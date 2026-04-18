@@ -97,6 +97,19 @@ errors = []
 warnings = []
 notes = []
 
+
+def endpoint_exists(endpoint: str, source_ids: set[str]) -> bool:
+    if not endpoint:
+        return False
+    if endpoint.startswith("source:"):
+        return endpoint.split(":", 1)[1] in source_ids
+    return (project_dir / endpoint).exists()
+
+
+def extract_markdown_links(markdown_text: str) -> list[str]:
+    # Keep this intentionally simple; index.md should only contain normal markdown links.
+    return [match.group(1).strip() for match in re.finditer(r"\[[^\]]+\]\(([^)]+)\)", markdown_text)]
+
 for rel in required_files:
     path = project_dir / rel
     if not path.exists():
@@ -104,6 +117,7 @@ for rel in required_files:
 
 json_files = [
     "state/project.json",
+    "state/bootstrap-state.json",
     "state/pages.json",
     "state/sources.json",
     "state/relationships.json",
@@ -189,6 +203,7 @@ for rel in entry_pages:
 
 sources_json = json_data.get("state/sources.json", {})
 sources = sources_json.get("sources", [])
+source_ids = {src.get("source_id") for src in sources if src.get("source_id")}
 
 if not sources and not scaffold_mode:
     warnings.append("state/sources.json has no recorded sources yet")
@@ -209,6 +224,13 @@ for src in sources_data_for_check.get("sources", []):
         ])
     if not any(c.exists() for c in candidates):
         errors.append(f"source entry {source_id} has no preserved file (looked in {', '.join(str(c) for c in candidates)})")
+
+    for derived_page in src.get("derived_pages", []) or []:
+        if not isinstance(derived_page, str) or not derived_page.strip():
+            errors.append(f"source entry {source_id} has invalid derived_pages value: {derived_page!r}")
+            continue
+        if not (project_dir / derived_page).exists():
+            errors.append(f"source entry {source_id} references missing derived page: {derived_page}")
 
 # New check: pages larger than 150 lines must declare oversize_reason
 OVERSIZE_THRESHOLD = 150
@@ -261,8 +283,48 @@ else:
     else:
         notes.append(f"Found {len(session_files)} session summary file(s)")
 
+    bootstrap_state = json_data.get("state/bootstrap-state.json", {}) or {}
+    latest_run_dir = str(bootstrap_state.get("latest_run_dir") or "")
+    if latest_run_dir and "-bootstrap-" in latest_run_dir:
+        run_basename = Path(latest_run_dir).name
+        run_prefix = run_basename.split("-bootstrap-", 1)[0]
+        if re.match(r"^\d{8}-\d{6}$", run_prefix):
+            run_date = f"{run_prefix[0:4]}-{run_prefix[4:6]}-{run_prefix[6:8]}"
+            if run_date not in changelog_text:
+                errors.append(
+                    "changelog.md is missing an entry matching the latest bootstrap run date "
+                    f"({run_date}, from {run_basename})"
+                )
+
 index_text = index_md.read_text(encoding="utf-8") if index_md.exists() else ""
 index_lines = index_text.splitlines()
+
+# New check: all markdown links in index.md resolve to an existing local file
+# (or to an allowed external URL).
+for link_target in extract_markdown_links(index_text):
+    target = link_target.split("#", 1)[0].strip()
+    if not target:
+        continue
+    if re.match(r"^(https?://|mailto:)", target):
+        continue
+    resolved = (project_dir / target).resolve() if target.startswith(".") else (project_dir / target).resolve()
+    try:
+        resolved.relative_to(project_dir.resolve())
+    except ValueError:
+        errors.append(f"index.md link escapes project directory: {link_target}")
+        continue
+    if not resolved.exists():
+        errors.append(f"index.md link target does not exist: {link_target}")
+
+# New check: all relationships endpoints resolve to existing pages or sources.
+relationships_json = json_data.get("state/relationships.json", {}) or {}
+for rel in relationships_json.get("relationships", []):
+    rel_from = rel.get("from", "")
+    rel_to = rel.get("to", "")
+    if not endpoint_exists(rel_from, source_ids):
+        errors.append(f"relationships.json has unresolved from endpoint: {rel_from}")
+    if not endpoint_exists(rel_to, source_ids):
+        errors.append(f"relationships.json has unresolved to endpoint: {rel_to}")
 
 project_focuses = [item.strip() for item in (project_json.get("bootstrap_focuses") or []) if str(item).strip()]
 

@@ -59,10 +59,12 @@ proposal = json.loads(Path(sys.argv[2]).read_text())
 
 pages_file = project_dir / "state" / "pages.json"
 sources_file = project_dir / "state" / "sources.json"
+relationships_file = project_dir / "state" / "relationships.json"
 changelog_file = project_dir / "changelog.md"
 
 pages_data = json.loads(pages_file.read_text())
 sources_data = json.loads(sources_file.read_text())
+relationships_data = json.loads(relationships_file.read_text())
 
 source_rel = proposal["source"]
 source_id = proposal["source_id"]
@@ -103,6 +105,8 @@ if preserved_path.exists():
 shutil.copy2(source_src, preserved_path)
 
 touched_pages: list[str] = []
+created_count = 0
+updated_count = 0
 
 for unit in proposal["units"]:
     page_rel = unit["page_path"]
@@ -120,6 +124,7 @@ for unit in proposal["units"]:
             "freshness_status": "baseline-validated",
             "baseline_pass": True,
         })
+        created_count += 1
     elif unit["action"] == "update":
         existing = page_abs.read_text(encoding="utf-8") if page_abs.exists() else ""
         page_abs.write_text(existing.rstrip() + "\n\n" + unit.get("content", ""), encoding="utf-8")
@@ -131,6 +136,7 @@ for unit in proposal["units"]:
                 entry["freshness_status"] = "baseline-validated"
                 entry["baseline_pass"] = True
                 break
+        updated_count += 1
     else:
         raise SystemExit(f"unknown unit action: {unit['action']}")
     touched_pages.append(page_rel)
@@ -146,18 +152,43 @@ sources_data["sources"].append({
     "ingested_at": now_iso(),
 })
 
+existing_relationships = {
+    (
+        rel.get("from"),
+        rel.get("to"),
+        rel.get("relationship_type"),
+    )
+    for rel in relationships_data.get("relationships", [])
+}
+for page_rel in touched_pages:
+    relationship = (page_rel, f"source:{source_id}", "derived-from")
+    if relationship not in existing_relationships:
+        relationships_data.setdefault("relationships", []).append({
+            "from": page_rel,
+            "to": f"source:{source_id}",
+            "relationship_type": "derived-from",
+            "confidence": 1.0,
+        })
+        existing_relationships.add(relationship)
+
 pages_file.write_text(json.dumps(pages_data, indent=2), encoding="utf-8")
 sources_file.write_text(json.dumps(sources_data, indent=2), encoding="utf-8")
+relationships_file.write_text(json.dumps(relationships_data, indent=2), encoding="utf-8")
 
 with changelog_file.open("a", encoding="utf-8") as f:
-    f.write(f"\n## [{datetime.now(timezone.utc).strftime('%Y-%m-%d')}] ingest | {source_rel}\n")
-    for p in touched_pages:
-        f.write(f"- touched: {p}\n")
+    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    for page_rel in touched_pages:
+        f.write(f"\n## [{day}] ingest | {source_rel} -> {page_rel}\n")
+        f.write(f"- source_id: {source_id}\n")
+        f.write("- outcome: applied approved ingest proposal unit\n")
 
 # Remove the source from the inbox (it is now preserved)
 source_src.unlink()
 
-print(f"applied {len(touched_pages)} unit(s), source preserved at {preserved_path}")
+print(
+    f"applied {len(touched_pages)} unit(s) "
+    f"(created={created_count}, updated={updated_count}), source preserved at {preserved_path}"
+)
 PY
 
 # Post-ingest lint (advisory). This invokes the semantic validator unless
@@ -173,4 +204,31 @@ fi
 if [[ -n "$model" ]]; then
   lint_args+=(--model "$model")
 fi
-"$ROOT_DIR/scripts/lint.sh" "${lint_args[@]}" || true
+lint_status="pass"
+if ! "$ROOT_DIR/scripts/lint.sh" "${lint_args[@]}"; then
+  lint_status="fail"
+fi
+
+latest_lint_findings_path="$(python3 - "$project_dir" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+state_path = Path(sys.argv[1]) / "state" / "bootstrap-state.json"
+if not state_path.exists():
+    print("")
+    raise SystemExit(0)
+
+data = json.loads(state_path.read_text(encoding="utf-8"))
+latest = data.get("latest_lint_findings") or {}
+print(latest.get("findings_path") or "")
+PY
+)"
+
+python3 "$ROOT_DIR/agents/bootstrap/_shared/state.py" record-ingest \
+  --project-dir "$project_dir" \
+  --project "$project_key" \
+  --status "$lint_status" \
+  --findings-path "$latest_lint_findings_path"
+
+echo "post-ingest lint status=$lint_status findings=${latest_lint_findings_path:-<none>}"

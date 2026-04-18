@@ -3,5 +3,5 @@
   "stage_num": "04",
   "stage_label": "validation",
   "pass_kind": "validation",
-  "summary_file": "validate-report.md"
+  "summary_file": "validate.final-message.md"
 }

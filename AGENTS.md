@@ -6,7 +6,7 @@ This file is the execution contract for agents operating inside `llm-wiki`.
 
 The goal is to make agent behavior predictable, reusable, and safe enough that project knowledge improves over time instead of drifting.
 
-If any instruction here conflicts with ad hoc chat phrasing, prefer this file unless the user explicitly overrides it for the current task.
+If any instruction here conflicts with ad hoc conversation phrasing, prefer this file unless the user explicitly overrides it for the current task.
 
 ## System Model
 
@@ -42,7 +42,7 @@ Always do these:
 
 Never do these:
 
-- treat chat history as canonical project knowledge
+- treat conversation history as canonical project knowledge
 - silently discard inbox items
 - rewrite or delete preserved source files during ingestion
 - present stale wiki content as verified fact
@@ -266,7 +266,7 @@ Create a new page only if all of the following are true:
 Do not create pages for:
 
 - one-off thoughts
-- temporary implementation chatter
+- temporary implementation noise
 - redundant summaries of existing pages
 - ambiguous concepts with no clear long-term value
 

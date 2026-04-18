@@ -321,6 +321,18 @@ Discovery rules:
 - use a bounded file tree scan to identify likely subsystems and integrations
 - do not brute-force the entire repo if a smaller representative set is enough
 - when you infer architecture from code structure, label it as inferred unless directly documented
+EOF
+
+  if [[ "$stage" == "validate" ]]; then
+    cat <<EOF
+
+Validation-stage output rules:
+- this is a report-only stage; do not modify wiki pages, state files, or changelog files
+- write the actual findings to <run-dir>/semantic-findings.json as instructed above
+- your final message must be a single short confirmation line only; do not put findings, analysis, or prose report content in the final message
+EOF
+  else
+    cat <<EOF
 
 Writing style for wiki pages:
 - do not include a '## Review Provenance' block or HTML comment markers of that shape
@@ -348,6 +360,7 @@ In your final message, include:
 3. what remains uncertain or missing
 4. whether this stage is complete enough to hand off to the next stage
 EOF
+  fi
 } >"$prompt_file"
 
 if [[ "$agent_backend" == "claude" ]]; then

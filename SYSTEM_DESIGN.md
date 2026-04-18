@@ -69,9 +69,8 @@ Purpose:
 Typical outputs:
 
 - `index.md`
-- `wiki/architecture/system-overview.md`
-- `wiki/architecture/runtime-topology.md`
-- dedicated backend landing page for server-first projects
+- one architecture page under `wiki/architecture/` (filename chosen from repo evidence)
+- initial state files and a durable bootstrap session note
 
 ### 2. Knowledge Compiler
 
@@ -82,14 +81,13 @@ Purpose:
 
 This is the stage that turns the wiki from “overview notes” into an actual second brain.
 
-Good outputs look like:
+Good outputs look like durable pages for:
 
-- combat pages
-- generation-pipeline pages
-- auth/session pages
-- quest or dungeon pages
-- registry/scheduling/runtime-domain pages
-- client-surface pages
+- runtime subsystems
+- module boundaries
+- integration surfaces
+- operational runbooks
+- architectural decisions
 
 The exact page set should come from repo and doc evidence, not from a fixed hardcoded list.
 

@@ -44,6 +44,18 @@ Ingest project-local source material:
 make ingest PROJECT=my_project
 ```
 
+Apply an approved proposal:
+
+```bash
+make ingest-apply PROJECT=my_project RUN=artifacts/runs/<timestamp>-ingest-my_project
+```
+
+Trusted fast path (skip manual approval):
+
+```bash
+make ingest PROJECT=my_project AUTO=1
+```
+
 Ingest unclassified raw inbox items:
 
 ```bash
@@ -53,7 +65,7 @@ make ingest-global
 Validate a project wiki:
 
 ```bash
-./scripts/validate.sh --project my_project
+make lint PROJECT=my_project
 ```
 
 ## Bootstrap Pipeline

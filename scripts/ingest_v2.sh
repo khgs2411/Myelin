@@ -43,9 +43,44 @@ require_command() {
   command -v "$cmd" >/dev/null 2>&1 || die "required command not found: $cmd"
 }
 
+validate_artifacts() {
+  local run_dir="$1"
+  local mode="$2"
+  local project_key_arg="$3"
+  local errors_file="$run_dir/validation-errors.txt"
+  local validator_args=(--run-dir "$run_dir" --mode "$mode")
+  if [[ "$mode" == "project" ]]; then
+    validator_args+=(--project "$project_key_arg")
+  fi
+  if python3 "$ROOT_DIR/scripts/ingest_validate_artifacts.py" "${validator_args[@]}" > /dev/null 2>"$errors_file"; then
+    rm -f "$errors_file"
+    return 0
+  fi
+  return 1
+}
+
+run_generation_prompt() {
+  local prompt_path="$1"
+  if [[ "$agent_backend" == "claude" ]]; then
+    local json_file="$2"
+    ( cd "$ROOT_DIR" && "${cmd[@]}" "$(cat "$prompt_path")" ) >"$json_file"
+    python3 - "$json_file" "$summary_file" <<'PY'
+import json, sys
+with open(sys.argv[1], "r", encoding="utf-8") as f:
+    data = json.load(f)
+result = data.get("result") or data.get("final_message") or ""
+with open(sys.argv[2], "w", encoding="utf-8") as f:
+    f.write(result)
+PY
+  else
+    "${cmd[@]}" - <"$prompt_path"
+  fi
+}
+
 list_source_files() {
   local dir="$1"
   find "$dir" -type f \
+    ! -name '.gitkeep' \
     ! -name '.DS_Store' \
     ! -name 'AGENTS.md' \
     ! -name 'README.md' | sort
@@ -322,11 +357,17 @@ Task:
   - $proposal_md
 
 Required output contracts:
-- classification.json must contain: source_kind, ownership, destination, update_targets, action
-- units.json must contain a top-level "units" array
-- mapping.json must map each unit to an action and page_path
-- proposal.json must contain a single top-level "source" field, plus source_id, source_kind, and units
+- classification.json must be a JSON object with exactly these fields: source_kind, ownership, destination, update_targets, action
+- units.json must be a JSON object with a top-level "units" array; each unit must contain unit_id, title, summary
+- mapping.json must be a JSON object with a top-level "units" array; each unit must contain unit_id, action, page_path, page_type, summary
+- proposal.json must be apply-ready for scripts/ingest_apply.sh:
+  - top-level source must be a single string path like "inbox/<filename>" or "raw/inbox/<filename>", not an object
+  - each unit must contain action, page_path, page_type, summary, content
+  - action values must be exactly "create" or "update"
+  - page_path values must be project-relative like "wiki/runbooks/foo.md", never "projects/$project_key/wiki/..."
+- every unit content block must include at least one concrete file_path:line citation such as `server/README.md:40-43`
 - proposal.md must be a human-readable summary of the planned changes
+- Do not use keys named proposed_action or proposed_page_path anywhere
 
 Context to read before writing:
 - AGENTS.md
@@ -347,6 +388,11 @@ Use these source fields in proposal output:
 - source path: $source_field
 - source filename: $source_name
 - suggested source id prefix: src-
+
+Content grounding rules:
+- verify workflow details against authoritative repo files, not only the inbox note
+- open the repo files named in the inbox note when needed and cite them directly in proposal content
+- every created or appended wiki section must include concrete file_path:line citations for the facts it claims
 
 After writing all five files, print one short line confirming proposal artifacts were written.
 EOF
@@ -386,21 +432,52 @@ EOF
 
   if [[ "$agent_backend" == "claude" ]]; then
     json_file="$run_dir/claude.json"
-    ( cd "$ROOT_DIR" && "${cmd[@]}" "$(cat "$prompt_file")" ) >"$json_file"
-    python3 - "$json_file" "$summary_file" <<'PY'
-import json, sys
-with open(sys.argv[1], "r", encoding="utf-8") as f:
-    data = json.load(f)
-result = data.get("result") or data.get("final_message") or ""
-with open(sys.argv[2], "w", encoding="utf-8") as f:
-    f.write(result)
-PY
   else
-    "${cmd[@]}" - <"$prompt_file"
+    json_file=""
   fi
+
+  run_generation_prompt "$prompt_file" "$json_file"
 
   [[ -f "$proposal_json" ]] || die "proposal generator did not produce $proposal_json"
   [[ -f "$proposal_md" ]] || die "proposal generator did not produce $proposal_md"
+
+  if ! validate_artifacts "$run_dir" "$mode" "$project_key"; then
+    repair_prompt="$run_dir/repair.prompt.md"
+    cat >"$repair_prompt" <<EOF
+You already attempted this ingest proposal, but the generated artifacts are not apply-ready.
+
+Do not read any new source material. Do not modify wiki pages, state files, preserved sources, or inbox files.
+Only repair these artifact files in-place:
+- $classification_json
+- $units_json
+- $mapping_json
+- $proposal_json
+- $proposal_md
+
+Validation errors that must be fixed:
+EOF
+    sed 's/^/- /' "$run_dir/validation-errors.txt" >>"$repair_prompt"
+    cat >>"$repair_prompt" <<EOF
+
+Reminder of the required machine contract:
+- proposal.json source must be a string path, not an object
+- proposal.json units must contain action, page_path, page_type, summary, content
+- mapping.json must contain a top-level "units" array
+- page_path values must be project-relative like "wiki/runbooks/foo.md"
+- do not use proposed_action or proposed_page_path keys
+- every unit content block must include at least one concrete file_path:line citation
+
+After repairing all five artifacts, print one short line confirming the proposal artifacts were repaired.
+EOF
+
+    run_generation_prompt "$repair_prompt" "$json_file"
+
+    if ! validate_artifacts "$run_dir" "$mode" "$project_key"; then
+      echo "proposal artifacts are invalid after repair attempt:" >&2
+      cat "$run_dir/validation-errors.txt" >&2
+      exit 1
+    fi
+  fi
 fi
 
 echo "proposal written: $proposal_md"
@@ -416,15 +493,13 @@ if [[ "${auto_apply:-0}" == "1" ]]; then
     apply_args+=(--model "$model")
   fi
   "$ROOT_DIR/scripts/ingest_apply.sh" "${apply_args[@]}"
-  echo "--- AUTO INGEST SUMMARY ---"
-  echo "run: $run_dir"
   python3 - <<PY
 import json
 data = json.load(open('$run_dir/proposal.json'))
 units = data.get('units', [])
 created = sum(1 for u in units if u.get('action') == 'create')
 updated = sum(1 for u in units if u.get('action') == 'update')
-print(f'pages created: {created}')
-print(f'pages updated: {updated}')
+touched = len(units)
+print(f'**AUTO INGEST APPLY** run={r"$run_dir"} touched_pages={touched} created_pages={created} updated_pages={updated}')
 PY
 fi

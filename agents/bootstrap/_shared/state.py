@@ -21,6 +21,7 @@ def default_state(project: str) -> dict:
         "latest_validation_report": None,
         "latest_validation_findings": None,
         "latest_lint_findings": None,
+        "latest_ingest_findings": None,
         "reconciliation_required": False,
         "stages": {
             stage: {
@@ -120,6 +121,19 @@ def cmd_record_lint(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_record_ingest(args: argparse.Namespace) -> int:
+    path = Path(args.project_dir) / "state" / "bootstrap-state.json"
+    project = args.project or Path(args.project_dir).name
+    data = load_state(path, project)
+    data["latest_ingest_findings"] = {
+        "status": args.status,
+        "findings_path": args.findings_path,
+        "updated_at": now_iso(),
+    }
+    save_state(path, data)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
@@ -159,6 +173,13 @@ def build_parser() -> argparse.ArgumentParser:
     record_lint.add_argument("--status", required=True, choices=["pass", "fail"])
     record_lint.add_argument("--findings-path", required=True)
     record_lint.set_defaults(func=cmd_record_lint)
+
+    record_ingest = sub.add_parser("record-ingest")
+    record_ingest.add_argument("--project-dir", required=True)
+    record_ingest.add_argument("--project")
+    record_ingest.add_argument("--status", required=True, choices=["pass", "fail"])
+    record_ingest.add_argument("--findings-path", required=True)
+    record_ingest.set_defaults(func=cmd_record_ingest)
 
     return parser
 

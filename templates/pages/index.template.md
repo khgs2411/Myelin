@@ -4,7 +4,7 @@ One-sentence summary of the repo and what this project space covers.
 
 ## Start Here
 
-- [System Overview](./wiki/architecture/system-overview.md): architecture starting point
+- The architecture entry page is created during bootstrap Stage 1.
 
 ## Current Priorities
 

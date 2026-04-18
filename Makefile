@@ -21,8 +21,8 @@ help:
 	@echo "  make bootstrap-reconcile PROJECT=<project-key> [MODEL=<model>]"
 	@echo "  make validate PROJECT=<project-key>"
 	@echo "  make lint PROJECT=<project-key> [MODEL=<model>]"
-	@echo "  make ingest PROJECT=<project-key> [MODEL=<model>]"
-	@echo "  make ingest-v2 PROJECT=<project-key> [MODEL=<model>] [AUTO=1]"
+	@echo "  make ingest PROJECT=<project-key> [MODEL=<model>] [AUTO=1]"
+	@echo "  make ingest-v2 PROJECT=<project-key> [MODEL=<model>] [AUTO=1]  # alias"
 	@echo "  make ingest-apply PROJECT=<project-key> RUN=<artifacts/runs/...> [MODEL=<model>]"
 	@echo "  make ingest-global [MODEL=<model>]"
 	@echo ""
@@ -85,11 +85,11 @@ lint:
 
 ingest:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make ingest PROJECT=my_project" && exit 1)
-	@./scripts/ingest.sh --project "$(PROJECT)" $(if $(MODEL),--model "$(MODEL)",)
+	@./scripts/ingest.sh --project "$(PROJECT)" $(if $(MODEL),--model "$(MODEL)",) $(if $(AUTO),--auto,)
 
 ingest-v2:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
-	@./scripts/ingest_v2.sh --project "$(PROJECT)" $(if $(MODEL),--model "$(MODEL)",) $(if $(AUTO),--auto,)
+	@./scripts/ingest.sh --project "$(PROJECT)" $(if $(MODEL),--model "$(MODEL)",) $(if $(AUTO),--auto,)
 
 ingest-apply:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
