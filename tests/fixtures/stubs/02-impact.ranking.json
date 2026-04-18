@@ -1,0 +1,36 @@
+{
+  "stage": "02-impact.ranking",
+  "response": {
+    "cutoff": 20,
+    "ranked_domains": [
+      {
+        "rank": 1,
+        "domain": "authentication",
+        "score": 0.85,
+        "signals": ["A", "B", "C"],
+        "signal_a_evidence": ["README.md:6-14", "docs/architecture.md:3-5"],
+        "signal_b_evidence": ["src/auth.py", "src/main.py:6-10"],
+        "signal_c_reasoning": "Owns session lifecycle; referenced from main.py entry point"
+      },
+      {
+        "rank": 2,
+        "domain": "data-store",
+        "score": 0.70,
+        "signals": ["A", "B"],
+        "signal_a_evidence": ["docs/architecture.md:5-6"],
+        "signal_b_evidence": ["src/db.py"],
+        "signal_c_reasoning": "Distinct storage layer consumed by entry point"
+      },
+      {
+        "rank": 3,
+        "domain": "entry-point",
+        "score": 0.60,
+        "signals": ["A", "B"],
+        "signal_a_evidence": ["README.md:14-16"],
+        "signal_b_evidence": ["src/main.py"],
+        "signal_c_reasoning": "Application entry; wires auth + db"
+      }
+    ]
+  },
+  "tokens_consumed": {"input_chars": 4500, "output_chars": 600, "is_estimate": true}
+}

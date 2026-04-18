@@ -1,7 +1,0 @@
-{
-  "stage": "orient",
-  "stage_num": "01",
-  "stage_label": "broad orientation",
-  "pass_kind": "broad-orientation",
-  "summary_file": "orient.final-message.md"
-}

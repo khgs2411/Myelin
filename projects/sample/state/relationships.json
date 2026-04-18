@@ -1,0 +1,40 @@
+{
+  "relationships": [
+    {
+      "from": "wiki/systems/authentication.md",
+      "to": "wiki/systems/data-store.md",
+      "relationship_type": "references",
+      "confidence": "high"
+    },
+    {
+      "from": "wiki/systems/authentication.md",
+      "to": "wiki/systems/entry-point.md",
+      "relationship_type": "references",
+      "confidence": "high"
+    },
+    {
+      "from": "wiki/systems/data-store.md",
+      "to": "wiki/systems/authentication.md",
+      "relationship_type": "references",
+      "confidence": "high"
+    },
+    {
+      "from": "wiki/systems/data-store.md",
+      "to": "wiki/systems/entry-point.md",
+      "relationship_type": "references",
+      "confidence": "high"
+    },
+    {
+      "from": "wiki/systems/entry-point.md",
+      "to": "wiki/systems/authentication.md",
+      "relationship_type": "references",
+      "confidence": "high"
+    },
+    {
+      "from": "wiki/systems/entry-point.md",
+      "to": "wiki/systems/data-store.md",
+      "relationship_type": "references",
+      "confidence": "high"
+    }
+  ]
+}

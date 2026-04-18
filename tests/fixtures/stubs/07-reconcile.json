@@ -1,0 +1,20 @@
+{
+  "stage": "07-reconcile",
+  "response": {
+    "project": "sample",
+    "run_id": "placeholder-will-be-stamped-by-runner",
+    "summary": "reconcile: no autonomous fix possible, escalating to operator",
+    "ranking_snapshot_path": "projects/sample/state/latest/ranking-snapshot.json",
+    "max_new_pages": 25,
+    "new_pages_count": 0,
+    "deferred_domains": [],
+    "approved": false,
+    "units": [],
+    "index_changes": null,
+    "state_changes_intent": {
+      "last_seen_commit_pending": null,
+      "last_update_at_pending": null
+    }
+  },
+  "tokens_consumed": {"input_chars": 5000, "output_chars": 200, "is_estimate": true}
+}

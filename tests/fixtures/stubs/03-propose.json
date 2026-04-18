@@ -1,0 +1,90 @@
+{
+  "stage": "03-propose",
+  "response": {
+    "project": "sample",
+    "run_id": "placeholder-will-be-stamped-by-runner",
+    "summary": "Initial bootstrap: 3 domain pages + index.",
+    "ranking_snapshot_path": "projects/sample/state/latest/ranking-snapshot.json",
+    "max_new_pages": 25,
+    "max_new_pages_config_source": "agents/update/03-propose/config.json:stage_specific.max_new_pages",
+    "new_pages_count": 3,
+    "deferred_domains": [],
+    "approved": false,
+    "units": [
+      {
+        "id": "u1",
+        "action": "create",
+        "page_path": "wiki/systems/authentication.md",
+        "rename_from": null,
+        "destructive": false,
+        "uncertainty": "low",
+        "justification": "Top-ranked domain per ranking-snapshot.json (rank 1). Cites src/auth.py and README.md.",
+        "justification_signals": ["A", "B", "C"],
+        "referenced_ranking_domains": ["authentication"],
+        "source_classification": {
+          "source_kind": "implementation-note",
+          "ownership": "project:sample",
+          "destination": "wiki/systems/authentication.md",
+          "update_targets": ["wiki/systems/authentication.md"],
+          "action": "create-new-page-and-update-index"
+        },
+        "content": "Session authentication for the sample app. Owns the SESSIONS dict.\n\n## Repo pointers\n\n- `src/auth.py:1-23` - login/logout/whoami functions and SESSIONS dict\n\nThe auth module issues an opaque session id on login and tracks it in the in-memory `SESSIONS` dictionary. `logout` removes the entry; `whoami` returns the username. No persistence.\n\n## Related\n\n- [data-store](../systems/data-store.md) - where session-authenticated users write data\n- [entry-point](../systems/entry-point.md) - how the app wires auth in\n- Known gaps: no persistence, no token expiry\n",
+        "affected_cross_refs": ["wiki/systems/data-store.md", "wiki/systems/entry-point.md"],
+        "source_citations": ["src/auth.py:1-23"]
+      },
+      {
+        "id": "u2",
+        "action": "create",
+        "page_path": "wiki/systems/data-store.md",
+        "rename_from": null,
+        "destructive": false,
+        "uncertainty": "low",
+        "justification": "Rank 2 domain. Cites src/db.py.",
+        "justification_signals": ["A", "B"],
+        "referenced_ranking_domains": ["data-store"],
+        "source_classification": {
+          "source_kind": "implementation-note",
+          "ownership": "project:sample",
+          "destination": "wiki/systems/data-store.md",
+          "update_targets": ["wiki/systems/data-store.md"],
+          "action": "create-new-page-and-update-index"
+        },
+        "content": "In-memory key-value store for the sample app.\n\n## Repo pointers\n\n- `src/db.py:1-15` - put/get/delete on the _STORE dict\n\n`_STORE` is a module-level dictionary. No locking, no persistence.\n\n## Related\n\n- [authentication](../systems/authentication.md) - session ids are not stored here\n- Known gaps: no persistence layer; data is lost on restart\n",
+        "affected_cross_refs": ["wiki/systems/authentication.md"],
+        "source_citations": ["src/db.py:1-15"]
+      },
+      {
+        "id": "u3",
+        "action": "create",
+        "page_path": "wiki/systems/entry-point.md",
+        "rename_from": null,
+        "destructive": false,
+        "uncertainty": "low",
+        "justification": "Rank 3 domain. Cites src/main.py.",
+        "justification_signals": ["A", "B"],
+        "referenced_ranking_domains": ["entry-point"],
+        "source_classification": {
+          "source_kind": "implementation-note",
+          "ownership": "project:sample",
+          "destination": "wiki/systems/entry-point.md",
+          "update_targets": ["wiki/systems/entry-point.md"],
+          "action": "create-new-page-and-update-index"
+        },
+        "content": "Sample app entry point. Wires auth and db together.\n\n## Repo pointers\n\n- `src/main.py:1-13` - main() orchestrates login -> put -> get\n\nOn invocation, creates an alice session, writes a record to the store, prints it back.\n\n## Related\n\n- [authentication](../systems/authentication.md) - provides the session\n- [data-store](../systems/data-store.md) - target of the write\n",
+        "affected_cross_refs": ["wiki/systems/authentication.md", "wiki/systems/data-store.md"],
+        "source_citations": ["src/main.py:1-13"]
+      }
+    ],
+    "index_changes": {
+      "action": "update",
+      "destructive": false,
+      "content": "Sample project - a minimal Python application used as a test fixture.\n\n## Start here\n\n- [authentication](wiki/systems/authentication.md) - session lifecycle\n- [data-store](wiki/systems/data-store.md) - where data lives\n- [entry-point](wiki/systems/entry-point.md) - how the app runs\n\n## Routing\n\n### Systems\n\n- [authentication](wiki/systems/authentication.md) - session auth\n- [data-store](wiki/systems/data-store.md) - in-memory KV store\n- [entry-point](wiki/systems/entry-point.md) - app entry\n\n## Gaps and deferred\n\n- No tests are described yet; add a runbook if test automation grows\n\n## Status\n\n- Last update: <stamped-by-apply>\n- Freshness: see `state/latest/validation-report.md`\n- Measurement: see `state/latest/measurement-report.md`\n",
+      "categories_reshuffled": 0
+    },
+    "state_changes_intent": {
+      "last_seen_commit_pending": "<stamped-by-apply>",
+      "last_update_at_pending": "<stamped-by-apply>"
+    }
+  },
+  "tokens_consumed": {"input_chars": 30000, "output_chars": 6000, "is_estimate": true}
+}

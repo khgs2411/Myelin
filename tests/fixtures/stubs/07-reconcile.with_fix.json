@@ -1,0 +1,42 @@
+{
+  "stage": "07-reconcile",
+  "response": {
+    "project": "sample",
+    "run_id": "placeholder-will-be-stamped-by-runner",
+    "summary": "reconcile: move wiki/runtime/entry-point.md to wiki/systems/entry-point.md",
+    "ranking_snapshot_path": "projects/sample/state/latest/ranking-snapshot.json",
+    "max_new_pages": 25,
+    "new_pages_count": 0,
+    "deferred_domains": [],
+    "approved": true,
+    "units": [
+      {
+        "id": "r1",
+        "action": "rename",
+        "page_path": "wiki/systems/entry-point.md",
+        "rename_from": "wiki/runtime/entry-point.md",
+        "destructive": true,
+        "uncertainty": "low",
+        "justification": "Reconcile: runtime is not in the shelf allowlist; systems is the closest legal home.",
+        "justification_signals": ["A"],
+        "referenced_ranking_domains": ["entry-point"],
+        "source_classification": {
+          "source_kind": "implementation-note",
+          "ownership": "project:sample",
+          "destination": "wiki/systems/entry-point.md",
+          "update_targets": ["wiki/systems/entry-point.md"],
+          "action": "update-existing-pages"
+        },
+        "content": "",
+        "affected_cross_refs": [],
+        "source_citations": []
+      }
+    ],
+    "index_changes": null,
+    "state_changes_intent": {
+      "last_seen_commit_pending": null,
+      "last_update_at_pending": null
+    }
+  },
+  "tokens_consumed": {"input_chars": 5200, "output_chars": 500, "is_estimate": true}
+}

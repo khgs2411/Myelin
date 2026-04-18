@@ -1,0 +1,7 @@
+{
+  "stage": "06-validate.semantic",
+  "response": {
+    "findings": []
+  },
+  "tokens_consumed": {"input_chars": 3000, "output_chars": 50, "is_estimate": true}
+}

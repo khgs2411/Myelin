@@ -2,10 +2,10 @@
 
 Use this directory for generated outputs that are useful to keep but are not part of canonical wiki structure.
 
-Examples:
+Layout:
 
-- generated reports
-- comparison documents
-- exported summaries
-- diagrams
-- one-off analysis outputs
+- `artifacts/<project-key>/runs/<timestamp>-<op>/` for project-scoped runs
+- `artifacts/_global/runs/<timestamp>-<op>/` for global intake runs
+
+These directories are the audit/debug trail. Canonical "latest" products live under
+`projects/<key>/state/latest/`.

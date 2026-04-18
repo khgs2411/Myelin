@@ -3,10 +3,9 @@
   "name": "<Project Name>",
   "repo_paths": [],
   "tags": [],
-  "entry_pages": [
-    "index.md"
-  ],
-  "bootstrap_focuses": [],
+  "entry_pages": ["index.md"],
   "related_concepts": [],
-  "ignored_paths": []
+  "ignored_paths": [],
+  "acceptance_questions_path": "acceptance-questions.md",
+  "ranking_cutoff": 20
 }

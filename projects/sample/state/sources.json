@@ -1,0 +1,37 @@
+{
+  "sources": [
+    {
+      "source_id": "wiki/systems/authentication.md:u1",
+      "original_path": "README.md:7-9;docs/architecture.md:5-5;src/auth.py:1-23;src/main.py:6-8",
+      "source_kind": "implementation-note",
+      "project_key": "sample",
+      "status": "integrated",
+      "derived_pages": [
+        "wiki/systems/authentication.md"
+      ],
+      "ingested_at": "2026-04-19T07:19:34.545358+00:00"
+    },
+    {
+      "source_id": "wiki/systems/data-store.md:u2",
+      "original_path": "README.md:7-9;docs/architecture.md:6-6;src/db.py:1-15;src/main.py:7-9",
+      "source_kind": "implementation-note",
+      "project_key": "sample",
+      "status": "integrated",
+      "derived_pages": [
+        "wiki/systems/data-store.md"
+      ],
+      "ingested_at": "2026-04-19T07:19:34.545358+00:00"
+    },
+    {
+      "source_id": "wiki/systems/entry-point.md:u3",
+      "original_path": "README.md:9-14;docs/architecture.md:8-8;src/main.py:1-13",
+      "source_kind": "implementation-note",
+      "project_key": "sample",
+      "status": "integrated",
+      "derived_pages": [
+        "wiki/systems/entry-point.md"
+      ],
+      "ingested_at": "2026-04-19T07:19:34.545358+00:00"
+    }
+  ]
+}

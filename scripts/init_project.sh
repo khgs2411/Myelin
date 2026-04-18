@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECTS_DIR="$ROOT_DIR/projects"
+PROJECTS_DIR="${PROJECTS_DIR:-$ROOT_DIR/projects}"
 
 usage() {
   cat <<'EOF'
@@ -286,6 +286,7 @@ fi
 
 mkdir -p \
   "$project_dir/inbox" \
+  "$project_dir/.migration-hints" \
   "$project_dir/sources" \
   "$project_dir/wiki/architecture" \
   "$project_dir/wiki/systems" \
@@ -386,9 +387,10 @@ cat >"$project_dir/state/project.json" <<EOF
   "entry_pages": [
     "index.md"
   ],
-  "bootstrap_focuses": $(if [[ ${#bootstrap_focuses[@]} -gt 0 ]]; then json_array "${bootstrap_focuses[@]}"; else json_array; fi),
   "related_concepts": $(if [[ ${#related_concepts[@]} -gt 0 ]]; then json_array "${related_concepts[@]}"; else json_array; fi),
-  "ignored_paths": $(json_array "${ignored_paths[@]}")
+  "ignored_paths": $(json_array "${ignored_paths[@]}"),
+  "acceptance_questions_path": "acceptance-questions.md",
+  "ranking_cutoff": 20
 }
 EOF
 
@@ -423,6 +425,9 @@ EOF
 cat >"$project_dir/state/freshness.json" <<EOF
 {
   "last_seen_commit": $(json_string_or_null "$last_seen_commit"),
+  "last_seen_commit_pending": null,
+  "last_update_at": "$today",
+  "last_update_at_pending": null,
   "changed_paths": [],
   "impacted_pages": [],
   "status": "scaffold",
@@ -432,6 +437,38 @@ cat >"$project_dir/state/freshness.json" <<EOF
 }
 EOF
 
-python3 "$ROOT_DIR/agents/bootstrap/_shared/state.py" ensure --project-dir "$project_dir" --project "$project_key"
+cat >"$project_dir/acceptance-questions.md" <<EOF
+# Acceptance Questions - $project_name
+
+<!-- version: 0.1 -->
+
+Questions a cold LLM session should be able to answer from the wiki alone.
+
+1. [discipline] What is this project and what are its major surfaces?
+
+## Scoring
+
+- 2: full answer with citations from wiki alone
+- 1: directional but incomplete or uncited
+- 0: can't answer; wrong; wiki contradicts itself
+
+## Acceptance bar
+
+- Total >= 16/20
+- No zero on [discipline]-tagged questions
+EOF
+
+if [[ ${#bootstrap_focuses[@]} -gt 0 ]]; then
+  cat >"$project_dir/.migration-hints/bootstrap-focuses-archive.md" <<EOF
+# Archived Bootstrap Focuses
+
+The deprecated \`--focus\` / \`--focuses\` inputs were provided during init and archived here for manual porting into \`acceptance-questions.md\`.
+
+$(for focus in "${bootstrap_focuses[@]}"; do printf -- "- %s\n" "$focus"; done)
+EOF
+  echo "deprecated: --focus archived to .migration-hints/; port to acceptance-questions.md" >&2
+fi
+
+python3 "$ROOT_DIR/agents/update/_shared/state.py" ensure --project-dir "$project_dir" --project "$project_key"
 
 echo "Created project scaffold at: $project_dir"

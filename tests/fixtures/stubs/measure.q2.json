@@ -1,0 +1,10 @@
+{
+  "stage": "measure.q2",
+  "response": {
+    "score": 2,
+    "answer": "Start with authentication for session lifecycle.",
+    "citations": ["wiki/systems/authentication.md"],
+    "reasoning": "Auth page is the primary entry."
+  },
+  "tokens_consumed": {"input_chars": 8000, "output_chars": 90, "is_estimate": true}
+}

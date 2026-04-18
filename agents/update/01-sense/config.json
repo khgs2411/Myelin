@@ -1,0 +1,19 @@
+{
+  "stage": "sense",
+  "agent_kind": "script+classifier",
+  "token_budget_input": 4000,
+  "token_budget_output": 500,
+  "on_over_budget": "fail-clean",
+  "stage_specific": {
+    "inbox_filename_patterns": {
+      "\\.md$": "session-note",
+      "-spec\\.md$": "spec",
+      "-design\\.md$": "design",
+      "-plan\\.md$": "plan"
+    },
+    "commit_message_ambiguity_heuristic": {
+      "enabled": true,
+      "whitespace_only_threshold": 0.9
+    }
+  }
+}

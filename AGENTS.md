@@ -49,7 +49,7 @@ Never do these:
 - create speculative architecture claims without a source or explicit inference label
 - create new durable pages when an existing canonical page should be updated instead
 
-## Canonical Session Bootstrap
+## Canonical Session Startup
 
 When starting work in or about a repo, follow this order exactly:
 
@@ -69,77 +69,23 @@ Do not skip directly to repo exploration unless:
 - freshness metadata indicates likely invalidation
 - the task is implementation-specific and requires direct code verification
 
-## Bootstrap Stage Contract
+## Update Operation Contract
 
-When running project bootstrap, treat it as a four-stage compiler pipeline:
+`make update PROJECT=<project-key>` is the canonical compiler pipeline for project knowledge.
 
-1. broad orientation
-2. knowledge compiler
-3. query expander
-4. validation
-5. reconciliation
+The stages are:
 
-### Stage 1: broad orientation
+1. sense
+2. impact
+3. propose
+4. apply
+5. validate
+6. reconcile when validate fails
+7. apply commit only after validate passes
 
-Goal:
+Treat validate as the gate. A run is not complete until validation passes and the commit pointer advances.
 
-- establish the project frame
-- identify repo surfaces and source-of-truth areas
-- create the smallest useful top-level canonical pages
-
-Expected outputs:
-
-- `index.md`
-- a top-level architecture page under `wiki/architecture/`, with filename chosen from repo evidence
-- initial state metadata and a durable session summary
-
-### Stage 2: knowledge compiler
-
-Goal:
-
-- create the durable project memory graph
-- expand the broad layer into subsystem, feature, runtime, tech-stack, and decision-candidate pages
-
-Do not stop at orientation pages if the repo clearly contains stable queryable domains.
-
-Create a dedicated durable page when at least two are true:
-
-- there is a stable folder, module, or domain for it
-- multiple source files or docs support it
-- it is likely to be queried directly
-- it is conceptually distinct from sibling systems
-- without it another canonical page would become too broad
-
-### Stage 3: query expander
-
-Goal:
-
-- turn broad domain pages into direct lookup pages for likely future questions
-- split high-value concepts out of larger pages when they are stable and queryable
-
-This stage exists to create a real second brain, not just a better overview.
-
-### Stage 4: validation
-
-Goal:
-
-- check structure
-- check coverage
-- detect overlap
-- reject broad-only or domain-only output when the source repo clearly supports a deeper layer
-
-Validation is report-only. Do not treat it as a content-writing stage.
-
-### Stage 5: reconciliation
-
-Goal:
-
-- fix validation findings without re-imagining the whole wiki
-- split overloaded pages
-- create missing required pages
-- repair index/state links and metadata drift
-
-Reconciliation should converge the wiki, not restart bootstrap.
+Reconcile is bounded to one loop iteration. If validate still fails after reconcile, stop and surface the findings instead of improvising further changes.
 
 ## Operator-Owned Project Config
 
@@ -152,7 +98,6 @@ Do not freely rewrite:
 - `repo_paths`
 - `tags`
 - `entry_pages`
-- `bootstrap_focuses`
 - `related_concepts`
 - `ignored_paths`
 
@@ -235,7 +180,7 @@ Allowed `action` values:
 - `reject`
 - `needs-review`
 
-Do not ingest a source without making these decisions explicit in metadata or the changeset.
+Do not process a source without making these decisions explicit in metadata or the changeset.
 
 ## Destination Rules By Source Type
 
@@ -277,32 +222,19 @@ If a new page is created, also do all of the following:
 - register it in `state/pages.json`
 - link the source in `state/sources.json` or equivalent metadata
 
-## Ingestion Workflow Contract
+## Source Processing Contract
 
-When processing a source from `raw/inbox/`, perform this sequence:
+`make update` owns project-local source processing. When a source is consumed from either inbox:
 
-1. Read the source.
-2. Classify it using the mandatory classification output.
-3. Determine whether it belongs to a project, a concept area, review, or rejection.
-4. Preserve the original source file.
-5. Update existing wiki pages or create a new page only if the page-creation policy allows it.
-6. Update source metadata.
-7. Update page metadata.
-8. Append a `changelog.md` entry.
-9. Move or mark the source as processed, rejected, or pending-review.
+1. read and classify the source
+2. decide ownership and destination
+3. preserve the original source
+4. update existing canonical pages or create a new page only when policy allows it
+5. update `state/` metadata
+6. append a `changelog.md` entry
+7. leave a terminal source status (`processed`, `rejected`, or `needs-review`)
 
-When processing a source from `projects/<project-key>/inbox/`, perform this sequence:
-
-1. Assume project ownership.
-2. Read the source.
-3. Classify it using the mandatory classification output.
-4. Preserve the original under `sources/`.
-5. Update relevant project wiki pages.
-6. Update source and page metadata.
-7. Append a `changelog.md` entry.
-8. Clear it from the inbox state.
-
-Do not leave partially ingested sources with no trace of status.
+Do not leave partially processed sources with no status trail.
 
 ## Wiki Writing Rules
 
@@ -335,6 +267,7 @@ These constraints apply to every page under `projects/<project-key>/wiki/`. Viol
 - Target around 60 lines per page; up to roughly 80 lines is acceptable when the material demands it. Do not split pages purely to hit a line count — coherence and DRY win.
 - Open with a single-sentence intro that answers "what is this." Do not lead with a `## Purpose` heading. A later heading such as `## Purpose And Boundary` is allowed when it adds real subject structure.
 - Include "Open Questions" or "Related" sections only when real items exist.
+- `index.md` carve-out: the project's `index.md` MAY include a `## Status` block as the final section. This block points at machine-readable state files, includes the last update timestamp plus the source commit SHA, and is not wiki-construction narration. See `docs/superpowers/specs/2026-04-18-unified-update-pipeline-design.md` §5.2.
 
 ## Freshness Contract
 

@@ -1,7 +1,0 @@
-{
-  "stage": "reconcile",
-  "stage_num": "05",
-  "stage_label": "reconciliation",
-  "pass_kind": "reconcile-bootstrap",
-  "summary_file": "reconcile.final-message.md"
-}

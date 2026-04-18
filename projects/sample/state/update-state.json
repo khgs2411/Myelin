@@ -1,0 +1,51 @@
+{
+  "project": "sample",
+  "latest_run_dir": "/Users/liadgoren/Repositories/llm-wiki/artifacts/sample/runs/20260419-071423-update",
+  "last_completed_stage": "validate",
+  "latest_validation_findings": {
+    "findings_path": "/Users/liadgoren/Repositories/llm-wiki/projects/sample/state/latest/validation-findings.json",
+    "audit_run_dir": "/Users/liadgoren/Repositories/llm-wiki/artifacts/sample/runs/20260419-071423-update",
+    "status": "pass",
+    "updated_at": "2026-04-19T07:21:09.046366+00:00"
+  },
+  "latest_lint_findings": null,
+  "latest_ingest_findings": null,
+  "stages": {
+    "sense": {
+      "status": "completed",
+      "last_run_dir": "/Users/liadgoren/Repositories/llm-wiki/artifacts/sample/runs/20260418-123216-update",
+      "last_completed_at": "2026-04-18T12:32:16.326086+00:00",
+      "summary_file": "/Users/liadgoren/Repositories/llm-wiki/artifacts/sample/runs/20260418-123216-update/sense-report.json"
+    },
+    "impact": {
+      "status": "completed",
+      "last_run_dir": "/Users/liadgoren/Repositories/llm-wiki/artifacts/sample/runs/20260418-123216-update",
+      "last_completed_at": "2026-04-18T12:32:16.352761+00:00",
+      "summary_file": "/Users/liadgoren/Repositories/llm-wiki/artifacts/sample/runs/20260418-123216-update/impact-report.json"
+    },
+    "propose": {
+      "status": "completed",
+      "last_run_dir": "/Users/liadgoren/Repositories/llm-wiki/artifacts/sample/runs/20260419-071423-update",
+      "last_completed_at": "2026-04-19T07:19:34.466453+00:00",
+      "summary_file": "/Users/liadgoren/Repositories/llm-wiki/artifacts/sample/runs/20260419-071423-update/proposal.json"
+    },
+    "apply": {
+      "status": "completed",
+      "last_run_dir": "/Users/liadgoren/Repositories/llm-wiki/artifacts/sample/runs/20260419-071423-update",
+      "last_completed_at": "2026-04-19T07:19:34.545358+00:00",
+      "summary_file": "/Users/liadgoren/Repositories/llm-wiki/artifacts/sample/runs/20260419-071423-update/proposal.json"
+    },
+    "validate": {
+      "status": "completed",
+      "last_run_dir": "/Users/liadgoren/Repositories/llm-wiki/artifacts/sample/runs/20260419-071423-update",
+      "last_completed_at": "2026-04-19T07:21:09.046366+00:00",
+      "summary_file": "/Users/liadgoren/Repositories/llm-wiki/artifacts/sample/runs/20260419-071423-update/validation-findings.json"
+    },
+    "reconcile": {
+      "status": "pending",
+      "last_run_dir": null,
+      "last_completed_at": null,
+      "summary_file": null
+    }
+  }
+}

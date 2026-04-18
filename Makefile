@@ -1,4 +1,4 @@
-.PHONY: init init-project bootstrap bootstrap-orient bootstrap-domains bootstrap-expand bootstrap-validate bootstrap-reconcile validate lint ingest ingest-v2 ingest-apply ingest-global help
+.PHONY: init init-project status status-all prune help update update-v2 update-v2-continue apply-pending reject-pending measure measure-tokens lint
 
 SYSTEM_PATH := /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
@@ -13,18 +13,17 @@ help:
 	@echo "Targets:"
 	@echo "  make init PROJECT=<project-key> [NAME=<display-name>] [PATH=/path/to/project] [TAGS=a|b] [RELATED_CONCEPTS=a|b] [FOCUSES=a|b]"
 	@echo "  make init-project PROJECT=<project-key> [NAME=<display-name>] [PATH=/path/to/project]"
-	@echo "  make bootstrap PROJECT=<project-key> [MODEL=<model>]"
-	@echo "  make bootstrap-orient PROJECT=<project-key> [MODEL=<model>]"
-	@echo "  make bootstrap-domains PROJECT=<project-key> [MODEL=<model>]"
-	@echo "  make bootstrap-expand PROJECT=<project-key> [MODEL=<model>]"
-	@echo "  make bootstrap-validate PROJECT=<project-key>"
-	@echo "  make bootstrap-reconcile PROJECT=<project-key> [MODEL=<model>]"
-	@echo "  make validate PROJECT=<project-key>"
-	@echo "  make lint PROJECT=<project-key> [MODEL=<model>]"
-	@echo "  make ingest PROJECT=<project-key> [MODEL=<model>] [AUTO=1]"
-	@echo "  make ingest-v2 PROJECT=<project-key> [MODEL=<model>] [AUTO=1]  # alias"
-	@echo "  make ingest-apply PROJECT=<project-key> RUN=<artifacts/runs/...> [MODEL=<model>]"
-	@echo "  make ingest-global [MODEL=<model>]"
+	@echo "  make update PROJECT=<project-key>  # run the unified update pipeline"
+	@echo "  make update-v2 PROJECT=<project-key>  # deprecated alias"
+	@echo "  make update-v2-continue PROJECT=<project-key>  # resume after gated approval"
+	@echo "  make lint PROJECT=<project-key>  # standalone validate against latest run"
+	@echo "  make status PROJECT=<project-key>"
+	@echo "  make status-all"
+	@echo "  make prune [PROJECT=<project-key>] [GLOBAL=1]"
+	@echo "  make apply-pending PROJECT=<project-key> PROPOSAL=<proposal-id>  # apply deferred destructive slice"
+	@echo "  make reject-pending PROJECT=<project-key> PROPOSAL=<proposal-id>  # archive slice without applying"
+	@echo "  make measure PROJECT=<project-key>"
+	@echo "  make measure-tokens PROJECT=<project-key> TASK=\"<brief>\""
 	@echo ""
 	@echo "MODEL selector (default: codex):"
 	@echo "  MODEL=codex              use Codex CLI default model"
@@ -51,50 +50,63 @@ init-project:
 		$(if $(RELATED_CONCEPTS),--related-concepts "$(RELATED_CONCEPTS)",) \
 		$(if $(FOCUSES),--focuses "$(FOCUSES)",)
 
-bootstrap:
-	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make bootstrap PROJECT=my_project" && exit 1)
-	@./agents/bootstrap/run.sh --project "$(PROJECT)" $(if $(MODEL),--model "$(MODEL)",)
+status:
+	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
+	@./scripts/status.sh --project "$(PROJECT)"
 
-bootstrap-orient:
-	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make bootstrap-orient PROJECT=my_project" && exit 1)
-	@./agents/bootstrap/01-orient/run.sh --project "$(PROJECT)" $(if $(MODEL),--model "$(MODEL)",)
+status-all:
+	@./scripts/status.sh --all
 
-bootstrap-domains:
-	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make bootstrap-domains PROJECT=my_project" && exit 1)
-	@./agents/bootstrap/02-domain-compiler/run.sh --project "$(PROJECT)" $(if $(MODEL),--model "$(MODEL)",)
+prune:
+	@if [ -n "$(PROJECT)" ]; then \
+		./scripts/prune_artifacts.sh --project "$(PROJECT)"; \
+	elif [ "$(GLOBAL)" = "1" ]; then \
+		./scripts/prune_artifacts.sh --global; \
+	else \
+		./scripts/prune_artifacts.sh; \
+	fi
 
-bootstrap-expand:
-	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make bootstrap-expand PROJECT=my_project" && exit 1)
-	@./agents/bootstrap/03-query-expander/run.sh --project "$(PROJECT)" $(if $(MODEL),--model "$(MODEL)",)
+update:
+	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make update PROJECT=sample" && exit 1)
+	@bash scripts/update.sh --project $(PROJECT)
 
-bootstrap-validate:
-	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make bootstrap-validate PROJECT=my_project" && exit 1)
-	@./agents/bootstrap/04-validate/run.sh --project "$(PROJECT)"
+update-v2:
+	@echo "WARNING: 'make update-v2' is deprecated; use 'make update' instead." >&2
+	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make update-v2 PROJECT=sample" && exit 1)
+	@bash scripts/update.sh --project $(PROJECT)
 
-bootstrap-reconcile:
-	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make bootstrap-reconcile PROJECT=my_project" && exit 1)
-	@./agents/bootstrap/05-reconcile/run.sh --project "$(PROJECT)" $(if $(MODEL),--model "$(MODEL)",)
+update-v2-continue:
+	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make update-v2-continue PROJECT=sample" && exit 1)
+	@CONTINUE=1 bash scripts/update.sh --project $(PROJECT)
 
-validate:
-	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make validate PROJECT=my_project" && exit 1)
-	@./scripts/validate.sh --project "$(PROJECT)"
+apply-pending:
+	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
+	@test -n "$(PROPOSAL)" || (echo "PROPOSAL is required, for example: make apply-pending PROJECT=sample PROPOSAL=20260418-...-update" && exit 1)
+	@bash scripts/apply_pending.sh --project $(PROJECT) --proposal $(PROPOSAL)
+
+reject-pending:
+	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
+	@test -n "$(PROPOSAL)" || (echo "PROPOSAL is required" && exit 1)
+	@bash scripts/reject_pending.sh --project $(PROJECT) --proposal $(PROPOSAL)
 
 lint:
-	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make lint PROJECT=my_project" && exit 1)
-	@./scripts/lint.sh --project "$(PROJECT)" $(if $(MODEL),--model "$(MODEL)",)
-
-ingest:
-	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make ingest PROJECT=my_project" && exit 1)
-	@./scripts/ingest.sh --project "$(PROJECT)" $(if $(MODEL),--model "$(MODEL)",) $(if $(AUTO),--auto,)
-
-ingest-v2:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
-	@./scripts/ingest.sh --project "$(PROJECT)" $(if $(MODEL),--model "$(MODEL)",) $(if $(AUTO),--auto,)
+	@PROJECT="$(PROJECT)" PROJECTS_ROOT="$${UPDATE_PROJECTS_ROOT:-$$(pwd)/projects}" \
+	  bash -c '\
+	    project_dir="$$PROJECTS_ROOT/$$PROJECT"; \
+	    latest="$$(python3 -c "import json,sys;print(json.load(open(sys.argv[1])).get(\"latest_run_dir\") or \"\")" "$$project_dir/state/update-state.json" 2>/dev/null)"; \
+	    if [ -z "$$latest" ] || [ ! -d "$$latest" ]; then \
+	      echo "error: no prior run found (latest_run_dir empty in update-state.json). Run make update first." >&2; \
+	      exit 1; \
+	    fi; \
+	    bash agents/update/06-validate/run.sh --project "$$PROJECT" --project-dir "$$project_dir" --run-dir "$$latest" \
+	  '
 
-ingest-apply:
+measure:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
-	@test -n "$(RUN)" || (echo "RUN is required (path to artifacts/runs/<dir>)" && exit 1)
-	@./scripts/ingest_apply.sh --project "$(PROJECT)" --run-dir "$(RUN)" $(if $(MODEL),--model "$(MODEL)",)
+	@bash scripts/measure.sh --project $(PROJECT)
 
-ingest-global:
-	@./scripts/ingest.sh --global $(if $(MODEL),--model "$(MODEL)",)
+measure-tokens:
+	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
+	@test -n "$(TASK)" || (echo "TASK is required, for example: make measure-tokens PROJECT=sample TASK=\"implement rate limiting\"" && exit 1)
+	@bash scripts/measure_tokens.sh --project $(PROJECT) --task "$(TASK)"

@@ -1,0 +1,13 @@
+{
+  "stage": "02-impact.delta",
+  "response": {
+    "affected_pages": [],
+    "new_domains": [
+      {"name": "authentication", "evidence": ["src/auth.py"], "signal_sources": ["A", "B"], "ranking_inclusion": "top-20"},
+      {"name": "data-store", "evidence": ["src/db.py"], "signal_sources": ["A", "B"], "ranking_inclusion": "top-20"},
+      {"name": "entry-point", "evidence": ["src/main.py"], "signal_sources": ["A", "B"], "ranking_inclusion": "top-20"}
+    ],
+    "stale_pages": []
+  },
+  "tokens_consumed": {"input_chars": 3000, "output_chars": 400, "is_estimate": true}
+}

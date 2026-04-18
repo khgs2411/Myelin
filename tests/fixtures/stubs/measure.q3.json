@@ -1,0 +1,10 @@
+{
+  "stage": "measure.q3",
+  "response": {
+    "score": 1,
+    "answer": "Sessions are stored in SESSIONS dict per src/auth.py.",
+    "citations": ["wiki/systems/authentication.md"],
+    "reasoning": "Partial - no expiry semantics discussed."
+  },
+  "tokens_consumed": {"input_chars": 8000, "output_chars": 95, "is_estimate": true}
+}
