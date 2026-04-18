@@ -1,0 +1,12 @@
+{
+  "key": "<project-key>",
+  "name": "<Project Name>",
+  "repo_paths": [],
+  "tags": [],
+  "entry_pages": [
+    "index.md"
+  ],
+  "bootstrap_focuses": [],
+  "related_concepts": [],
+  "ignored_paths": []
+}

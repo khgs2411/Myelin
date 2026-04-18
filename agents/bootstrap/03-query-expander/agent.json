@@ -1,0 +1,7 @@
+{
+  "stage": "expand",
+  "stage_num": "03",
+  "stage_label": "query expander",
+  "pass_kind": "query-expander",
+  "summary_file": "expand.final-message.md"
+}

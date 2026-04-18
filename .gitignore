@@ -1,0 +1,15 @@
+.obsidian
+.claude
+.venv
+.DS_Store
+.uv-cache
+.pytest_cache
+
+projects
+docs
+uv.lock
+tests
+artifacts/runs
+raw/inbox
+raw/processed
+raw/rejected

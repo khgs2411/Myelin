@@ -1,0 +1,7 @@
+{
+  "stage": "domains",
+  "stage_num": "02",
+  "stage_label": "domain compiler",
+  "pass_kind": "domain-compiler",
+  "summary_file": "domains.final-message.md"
+}
