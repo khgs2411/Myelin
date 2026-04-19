@@ -331,43 +331,35 @@ fi
 cat >"$project_dir/index.md" <<EOF
 # $project_name
 
-$project_name is the entry point for the maintained \`$project_key\` project wiki.
+$project_name landing page (scaffold - will be rewritten by the first \`make update\` run).
 
 ## Start Here
 
-- The architecture overview will be created by Stage 1 of bootstrap.
-
-## Current Priorities
-
-- No verified project priorities are documented in source materials yet.
+- (populated after first update run)
 
 ## Architecture
 
-- The architecture overview will be created by Stage 1 of bootstrap.
+- (populated after first update run)
 
 ## Systems And Modules
 
-- No canonical system or module pages have been compiled yet.
+- (populated after first update run)
 
 ## Integrations
 
-- No integration pages have been compiled yet.
+- (populated after first update run)
 
 ## Decisions
 
-- No durable decision pages have been compiled yet.
+- (populated after first update run)
 
 ## Runbooks
 
-- No project-specific runbooks have been compiled yet.
-
-## Known Risky Or Stale Areas
-
-- This wiki has not been bootstrapped against the mapped repo yet.
+- (populated after first update run)
 
 ## Recent Sessions
 
-- No durable session summaries yet.
+- (populated after first update run)
 EOF
 
 cat >"$project_dir/changelog.md" <<EOF

@@ -22,6 +22,32 @@ _ALLOWED_SOURCE_KINDS = {
     "troubleshooting",
 }
 
+# Phrases that mean the writer described the wiki instead of the project. Any
+# of these appearing in index.md's opening sentence or in Current Priorities
+# is a blocker - CLAUDE.md writing-style rules ban this explicitly and the
+# first run of rpg_game showed the model will default to this framing unless
+# validate enforces it.
+_WIKI_META_OPENING_PHRASES = (
+    "entry point for the maintained",
+    "is the entry point for",
+    "project wiki",
+    "this wiki",
+    "maintained knowledge layer",
+    "baseline pass",
+    "baseline established",
+    "broad bootstrap",
+    "focused follow-up pass",
+    "has not been bootstrapped",
+)
+
+_WIKI_META_PRIORITIES_PHRASES = (
+    "establish the canonical",
+    "keep system pages grounded",
+    "no verified project priorities",
+    "first canonical bootstrap",
+    "bootstrap against the mapped repo",
+)
+
 
 def _wiki_pages(project_dir: Path) -> list[Path]:
     wiki = project_dir / "wiki"
@@ -221,6 +247,162 @@ def pages_json_filesystem_agreement(project_dir: Path) -> list[dict]:
                 "pages_json_filesystem_agreement",
             )
         )
+    return findings
+
+
+def index_not_wiki_meta(project_dir: Path) -> list[dict]:
+    """Block index.md content that describes the wiki instead of the project.
+
+    The index must open by answering "what is this project" - not "what is
+    this wiki." Current Priorities must carry real project priorities (or
+    read honestly about the uncertain state of them), not bootstrap/wiki-
+    construction narration.
+    """
+    findings: list[dict] = []
+    index_path = project_dir / "index.md"
+    if not index_path.is_file():
+        return findings
+    text = index_path.read_text()
+    lines = text.splitlines()
+
+    # First non-heading, non-empty line after the title heading should be a
+    # project summary. If it contains any banned meta phrase, flag it.
+    opening = ""
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        opening = stripped
+        break
+
+    opening_lc = opening.lower()
+    for phrase in _WIKI_META_OPENING_PHRASES:
+        if phrase in opening_lc:
+            findings.append(
+                _finding(
+                    "index.md",
+                    f"opening line narrates the wiki itself (contains {phrase!r}); "
+                    "first non-heading line must describe the project, not the wiki",
+                    "index_not_wiki_meta.opening",
+                )
+            )
+            break
+
+    # Current Priorities block: everything between `## Current Priorities`
+    # and the next `##` heading. Banned phrases here are wiki-construction
+    # narration rather than real project priorities.
+    current_priorities_body: list[str] = []
+    in_section = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.lower().startswith("## current priorities"):
+            in_section = True
+            continue
+        if in_section and stripped.startswith("## "):
+            break
+        if in_section:
+            current_priorities_body.append(line)
+
+    body_lc = "\n".join(current_priorities_body).lower()
+    for phrase in _WIKI_META_PRIORITIES_PHRASES:
+        if phrase in body_lc:
+            findings.append(
+                _finding(
+                    "index.md",
+                    f"Current Priorities narrates wiki construction (contains {phrase!r}); "
+                    "replace with real project priorities or remove the section",
+                    "index_not_wiki_meta.current_priorities",
+                )
+            )
+            break
+
+    return findings
+
+
+def ranked_domain_coverage(run_dir: Path, ranking_snapshot: dict) -> list[dict]:
+    """Every ranked domain must have a home: a dedicated page or a defer.
+
+    Without this rule propose collapses high-ranked domains into umbrella
+    pages, so targeted lookups ('where is entity dispatch defined?') fail
+    even though the domain scored in the top-N. The ranking cutoff already
+    caps the set by project size, so the rule scales automatically: small
+    projects get every ranked domain on its own page, large projects get
+    the top-N with everything else explicitly deferred.
+
+    A ranked domain is considered "homed" if:
+      - it appears in at least one unit's referenced_ranking_domains, OR
+      - it appears in deferred_domains with a non-empty reason.
+    """
+    findings: list[dict] = []
+    proposal_path = run_dir / "proposal.json"
+    if not proposal_path.is_file():
+        return findings
+    proposal = json.loads(proposal_path.read_text())
+
+    ranked_domains = [
+        entry.get("domain")
+        for entry in ranking_snapshot.get("ranked_domains", [])
+        if isinstance(entry, dict) and entry.get("domain")
+    ]
+
+    homed: set[str] = set()
+    for unit in proposal.get("units", []):
+        for domain in unit.get("referenced_ranking_domains", []):
+            if domain:
+                homed.add(domain)
+
+    for deferred in proposal.get("deferred_domains", []):
+        if not isinstance(deferred, dict):
+            continue
+        domain = deferred.get("domain")
+        reason = (deferred.get("reason") or "").strip()
+        if domain and reason:
+            homed.add(domain)
+
+    for domain in ranked_domains:
+        if domain not in homed:
+            findings.append(
+                _finding(
+                    "proposal.json",
+                    f"ranked domain '{domain}' has no home: not referenced by any "
+                    "unit and not listed in deferred_domains with a reason",
+                    "ranked_domain_coverage",
+                )
+            )
+
+    return findings
+
+
+def domain_collapse_check(run_dir: Path) -> list[dict]:
+    """Flag units that collapse 3+ ranked domains into one destination page.
+
+    Collapsing is how the first rpg_game run produced an umbrella
+    `mvp-dungeon-and-quest-loop.md` that folded dungeoneering, questing,
+    dynamic mobs, inventory, and loadout into a single page - defeating
+    targeted lookup. Allow 2 domains per page (natural pairing), blocker
+    at 3+.
+    """
+    findings: list[dict] = []
+    proposal_path = run_dir / "proposal.json"
+    if not proposal_path.is_file():
+        return findings
+    proposal = json.loads(proposal_path.read_text())
+
+    for unit in proposal.get("units", []):
+        referenced = [d for d in unit.get("referenced_ranking_domains", []) if d]
+        if len(set(referenced)) >= 3:
+            findings.append(
+                _finding(
+                    "proposal.json",
+                    f"unit {unit.get('id', '<no-id>')} "
+                    f"page_path={unit.get('page_path')!r} collapses "
+                    f"{len(set(referenced))} ranked domains "
+                    f"({sorted(set(referenced))}); split into dedicated pages "
+                    "or justify via deferred_domains",
+                    "domain_collapse_check",
+                )
+            )
+
     return findings
 
 

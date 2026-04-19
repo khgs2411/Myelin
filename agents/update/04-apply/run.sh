@@ -216,7 +216,7 @@ for unit in additive_units:
         page_path.parent.mkdir(parents=True, exist_ok=True)
         page_path.write_text(unit.get("content") or "")
 
-index_changes = proposal.get("index_changes", {})
+index_changes = proposal.get("index_changes") or {}
 if index_changes.get("action") == "update" and index_changes.get("content"):
     # index_changes shelf policy is enforced in validate via on-disk shelf checks
     # plus index link resolution, so apply keeps this path simple.
@@ -246,6 +246,29 @@ for unit in additive_units:
         "last_reviewed_at": now,
         "freshness_status": "fresh",
     }
+
+# Also refresh the index.md entry when index_changes rewrote it. Without this,
+# pages.json carries the scaffold-era summary forever and impact-stage stale
+# reasoning drifts on every incremental run.
+if index_changes.get("action") == "update" and index_changes.get("content"):
+    new_index_content = index_changes["content"]
+    # Summary: first non-empty, non-heading line of the new index.md body.
+    summary = ""
+    for line in new_index_content.splitlines():
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#"):
+            summary = stripped[:200]
+            break
+    pages_by_path["index.md"] = {
+        "path": "index.md",
+        "type": "index",
+        "summary": summary,
+        "linked_sources": [],
+        "linked_topics": [],
+        "last_reviewed_at": now,
+        "freshness_status": "fresh",
+    }
+
 pages_path.write_text(json.dumps({"pages": list(pages_by_path.values())}, indent=2) + "\n")
 
 relationships_path = project_dir / "state" / "relationships.json"

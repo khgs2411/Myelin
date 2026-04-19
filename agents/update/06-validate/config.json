@@ -17,7 +17,10 @@
       "proposal_referenced_ranking_domains",
       "proposal_max_new_pages",
       "proposal_source_classification",
-      "shelf_allowlist"
+      "shelf_allowlist",
+      "index_not_wiki_meta",
+      "ranked_domain_coverage",
+      "domain_collapse_check"
     ],
     "shelf_allowlist": [
       "architecture",

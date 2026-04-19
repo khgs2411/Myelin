@@ -150,6 +150,13 @@ EOM
     fi
   fi
 
+  # Auto-generate acceptance questions by dogfooding the fresh wiki. Non-fatal:
+  # failures here don't block commit-pointer advancement, because the wiki is
+  # already valid and the questions file can always be regenerated or edited.
+  bash "$STAGES_ROOT/05-acceptance/run.sh" \
+    --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" \
+    || echo "[$key] acceptance question generation skipped (non-fatal)" >&2
+
   PROJECTS_ROOT="$PROJECTS_ROOT" bash "$ROOT_DIR/scripts/apply_commit.sh" --project "$key" || return 1
 
   echo "[$key] pipeline complete"

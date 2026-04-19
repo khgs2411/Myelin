@@ -8,6 +8,63 @@ The goal is to make agent behavior predictable, reusable, and safe enough that p
 
 If any instruction here conflicts with ad hoc conversation phrasing, prefer this file unless the user explicitly overrides it for the current task.
 
+## Developer Quick Start
+
+```bash
+# Scaffold a new project
+make init PROJECT=<key> NAME="<Display>" PATH=/abs/path/to/repo
+
+# Run the full pipeline (sense -> impact -> propose -> apply -> validate -> [reconcile] -> acceptance -> commit)
+make update PROJECT=<key> AUTO=1
+
+# Re-run validate against the latest run without re-running earlier stages
+make lint PROJECT=<key>
+
+# Score the wiki against acceptance-questions.md (second-brain quality signal)
+make measure PROJECT=<key>
+
+# Resume after a gated approval
+make update-v2-continue PROJECT=<key>
+
+# Tests (pre-existing failures: test_plan_{a,b}_acceptance, test_state_migration
+# depend on a projects/sample/ fixture not present in every working tree)
+.venv/bin/pytest tests/ -q
+```
+
+### Environment variables
+
+| Var | Effect |
+|-----|--------|
+| `MODEL=codex` / `codex/<id>` / `claude` / `claude/<id>` | LLM backend + model selector (default: codex) |
+| `AUTO=1` | Propose writes `approved=true`, destructive units defer to `pending-approvals/` |
+| `CONTINUE=1` | Resume from latest run's `proposal.json` (post-approval) |
+| `LLM_STUB_RESPONSES_DIR=<path>` | Use canned responses instead of live LLM (stub tests) |
+| `UPDATE_PROJECTS_ROOT` / `UPDATE_ARTIFACTS_ROOT` / `UPDATE_STAGES_ROOT` | Override roots (tests) |
+| `RANKING_CUTOFF=<n>` | Override ranking snapshot cutoff |
+| `CODEX_BIN` / `CLAUDE_BIN` | Override CLI binary path |
+
+## Repo Layout
+
+- `agents/update/<stage>/` - each pipeline stage as `{config.json, instructions.md, run.sh}`. Stages: `01-sense`, `02-impact`, `03-propose`, `04-apply`, `05-acceptance`, `06-validate`, `07-reconcile`, `measure`.
+- `agents/update/_shared/` - `llm_client.py` (codex/claude wrapper), `state.py`, `config.py`.
+- `scripts/` - orchestration (`update.sh`, `measure.sh`, `apply_commit.sh`, `init_project.sh`, `validate_stage_configs.py`, `stable_products.py`).
+- `projects/<project-key>/` - per-project knowledge: `index.md`, `wiki/{architecture,systems,modules,integrations,decisions,runbooks,sessions,glossary,open-questions}/`, `state/{project.json,pages.json,freshness.json,sources.json,relationships.json,update-state.json,latest/}`, `inbox/`, `acceptance-questions.md`, `changelog.md`.
+- `artifacts/<project-key>/runs/<ts>-update/` - per-run pipeline output: `sense-report.json`, `ranking-snapshot.json`, `impact-report.json`, `proposal.{json,md}`, `validation-findings.json`, `reconcile-proposal.json`.
+- `raw/` - global unclassified intake (`inbox/`, `processed/`, `rejected/`).
+- `concepts/` - cross-project knowledge pages.
+- `tests/` - pytest suite; run via `.venv/bin/pytest`.
+
+## Pipeline Development Gotchas
+
+When touching stage code or LLM-stage instructions, these pitfalls have each burned the pipeline at least once:
+
+- **Codex must run with `--sandbox read-only`.** `agents/update/_shared/llm_client.py` sets this. Without it, codex helpfully writes the expected JSON artifact to disk and returns a markdown status message that the JSON parser can't decode. Symptom: `json.decoder.JSONDecodeError: Expecting value: line 1 column 1` with stdout starting `"Wrote [foo.json](/abs/path)"`.
+- **LLM-stage instructions must say "Return ONLY this JSON object on stdout" - never "Write `<run-dir>/foo.json`".** Even with sandbox lockdown, "Write" phrasing shifts the model into describe-what-I-wrote mode. All LLM stages (`02-impact`, `03-propose`, `05-acceptance`, `06-validate` semantic sub-task, `07-reconcile`) follow this rule. `llm_client._recover_from_referenced_file` is a defense-in-depth fallback only.
+- **`04-apply/run.sh` must refresh `pages.json` when `index.md` is rewritten**, not only when additive wiki units are applied. Skipping this causes metadata drift that corrupts `02-impact`'s stale-reasoning on the next run.
+- **Validator rules live in `agents/update/06-validate/structural.py`**, are registered in `06-validate/config.json::stage_specific.structural_rules`, AND must be wired into `06-validate/run.sh`'s finding loop. Missing any one of the three = silent skip.
+- **RTK hook only rewrites Bash tool calls.** `Read`, `Grep`, `Glob` bypass RTK. For token-heavy file reads or greps, shell out (`rtk read`, `rtk grep`, `rtk find`) or use the Bash tool.
+- **`projects/sample/` fixture is not always present.** `test_plan_{a,b}_acceptance.py` and `test_state_migration.py::test_sample_project_registered` will fail without it - these are pre-existing, not regressions.
+
 ## System Model
 
 Scope: software repositories only. Do not attempt to ingest non-repo content dropped into the inbox — classify as `unknown` and route to `needs-review`.
@@ -57,10 +114,10 @@ When starting work in or about a repo, follow this order exactly:
 2. Read `projects/<project-key>/state/project.json`.
 3. Read `projects/<project-key>/index.md`.
 4. Read recent entries from `projects/<project-key>/changelog.md`.
-6. Read freshness metadata from `projects/<project-key>/state/freshness.json`.
-7. Read the smallest relevant set of wiki pages for the task.
-8. Read raw sources only if the wiki is missing, stale, ambiguous, or clearly insufficient.
-9. Read repo files only where verification or implementation requires it.
+5. Read freshness metadata from `projects/<project-key>/state/freshness.json`.
+6. Read the smallest relevant set of wiki pages for the task.
+7. Read raw sources only if the wiki is missing, stale, ambiguous, or clearly insufficient.
+8. Read repo files only where verification or implementation requires it.
 
 Do not skip directly to repo exploration unless:
 
@@ -81,9 +138,12 @@ The stages are:
 4. apply
 5. validate
 6. reconcile when validate fails
-7. apply commit only after validate passes
+7. acceptance (auto-generates `acceptance-questions.md` by dogfooding the fresh wiki if the file is still at the scaffold default; operator edits are sticky)
+8. apply commit only after validate passes
 
 Treat validate as the gate. A run is not complete until validation passes and the commit pointer advances.
+
+Validate's structural layer enforces `index_not_wiki_meta` (blocks wiki-meta narration on `index.md`), `ranked_domain_coverage` (every ranked domain needs a dedicated page or a deferred-with-reason entry), and `domain_collapse_check` (blocker when 3+ ranked domains collapse into one destination page). See `agents/update/06-validate/structural.py` for the full rule set.
 
 Reconcile is bounded to one loop iteration. If validate still fails after reconcile, stop and surface the findings instead of improvising further changes.
 

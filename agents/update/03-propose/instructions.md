@@ -23,6 +23,8 @@ Return ONLY the `proposal.json` JSON object on stdout, per spec Section 5.3. Do 
 5. Every `source_citations` entry must resolve to a real file and line range in the repo.
 6. `destructive: true` on any unit or `index_changes.destructive: true` forces approval even under `AUTO=1`.
 7. `uncertainty: high` on any unit forces approval even under `AUTO=1`.
+8. **Every ranked domain in `ranking-snapshot.json.ranked_domains` must have a home.** Either (a) a dedicated page unit where that domain is the primary subject and appears in `referenced_ranking_domains`, OR (b) an entry in `deferred_domains` with a concrete reason (e.g., "insufficient source material", "naturally folds into X page", "covered by existing Y page"). Do NOT silently drop ranked domains. Validate enforces this via `ranked_domain_coverage`.
+9. **Do not collapse 3+ ranked domains into one destination page.** Two related domains on one page is fine; three or more is a blocker unless the extras are also listed in `deferred_domains` with a reason. Prefer a dedicated page per domain - the ranking cutoff already scales with project size. Validate enforces this via `domain_collapse_check`.
 
 ## Approval Gate
 
@@ -104,3 +106,12 @@ Every unit's `content` string must conform to the structural validator in `agent
 - The page MUST contain a `## Repo pointers` section listing the concrete `path:line-range` citations that ground the page. Use the format `` - `path/to/file.ext:LINE_START-LINE_END` - short label ``.
 - The page MUST contain a `## Related` section linking to sibling wiki pages; omit the section only if no real cross-links exist (but prefer to include at least one real link).
 - Ground all factual claims with inline citations in backticks, e.g. `` (`server/README.md:39-43`) ``. Do not use `Verified:` / `Inferred:` / `Stale risk:` as structural section decorators.
+
+### Index.md contract (separate from wiki pages)
+
+`index_changes.content` is the project's landing page. It is the first thing a cold future session reads. Treat it as **project-facing**, never wiki-facing.
+
+- The first non-heading line MUST describe the project itself: what it is, what it does, what its major surfaces are. It must NOT describe this wiki, the llm-wiki system, the ingestion pipeline, or the agent's own work.
+- Banned opening phrases (validate will block these): "entry point for the maintained...", "is the entry point for...", "project wiki", "this wiki", "maintained knowledge layer", "has not been bootstrapped", "baseline pass", "broad bootstrap", "focused follow-up pass".
+- `## Current Priorities` must contain real project priorities derived from sources, or be omitted / honestly marked as unknown. It must NOT contain wiki-construction narration like "Establish the canonical...", "Keep system pages grounded...", "No verified project priorities are documented...", "first canonical bootstrap", "bootstrap against the mapped repo".
+- `index.md` MAY include a final `## Status` block pointing at machine-readable state files (freshness.json, ranking-snapshot.md, etc.) - this is the one place where pointing at wiki infrastructure is allowed.

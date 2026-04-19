@@ -30,6 +30,7 @@ python3 - "$project_key" "$project_dir" "$aq_path" "$ROOT_DIR" <<'PY'
 import json
 import re
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -61,23 +62,49 @@ wiki_concat = "\n\n".join(wiki_chunks)
 if len(wiki_concat) > 50000:
     wiki_concat = wiki_concat[:50000] + "\n... [truncated]"
 
+total_questions = len(questions)
+print(
+    f"measure: scoring {total_questions} question(s) against "
+    f"{len(wiki_chunks)} wiki chunk(s) ({len(wiki_concat)} chars)",
+    file=sys.stderr,
+    flush=True,
+)
+
 per_question = []
-for question in questions:
+wall_start = time.time()
+for pos, question in enumerate(questions, start=1):
     stage_id = f"measure.q{question['index']}"
+    preview = question["text"][:72] + ("..." if len(question["text"]) > 72 else "")
+    print(
+        f"  [{pos}/{total_questions}] Q{question['index']}: {preview}",
+        file=sys.stderr,
+        flush=True,
+    )
+    q_start = time.time()
     prompt = json.dumps({"question": question["text"], "wiki": wiki_concat})
     try:
         result = llm_client.invoke(stage_id=stage_id, prompt=prompt)
         response = result["response"]
+        score = response.get("score", 0)
         per_question.append(
             {
                 "index": question["index"],
                 "question": question["text"],
-                "score": response.get("score", 0),
+                "score": score,
                 "answer": response.get("answer", ""),
                 "citations": response.get("citations", []),
                 "reasoning": response.get("reasoning", ""),
                 "tokens_consumed": result.get("tokens_consumed", {}),
             }
+        )
+        elapsed = time.time() - q_start
+        running = sum(item.get("score") or 0 for item in per_question)
+        running_max = 2 * len(per_question)
+        print(
+            f"  [{pos}/{total_questions}] -> score={score}/2 "
+            f"({elapsed:.1f}s, running {running}/{running_max})",
+            file=sys.stderr,
+            flush=True,
         )
     except (FileNotFoundError, RuntimeError) as exc:
         per_question.append(
@@ -91,6 +118,20 @@ for question in questions:
                 "tokens_consumed": {},
             }
         )
+        elapsed = time.time() - q_start
+        print(
+            f"  [{pos}/{total_questions}] -> ERROR ({elapsed:.1f}s): {exc}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+wall_elapsed = time.time() - wall_start
+print(
+    f"measure: {total_questions} question(s) scored in {wall_elapsed:.1f}s "
+    f"({wall_elapsed / max(total_questions, 1):.1f}s avg)",
+    file=sys.stderr,
+    flush=True,
+)
 
 total = sum(item.get("score") or 0 for item in per_question)
 max_possible = 2 * len(per_question)

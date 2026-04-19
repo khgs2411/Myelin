@@ -76,6 +76,9 @@ structural_findings.extend(structural.no_dead_cross_refs(project_dir))
 structural_findings.extend(structural.no_orphan_pages(project_dir))
 structural_findings.extend(structural.index_routing_resolves(project_dir))
 structural_findings.extend(structural.pages_json_filesystem_agreement(project_dir))
+structural_findings.extend(structural.index_not_wiki_meta(project_dir))
+structural_findings.extend(structural.ranked_domain_coverage(run_dir, ranking))
+structural_findings.extend(structural.domain_collapse_check(run_dir))
 structural_findings.extend(structural.validate_proposal(run_dir, ranking, allowed_shelves))
 
 structural_blockers = [finding for finding in structural_findings if finding.get("severity") == "blocker"]
