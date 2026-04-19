@@ -11,9 +11,11 @@ You are the reconcile stage, invoked only when the validate stage reported `stat
 
 ## Output
 
-Write `<run-dir>/reconcile-proposal.json` using the same schema as `proposal.json`.
+Return ONLY the reconcile proposal JSON object on stdout, using the same schema as `proposal.json`. Do not write any files yourself; the pipeline's `run.sh` writes `<run-dir>/reconcile-proposal.json` from your stdout.
 
 ## Required output schema
+
+Return ONLY this JSON object. Do not include prose, apologies, markdown fences, or status messages around it.
 
 ```json
 {
@@ -50,3 +52,4 @@ Emit no units and set `approved: false` when the right fix is ambiguous or needs
 - Same hard rules as propose: justification signals, shelf allowlist, source classification, and resolvable citations.
 - `max_loop_iterations` is 1.
 - Approval mode mirrors the original proposal.
+- Do not include prose, apologies, or markdown fences around the JSON. Do not write any files to disk; stdout is the sole channel.

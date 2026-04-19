@@ -50,7 +50,10 @@ def test_codex_backend_command_shape(monkeypatch):
     assert cmd[1] == "exec"
     assert "--skip-git-repo-check" in cmd
     assert cmd[-1] == "-"
-    assert "--sandbox" not in cmd
+    # Sandbox must be read-only: prevents codex from writing the JSON payload
+    # to disk and replying with a markdown status message that can't be parsed.
+    assert "--sandbox" in cmd
+    assert cmd[cmd.index("--sandbox") + 1] == "read-only"
     assert "--add-dir" not in cmd
     assert "-o" not in cmd
     assert captured["stdin"] is not None
@@ -154,6 +157,81 @@ def test_malformed_json_response_raises(monkeypatch):
     monkeypatch.setattr(subprocess, "run", fake_run)
     with pytest.raises(RuntimeError, match="response is not valid JSON"):
         llm_client.invoke(stage_id="03-propose", prompt="x")
+
+
+def test_codex_response_with_fenced_json_is_recovered(monkeypatch):
+    """Codex sometimes wraps the JSON answer in prose plus a fenced json block."""
+    llm_client = _import_client()
+    monkeypatch.delenv("LLM_STUB_RESPONSES_DIR", raising=False)
+    monkeypatch.setenv("MODEL", "codex")
+
+    def fake_run(cmd, **kwargs):
+        return MagicMock(
+            returncode=0,
+            stdout=(
+                "Semantic pass. Coverage looks good.\n\n"
+                "```json\n"
+                '{\n  "findings": []\n}\n'
+                "```"
+            ),
+            stderr="",
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    out = llm_client.invoke(stage_id="06-validate.semantic", prompt="x")
+    assert out["response"] == {"findings": []}
+
+
+def test_codex_response_with_markdown_link_before_json_is_recovered(monkeypatch):
+    """A markdown link in prose must not be mistaken for a JSON array."""
+    llm_client = _import_client()
+    monkeypatch.delenv("LLM_STUB_RESPONSES_DIR", raising=False)
+    monkeypatch.setenv("MODEL", "codex")
+
+    def fake_run(cmd, **kwargs):
+        return MagicMock(
+            returncode=0,
+            stdout=(
+                "Wrote the reconcile output to "
+                "[reconcile-proposal.json](/tmp/reconcile-proposal.json).\n\n"
+                '{\n  "summary": "reconcile: no autonomous fix possible",\n'
+                '  "approved": false,\n'
+                '  "units": []\n'
+                "}\n"
+            ),
+            stderr="",
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    out = llm_client.invoke(stage_id="07-reconcile", prompt="x")
+    assert out["response"] == {
+        "summary": "reconcile: no autonomous fix possible",
+        "approved": False,
+        "units": [],
+    }
+
+
+def test_codex_response_with_plain_fenced_json_is_recovered(monkeypatch):
+    """A plain fenced block without a json language tag should still parse."""
+    llm_client = _import_client()
+    monkeypatch.delenv("LLM_STUB_RESPONSES_DIR", raising=False)
+    monkeypatch.setenv("MODEL", "codex")
+
+    def fake_run(cmd, **kwargs):
+        return MagicMock(
+            returncode=0,
+            stdout=(
+                "Result follows.\n\n"
+                "```\n"
+                '{\n  "approved": false,\n  "units": []\n}\n'
+                "```"
+            ),
+            stderr="",
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    out = llm_client.invoke(stage_id="07-reconcile", prompt="x")
+    assert out["response"] == {"approved": False, "units": []}
 
 
 def test_non_zero_exit_raises(monkeypatch):

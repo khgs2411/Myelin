@@ -30,11 +30,11 @@ Both must return `status: pass` for the overall stage to pass. Any blocker-sever
 11. `proposal_source_classification`
 12. `shelf_allowlist`
 
-## Semantic sub-task
+## Semantic sub-task (LLM output contract)
 
 Skip the semantic LLM sub-task if structural checks emit any blocker findings.
 
-Required output schema:
+Return ONLY this JSON object on stdout. Do not write any files to disk; the stage's `run.sh` composes and writes `validation-findings.json` from your stdout plus the deterministic structural findings. Do not include prose, apologies, markdown fences, or status messages around the JSON.
 
 ```json
 {
@@ -50,18 +50,6 @@ Required output schema:
 }
 ```
 
-## Output
+## Pipeline-side output (not your responsibility)
 
-Write `<run-dir>/validation-findings.json` with:
-
-```json
-{
-  "run_id": "<ts>-update-<key>",
-  "status": "pass | fail",
-  "pass_count": {"structural": 12, "semantic": 5},
-  "structural": [{"page": "...", "issue": "...", "severity": "blocker|warn", "rule_id": "..."}],
-  "semantic": [{"category": "...", "severity": "...", "pages": ["..."], "evidence": "...", "suggested_action": "..."}]
-}
-```
-
-Also update `state/update-state.json.stages.validate` with the latest findings path.
+For context only - `run.sh` merges your `findings` with the deterministic structural findings and writes the combined report to `<run-dir>/validation-findings.json`, then updates `state/update-state.json.stages.validate`. You do not write either of these files.

@@ -24,6 +24,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -66,12 +67,59 @@ def _parse_codex_response(stdout: str) -> dict:
     if not text:
         raise RuntimeError("codex returned empty output")
     try:
-        return json.loads(text)
+        return _parse_jsonish_text(text)
+    except json.JSONDecodeError:
+        pass
+
+    recovered = _recover_from_referenced_file(text)
+    if recovered is not None:
+        return recovered
+
+    try:
+        return _parse_jsonish_text(text)
     except json.JSONDecodeError as exc:
         raise RuntimeError(
             f"response is not valid JSON: {exc}\n"
             f"first 500 chars: {text[:500]!r}"
         ) from exc
+
+
+def _recover_from_referenced_file(text: str) -> dict | None:
+    """Last-resort recovery: codex wrote its JSON to disk and narrated.
+
+    When codex runs with a writable sandbox, it will sometimes "help" by writing
+    the expected artifact to disk and replying with a markdown status message
+    like: `Wrote [reconcile-proposal.json](/abs/path/reconcile-proposal.json)`.
+    That stdout is un-parseable by itself, but the real payload is on disk. We
+    scan the prose for markdown-link-style absolute JSON paths, try each, and
+    return the first one that parses as a JSON object.
+
+    This is defense-in-depth against drift in codex tooling or instructions; the
+    primary fix is to run codex with `--sandbox read-only` so it cannot write
+    in the first place.
+    """
+    # Match (/abs/path/to/file.json) or (/abs/path/to/file.json "title")
+    pattern = re.compile(r"\((/[^)\s]+?\.json)(?:\s+\"[^\"]*\")?\)")
+    seen: set[str] = set()
+    for match in pattern.finditer(text):
+        candidate = match.group(1)
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        path = Path(candidate)
+        if not path.is_file():
+            continue
+        try:
+            raw = path.read_text()
+        except OSError:
+            continue
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+    return None
 
 
 def _parse_claude_response(stdout: str) -> dict:
@@ -92,12 +140,81 @@ def _parse_claude_response(stdout: str) -> dict:
             f"{list(wrapper.keys())}"
         )
     try:
-        return json.loads(inner)
+        return _parse_jsonish_text(inner)
     except json.JSONDecodeError as exc:
         raise RuntimeError(
             f"response is not valid JSON: {exc}\n"
             f"first 500 chars of result: {inner[:500]!r}"
         ) from exc
+
+
+def _parse_jsonish_text(text: str) -> dict:
+    """Parse direct JSON or recover a JSON payload from wrapper prose."""
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    for fenced in re.finditer(r"```(?:json)?\s*(.*?)\s*```", text, flags=re.IGNORECASE | re.DOTALL):
+        try:
+            return json.loads(fenced.group(1))
+        except json.JSONDecodeError:
+            continue
+
+    for candidate in _iter_json_candidates(text):
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+
+    return json.loads(text)
+
+
+def _iter_json_candidates(text: str):
+    """Yield balanced JSON-looking object/array substrings from prose."""
+    for idx, char in enumerate(text):
+        if char not in "{[":
+            continue
+        candidate = _extract_balanced_json_value(text, idx)
+        if candidate is not None:
+            yield candidate
+
+
+def _extract_balanced_json_value(text: str, start: int) -> str | None:
+    """Return a balanced JSON object/array starting at `start`, if any."""
+    if start < 0 or start >= len(text) or text[start] not in "{[":
+        return None
+
+    stack: list[str] = []
+    in_string = False
+    escape = False
+    for idx in range(start, len(text)):
+        char = text[idx]
+        if in_string:
+            if escape:
+                escape = False
+            elif char == "\\":
+                escape = True
+            elif char == '"':
+                in_string = False
+            continue
+
+        if char == '"':
+            in_string = True
+            continue
+        if char in "{[":
+            stack.append(char)
+            continue
+        if char in "}]":
+            if not stack:
+                return None
+            opener = stack.pop()
+            if (opener, char) not in {("{", "}"), ("[", "]")}:
+                return None
+            if not stack:
+                return text[start : idx + 1]
+
+    return None
 
 
 def _resolve_backend() -> tuple[str, str]:
@@ -147,7 +264,13 @@ def _invoke_real(stage_id: str, prompt: str) -> dict[str, Any]:
             )
         response = _parse_claude_response(result.stdout)
     else:
-        cmd = [CODEX_BIN, "exec", "--skip-git-repo-check"]
+        cmd = [
+            CODEX_BIN,
+            "exec",
+            "--skip-git-repo-check",
+            "--sandbox",
+            "read-only",
+        ]
         if model_id:
             cmd += ["--model", model_id]
         cmd.append("-")

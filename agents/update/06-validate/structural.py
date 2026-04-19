@@ -193,6 +193,13 @@ def pages_json_filesystem_agreement(project_dir: Path) -> list[dict]:
     if not pages_path.is_file():
         return findings
     on_disk = {str(page.relative_to(project_dir)) for page in _wiki_pages(project_dir)}
+    project_json_path = project_dir / "state" / "project.json"
+    if project_json_path.is_file():
+        project_json = json.loads(project_json_path.read_text())
+        for rel in project_json.get("entry_pages", []):
+            path = project_dir / rel
+            if path.is_file():
+                on_disk.add(str(path.relative_to(project_dir)))
     in_state = {
         entry["path"]
         for entry in json.loads(pages_path.read_text()).get("pages", [])

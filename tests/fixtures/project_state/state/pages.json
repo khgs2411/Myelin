@@ -1,1 +1,13 @@
-{"pages": []}
+{
+  "pages": [
+    {
+      "path": "index.md",
+      "type": "index",
+      "summary": "Primary entry point for the sample knowledge space.",
+      "linked_sources": [],
+      "linked_topics": [],
+      "last_reviewed_at": "2026-04-18T00:00:00+00:00",
+      "freshness_status": "scaffold"
+    }
+  ]
+}

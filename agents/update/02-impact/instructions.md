@@ -16,7 +16,7 @@ Both sub-tasks run in the same stage invocation but produce two distinct artifac
 
 ## Sub-task 1: Ranking
 
-Produce `<run-dir>/ranking-snapshot.json` per spec Section 4.3.
+Return the ranking JSON (schema in `## Required output schema` below) on stdout per spec Section 4.3. Do not write any files to disk; `run.sh` writes `<run-dir>/ranking-snapshot.json` from your stdout.
 
 Steps:
 1. Signal A — collect meta-docs matching `meta_doc_patterns`. Record paths.
@@ -35,7 +35,7 @@ Output must be strict JSON (no prose outside schema).
 
 ## Sub-task 2: Delta
 
-Produce `<run-dir>/impact-report.json` per spec Section 5.4.
+Return the delta JSON (schema in `## Required output schema` below) on stdout per spec Section 5.4. Do not write any files to disk; `run.sh` writes `<run-dir>/impact-report.json` from your stdout.
 
 Steps:
 1. For each `changed_paths` entry in sense-report: map to affected wiki pages via `pages.json`. Emit `affected_pages[]` with reason + source.

@@ -12,9 +12,7 @@ You are the `propose` stage of the unified update pipeline. You draft a full cha
 
 ## Output
 
-Write two paired artifacts to the run directory:
-- `proposal.json` - machine payload per spec Section 5.3
-- `proposal.md` - human render grouped by action, destructive units visibly separated
+Return ONLY the `proposal.json` JSON object on stdout, per spec Section 5.3. Do not write any files to disk; the stage's `run.sh` writes `<run-dir>/proposal.json` from your stdout and renders `<run-dir>/proposal.md` deterministically from that JSON. The `## Required output schema` section below is your sole output contract.
 
 ## Rules
 
@@ -97,3 +95,12 @@ Return ONLY this JSON object:
 - `page_path` and `rename_from` must begin with one of these allowed shelves: `wiki/architecture/`, `wiki/systems/`, `wiki/modules/`, `wiki/integrations/`, `wiki/decisions/`, `wiki/runbooks/`, `wiki/sessions/`, `wiki/glossary/`, `wiki/open-questions/`. Do not invent new shelf names such as `wiki/runtime/`, `wiki/core/`, or `wiki/utils/`; apply rejects them and validate reports them as `shelf_allowlist` blockers.
 - `action: "delete"` requires `content: null`.
 - Do not include prose, apologies, or markdown fences around the JSON.
+
+### Required page structure (validator contract)
+
+Every unit's `content` string must conform to the structural validator in `agents/update/06-validate/structural.py`. Failing this guarantees validate will fail and reconcile will be invoked.
+
+- Do NOT open the page with a heading line. The first non-empty line must be a single-sentence prose summary that answers "what is this." Do not emit a leading `# Title` H1; the page's title is carried by its filename and by `index.md`.
+- The page MUST contain a `## Repo pointers` section listing the concrete `path:line-range` citations that ground the page. Use the format `` - `path/to/file.ext:LINE_START-LINE_END` - short label ``.
+- The page MUST contain a `## Related` section linking to sibling wiki pages; omit the section only if no real cross-links exist (but prefer to include at least one real link).
+- Ground all factual claims with inline citations in backticks, e.g. `` (`server/README.md:39-43`) ``. Do not use `Verified:` / `Inferred:` / `Stale risk:` as structural section decorators.

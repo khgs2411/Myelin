@@ -70,6 +70,11 @@ def test_update_auto_mode_produces_wiki(tmp_path):
 def test_update_gated_mode_stops_at_propose(tmp_path):
     """Without AUTO, make update-v2 runs propose and stops, does not write wiki."""
     projects_root, project_dir, artifacts_root = _prepare_isolated_run(tmp_path)
+    systems_dir = project_dir / "wiki" / "systems"
+    baseline_pages = {
+        path.name: path.read_text()
+        for path in systems_dir.glob("*.md")
+    }
     env = {
         **os.environ,
         "LLM_STUB_RESPONSES_DIR": str(REPO_ROOT / "tests" / "fixtures" / "stubs"),
@@ -88,7 +93,11 @@ def test_update_gated_mode_stops_at_propose(tmp_path):
     assert runs, "expected a run dir"
     assert (runs[-1] / "proposal.json").is_file()
 
-    assert not any((project_dir / "wiki" / "systems").glob("*.md")), "wiki should be untouched"
+    current_pages = {
+        path.name: path.read_text()
+        for path in systems_dir.glob("*.md")
+    }
+    assert current_pages == baseline_pages, "wiki should be untouched"
     assert "make update-v2-continue" in result.stdout + result.stderr
 
 
