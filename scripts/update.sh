@@ -61,6 +61,62 @@ run_project() {
   local project_dir="$PROJECTS_ROOT/$key"
   [[ -d "$project_dir" ]] || { echo "warn: project not found: $key" >&2; return 1; }
 
+  local pipeline_total=8
+  local pipeline_start
+  pipeline_start=$(date +%s)
+
+  progress_bar() {
+    local completed="$1"
+    local total="$2"
+    local filled=""
+    local empty=""
+    local i
+    for ((i = 0; i < completed; i++)); do
+      filled+="#"
+    done
+    for ((i = completed; i < total; i++)); do
+      empty+="-"
+    done
+    printf '[%s%s]' "$filled" "$empty"
+  }
+
+  emit_stage_line() {
+    local num="$1"
+    local name="$2"
+    local status="$3"
+    local completed="$4"
+    printf '[%s] [%s/%s] %s ... %s %s\n' \
+      "$key" "$num" "$pipeline_total" "$name" "$(progress_bar "$completed" "$pipeline_total")" "$status" >&2
+  }
+
+  run_stage() {
+    local num="$1"
+    local name="$2"
+    shift 2
+    local start end elapsed rc start_progress
+    start_progress=$((num > 1 ? num - 1 : 0))
+    emit_stage_line "$num" "$name" "(running)" "$start_progress"
+    start=$(date +%s)
+    set +e
+    "$@"
+    rc=$?
+    set -e
+    end=$(date +%s)
+    elapsed=$((end - start))
+    if [[ "$rc" -eq 0 ]]; then
+      emit_stage_line "$num" "$name" "${elapsed}s" "$num"
+    else
+      emit_stage_line "$num" "$name" "${elapsed}s FAILED (rc=$rc)" "$num"
+    fi
+    return "$rc"
+  }
+
+  skip_stage() {
+    local num="$1"
+    local name="$2"
+    emit_stage_line "$num" "$name" "skipped" "$num"
+  }
+
   local run_id
   local run_dir
 
@@ -71,24 +127,24 @@ run_project() {
     [[ -f "$latest/proposal.json" ]] || die "CONTINUE=1 set but $latest has no proposal.json"
     run_dir="$latest"
     run_id="$(basename "$run_dir")"
-    echo "[$key] CONTINUE=1; using existing run_dir: $run_dir"
+    echo "[$key] CONTINUE=1; resuming at apply (run_dir: $run_dir)" >&2
   else
     run_id="$(date -u +%Y%m%d-%H%M%S)-update"
     run_dir="$ARTIFACTS_ROOT/$key/runs/$run_id"
     mkdir -p "$run_dir"
-    echo "[$key] run_dir: $run_dir"
+    echo "[$key] run_dir: $run_dir" >&2
 
-    bash "$STAGES_ROOT/01-sense/run.sh" \
+    run_stage 1 "sense" bash "$STAGES_ROOT/01-sense/run.sh" \
       --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" || return 1
 
-    bash "$STAGES_ROOT/02-impact/run.sh" \
+    run_stage 2 "impact" bash "$STAGES_ROOT/02-impact/run.sh" \
       --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" || return 1
 
     python3 "$ROOT_DIR/scripts/stable_products.py" render-ranking \
       --input "$run_dir/ranking-snapshot.json" \
       --project-dir "$project_dir" || return 1
 
-    bash "$STAGES_ROOT/03-propose/run.sh" \
+    run_stage 3 "propose" bash "$STAGES_ROOT/03-propose/run.sh" \
       --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" || return 1
   fi
 
@@ -108,11 +164,11 @@ EOM
     return 0
   fi
 
-  bash "$STAGES_ROOT/04-apply/run.sh" \
+  run_stage 4 "apply" bash "$STAGES_ROOT/04-apply/run.sh" \
     --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" || return 1
 
   local validate_exit=0
-  bash "$STAGES_ROOT/06-validate/run.sh" \
+  run_stage 5 "validate" bash "$STAGES_ROOT/06-validate/run.sh" \
     --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" \
     || validate_exit=$?
 
@@ -123,7 +179,7 @@ EOM
   fi
 
   if [[ "$validate_exit" -ne 0 ]]; then
-    bash "$STAGES_ROOT/07-reconcile/run.sh" \
+    run_stage 6 "reconcile" bash "$STAGES_ROOT/07-reconcile/run.sh" \
       --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" || return 1
 
     local reconcile_approved
@@ -136,10 +192,10 @@ EOM
         "$original_proposal_path" \
         "$run_dir/reconcile-proposal.json" \
         "$run_dir/proposal.json" || return 1
-      bash "$STAGES_ROOT/04-apply/run.sh" \
+      run_stage 4 "apply (retry)" bash "$STAGES_ROOT/04-apply/run.sh" \
         --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" || return 1
       validate_exit=0
-      bash "$STAGES_ROOT/06-validate/run.sh" \
+      run_stage 5 "validate (retry)" bash "$STAGES_ROOT/06-validate/run.sh" \
         --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" \
         || validate_exit=$?
       if [[ -f "$run_dir/validation-findings.json" ]]; then
@@ -153,18 +209,23 @@ EOM
       echo "[$key] validate failed after reconcile; commit pointer NOT advanced" >&2
       return 1
     fi
+  else
+    skip_stage 6 "reconcile"
   fi
 
   # Auto-generate acceptance questions by dogfooding the fresh wiki. Non-fatal:
   # failures here don't block commit-pointer advancement, because the wiki is
   # already valid and the questions file can always be regenerated or edited.
-  bash "$STAGES_ROOT/05-acceptance/run.sh" \
+  run_stage 7 "acceptance" bash "$STAGES_ROOT/05-acceptance/run.sh" \
     --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" \
     || echo "[$key] acceptance question generation skipped (non-fatal)" >&2
 
-  PROJECTS_ROOT="$PROJECTS_ROOT" bash "$ROOT_DIR/scripts/apply_commit.sh" --project "$key" || return 1
+  run_stage 8 "apply_commit" env PROJECTS_ROOT="$PROJECTS_ROOT" bash "$ROOT_DIR/scripts/apply_commit.sh" --project "$key" || return 1
 
-  echo "[$key] pipeline complete"
+  local pipeline_end total_elapsed
+  pipeline_end=$(date +%s)
+  total_elapsed=$((pipeline_end - pipeline_start))
+  echo "[$key] pipeline complete in ${total_elapsed}s" >&2
 }
 
 rc=0

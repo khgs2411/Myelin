@@ -73,6 +73,7 @@ ranking_prompt = json.dumps({
     "cutoff": cutoff,
     "project_key": project_key,
 })
+print("impact: ranking sub-task ...", file=sys.stderr, flush=True)
 ranking_result = llm_client.invoke(stage_id="02-impact.ranking", prompt=ranking_prompt)
 ranking = ranking_result["response"]
 ranking["run_id"] = run_dir.name
@@ -88,6 +89,7 @@ delta_prompt = json.dumps({
     "ranking": ranking,
     "project_key": project_key,
 })
+print("impact: delta sub-task ...", file=sys.stderr, flush=True)
 delta_result = llm_client.invoke(stage_id="02-impact.delta", prompt=delta_prompt)
 delta = delta_result["response"]
 delta["run_id"] = run_dir.name
