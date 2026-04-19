@@ -46,6 +46,7 @@ auto="${AUTO:-}"
 
 python3 - "$project_key" "$project_dir" "$run_dir" "$ROOT_DIR" "$auto" <<'PY'
 import json
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -63,10 +64,46 @@ from agents.update._shared import llm_client  # noqa: E402
 impact = json.loads((run_dir / "impact-report.json").read_text())
 ranking = json.loads((run_dir / "ranking-snapshot.json").read_text())
 
+
+def _load_acceptance_questions(project_dir: Path) -> list[dict]:
+    """Parse acceptance-questions.md into a structured list for the prompt.
+
+    The file is produced by the 05-acceptance stage in the format:
+        N. [tag] question text  <!-- targets: domain | expected: wiki/path.md -->
+    Scaffold entries may omit the HTML-comment annotation. Missing file is
+    fine (first run before the acceptance stage has ever succeeded) - the
+    propose model just doesn't get the constraint that cycle.
+    """
+    aq_path = project_dir / "acceptance-questions.md"
+    if not aq_path.is_file():
+        return []
+    text = aq_path.read_text()
+    line_re = re.compile(
+        r"^(\d+)\.\s+\[(\w+)\]\s+(.+?)(?:\s+<!--\s*(.*?)\s*-->)?\s*$"
+    )
+    questions: list[dict] = []
+    for raw in text.splitlines():
+        match = line_re.match(raw.strip())
+        if not match:
+            continue
+        index, tag, body, annotations = match.groups()
+        entry = {"index": int(index), "tag": tag, "text": body.strip()}
+        if annotations:
+            for pair in annotations.split("|"):
+                key, _, value = pair.strip().partition(":")
+                if key and value:
+                    entry[key.strip()] = value.strip()
+        questions.append(entry)
+    return questions
+
+
+acceptance_questions = _load_acceptance_questions(project_dir)
+
 prompt = json.dumps({
     "project_key": project_key,
     "impact": impact,
     "ranking": ranking,
+    "acceptance_questions": acceptance_questions,
 })
 result = llm_client.invoke(stage_id="03-propose", prompt=prompt)
 proposal = result["response"]

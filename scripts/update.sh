@@ -130,7 +130,12 @@ EOM
     reconcile_approved="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("approved", False))' "$run_dir/reconcile-proposal.json")"
 
     if [[ "$reconcile_approved" == "True" ]]; then
-      cp "$run_dir/reconcile-proposal.json" "$run_dir/proposal.json"
+      local original_proposal_path="$run_dir/proposal.original.json"
+      [[ -f "$original_proposal_path" ]] || cp "$run_dir/proposal.json" "$original_proposal_path"
+      python3 "$ROOT_DIR/scripts/merge_reconcile.py" \
+        "$original_proposal_path" \
+        "$run_dir/reconcile-proposal.json" \
+        "$run_dir/proposal.json" || return 1
       bash "$STAGES_ROOT/04-apply/run.sh" \
         --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" || return 1
       validate_exit=0
