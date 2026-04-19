@@ -1,4 +1,4 @@
-.PHONY: init init-project status status-all prune help update update-v2 update-v2-continue apply-pending reject-pending measure measure-legacy measure-tokens lint ask
+.PHONY: init status status-all prune help compile compile-continue update update-continue apply-pending reject-pending measure measure-legacy measure-tokens lint ask
 
 SYSTEM_PATH := /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
@@ -12,10 +12,10 @@ endif
 help:
 	@echo "Targets:"
 	@echo "  make init PROJECT=<project-key> [NAME=<display-name>] [PATH=/path/to/project] [TAGS=a|b] [RELATED_CONCEPTS=a|b] [FOCUSES=a|b]"
-	@echo "  make init-project PROJECT=<project-key> [NAME=<display-name>] [PATH=/path/to/project]"
-	@echo "  make update PROJECT=<project-key>  # run the unified update pipeline"
-	@echo "  make update-v2 PROJECT=<project-key>  # deprecated alias"
-	@echo "  make update-v2-continue PROJECT=<project-key>  # resume after gated approval"
+	@echo "  make compile PROJECT=<project-key>  # full recompile of the project brain"
+	@echo "  make compile-continue PROJECT=<project-key>  # resume after gated approval"
+	@echo "  make update PROJECT=<project-key>  # drain inbox, apply gap-note patches (lighter than compile)"
+	@echo "  make update-continue PROJECT=<project-key>  # resume a gated ingest proposal"
 	@echo "  make lint PROJECT=<project-key>  # standalone validate against latest run"
 	@echo "  make status PROJECT=<project-key>"
 	@echo "  make status-all"
@@ -43,15 +43,6 @@ init:
 		$(if $(RELATED_CONCEPTS),--related-concepts "$(RELATED_CONCEPTS)",) \
 		$(if $(FOCUSES),--focuses "$(FOCUSES)",)
 
-init-project:
-	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make init-project PROJECT=my_project" && exit 1)
-	@/usr/bin/env PATH="$(SYSTEM_PATH)" ./scripts/init_project.sh --project "$(PROJECT)" \
-		$(if $(NAME),--name "$(NAME)",) \
-		$(if $(USER_PROJECT_PATH),--path "$(USER_PROJECT_PATH)",) \
-		$(if $(TAGS),--tags "$(TAGS)",) \
-		$(if $(RELATED_CONCEPTS),--related-concepts "$(RELATED_CONCEPTS)",) \
-		$(if $(FOCUSES),--focuses "$(FOCUSES)",)
-
 status:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
 	@./scripts/status.sh --project "$(PROJECT)"
@@ -68,17 +59,20 @@ prune:
 		./scripts/prune_artifacts.sh; \
 	fi
 
+compile:
+	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make compile PROJECT=sample" && exit 1)
+	@bash scripts/compile.sh --project $(PROJECT)
+
+compile-continue:
+	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make compile-continue PROJECT=sample" && exit 1)
+	@CONTINUE=1 bash scripts/compile.sh --project $(PROJECT)
+
 update:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make update PROJECT=sample" && exit 1)
 	@bash scripts/update.sh --project $(PROJECT)
 
-update-v2:
-	@echo "WARNING: 'make update-v2' is deprecated; use 'make update' instead." >&2
-	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make update-v2 PROJECT=sample" && exit 1)
-	@bash scripts/update.sh --project $(PROJECT)
-
-update-v2-continue:
-	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make update-v2-continue PROJECT=sample" && exit 1)
+update-continue:
+	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make update-continue PROJECT=sample" && exit 1)
 	@CONTINUE=1 bash scripts/update.sh --project $(PROJECT)
 
 apply-pending:
@@ -98,7 +92,7 @@ lint:
 	    project_dir="$$PROJECTS_ROOT/$$PROJECT"; \
 	    latest="$$(python3 -c "import json,sys;print(json.load(open(sys.argv[1])).get(\"latest_run_dir\") or \"\")" "$$project_dir/state/update-state.json" 2>/dev/null)"; \
 	    if [ -z "$$latest" ] || [ ! -d "$$latest" ]; then \
-	      echo "error: no prior run found (latest_run_dir empty in update-state.json). Run make update first." >&2; \
+	      echo "error: no prior run found (latest_run_dir empty in update-state.json). Run make compile first." >&2; \
 	      exit 1; \
 	    fi; \
 	    bash agents/update/06-validate/run.sh --project "$$PROJECT" --project-dir "$$project_dir" --run-dir "$$latest" \

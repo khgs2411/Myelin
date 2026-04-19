@@ -7,6 +7,7 @@ from pathlib import Path
 
 
 STAGES = ["orient", "domains", "expand", "validate", "reconcile"]
+UPDATE_STAGES = ["sense", "impact", "propose", "apply", "validate", "reconcile", "ingest"]
 
 
 def now_iso() -> str:
@@ -50,7 +51,7 @@ def default_update_state(project: str) -> dict:
                 "last_completed_at": None,
                 "summary_file": None,
             }
-            for stage in ("sense", "impact", "propose", "apply", "validate", "reconcile")
+            for stage in UPDATE_STAGES
         },
     }
 
@@ -225,7 +226,7 @@ def build_parser() -> argparse.ArgumentParser:
     record_stage = sub.add_parser("record-stage")
     record_stage.add_argument("--project-dir", required=True)
     record_stage.add_argument("--project")
-    record_stage.add_argument("--stage", required=True, choices=STAGES)
+    record_stage.add_argument("--stage", required=True, choices=sorted(set(STAGES + UPDATE_STAGES)))
     record_stage.add_argument("--status", required=True, choices=["completed", "failed"])
     record_stage.add_argument("--run-dir", required=True)
     record_stage.add_argument("--summary-file")

@@ -14,7 +14,10 @@ If any instruction here conflicts with ad hoc conversation phrasing, prefer this
 # Scaffold a new project
 make init PROJECT=<key> NAME="<Display>" PATH=/abs/path/to/repo
 
-# Run the full pipeline (sense -> impact -> propose -> apply -> validate -> [reconcile] -> acceptance -> commit)
+# Full recompile of the project brain (sense -> impact -> propose -> apply -> validate -> [reconcile] -> acceptance -> commit)
+make compile PROJECT=<key> AUTO=1
+
+# Incremental inbox drain (08-ingest -> apply -> validate -> [reconcile] -> terminal-state -> commit)
 make update PROJECT=<key> AUTO=1
 
 # Re-run validate against the latest run without re-running earlier stages
@@ -24,7 +27,8 @@ make lint PROJECT=<key>
 make measure PROJECT=<key>
 
 # Resume after a gated approval
-make update-v2-continue PROJECT=<key>
+make compile-continue PROJECT=<key>
+make update-continue PROJECT=<key>
 
 # Tests (pre-existing failures: test_plan_{a,b}_acceptance, test_state_migration
 # depend on a projects/sample/ fixture not present in every working tree)
@@ -37,7 +41,8 @@ make update-v2-continue PROJECT=<key>
 |-----|--------|
 | `MODEL=codex` / `codex/<id>` / `claude` / `claude/<id>` | LLM backend + model selector (default: codex) |
 | `AUTO=1` | Propose writes `approved=true`, destructive units defer to `pending-approvals/` |
-| `CONTINUE=1` | Resume from latest run's `proposal.json` (post-approval) |
+| `CONTINUE=1` | Resume from latest run's `proposal.json` (used by `make compile-continue` and `make update-continue`) |
+| `NO_EMIT=1` | suppress gap-note emission in `make measure` |
 | `LLM_STUB_RESPONSES_DIR=<path>` | Use canned responses instead of live LLM (stub tests) |
 | `UPDATE_PROJECTS_ROOT` / `UPDATE_ARTIFACTS_ROOT` / `UPDATE_STAGES_ROOT` | Override roots (tests) |
 | `RANKING_CUTOFF=<n>` | Override ranking snapshot cutoff |
@@ -45,9 +50,9 @@ make update-v2-continue PROJECT=<key>
 
 ## Repo Layout
 
-- `agents/update/<stage>/` - each pipeline stage as `{config.json, instructions.md, run.sh}`. Stages: `01-sense`, `02-impact`, `03-propose`, `04-apply`, `05-acceptance`, `06-validate`, `07-reconcile`, `measure`.
+- `agents/update/<stage>/` - each pipeline stage as `{config.json, instructions.md, run.sh}`. Stages: `01-sense`, `02-impact`, `03-propose`, `04-apply`, `05-acceptance`, `06-validate`, `07-reconcile`, `08-ingest`, `measure`.
 - `agents/update/_shared/` - `llm_client.py` (codex/claude wrapper), `state.py`, `config.py`.
-- `scripts/` - orchestration (`update.sh`, `measure.sh`, `apply_commit.sh`, `init_project.sh`, `validate_stage_configs.py`, `stable_products.py`).
+- `scripts/` - orchestration (`compile.sh`, `update.sh`, `measure.sh`, `apply_commit.sh`, `init_project.sh`, `validate_stage_configs.py`, `stable_products.py`).
 - `projects/<project-key>/` - per-project knowledge: `index.md`, `wiki/{architecture,systems,modules,integrations,decisions,runbooks,sessions,glossary,open-questions}/`, `state/{project.json,pages.json,freshness.json,sources.json,relationships.json,update-state.json,latest/}`, `inbox/`, `acceptance-questions.md`, `changelog.md`.
 - `artifacts/<project-key>/runs/<ts>-update/` - per-run pipeline output: `sense-report.json`, `ranking-snapshot.json`, `impact-report.json`, `proposal.{json,md}`, `validation-findings.json`, `reconcile-proposal.json`.
 - `raw/` - global unclassified intake (`inbox/`, `processed/`, `rejected/`).
@@ -62,6 +67,7 @@ When touching stage code or LLM-stage instructions, these pitfalls have each bur
 - **LLM-stage instructions must say "Return ONLY this JSON object on stdout" - never "Write `<run-dir>/foo.json`".** Even with sandbox lockdown, "Write" phrasing shifts the model into describe-what-I-wrote mode. All LLM stages (`02-impact`, `03-propose`, `05-acceptance`, `06-validate` semantic sub-task, `07-reconcile`) follow this rule. `llm_client._recover_from_referenced_file` is a defense-in-depth fallback only.
 - **`04-apply/run.sh` must refresh `pages.json` when `index.md` is rewritten**, not only when additive wiki units are applied. Skipping this causes metadata drift that corrupts `02-impact`'s stale-reasoning on the next run.
 - **Validator rules live in `agents/update/06-validate/structural.py`**, are registered in `06-validate/config.json::stage_specific.structural_rules`, AND must be wired into `06-validate/run.sh`'s finding loop. Missing any one of the three = silent skip.
+- **`INGEST_MODE=1` relaxes only `ranked_domain_coverage` and `domain_collapse_check`.** `make update` sets this for `06-validate`; all other structural and semantic rules still run. If an ingest run unexpectedly passes or fails, check whether those two compile-only rules were intentionally skipped.
 - **RTK hook only rewrites Bash tool calls.** `Read`, `Grep`, `Glob` bypass RTK. For token-heavy file reads or greps, shell out (`rtk read`, `rtk grep`, `rtk find`) or use the Bash tool.
 - **`projects/sample/` fixture is not always present.** `test_plan_{a,b}_acceptance.py` and `test_state_migration.py::test_sample_project_registered` will fail without it - these are pre-existing, not regressions.
 
@@ -126,9 +132,9 @@ Do not skip directly to repo exploration unless:
 - freshness metadata indicates likely invalidation
 - the task is implementation-specific and requires direct code verification
 
-## Update Operation Contract
+## Pipeline Operations
 
-`make update PROJECT=<project-key>` is the canonical compiler pipeline for project knowledge.
+`make compile PROJECT=<project-key>` is the canonical compiler pipeline for project knowledge.
 
 The stages are:
 
@@ -146,6 +152,19 @@ Treat validate as the gate. A run is not complete until validation passes and th
 Validate's structural layer enforces `index_not_wiki_meta` (blocks wiki-meta narration on `index.md`), `ranked_domain_coverage` (every ranked domain needs a dedicated page or a deferred-with-reason entry), and `domain_collapse_check` (blocker when 3+ ranked domains collapse into one destination page). See `agents/update/06-validate/structural.py` for the full rule set.
 
 Reconcile is bounded to one loop iteration. If validate still fails after reconcile, stop and surface the findings instead of improvising further changes.
+
+`make update PROJECT=<project-key>` is the incremental ingest pipeline for queued gap-notes.
+
+The stages are:
+
+1. ingest (`08-ingest`)
+2. apply
+3. validate with `INGEST_MODE=1`
+4. reconcile when validate fails
+5. terminal-state handling (`processed/` or `needs-review/`)
+6. apply commit only after validate passes
+
+`make update` is demand-driven and cheaper than `make compile`: it batches inbox items by `target_hint`, patches existing pages when possible, and deliberately relaxes only `ranked_domain_coverage` and `domain_collapse_check`.
 
 ## Operator-Owned Project Config
 
@@ -196,11 +215,58 @@ Rules for project-local inbox:
 - assume project ownership unless evidence contradicts it
 - still classify source type before integration
 - preserve the original source under the project after processing
+- consumed items end in a terminal state under `projects/<project-key>/inbox/processed/` or `projects/<project-key>/inbox/needs-review/`
+- `needs-review` items carry a sibling `<id>.reason.md` file explaining why ingest could not close them
 
 For the raw intake area specifically:
 
 - treat `raw/inbox/` as unclassified intake only
 - move each processed file to a terminal state under `raw/processed/`, `raw/rejected/`, or an explicit pending-review location
+
+Inbox item producers:
+
+- `mcp-auto`: `query_wiki` emits a gap-note automatically when confidence is below `0.6`
+- `agent-enriched`: `enrich_gap` appends operator or agent notes to an existing low-confidence MCP gap-note
+- `measure-auto`: `make measure` emits gap-notes for any question that scores below full marks unless `NO_EMIT=1`
+- `manual`: operators may write the same schema by hand when they want to seed future ingest work
+
+The uniform JSON contract and filename convention live in [docs/inbox-item-schema.md](/Users/liadgoren/Repositories/llm-wiki/docs/inbox-item-schema.md).
+
+Measure note:
+
+- `NO_EMIT=1 make measure PROJECT=<key>` suppresses gap-note emission entirely
+
+## Inbox Item Contract
+
+Inbox files under `projects/<project-key>/inbox/` use the schema in `docs/inbox-item-schema.md`.
+
+Required fields:
+
+- `id`
+- `schema_version`
+- `source`
+- `emitted_at`
+- `project_key`
+- `question`
+- `target_hint`
+
+Allowed `source` values:
+
+- `mcp-auto`
+- `agent-enriched`
+- `measure-auto`
+- `manual`
+
+Filename convention:
+
+- `<iso-timestamp-z>_<6-char-random-hex>.json`
+- the timestamp is UTC with `:` replaced by `-`
+- the `id` field must equal the filename stem
+
+Schema rule:
+
+- all top-level keys are always present
+- fields that do not apply to a given source are written as `null`, never omitted
 
 ## Mandatory Source Classification Output
 
@@ -284,7 +350,7 @@ If a new page is created, also do all of the following:
 
 ## Source Processing Contract
 
-`make update` owns project-local source processing. When a source is consumed from either inbox:
+`make compile` and `make update` own project-local source processing. When a source is consumed from either inbox:
 
 1. read and classify the source
 2. decide ownership and destination

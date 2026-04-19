@@ -40,6 +40,7 @@ fi
 
 python3 - "$project_key" "$project_dir" "$run_dir" "$AGENT_DIR" "$ROOT_DIR" <<'PY'
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -60,6 +61,15 @@ config = json.loads((agent_dir / "config.json").read_text())
 project_json = json.loads((project_dir / "state" / "project.json").read_text())
 ranking = json.loads((run_dir / "ranking-snapshot.json").read_text())
 proposal = json.loads((run_dir / "proposal.json").read_text())
+ingest_mode = os.environ.get("INGEST_MODE") == "1"
+relaxed_rules: set[str] = set()
+if ingest_mode:
+    ingest_config_path = root_dir / "agents" / "update" / "08-ingest" / "config.json"
+    if ingest_config_path.is_file():
+        ingest_config = json.loads(ingest_config_path.read_text())
+        relaxed_rules = set(ingest_config.get("stage_specific", {}).get("relaxed_validator_rules", []))
+    else:
+        relaxed_rules = {"ranked_domain_coverage", "domain_collapse_check"}
 
 allowed_shelves = config["stage_specific"]["shelf_allowlist"]
 repo_paths = project_json.get("repo_paths", [])
@@ -77,8 +87,10 @@ structural_findings.extend(structural.no_orphan_pages(project_dir))
 structural_findings.extend(structural.index_routing_resolves(project_dir))
 structural_findings.extend(structural.pages_json_filesystem_agreement(project_dir))
 structural_findings.extend(structural.index_not_wiki_meta(project_dir))
-structural_findings.extend(structural.ranked_domain_coverage(run_dir, ranking))
-structural_findings.extend(structural.domain_collapse_check(run_dir))
+if "ranked_domain_coverage" not in relaxed_rules:
+    structural_findings.extend(structural.ranked_domain_coverage(run_dir, ranking))
+if "domain_collapse_check" not in relaxed_rules:
+    structural_findings.extend(structural.domain_collapse_check(run_dir))
 structural_findings.extend(structural.validate_proposal(run_dir, ranking, allowed_shelves))
 
 structural_blockers = [finding for finding in structural_findings if finding.get("severity") == "blocker"]
@@ -123,9 +135,12 @@ report = {
     "run_id": run_dir.name,
     "status": status,
     "pass_count": {
-        "structural": len(config["stage_specific"]["structural_rules"]) - len(structural_rule_ids),
+        "structural": len(
+            [rule for rule in config["stage_specific"]["structural_rules"] if rule not in relaxed_rules]
+        ) - len(structural_rule_ids),
         "semantic": len(config["stage_specific"]["semantic_rules_enabled"]) - len(semantic_categories),
     },
+    "relaxed_structural_rules": sorted(relaxed_rules),
     "structural": structural_findings,
     "semantic": semantic_findings,
 }
@@ -153,6 +168,8 @@ if update_state_path.is_file():
     }
     update_state_path.write_text(json.dumps(update_state, indent=2) + "\n")
 
+if relaxed_rules:
+    print(f"validate: relaxed structural rules={sorted(relaxed_rules)}")
 print(
     f"validate: status={status} structural_findings={len(structural_findings)} "
     f"semantic_findings={len(semantic_findings)}"

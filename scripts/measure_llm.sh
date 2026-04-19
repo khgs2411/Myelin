@@ -23,11 +23,12 @@ project_dir="$PROJECTS_ROOT/$project_key"
 [[ -d "$project_dir" ]] || die "project not found: $project_dir"
 aq_path="$project_dir/$(python3 -c "import json,sys;print(json.load(open(sys.argv[1])).get('acceptance_questions_path', 'acceptance-questions.md'))" "$project_dir/state/project.json")"
 [[ -f "$aq_path" ]] || die "acceptance-questions file not found: $aq_path"
-[[ -d "$project_dir/wiki" ]] || die "no wiki to measure; run make update first"
-find "$project_dir/wiki" -name '*.md' -print -quit | grep -q . || die "no wiki pages to measure; run make update first"
+[[ -d "$project_dir/wiki" ]] || die "no wiki to measure; run make compile first"
+find "$project_dir/wiki" -name '*.md' -print -quit | grep -q . || die "no wiki pages to measure; run make compile first"
 
 python3 - "$project_key" "$project_dir" "$aq_path" "$ROOT_DIR" "$PROJECTS_ROOT" <<'PY'
 import json
+import os
 import re
 import sys
 import time
@@ -41,6 +42,7 @@ root_dir = Path(sys.argv[4])
 projects_root = Path(sys.argv[5])
 
 sys.path.insert(0, str(root_dir))
+from agents._shared import inbox_writer
 from agents.query import query_engine
 
 
@@ -52,15 +54,44 @@ def score_from_confidence(confidence: float) -> int:
     return 0
 
 
+def parse_question(line: str) -> dict | None:
+    match = re.match(r"^(\d+)\.\s*(.*)$", line.strip())
+    if not match:
+        return None
+    raw_text = match.group(2).strip()
+    metadata = {}
+    comment_match = re.search(r"\s*<!--\s*(.*?)\s*-->\s*$", raw_text)
+    if comment_match:
+        for chunk in comment_match.group(1).split("|"):
+            chunk = chunk.strip()
+            if ":" not in chunk:
+                continue
+            key, value = chunk.split(":", 1)
+            metadata[key.strip()] = value.strip()
+        raw_text = raw_text[:comment_match.start()].rstrip()
+
+    tag_match = re.match(r"^\[([^\]]+)\]\s*(.*)$", raw_text)
+    question_tag = None
+    if tag_match:
+        question_tag = tag_match.group(1)
+
+    return {
+        "index": int(match.group(1)),
+        "text": raw_text,
+        "question_tag": question_tag,
+        "expected_page": metadata.get("expected"),
+    }
+
+
 aq_text = aq_path.read_text()
 version_match = re.search(r"<!-- version:\s*([^\s>]+)\s*-->", aq_text)
 version = version_match.group(1) if version_match else "unversioned"
 
 questions = []
 for line in aq_text.splitlines():
-    match = re.match(r"^(\d+)\.\s*(.*)$", line.strip())
-    if match:
-        questions.append({"index": int(match.group(1)), "text": match.group(2)})
+    parsed = parse_question(line)
+    if parsed:
+        questions.append(parsed)
 
 pages_considered = len(json.loads((project_dir / "state" / "pages.json").read_text()).get("pages", []))
 print(
@@ -70,6 +101,9 @@ print(
 )
 
 per_question = []
+emitted_gap_count = 0
+gap_emission_suppressed = os.environ.get("NO_EMIT") == "1"
+measurement_run_id = datetime.now(timezone.utc).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
 wall_start = time.time()
 for pos, question in enumerate(questions, start=1):
     preview = question["text"][:72] + ("..." if len(question["text"]) > 72 else "")
@@ -95,6 +129,20 @@ for pos, question in enumerate(questions, start=1):
                 "tokens_consumed": result.get("tokens_consumed", {}),
             }
         )
+        if not gap_emission_suppressed and score < 2:
+            inbox_writer.write_gap(
+                project_dir,
+                source="measure-auto",
+                question=question["text"],
+                target_hint=question.get("expected_page") or "",
+                question_index=question["index"],
+                question_tag=question.get("question_tag"),
+                score_awarded=score,
+                score_max=2,
+                expected_page=question.get("expected_page"),
+                measurement_run_id=measurement_run_id,
+            )
+            emitted_gap_count += 1
         elapsed = time.time() - q_start
         running = sum(item.get("score") or 0 for item in per_question)
         running_max = 2 * len(per_question)
@@ -176,4 +224,8 @@ lines.append("- (run `make measure-tokens` for calibration data)")
 (latest / "measurement-report.md").write_text("\n".join(lines) + "\n")
 
 print(f"measure: {total}/{max_possible} over {len(per_question)} question(s)")
+if gap_emission_suppressed:
+    print("measure: gap emission suppressed (NO_EMIT=1)")
+else:
+    print(f"measure: emitted {emitted_gap_count} gap-note(s) to projects/{project_key}/inbox/")
 PY

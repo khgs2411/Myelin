@@ -1,4 +1,4 @@
-"""Plan A acceptance: scripts/update.sh orchestrates sense + impact end-to-end.
+"""Plan A acceptance: scripts/compile.sh orchestrates sense + impact end-to-end.
 
 Uses an isolated tmp copy of projects/sample so the test does not mutate the
 working tree. Also supports overriding the artifacts root via UPDATE_ARTIFACTS_ROOT.
@@ -25,8 +25,8 @@ def _prepare_isolated_run(tmp_path: Path) -> tuple[Path, Path, Path]:
     return projects_root, project_dir, artifacts_root
 
 
-def test_update_script_runs_sense_and_impact(tmp_path):
-    """update.sh must orchestrate sense -> impact end-to-end without touching the real working tree."""
+def test_compile_script_runs_sense_and_impact(tmp_path):
+    """compile.sh must orchestrate sense -> impact end-to-end without touching the real working tree."""
     projects_root, project_dir, artifacts_root = _prepare_isolated_run(tmp_path)
     env = {
         **os.environ,
@@ -35,7 +35,7 @@ def test_update_script_runs_sense_and_impact(tmp_path):
         "UPDATE_ARTIFACTS_ROOT": str(artifacts_root),
     }
     result = subprocess.run(
-        ["bash", str(REPO_ROOT / "scripts" / "update.sh"), "--project", "sample"],
+        ["bash", str(REPO_ROOT / "scripts" / "compile.sh"), "--project", "sample"],
         env=env, capture_output=True, text=True,
     )
     assert result.returncode == 0, f"stdout={result.stdout}\nstderr={result.stderr}"
@@ -53,8 +53,8 @@ def test_update_script_runs_sense_and_impact(tmp_path):
     assert (latest_state / "ranking-snapshot.md").is_file()
 
 
-def test_update_script_fails_when_stage_configs_invalid(tmp_path):
-    """If agents/update/*/config.json is broken, update.sh aborts before stages run."""
+def test_compile_script_fails_when_stage_configs_invalid(tmp_path):
+    """If agents/update/*/config.json is broken, compile.sh aborts before stages run."""
     projects_root, project_dir, artifacts_root = _prepare_isolated_run(tmp_path)
     bad_stages = tmp_path / "agents-update"
     (bad_stages / "01-sense").mkdir(parents=True)
@@ -67,21 +67,21 @@ def test_update_script_fails_when_stage_configs_invalid(tmp_path):
         "UPDATE_ARTIFACTS_ROOT": str(artifacts_root),
     }
     result = subprocess.run(
-        ["bash", str(REPO_ROOT / "scripts" / "update.sh"), "--project", "sample"],
+        ["bash", str(REPO_ROOT / "scripts" / "compile.sh"), "--project", "sample"],
         env=env, capture_output=True, text=True,
     )
     assert result.returncode != 0
 
 
-def test_make_update_v2_target_exists():
-    """Makefile must define update-v2 target."""
+def test_make_compile_target_exists():
+    """Makefile must define compile target."""
     makefile = REPO_ROOT / "Makefile"
     content = makefile.read_text()
-    assert "update-v2:" in content or "update-v2 " in content
+    assert "compile:" in content or "compile " in content
 
 
-def test_make_update_v2_invokes_update_sh(tmp_path):
-    """make update-v2 PROJECT=sample succeeds end-to-end against an isolated project copy."""
+def test_make_compile_invokes_compile_sh(tmp_path):
+    """make compile PROJECT=sample succeeds end-to-end against an isolated project copy."""
     projects_root = tmp_path / "projects"
     projects_root.mkdir()
     shutil.copytree(REPO_ROOT / "projects" / "sample", projects_root / "sample")
@@ -94,7 +94,7 @@ def test_make_update_v2_invokes_update_sh(tmp_path):
         "UPDATE_ARTIFACTS_ROOT": str(artifacts_root),
     }
     result = subprocess.run(
-        ["make", "update-v2", "PROJECT=sample"],
+        ["make", "compile", "PROJECT=sample"],
         cwd=str(REPO_ROOT), env=env, capture_output=True, text=True,
     )
     assert result.returncode == 0, f"stdout={result.stdout}\nstderr={result.stderr}"

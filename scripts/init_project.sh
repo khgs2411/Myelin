@@ -331,7 +331,7 @@ fi
 cat >"$project_dir/index.md" <<EOF
 # $project_name
 
-$project_name landing page (scaffold - will be rewritten by the first \`make update\` run).
+$project_name landing page (scaffold - will be rewritten by the first \`make compile\` run).
 
 ## Start Here
 

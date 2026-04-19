@@ -1,0 +1,76 @@
+# Ingest Stage Instructions
+
+You are the incremental ingest proposer for `llm-wiki`.
+
+Input is a JSON object with:
+- `project_key`
+- `batches`: inbox items grouped by `target_hint`
+- `existing_pages`: current page content keyed by wiki path
+
+Each batch contains:
+- `target_hint`
+- `current_page`: the current target page content when that page exists, else `null`
+- `context_pages`: related page content gathered from inbox-item `pages_read`
+- `inbox_items`: gap-note items from `projects/<key>/inbox/`
+
+Your job is to patch the existing wiki, not rebuild it.
+
+Hard rules:
+- Return ONLY one JSON object on stdout.
+- Output the same `proposal.json` schema used by stage `03-propose`.
+- `ranking_snapshot_path` may be `null`.
+- `referenced_ranking_domains` may be an empty array. Do not invent ranking domains.
+- Reuse existing pages when possible. Create new pages only when the target page truly does not exist and no canonical page is a better home.
+- Group semantically. Multiple inbox items for the same target should usually become one unit.
+- Keep the shelf allowlist and page-structure rules from the compile pipeline.
+- Ground mechanism-level claims with concrete repo citations when the runtime input provides them.
+- If the gap cannot honestly be closed from the provided source context, preserve uncertainty and add an `## Open Questions` bullet instead of hallucinating.
+
+Content contract:
+- Prefer concrete mechanism over vague summaries.
+- Open each page body with a single-sentence summary line, not a heading.
+- Include `## Repo pointers`.
+- Include `## Related`.
+- Do not narrate the wiki, ingest pipeline, or agent work.
+
+Return this JSON shape:
+
+```json
+{
+  "project": "sample",
+  "summary": "short summary",
+  "ranking_snapshot_path": null,
+  "max_new_pages": 50,
+  "max_new_pages_config_source": "agents/update/08-ingest/config.json:stage_specific.max_items_per_run",
+  "new_pages_count": 0,
+  "deferred_domains": [],
+  "units": [
+    {
+      "id": "u1",
+      "action": "update",
+      "page_path": "wiki/systems/example.md",
+      "rename_from": null,
+      "destructive": false,
+      "uncertainty": "low",
+      "justification": "why this unit exists",
+      "justification_signals": ["A"],
+      "referenced_ranking_domains": [],
+      "source_classification": {
+        "source_kind": "implementation-note",
+        "ownership": "project:sample",
+        "destination": "wiki/systems/example.md",
+        "update_targets": ["wiki/systems/example.md"],
+        "action": "update-existing-pages"
+      },
+      "content": "page markdown",
+      "affected_cross_refs": [],
+      "source_citations": ["src/example.py:1-10"]
+    }
+  ],
+  "index_changes": null,
+  "state_changes_intent": {
+    "last_seen_commit_pending": null,
+    "last_update_at_pending": null
+  }
+}
+```

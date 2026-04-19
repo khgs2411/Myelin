@@ -200,7 +200,7 @@ if auto and destructive_units:
         "state_changes_intent": {
             "last_seen_commit_pending": None,
             "last_update_at_pending": None,
-            "note": "Commit pointer advancement was handled by the origin run's applied portion. Applying this slice does not advance the pointer. A fresh make update-v2 run is required.",
+            "note": "Commit pointer advancement was handled by the origin run's applied portion. Applying this slice does not advance the pointer. A fresh make compile run is required.",
         },
     }
     (pending_dir / "proposal-slice.json").write_text(json.dumps(slice_data, indent=2) + "\n")

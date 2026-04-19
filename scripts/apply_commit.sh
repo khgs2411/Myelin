@@ -62,7 +62,11 @@ os.replace(tmp_path, freshness_path)
 changelog_path = project_dir / "changelog.md"
 if changelog_path.is_file():
     now = datetime.now(timezone.utc).isoformat()
-    entry = f"\n## [{now}] apply-commit - last_seen_commit advanced to {pending_commit}\n"
+    custom_message = os.environ.get("APPLY_COMMIT_MESSAGE", "").strip()
+    if custom_message:
+        entry = f"\n## [{now}] {custom_message}\n"
+    else:
+        entry = f"\n## [{now}] apply-commit - last_seen_commit advanced to {pending_commit}\n"
     changelog_path.write_text(changelog_path.read_text() + entry)
 
 print(f"apply_commit: advanced last_seen_commit -> {pending_commit}")

@@ -11,6 +11,7 @@
     "propose": {"status": "pending", "last_run_dir": null, "last_completed_at": null, "summary_file": null},
     "apply": {"status": "pending", "last_run_dir": null, "last_completed_at": null, "summary_file": null},
     "validate": {"status": "pending", "last_run_dir": null, "last_completed_at": null, "summary_file": null},
-    "reconcile": {"status": "pending", "last_run_dir": null, "last_completed_at": null, "summary_file": null}
+    "reconcile": {"status": "pending", "last_run_dir": null, "last_completed_at": null, "summary_file": null},
+    "ingest": {"status": "pending", "last_run_dir": null, "last_completed_at": null, "summary_file": null}
   }
 }

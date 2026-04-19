@@ -1,4 +1,4 @@
-"""Plan B acceptance: make update-v2 runs sense -> impact -> propose.
+"""Plan B acceptance: make compile runs sense -> impact -> propose.
 
 Under AUTO=1, also runs apply + apply_commit and produces a wiki.
 Without AUTO=1, stops at propose and prompts operator to continue.
@@ -39,8 +39,8 @@ def _prepare_isolated_run(tmp_path: Path) -> tuple[Path, Path, Path]:
     return projects_root, project_dir, artifacts_root
 
 
-def test_update_auto_mode_produces_wiki(tmp_path):
-    """make update-v2 AUTO=1 runs end-to-end and writes a wiki."""
+def test_compile_auto_mode_produces_wiki(tmp_path):
+    """make compile AUTO=1 runs end-to-end and writes a wiki."""
     projects_root, project_dir, artifacts_root = _prepare_isolated_run(tmp_path)
     env = {
         **os.environ,
@@ -50,7 +50,7 @@ def test_update_auto_mode_produces_wiki(tmp_path):
         "AUTO": "1",
     }
     result = subprocess.run(
-        ["bash", str(REPO_ROOT / "scripts" / "update.sh"), "--project", "sample"],
+        ["bash", str(REPO_ROOT / "scripts" / "compile.sh"), "--project", "sample"],
         env=env,
         capture_output=True,
         text=True,
@@ -67,8 +67,8 @@ def test_update_auto_mode_produces_wiki(tmp_path):
     assert freshness["last_seen_commit_pending"] is None
 
 
-def test_update_gated_mode_stops_at_propose(tmp_path):
-    """Without AUTO, make update-v2 runs propose and stops, does not write wiki."""
+def test_compile_gated_mode_stops_at_propose(tmp_path):
+    """Without AUTO, make compile runs propose and stops, does not write wiki."""
     projects_root, project_dir, artifacts_root = _prepare_isolated_run(tmp_path)
     systems_dir = project_dir / "wiki" / "systems"
     baseline_pages = {
@@ -82,7 +82,7 @@ def test_update_gated_mode_stops_at_propose(tmp_path):
         "UPDATE_ARTIFACTS_ROOT": str(artifacts_root),
     }
     result = subprocess.run(
-        ["bash", str(REPO_ROOT / "scripts" / "update.sh"), "--project", "sample"],
+        ["bash", str(REPO_ROOT / "scripts" / "compile.sh"), "--project", "sample"],
         env=env,
         capture_output=True,
         text=True,
@@ -98,10 +98,10 @@ def test_update_gated_mode_stops_at_propose(tmp_path):
         for path in systems_dir.glob("*.md")
     }
     assert current_pages == baseline_pages, "wiki should be untouched"
-    assert "make update-v2-continue" in result.stdout + result.stderr
+    assert "make compile-continue" in result.stdout + result.stderr
 
 
-def test_update_continue_after_gated_approval(tmp_path):
+def test_compile_continue_after_gated_approval(tmp_path):
     """After gated propose, operator approves and re-runs with CONTINUE=1 to apply."""
     projects_root, project_dir, artifacts_root = _prepare_isolated_run(tmp_path)
     env = {
@@ -111,7 +111,7 @@ def test_update_continue_after_gated_approval(tmp_path):
         "UPDATE_ARTIFACTS_ROOT": str(artifacts_root),
     }
     first_run = subprocess.run(
-        ["bash", str(REPO_ROOT / "scripts" / "update.sh"), "--project", "sample"],
+        ["bash", str(REPO_ROOT / "scripts" / "compile.sh"), "--project", "sample"],
         env=env,
         capture_output=True,
         text=True,
@@ -126,7 +126,7 @@ def test_update_continue_after_gated_approval(tmp_path):
 
     continue_env = {**env, "CONTINUE": "1"}
     second_run = subprocess.run(
-        ["bash", str(REPO_ROOT / "scripts" / "update.sh"), "--project", "sample"],
+        ["bash", str(REPO_ROOT / "scripts" / "compile.sh"), "--project", "sample"],
         env=continue_env,
         capture_output=True,
         text=True,
@@ -135,9 +135,9 @@ def test_update_continue_after_gated_approval(tmp_path):
     assert (project_dir / "wiki" / "systems" / "authentication.md").is_file()
 
 
-def test_make_update_v2_continue_target_exists():
+def test_make_compile_continue_target_exists():
     makefile_content = (REPO_ROOT / "Makefile").read_text()
-    assert "update-v2-continue:" in makefile_content
+    assert "compile-continue:" in makefile_content
 
 
 def test_make_apply_pending_target_exists():

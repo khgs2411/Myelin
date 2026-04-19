@@ -184,7 +184,7 @@ if not proposal["approved"]:
     md_lines.extend([
         "---",
         "",
-        "To approve: edit `proposal.json` and set `\"approved\": true`, then run `make update-v2-continue PROJECT=<key>`.",
+        "To approve: edit `proposal.json` and set `\"approved\": true`, then run `make compile-continue PROJECT=<key>`.",
     ])
 
 (run_dir / "proposal.md").write_text("\n".join(md_lines) + "\n")

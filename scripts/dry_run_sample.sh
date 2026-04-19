@@ -74,7 +74,7 @@ MODEL="$MODEL" \
 UPDATE_PROJECTS_ROOT="$bundle/project-copy" \
 UPDATE_ARTIFACTS_ROOT="$bundle/artifacts" \
 AUTO=1 \
-make -C "$ROOT_DIR" update-v2 PROJECT=sample \
+make -C "$ROOT_DIR" compile PROJECT=sample \
   >"$bundle/stdout.log" 2>"$bundle/stderr.log"
 exit_code=$?
 set -e

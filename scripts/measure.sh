@@ -23,8 +23,8 @@ project_dir="$PROJECTS_ROOT/$project_key"
 [[ -d "$project_dir" ]] || die "project not found: $project_dir"
 aq_path="$project_dir/$(python3 -c "import json,sys;print(json.load(open(sys.argv[1])).get('acceptance_questions_path', 'acceptance-questions.md'))" "$project_dir/state/project.json")"
 [[ -f "$aq_path" ]] || die "acceptance-questions file not found: $aq_path"
-[[ -d "$project_dir/wiki" ]] || die "no wiki to measure; run make update first"
-find "$project_dir/wiki" -name '*.md' -print -quit | grep -q . || die "no wiki pages to measure; run make update first"
+[[ -d "$project_dir/wiki" ]] || die "no wiki to measure; run make compile first"
+find "$project_dir/wiki" -name '*.md' -print -quit | grep -q . || die "no wiki pages to measure; run make compile first"
 
 python3 - "$project_key" "$project_dir" "$aq_path" "$ROOT_DIR" <<'PY'
 import json
