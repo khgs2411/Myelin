@@ -280,11 +280,12 @@ def test_real_path_emits_normalized_tokens_consumed(monkeypatch):
     assert tc["is_estimate"] is True
 
 
-def test_invoke_signature_ignores_deprecated_model_kwarg(monkeypatch):
-    """The invoke() signature accepts no `model` kwarg; MODEL env is the only control."""
+def test_invoke_signature_allows_model_override_only(monkeypatch):
+    """invoke() may accept model_override, but must not accept the deprecated model kwarg."""
     llm_client = _import_client()
     sig = inspect.signature(llm_client.invoke)
     assert "model" not in sig.parameters, (
         "invoke() must not accept a `model` kwarg; "
         "backend is selected by the MODEL env var only"
     )
+    assert "model_override" in sig.parameters

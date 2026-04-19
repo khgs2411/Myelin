@@ -1,4 +1,4 @@
-.PHONY: init init-project status status-all prune help update update-v2 update-v2-continue apply-pending reject-pending measure measure-tokens lint
+.PHONY: init init-project status status-all prune help update update-v2 update-v2-continue apply-pending reject-pending measure measure-legacy measure-tokens lint ask
 
 SYSTEM_PATH := /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
@@ -23,6 +23,8 @@ help:
 	@echo "  make apply-pending PROJECT=<project-key> PROPOSAL=<proposal-id>  # apply deferred destructive slice"
 	@echo "  make reject-pending PROJECT=<project-key> PROPOSAL=<proposal-id>  # archive slice without applying"
 	@echo "  make measure PROJECT=<project-key>"
+	@echo "  make measure-legacy PROJECT=<project-key>"
+	@echo "  make ask PROJECT=<project-key> Q=\"your question\""
 	@echo "  make measure-tokens PROJECT=<project-key> TASK=\"<brief>\""
 	@echo ""
 	@echo "MODEL selector (default: codex):"
@@ -104,7 +106,16 @@ lint:
 
 measure:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
+	@bash scripts/measure_llm.sh --project $(PROJECT)
+
+measure-legacy:
+	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
 	@bash scripts/measure.sh --project $(PROJECT)
+
+ask:
+	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
+	@test -n "$(Q)" || (echo 'Q="your question" is required' && exit 1)
+	@bash scripts/ask.sh --project $(PROJECT) --question "$(Q)"
 
 measure-tokens:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)

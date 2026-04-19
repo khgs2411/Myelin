@@ -1,0 +1,27 @@
+{
+  "_comment": "Template .mcp.json for the llm-wiki MCP server. Copy into any project root and edit env vars as needed. Only LLM_WIKI_ROOT is required; remove other env entries (or leave them empty) to fall back to defaults.",
+  "_env_reference": {
+    "LLM_WIKI_ROOT": "REQUIRED. Absolute path to the local llm-wiki clone. The MCP imports agents/query/query_engine.py from here and resolves projects/<key>/ relative to it.",
+    "LLM_WIKI_PROJECT": "Optional. Default project_key used when the caller omits it. Useful when copying this file into a single-project repo so the agent doesn't need to pass project_key on every call.",
+    "MODEL": "Optional. Backend selector for the query engine's downstream LLM: 'codex' | 'codex/<id>' | 'claude' | 'claude/<id>' | '<id>'. Default: 'codex'. Note: query ops pin weak models internally (gpt-5.4-mini / claude-haiku-4-5); MODEL here only picks the CLI backend, not the model id.",
+    "UPDATE_PROJECTS_ROOT": "Optional. Override for the projects/ root if your project state lives outside $LLM_WIKI_ROOT/projects. Rarely needed.",
+    "CODEX_BIN": "Optional. Path to the codex CLI binary. Default: 'codex' (looked up on PATH).",
+    "CLAUDE_BIN": "Optional. Path to the claude CLI binary. Default: 'claude' (looked up on PATH).",
+    "LLM_STUB_RESPONSES_DIR": "Test-only. Path to a directory of stub response JSON files; short-circuits live LLM calls. Leave unset for normal use."
+  },
+  "mcpServers": {
+    "llm-wiki": {
+      "command": "uvx",
+      "args": ["topsyde-llm-wiki-mcp"],
+      "env": {
+        "LLM_WIKI_ROOT": "/Users/liadgoren/Repositories/llm-wiki",
+        "LLM_WIKI_PROJECT": "",
+        "MODEL": "",
+        "UPDATE_PROJECTS_ROOT": "",
+        "CODEX_BIN": "",
+        "CLAUDE_BIN": "",
+        "LLM_STUB_RESPONSES_DIR": ""
+      }
+    }
+  }
+}

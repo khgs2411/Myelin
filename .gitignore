@@ -7,6 +7,7 @@
 __pycache__/
 *.pyc
 
+/mcp/
 projects
 !projects/sample/
 docs/*
@@ -35,6 +36,10 @@ tests/*
 !tests/test_plan_a_acceptance.py
 !tests/test_llm_client_real.py
 !tests/test_stage_instructions_schema.py
+!tests/test_measure_llm.py
+!tests/test_query_engine.py
+!tests/test_query_cli.py
+!tests/test_mcp_server.py
 artifacts/*/runs
 artifacts/_global/runs
 raw/inbox

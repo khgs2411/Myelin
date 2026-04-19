@@ -42,6 +42,12 @@ def _sha256(text: str) -> str:
 def _stage_instructions_path(stage_id: str) -> Path | None:
     """Map a stage_id to its instructions.md file, if one exists."""
     root = Path(__file__).resolve().parents[3]
+    if stage_id == "query.router":
+        path = root / "agents" / "query" / "router_instructions.md"
+        return path if path.is_file() else None
+    if stage_id == "query.synthesizer":
+        path = root / "agents" / "query" / "synthesizer_instructions.md"
+        return path if path.is_file() else None
     base = stage_id.split(".", 1)[0]
     path = root / "agents" / "update" / base / "instructions.md"
     return path if path.is_file() else None
@@ -217,8 +223,8 @@ def _extract_balanced_json_value(text: str, start: int) -> str | None:
     return None
 
 
-def _resolve_backend() -> tuple[str, str]:
-    model = os.environ.get("MODEL", "codex")
+def _resolve_backend(model_override: str | None = None) -> tuple[str, str]:
+    model = model_override or os.environ.get("MODEL", "codex")
     if model == "claude":
         return "claude", ""
     if model.startswith("claude/"):
@@ -241,8 +247,12 @@ def _normalize_tokens(raw: dict, is_estimate: bool = True) -> dict[str, Any]:
     }
 
 
-def _invoke_real(stage_id: str, prompt: str) -> dict[str, Any]:
-    backend, model_id = _resolve_backend()
+def _invoke_real(
+    stage_id: str,
+    prompt: str,
+    model_override: str | None = None,
+) -> dict[str, Any]:
+    backend, model_id = _resolve_backend(model_override)
     combined = _build_combined_prompt(stage_id, prompt)
 
     if len(combined) > PROMPT_SIZE_LIMIT:
@@ -290,7 +300,12 @@ def _invoke_real(stage_id: str, prompt: str) -> dict[str, Any]:
     }
 
 
-def invoke(*, stage_id: str, prompt: str) -> dict[str, Any]:
+def invoke(
+    *,
+    stage_id: str,
+    prompt: str,
+    model_override: str | None = None,
+) -> dict[str, Any]:
     """Invoke LLM or return a stubbed response."""
     stub_dir = os.environ.get("LLM_STUB_RESPONSES_DIR")
     if stub_dir:
@@ -311,4 +326,4 @@ def invoke(*, stage_id: str, prompt: str) -> dict[str, Any]:
             "tokens_consumed": _normalize_tokens(data.get("tokens_consumed", {})),
         }
 
-    return _invoke_real(stage_id, prompt)
+    return _invoke_real(stage_id, prompt, model_override)
