@@ -40,8 +40,12 @@ tests/*
 !tests/test_query_engine.py
 !tests/test_query_cli.py
 !tests/test_mcp_server.py
+!tests/test_mcp_gap_emission.py
+!tests/test_enrich_gap_auto_update.py
+!tests/test_auto_update_wrapper.py
 artifacts/*/runs
 artifacts/_global/runs
 raw/inbox
 raw/processed
 raw/rejected
+projects/*/logs/

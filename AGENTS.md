@@ -44,6 +44,7 @@ make update-continue PROJECT=<key>
 | `CONTINUE=1` | Resume from latest run's `proposal.json` (used by `make compile-continue` and `make update-continue`) |
 | `NO_EMIT=1` | suppress gap-note emission in `make measure` |
 | `LLM_STUB_RESPONSES_DIR=<path>` | Use canned responses instead of live LLM (stub tests) |
+| `LLM_WIKI_AUTO_UPDATE=1` | auto-run `make update` after `enrich_gap` MCP calls (detached background subprocess) |
 | `UPDATE_PROJECTS_ROOT` / `UPDATE_ARTIFACTS_ROOT` / `UPDATE_STAGES_ROOT` | Override roots (tests) |
 | `RANKING_CUTOFF=<n>` | Override ranking snapshot cutoff |
 | `CODEX_BIN` / `CLAUDE_BIN` | Override CLI binary path |
@@ -69,6 +70,7 @@ When touching stage code or LLM-stage instructions, these pitfalls have each bur
 - **Validator rules live in `agents/update/06-validate/structural.py`**, are registered in `06-validate/config.json::stage_specific.structural_rules`, AND must be wired into `06-validate/run.sh`'s finding loop. Missing any one of the three = silent skip.
 - **`INGEST_MODE=1` relaxes only `ranked_domain_coverage` and `domain_collapse_check`.** `make update` sets this for `06-validate`; all other structural and semantic rules still run. If an ingest run unexpectedly passes or fails, check whether those two compile-only rules were intentionally skipped.
 - **RTK hook only rewrites Bash tool calls.** `Read`, `Grep`, `Glob` bypass RTK. For token-heavy file reads or greps, shell out (`rtk read`, `rtk grep`, `rtk find`) or use the Bash tool.
+- **Auto-update lockfiles can strand on hard kills.** `enrich_gap` auto-update uses `projects/<key>/state/.update.lock`; the wrapper clears it on normal exit, but `SIGKILL` leaves it behind and the operator must remove it manually. Detached update logs live under `projects/<key>/logs/auto-update-<timestamp>.log`.
 - **`projects/sample/` fixture is not always present.** `test_plan_{a,b}_acceptance.py` and `test_state_migration.py::test_sample_project_registered` will fail without it - these are pre-existing, not regressions.
 
 ## System Model
@@ -229,6 +231,12 @@ Inbox item producers:
 - `agent-enriched`: `enrich_gap` appends operator or agent notes to an existing low-confidence MCP gap-note
 - `measure-auto`: `make measure` emits gap-notes for any question that scores below full marks unless `NO_EMIT=1`
 - `manual`: operators may write the same schema by hand when they want to seed future ingest work
+
+### Auto-Update On Enrich
+
+When `enrich_gap` runs with `auto_update=True`, or with `LLM_WIKI_AUTO_UPDATE=1` and no per-call override, the MCP server spawns a detached `make update PROJECT=<key> AUTO=1` subprocess immediately after the enriched gap-note is written. The MCP call returns without waiting, so the next session can benefit once the pipeline drains the inbox.
+
+Only one auto-update runs per project at a time. The MCP side acquires `projects/<project-key>/state/.update.lock` atomically before spawning; if the lock already exists, the tool returns `auto_update_status: "skipped:already-running"` and leaves the enriched item in the inbox for the next run. Logs for detached runs live under `projects/<project-key>/logs/auto-update-<iso-timestamp-z>.log`.
 
 The uniform JSON contract and filename convention live in [docs/inbox-item-schema.md](/Users/liadgoren/Repositories/llm-wiki/docs/inbox-item-schema.md).
 
