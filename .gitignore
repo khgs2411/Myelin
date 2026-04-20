@@ -16,6 +16,7 @@ docs/*
 docs/superpowers/dry-run-notes/artifacts/
 !docs/ARTIFACTS_AND_STATUS.md
 !docs/INGEST_PROPOSAL_FORMAT.md
+!docs/inbox-item-schema.md
 uv.lock
 tests/*
 !tests/conftest.py
@@ -43,6 +44,7 @@ tests/*
 !tests/test_mcp_gap_emission.py
 !tests/test_enrich_gap_auto_update.py
 !tests/test_auto_update_wrapper.py
+!tests/test_mcp_flag_stale_answer.py
 artifacts/*/runs
 artifacts/_global/runs
 raw/inbox

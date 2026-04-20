@@ -8,7 +8,7 @@ from typing import Any
 
 
 SCHEMA_VERSION = 1
-ALLOWED_SOURCES = {"mcp-auto", "agent-enriched", "measure-auto", "manual"}
+ALLOWED_SOURCES = {"mcp-auto", "agent-enriched", "agent-flagged", "measure-auto", "manual"}
 INBOX_ITEM_KEYS = [
     "id",
     "schema_version",

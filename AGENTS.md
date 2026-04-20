@@ -227,8 +227,9 @@ For the raw intake area specifically:
 
 Inbox item producers:
 
-- `mcp-auto`: `query_wiki` emits a gap-note automatically when confidence is below `0.6`
+- `mcp-auto`: `query_wiki` emits a gap-note automatically when confidence is below `0.66`
 - `agent-enriched`: `enrich_gap` appends operator or agent notes to an existing low-confidence MCP gap-note
+- `agent-flagged`: an agent calls `flag_stale_answer` after reading a confidently-wrong `query_wiki` response; the correction is written directly into `enriched_notes` and a new gap-note is created rather than appended to an existing one
 - `measure-auto`: `make measure` emits gap-notes for any question that scores below full marks unless `NO_EMIT=1`
 - `manual`: operators may write the same schema by hand when they want to seed future ingest work
 
@@ -262,6 +263,7 @@ Allowed `source` values:
 
 - `mcp-auto`
 - `agent-enriched`
+- `agent-flagged`
 - `measure-auto`
 - `manual`
 
