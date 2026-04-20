@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "llm-wiki": {
+      "command": "uvx",
+      "args": ["topsyde-llm-wiki-mcp@latest"],
+      "env": {
+        "LLM_WIKI_ROOT": "/Users/liadgoren/Repositories/llm-wiki"
+      }
+    }
+  }
+}

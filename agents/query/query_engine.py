@@ -105,8 +105,15 @@ def query(
     question: str,
     *,
     projects_root: Path | None = None,
+    raw: bool = False,
 ) -> dict:
-    """Answer a question from a single project's wiki."""
+    """Answer a question from a single project's wiki.
+
+    When `raw=False` (default), runs router + synthesizer and returns a weak-model
+    synthesized answer. When `raw=True`, runs router only and returns the raw
+    markdown of selected pages under `pages_content`; `answer` is an empty string,
+    `synthesizer_model` is None, and `confidence` comes from the router.
+    """
     project_dir = _resolve_project_dir(project_key, projects_root)
     if not project_dir.is_dir():
         raise FileNotFoundError(f"project not found: {project_dir}")
@@ -134,6 +141,23 @@ def query(
     if not isinstance(selected_paths, list):
         selected_paths = []
     selected_pages = _read_selected_pages(project_dir, [str(path) for path in selected_paths])
+    pages_read = [page["page_path"] for page in selected_pages]
+
+    if raw:
+        return {
+            "answer": "",
+            "citations": list(pages_read),
+            "confidence": float(router_response.get("confidence", 0.0)),
+            "pages_read": pages_read,
+            "pages_considered": len(catalog),
+            "router_model": weak_model,
+            "synthesizer_model": None,
+            "pages_content": [
+                {"page_path": page["page_path"], "content": page["content"]}
+                for page in selected_pages
+            ],
+            "tokens_consumed": _merge_tokens(router_result.get("tokens_consumed", {})),
+        }
 
     synthesizer_result = llm_client.invoke(
         stage_id="query.synthesizer",
@@ -142,7 +166,6 @@ def query(
     )
     synthesizer_response = synthesizer_result["response"]
 
-    pages_read = [page["page_path"] for page in selected_pages]
     citations = [
         citation
         for citation in synthesizer_response.get("citations", [])
@@ -169,12 +192,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--project", required=True)
     parser.add_argument("--question", required=True)
     parser.add_argument("--projects-root")
+    parser.add_argument(
+        "--raw",
+        action="store_true",
+        help="Skip synthesizer; return raw markdown of router-selected pages",
+    )
     args = parser.parse_args(argv)
 
     result = query(
         args.project,
         args.question,
         projects_root=Path(args.projects_root) if args.projects_root else None,
+        raw=args.raw,
     )
     print(json.dumps(result, indent=2))
     return 0

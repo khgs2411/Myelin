@@ -189,6 +189,81 @@ def test_query_falls_back_when_router_returns_zero_pages(tmp_project, monkeypatc
     assert "could not find" in result["answer"].lower()
 
 
+def test_query_raw_mode_skips_synthesizer_and_returns_pages_content(tmp_project, monkeypatch):
+    _seed_query_project(tmp_project)
+
+    captured_stages: list[str] = []
+
+    def fake_invoke(*, stage_id: str, prompt: str, model_override: str | None = None):
+        captured_stages.append(stage_id)
+        if stage_id == "query.router":
+            return {
+                "response": {
+                    "pages": ["wiki/systems/combat.md"],
+                    "confidence": 0.82,
+                    "reasoning": "combat domain",
+                },
+                "tokens_consumed": {"input_chars": 100, "output_chars": 20, "is_estimate": True},
+            }
+        raise AssertionError(f"synthesizer must not be called in raw mode, got {stage_id}")
+
+    query_engine = _import_query_engine()
+    monkeypatch.setattr(query_engine.llm_client, "invoke", fake_invoke)
+
+    result = query_engine.query(
+        "sample",
+        "combat timing?",
+        projects_root=tmp_project.parent,
+        raw=True,
+    )
+
+    assert captured_stages == ["query.router"]
+    assert result["answer"] == ""
+    assert result["citations"] == ["wiki/systems/combat.md"]
+    assert result["confidence"] == pytest.approx(0.82)
+    assert result["pages_read"] == ["wiki/systems/combat.md"]
+    assert result["synthesizer_model"] is None
+    assert result["router_model"] == "codex/gpt-5.4-mini"
+    assert result["pages_content"] == [
+        {
+            "page_path": "wiki/systems/combat.md",
+            "content": "Combat system routes actions through the ATB loop.\n",
+        }
+    ]
+    assert result["tokens_consumed"]["input_chars"] == 100
+    assert result["tokens_consumed"]["output_chars"] == 20
+
+
+def test_query_raw_mode_low_confidence_is_passed_through(tmp_project, monkeypatch):
+    _seed_query_project(tmp_project)
+
+    def fake_invoke(*, stage_id: str, prompt: str, model_override: str | None = None):
+        assert stage_id == "query.router"
+        return {
+            "response": {
+                "pages": [],
+                "confidence": 0.15,
+                "reasoning": "no match",
+            },
+            "tokens_consumed": {"input_chars": 30, "output_chars": 5, "is_estimate": True},
+        }
+
+    query_engine = _import_query_engine()
+    monkeypatch.setattr(query_engine.llm_client, "invoke", fake_invoke)
+
+    result = query_engine.query(
+        "sample",
+        "unknown topic?",
+        projects_root=tmp_project.parent,
+        raw=True,
+    )
+
+    assert result["pages_read"] == []
+    assert result["pages_content"] == []
+    assert result["confidence"] == pytest.approx(0.15)
+    assert result["synthesizer_model"] is None
+
+
 @pytest.mark.parametrize(
     ("model_env", "expected"),
     [

@@ -36,7 +36,7 @@ def test_query_wiki_low_confidence_emits_gap(monkeypatch, tmp_path: Path):
     monkeypatch.setenv("LLM_WIKI_ROOT", str(tmp_path))
     module = _load_module()
 
-    def fake_query(_project_key: str, _question: str, *, projects_root: Path | None = None):
+    def fake_query(_project_key: str, _question: str, *, projects_root: Path | None = None, raw: bool = False):
         assert projects_root == tmp_path / "projects"
         return {
             "answer": "Not sure.",
@@ -68,12 +68,83 @@ def test_query_wiki_low_confidence_emits_gap(monkeypatch, tmp_path: Path):
     assert item["enriched_notes"] is None
 
 
+def test_query_wiki_raw_mode_threads_flag_and_returns_pages_content(monkeypatch, tmp_path: Path):
+    project_dir = _seed_project(tmp_path)
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(tmp_path))
+    module = _load_module()
+
+    received_kwargs: dict = {}
+
+    def fake_query(_project_key: str, _question: str, *, projects_root: Path | None = None, raw: bool = False):
+        received_kwargs["raw"] = raw
+        received_kwargs["projects_root"] = projects_root
+        return {
+            "answer": "",
+            "citations": ["wiki/systems/combat.md"],
+            "confidence": 0.82,
+            "pages_read": ["wiki/systems/combat.md"],
+            "pages_considered": 21,
+            "router_model": "gpt-5.4-mini",
+            "synthesizer_model": None,
+            "pages_content": [
+                {"page_path": "wiki/systems/combat.md", "content": "Full markdown here."}
+            ],
+            "tokens_consumed": {"input_chars": 100, "output_chars": 20, "is_estimate": True},
+        }
+
+    monkeypatch.setattr(module, "_load_query_function", lambda: fake_query)
+
+    result = module.query_wiki("sample", "combat timing?", raw=True)
+
+    assert received_kwargs["raw"] is True
+    assert result["synthesizer_model"] is None
+    assert result["pages_content"][0]["page_path"] == "wiki/systems/combat.md"
+    assert result["pages_content"][0]["content"] == "Full markdown here."
+    assert result["emitted_gap_id"] is None
+    assert not list((project_dir / "inbox").glob("*.json"))
+
+
+def test_query_wiki_raw_mode_low_router_confidence_emits_gap(monkeypatch, tmp_path: Path):
+    project_dir = _seed_project(tmp_path)
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(tmp_path))
+    module = _load_module()
+
+    def fake_query(_project_key: str, _question: str, *, projects_root: Path | None = None, raw: bool = False):
+        assert raw is True
+        return {
+            "answer": "",
+            "citations": ["wiki/systems/combat.md"],
+            "confidence": 0.25,
+            "pages_read": ["wiki/systems/combat.md"],
+            "pages_considered": 21,
+            "router_model": "gpt-5.4-mini",
+            "synthesizer_model": None,
+            "pages_content": [
+                {"page_path": "wiki/systems/combat.md", "content": "Partial markdown."}
+            ],
+            "tokens_consumed": {"input_chars": 100, "output_chars": 20, "is_estimate": True},
+        }
+
+    monkeypatch.setattr(module, "_load_query_function", lambda: fake_query)
+
+    result = module.query_wiki("sample", "what's missing here?", raw=True)
+
+    inbox_files = sorted((project_dir / "inbox").glob("*.json"))
+    assert len(inbox_files) == 1
+    item = json.loads(inbox_files[0].read_text())
+    assert result["emitted_gap_id"] == item["id"]
+    assert item["source"] == "mcp-auto"
+    assert item["confidence"] == pytest.approx(0.25)
+    assert item["synthesizer_model"] is None
+    assert item["router_model"] == "gpt-5.4-mini"
+
+
 def test_query_wiki_high_confidence_does_not_emit_gap(monkeypatch, tmp_path: Path):
     project_dir = _seed_project(tmp_path)
     monkeypatch.setenv("LLM_WIKI_ROOT", str(tmp_path))
     module = _load_module()
 
-    def fake_query(_project_key: str, _question: str, *, projects_root: Path | None = None):
+    def fake_query(_project_key: str, _question: str, *, projects_root: Path | None = None, raw: bool = False):
         return {
             "answer": "Grounded answer.",
             "citations": ["wiki/systems/combat.md"],
