@@ -22,6 +22,19 @@
         "CLAUDE_BIN": "",
         "LLM_STUB_RESPONSES_DIR": ""
       }
+    },
+    "dev_llm-wiki": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/Users/liadgoren/Repositories/llm-wiki/mcp",
+        "run",
+        "llm_wiki_mcp.py"
+      ],
+      "env": {
+        "LLM_WIKI_ROOT": "/Users/liadgoren/Repositories/llm-wiki",
+        "LLM_WIKI_PROJECT": ""
+      }
     }
   }
 }

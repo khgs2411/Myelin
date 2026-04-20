@@ -20,11 +20,13 @@ Hard rules:
 - Output the same `proposal.json` schema used by stage `03-propose`.
 - `ranking_snapshot_path` may be `null`.
 - `referenced_ranking_domains` may be an empty array. Do not invent ranking domains.
+- `justification_signals` must be `["C"]` on every ingest unit. Signal C means "page exists but is incomplete" - the canonical meaning of a gap-note, and the only signal that applies without a ranking snapshot. Do NOT invent new signal values (e.g., `repeated-gap-note`, `repo-citation-provided`); apply rejects anything outside the A/B/C vocabulary and the run fails.
 - Reuse existing pages when possible. Create new pages only when the target page truly does not exist and no canonical page is a better home.
 - Group semantically. Multiple inbox items for the same target should usually become one unit.
 - Keep the shelf allowlist and page-structure rules from the compile pipeline.
 - Ground mechanism-level claims with concrete repo citations when the runtime input provides them.
 - If the gap cannot honestly be closed from the provided source context, preserve uncertainty and add an `## Open Questions` bullet instead of hallucinating.
+- `source_citations` must be full repo-relative paths that resolve to real files. Apply re-validates every citation; bad citations reject the whole proposal. If a gap-note's `enriched_notes` uses a basename shorthand (e.g., `MobReducers.cs:42`), DO NOT cite it verbatim - either locate the full path from the runtime input's `context_pages` or from existing repo references in `current_page`, or omit that citation entirely and surface the ambiguity in `## Open Questions`. Inline backticked citations in page `content` follow the same rule.
 
 Content contract:
 - Prefer concrete mechanism over vague summaries.
