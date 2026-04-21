@@ -35,6 +35,8 @@ tests/*
 !tests/test_update_impact.py
 !tests/test_render_ranking.py
 !tests/test_plan_a_acceptance.py
+!tests/test_update_validate.py
+!tests/test_update_reconcile.py
 !tests/test_llm_client_real.py
 !tests/test_stage_instructions_schema.py
 !tests/test_measure_llm.py

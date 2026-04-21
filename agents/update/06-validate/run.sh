@@ -96,27 +96,26 @@ structural_findings.extend(structural.validate_proposal(run_dir, ranking, allowe
 structural_blockers = [finding for finding in structural_findings if finding.get("severity") == "blocker"]
 semantic_findings: list[dict] = []
 
-if not structural_blockers:
-    wiki_dump: list[dict[str, str]] = []
-    for page in sorted((project_dir / "wiki").rglob("*.md")) if (project_dir / "wiki").is_dir() else []:
-        wiki_dump.append(
-            {
-                "path": str(page.relative_to(project_dir)),
-                "content": page.read_text(),
-            }
-        )
-    prompt = json.dumps(
+wiki_dump: list[dict[str, str]] = []
+for page in sorted((project_dir / "wiki").rglob("*.md")) if (project_dir / "wiki").is_dir() else []:
+    wiki_dump.append(
         {
-            "project_key": project_key,
-            "ranking_snapshot": ranking,
-            "proposal": proposal,
-            "index_md": (project_dir / "index.md").read_text() if (project_dir / "index.md").is_file() else "",
-            "wiki_pages": wiki_dump,
-            "enabled_rules": config["stage_specific"]["semantic_rules_enabled"],
+            "path": str(page.relative_to(project_dir)),
+            "content": page.read_text(),
         }
     )
-    result = llm_client.invoke(stage_id="06-validate.semantic", prompt=prompt)
-    semantic_findings = result["response"].get("findings", [])
+prompt = json.dumps(
+    {
+        "project_key": project_key,
+        "ranking_snapshot": ranking,
+        "proposal": proposal,
+        "index_md": (project_dir / "index.md").read_text() if (project_dir / "index.md").is_file() else "",
+        "wiki_pages": wiki_dump,
+        "enabled_rules": config["stage_specific"]["semantic_rules_enabled"],
+    }
+)
+result = llm_client.invoke(stage_id="06-validate.semantic", prompt=prompt)
+semantic_findings = result["response"].get("findings", [])
 
 semantic_blockers = [finding for finding in semantic_findings if finding.get("severity") == "blocker"]
 status = "fail" if structural_blockers or semantic_blockers else "pass"

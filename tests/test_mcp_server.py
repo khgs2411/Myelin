@@ -33,6 +33,16 @@ def test_mcp_module_loads_and_exposes_tools(monkeypatch, tmp_path):
     assert callable(module.main)
 
 
+def test_mcp_module_registers_discovery_resources(monkeypatch):
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
+    module = _load_module()
+
+    assert "llm-wiki://capabilities" in module.mcp._resources
+    assert "llm-wiki://project/{project_key}/index" in module.mcp._resource_templates
+    assert "llm-wiki://project/{project_key}/latest/{product}{?format}" in module.mcp._resource_templates
+    assert "llm-wiki://project/{project_key}/page/{page_path*}" in module.mcp._resource_templates
+
+
 def test_list_wiki_projects_reads_registered_projects(monkeypatch, tmp_path):
     projects_root = tmp_path / "projects"
     project_dir = projects_root / "sample"
@@ -61,6 +71,83 @@ def test_list_wiki_projects_reads_registered_projects(monkeypatch, tmp_path):
             "last_update_at": None,
         }
     ]
+
+
+def test_capabilities_resource_reports_tools_and_templates(monkeypatch):
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
+    module = _load_module()
+
+    data = module.capabilities_resource()
+
+    assert data["server"] == "llm-wiki"
+    assert "query_wiki" in data["tools"]
+    assert "llm-wiki://project/{project_key}/latest/{product}{?format}" in data["resource_templates"]
+    assert data["recommended_flow"] == [
+        "list_wiki_projects",
+        "query_wiki",
+        "get_wiki_page",
+    ]
+
+
+def test_project_index_resource_reads_index_markdown(monkeypatch, tmp_path):
+    project_dir = tmp_path / "projects" / "sample"
+    (project_dir / "state").mkdir(parents=True)
+    (project_dir / "state" / "project.json").write_text(json.dumps({"key": "sample", "name": "Sample"}))
+    (project_dir / "index.md").write_text("# Sample\n\nhello\n")
+
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(tmp_path))
+    module = _load_module()
+
+    assert module.project_index_resource("sample") == "# Sample\n\nhello\n"
+
+
+def test_latest_product_resource_reads_markdown_and_json(monkeypatch, tmp_path):
+    project_dir = tmp_path / "projects" / "sample"
+    latest_dir = project_dir / "state" / "latest"
+    latest_dir.mkdir(parents=True)
+    (project_dir / "state" / "project.json").write_text(json.dumps({"key": "sample", "name": "Sample"}))
+    (latest_dir / "validation-report.md").write_text("# Validation\n\npass\n")
+    (latest_dir / "validation-findings.json").write_text(json.dumps({"status": "pass"}))
+
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(tmp_path))
+    module = _load_module()
+
+    assert module.latest_product_resource("sample", "validation") == "# Validation\n\npass\n"
+    assert module.latest_product_resource("sample", "validation", format="json") == {"status": "pass"}
+
+
+def test_latest_product_resource_rejects_unknown_product_and_format(monkeypatch, tmp_path):
+    project_dir = tmp_path / "projects" / "sample"
+    (project_dir / "state" / "latest").mkdir(parents=True)
+    (project_dir / "state" / "project.json").write_text(json.dumps({"key": "sample", "name": "Sample"}))
+
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(tmp_path))
+    module = _load_module()
+
+    with pytest.raises(ValueError):
+        module.latest_product_resource("sample", "unknown")
+
+    with pytest.raises(ValueError):
+        module.latest_product_resource("sample", "validation", format="xml")
+
+
+def test_wiki_page_resource_reads_nested_page_and_blocks_traversal(monkeypatch, tmp_path):
+    project_dir = tmp_path / "projects" / "sample"
+    (project_dir / "state").mkdir(parents=True)
+    (project_dir / "state" / "project.json").write_text(json.dumps({"key": "sample", "name": "Sample"}))
+    page = project_dir / "wiki" / "systems" / "auth.md"
+    page.parent.mkdir(parents=True)
+    page.write_text("auth page\n")
+    sibling_dir = tmp_path / "projects" / "sample-evil"
+    sibling_dir.mkdir(parents=True)
+    (sibling_dir / "secret.md").write_text("nope")
+
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(tmp_path))
+    module = _load_module()
+
+    assert module.wiki_page_resource("sample", "wiki/systems/auth.md") == "auth page\n"
+    with pytest.raises(ValueError):
+        module.wiki_page_resource("sample", "../sample-evil/secret.md")
 
 
 def test_project_default_env_resolution(monkeypatch):
