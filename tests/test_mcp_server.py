@@ -33,6 +33,16 @@ def test_mcp_module_loads_and_exposes_tools(monkeypatch, tmp_path):
     assert callable(module.main)
 
 
+def test_query_wiki_docstring_instructs_low_confidence_follow_up(monkeypatch):
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
+    module = _load_module()
+
+    doc = module.query_wiki.__doc__ or ""
+    assert "enrich_gap" in doc
+    assert "emitted_gap_id" in doc
+    assert "low confidence" in doc.lower()
+
+
 def test_mcp_module_registers_discovery_resources(monkeypatch):
     monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
     module = _load_module()

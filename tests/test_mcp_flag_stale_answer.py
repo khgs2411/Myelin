@@ -54,6 +54,28 @@ def test_inbox_writer_accepts_agent_flagged_source(tmp_path: Path):
     assert written["source"] == "agent-flagged"
 
 
+def test_inbox_writer_accepts_validate_auto_source(tmp_path: Path):
+    sys.path.insert(0, str(REPO_ROOT))
+    from agents._shared import inbox_writer
+
+    project_dir = _seed_project(tmp_path)
+
+    item = inbox_writer.write_gap(
+        project_dir,
+        source="validate-auto",
+        question="Clarify overlap between wiki/systems/a.md and wiki/systems/b.md.",
+        target_hint="wiki/systems/a.md",
+        pages_read=["wiki/systems/a.md", "wiki/systems/b.md"],
+        enriched_notes="Validation finding: overlap.\nSuggested action: add one sentence.",
+        operator_notes='{"category":"redundancy"}',
+    )
+
+    assert item["source"] == "validate-auto"
+    assert item["pages_read"] == ["wiki/systems/a.md", "wiki/systems/b.md"]
+    written = json.loads((project_dir / "inbox" / f"{item['id']}.json").read_text())
+    assert written["source"] == "validate-auto"
+
+
 def test_flag_stale_answer_writes_gap_with_correction(monkeypatch, tmp_path: Path):
     project_dir = _seed_project(tmp_path)
     monkeypatch.setenv("LLM_WIKI_ROOT", str(tmp_path))

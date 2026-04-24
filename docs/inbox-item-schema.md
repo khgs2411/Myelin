@@ -47,6 +47,7 @@ Allowed `source` values:
 - `mcp-auto`
 - `agent-enriched`
 - `agent-flagged`
+- `validate-auto`
 - `measure-auto`
 - `manual`
 
@@ -55,6 +56,7 @@ Source-specific rules:
 - `mcp-auto` and `agent-enriched` populate `confidence`, `pages_read`, `pages_considered`, `router_model`, and `synthesizer_model`.
 - `agent-enriched` additionally populates `enriched_notes`.
 - `agent-flagged` populates `confidence` (the original wrong confidence score from the bad answer), `pages_read` (what the bad answer cited), `router_model`, `synthesizer_model`, and `enriched_notes` (the agent's correction, with `file_path:line_number` citations). Use when the wiki answered confidently but source verification showed the answer was wrong or stale.
+- `validate-auto` populates `pages_read` (affected wiki pages), `enriched_notes` (validation evidence plus suggested action), and `operator_notes` (a dedupe signature for the still-pending maintenance item). Use when validate emits a curated non-blocking semantic warning that should be queued for a later manual `make update`. Update-run validate calls suppress `validate-auto` emission until the bounded self-correction pass has had one chance to resolve the warning.
 - `measure-auto` populates `question_index`, `question_tag`, `score_awarded`, `score_max`, `expected_page`, and `measurement_run_id`.
 - `manual` may populate `operator_notes`.
 - Fields that do not apply must be present with `null` values rather than omitted.
@@ -63,6 +65,7 @@ Source-specific rules:
 
 - `mcp-auto`: use the best available page hint, preferring the first citation and then the first page read.
 - `agent-flagged`: use the first citation supplied by the flagging agent.
+- `validate-auto`: use the first affected page when one exists.
 - `measure-auto`: use `expected_page`.
 - `manual`: use a best guess or `""` when no page hint exists yet.
 

@@ -54,7 +54,7 @@ auto = sys.argv[6] == "1"
 
 sys.path.insert(0, str(root_dir))
 
-from agents.update._shared import ingest, llm_client  # noqa: E402
+from agents.update._shared import ingest, llm_client, proposal_citations  # noqa: E402
 
 
 def load_text(path: Path) -> str:
@@ -151,6 +151,7 @@ if repo_paths:
         if head.returncode == 0:
             sci["last_seen_commit_pending"] = head.stdout.strip()
 proposal["state_changes_intent"] = sci
+proposal = proposal_citations.normalize_proposal_citations(proposal, repo)
 
 proposal_path = run_dir / "proposal.json"
 proposal_path.write_text(json.dumps(proposal, indent=2) + "\n", encoding="utf-8")

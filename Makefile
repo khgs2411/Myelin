@@ -33,6 +33,8 @@ help:
 	@echo "  NO_EMIT=1                 suppress gap-note emission during measure"
 	@echo "  MODEL=<backend>           override LLM backend (see MODEL selector below) -"
 	@echo "                            applies to compile, update, measure, ask, measure-tokens"
+	@echo "  MODEL_REASONING_EFFORT=<level>"
+	@echo "                            override Codex reasoning effort; compile/update default to high"
 	@echo "  RANKING_CUTOFF=<n>        override ranking snapshot cutoff (compile)"
 	@echo "  CODEX_BIN / CLAUDE_BIN    override CLI binary path (default: looked up on PATH)"
 	@echo "  GLOBAL=1                  scope prune to global (non-project) artifacts"
@@ -43,6 +45,9 @@ help:
 	@echo "  MODEL=claude             use Claude CLI default model"
 	@echo "  MODEL=claude/<id>        use Claude CLI with a specific model id"
 	@echo "  MODEL=<id>               legacy: pass <id> to Codex as the model"
+	@echo ""
+	@echo "Pipeline default when MODEL is unset:"
+	@echo "  compile/update stages use codex/gpt-5.4 with MODEL_REASONING_EFFORT=high"
 
 init:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make init PROJECT=my_project" && exit 1)

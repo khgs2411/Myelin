@@ -55,6 +55,7 @@ sys.path.insert(0, str(root_dir))
 sys.path.insert(0, str(agent_dir))
 
 import structural
+from agents._shared import inbox_writer
 from agents.update._shared import llm_client
 
 config = json.loads((agent_dir / "config.json").read_text())
@@ -95,6 +96,85 @@ structural_findings.extend(structural.validate_proposal(run_dir, ranking, allowe
 
 structural_blockers = [finding for finding in structural_findings if finding.get("severity") == "blocker"]
 semantic_findings: list[dict] = []
+CURATED_INBOX_CATEGORIES = {"redundancy", "stale", "contradiction"}
+
+
+def _normalized_pages(finding: dict) -> list[str]:
+    pages = finding.get("pages") or []
+    return [str(page) for page in pages if isinstance(page, str) and page.strip()]
+
+
+def _validate_auto_signature(finding: dict) -> str:
+    payload = {
+        "category": str(finding.get("category") or "").strip().lower(),
+        "pages": _normalized_pages(finding),
+        "suggested_action": str(finding.get("suggested_action") or "").strip(),
+    }
+    return json.dumps(payload, sort_keys=True)
+
+
+def _has_pending_validate_auto(project_dir: Path, signature: str) -> bool:
+    inbox_dir = project_dir / "inbox"
+    if not inbox_dir.is_dir():
+        return False
+    for path in sorted(inbox_dir.glob("*.json")):
+        try:
+            item = json.loads(path.read_text())
+        except json.JSONDecodeError:
+            continue
+        if item.get("source") != "validate-auto":
+            continue
+        if item.get("operator_notes") == signature:
+            return True
+    return False
+
+
+def _validate_auto_question(finding: dict) -> str:
+    category = str(finding.get("category") or "").strip().lower()
+    pages = _normalized_pages(finding)
+    if category == "redundancy" and len(pages) >= 2:
+        return f"Clarify overlap between {pages[0]} and {pages[1]}."
+    if category == "stale" and pages:
+        return f"Refresh stale wiki content on {pages[0]}."
+    if category == "contradiction" and len(pages) >= 2:
+        return f"Resolve contradiction between {pages[0]} and {pages[1]}."
+    if pages:
+        return f"Address {category} warning on {pages[0]}."
+    return f"Address {category} validation warning."
+
+
+def _validate_auto_notes(finding: dict) -> str:
+    lines = [f"Validation finding: {str(finding.get('evidence') or '').strip()}"]
+    suggested = str(finding.get("suggested_action") or "").strip()
+    if suggested:
+        lines.append(f"Suggested action: {suggested}")
+    return "\n".join(lines)
+
+
+def _emit_curated_validation_items(project_dir: Path, findings: list[dict]) -> None:
+    for finding in findings:
+        category = str(finding.get("category") or "").strip().lower()
+        suggested_action = str(finding.get("suggested_action") or "").strip()
+        severity = str(finding.get("severity") or "").strip().lower()
+        if severity != "warn":
+            continue
+        if category not in CURATED_INBOX_CATEGORIES:
+            continue
+        if not suggested_action:
+            continue
+        signature = _validate_auto_signature(finding)
+        if _has_pending_validate_auto(project_dir, signature):
+            continue
+        pages = _normalized_pages(finding)
+        inbox_writer.write_gap(
+            project_dir,
+            source="validate-auto",
+            question=_validate_auto_question(finding),
+            target_hint=pages[0] if pages else "",
+            pages_read=pages or None,
+            enriched_notes=_validate_auto_notes(finding),
+            operator_notes=signature,
+        )
 
 wiki_dump: list[dict[str, str]] = []
 for page in sorted((project_dir / "wiki").rglob("*.md")) if (project_dir / "wiki").is_dir() else []:
@@ -145,6 +225,8 @@ report = {
 }
 report_path = run_dir / "validation-findings.json"
 report_path.write_text(json.dumps(report, indent=2) + "\n")
+if os.environ.get("VALIDATE_AUTO_EMIT", "1") != "0":
+    _emit_curated_validation_items(project_dir, semantic_findings)
 
 now = datetime.now(timezone.utc).isoformat()
 update_state_path = project_dir / "state" / "update-state.json"

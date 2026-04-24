@@ -59,7 +59,7 @@ root_dir = Path(sys.argv[4])
 auto = sys.argv[5] == "1"
 
 sys.path.insert(0, str(root_dir))
-from agents.update._shared import llm_client  # noqa: E402
+from agents.update._shared import llm_client, proposal_citations  # noqa: E402
 
 impact = json.loads((run_dir / "impact-report.json").read_text())
 ranking = json.loads((run_dir / "ranking-snapshot.json").read_text())
@@ -134,6 +134,7 @@ index_changes = proposal.get("index_changes", {})
 if index_changes.get("content") and "<stamped-by-apply>" in index_changes["content"]:
     index_changes["content"] = index_changes["content"].replace("<stamped-by-apply>", now)
 proposal["index_changes"] = index_changes
+proposal = proposal_citations.normalize_proposal_citations(proposal, repo)
 
 (run_dir / "proposal.json").write_text(json.dumps(proposal, indent=2) + "\n")
 

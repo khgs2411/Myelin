@@ -52,8 +52,11 @@ python3 - "$ROOT_DIR" "$mode" "$project_key" "$project_dir_override" <<'PY'
 from __future__ import annotations
 
 import json
+import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 root_dir = Path(sys.argv[1]).resolve()
 mode = sys.argv[2]
@@ -82,7 +85,6 @@ def status_view(project_dir: Path) -> dict:
     project = load_json(project_dir / "state" / "project.json")
     bootstrap = load_pipeline_state(project_dir)
     freshness = load_json(project_dir / "state" / "freshness.json")
-    lint = load_json(project_dir / "state" / "latest" / "lint-findings.json")
     validation = load_json(project_dir / "state" / "latest" / "validation-findings.json")
     ingest = load_json(project_dir / "state" / "latest" / "ingest-findings.json")
     last_stage = bootstrap.get("last_completed_stage")
@@ -91,7 +93,6 @@ def status_view(project_dir: Path) -> dict:
         "project": project,
         "bootstrap": bootstrap,
         "freshness": freshness,
-        "lint": lint,
         "validation": validation,
         "ingest": ingest,
         "last_stage_timestamp": last_stage_data.get("last_completed_at"),
@@ -108,56 +109,316 @@ def scalar(value: object, fallback: str = "none") -> str:
     return text if text else fallback
 
 
+def pluralize(count: int, singular: str, plural: str | None = None) -> str:
+    if count == 1:
+        return singular
+    return plural or f"{singular}s"
+
+
+def clip_text(text: str, limit: int = 140) -> str:
+    stripped = " ".join(text.split())
+    if len(stripped) <= limit:
+        return stripped
+    return stripped[: limit - 1].rstrip() + "…"
+
+
+def shorten_commit(commit: object) -> str:
+    text = scalar(commit)
+    return text[:8] if text != "none" else text
+
+
+def parse_iso_timestamp(raw: str) -> datetime | None:
+    value = raw.strip()
+    if not value:
+        return None
+    if value.endswith("Z"):
+        value = value[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def parse_filename_timestamp(name: str) -> datetime | None:
+    stem = name.split("_", 1)[0]
+    if "T" not in stem:
+        return None
+    date_part, time_part = stem.split("T", 1)
+    time_part = time_part.rstrip("Z")
+    time_pieces = time_part.split("-")
+    if len(time_pieces) != 3:
+        return None
+    return parse_iso_timestamp(f"{date_part}T{':'.join(time_pieces)}+00:00")
+
+
+def display_timezone():
+    tz_name = os.environ.get("TZ")
+    if tz_name:
+        try:
+            return ZoneInfo(tz_name)
+        except ZoneInfoNotFoundError:
+            pass
+    return datetime.now().astimezone().tzinfo or timezone.utc
+
+
+def format_timestamp(raw: object) -> str:
+    if raw is None:
+        return "unknown"
+    parsed = parse_iso_timestamp(str(raw))
+    if parsed is None:
+        return scalar(raw)
+    local_value = parsed.astimezone(display_timezone())
+    return local_value.strftime("%Y-%m-%d %H:%M %Z")
+
+
+def summarize_inbox(project_dir: Path) -> dict:
+    inbox_dir = project_dir / "inbox"
+    pending_items = sorted(
+        path for path in inbox_dir.glob("*.json")
+        if path.is_file()
+    )
+    processed_dir = inbox_dir / "processed"
+    processed_count = 0
+    if processed_dir.is_dir():
+        processed_count = sum(1 for path in processed_dir.glob("*.json") if path.is_file())
+    oldest_pending = None
+    if pending_items:
+        oldest_pending = parse_filename_timestamp(pending_items[0].name)
+    return {
+        "pending_count": len(pending_items),
+        "processed_count": processed_count,
+        "oldest_pending": oldest_pending,
+    }
+
+
+def collect_findings(findings_doc: dict) -> list[dict]:
+    findings: list[dict] = []
+    for key in ("structural", "semantic"):
+        value = findings_doc.get(key)
+        if isinstance(value, list):
+            findings.extend(item for item in value if isinstance(item, dict))
+    return findings
+
+
+def concise_finding_detail(finding: dict) -> str:
+    category = scalar(finding.get("category"), "").strip().lower()
+    pages = finding.get("pages") or []
+    if category == "stale" and pages == ["index.md"]:
+        return "index status metadata is behind the latest reviewed commit"
+    if category and pages:
+        page_list = ", ".join(str(page) for page in pages[:2])
+        if len(pages) > 2:
+            page_list += ", …"
+        return f"{category} on {page_list}"
+    if category:
+        return category
+    return clip_text(scalar(finding.get("evidence"), ""))
+
+
+def validation_summary(validation: dict) -> dict:
+    findings = collect_findings(validation)
+    warning_count = sum(1 for item in findings if scalar(item.get("severity")) in {"warn", "warning"})
+    blocker_count = sum(1 for item in findings if scalar(item.get("severity")) in {"blocker", "error", "fail"})
+    total_count = len(findings)
+    status = scalar(validation.get("status"))
+    summary = status
+    if status == "fail" and total_count:
+        summary = f"fail with {total_count} {pluralize(total_count, 'finding')}"
+    elif warning_count:
+        summary = f"{status} with {warning_count} {pluralize(warning_count, 'warning')}"
+    elif total_count:
+        summary = f"{status} with {total_count} {pluralize(total_count, 'finding')}"
+    detail = ""
+    suggested_action = ""
+    operator_explanation = ""
+    category = ""
+    if findings:
+        detail = concise_finding_detail(findings[0])
+        suggested_action = scalar(findings[0].get("suggested_action"), "")
+        first = findings[0]
+        category = scalar(first.get("category"), "").strip().lower()
+        if category == "stale" and (first.get("pages") or []) == ["index.md"]:
+            operator_explanation = (
+                "the wiki passed validation, but the status block in index.md still points at an older reviewed commit."
+            )
+    return {
+        "status": status,
+        "summary": summary,
+        "detail": detail,
+        "suggested_action": suggested_action,
+        "operator_explanation": operator_explanation,
+        "category": category,
+        "warning_count": warning_count,
+        "blocker_count": blocker_count,
+        "total_count": total_count,
+    }
+
+
+def latest_activity_summary(view: dict) -> str:
+    bootstrap = view["bootstrap"]
+    ingest = view["ingest"]
+    parts: list[str] = []
+    last_stage = bootstrap.get("last_completed_stage")
+    last_stage_time = view.get("last_stage_timestamp")
+    if last_stage and last_stage_time:
+        parts.append(f"{last_stage} completed {format_timestamp(last_stage_time)}")
+    elif last_stage:
+        parts.append(f"{last_stage} completed at unknown time")
+
+    ingest_time = ingest.get("updated_at")
+    if ingest_time:
+        ingest_text = f"last ingest {format_timestamp(ingest_time)}"
+        unit_count = ingest.get("unit_count")
+        if unit_count is not None:
+            ingest_text += f" updated {unit_count} {pluralize(int(unit_count), 'unit')}"
+        source_ids = [piece.strip() for piece in scalar(ingest.get("source_id"), "").split(",") if piece.strip()]
+        source_kind = scalar(ingest.get("source_kind"), "")
+        if source_ids and source_kind:
+            ingest_text += f" from {len(source_ids)} {pluralize(len(source_ids), source_kind)}"
+        parts.append(ingest_text)
+
+    if not parts:
+        return "none recorded"
+    return "; ".join(parts)
+
+
+def overall_summary(view: dict, inbox: dict, validation: dict) -> str:
+    freshness = view["freshness"]
+    issues: list[str] = []
+    pending_count = inbox["pending_count"]
+    if pending_count:
+        issues.append(f"{pending_count} pending inbox {pluralize(pending_count, 'item')}")
+    warning_count = validation["warning_count"]
+    blocker_count = validation["blocker_count"]
+    if blocker_count:
+        issues.append(f"{blocker_count} validation {pluralize(blocker_count, 'blocker')}")
+    elif warning_count:
+        issues.append(f"{warning_count} validation {pluralize(warning_count, 'warning')}")
+    impacted_count = len(freshness.get("impacted_pages") or [])
+    if impacted_count:
+        issues.append(f"{impacted_count} impacted {pluralize(impacted_count, 'page')}")
+    if issues:
+        return f"needs attention - {', '.join(issues)}"
+    if scalar(freshness.get("status")) == "stale":
+        return "stale"
+    return "ready"
+
+
+def path_hints(project_dir: Path, inbox: dict, validation: dict, freshness: dict) -> list[str]:
+    latest_dir = project_dir / "state" / "latest"
+    hints: list[str] = []
+    wanted: list[tuple[str, str]] = []
+    if validation["total_count"] or validation["status"] in {"fail", "pass"}:
+        wanted.append(("validation report", "validation-report.md"))
+    if inbox["pending_count"] or (latest_dir / "ingest-report.md").is_file():
+        wanted.append(("ingest report", "ingest-report.md"))
+    if len(freshness.get("impacted_pages") or []) > 0:
+        wanted.append(("ranking snapshot", "ranking-snapshot.md"))
+    if not wanted:
+        wanted.append(("measurement report", "measurement-report.md"))
+    for label, filename in wanted:
+        path = latest_dir / filename
+        if path.is_file():
+            hints.append(f"- {label}: {path}")
+    return hints
+
+
+def latest_run_used_self_correct(view: dict) -> bool:
+    bootstrap = view["bootstrap"]
+    latest_run_dir = scalar(bootstrap.get("latest_run_dir"), "")
+    self_correct = (bootstrap.get("stages") or {}).get("self-correct", {})
+    self_correct_run_dir = scalar(self_correct.get("last_run_dir"), "")
+    return bool(latest_run_dir and self_correct_run_dir and latest_run_dir == self_correct_run_dir)
+
+
+def todo_hints(view: dict, project_key: str, inbox: dict, validation: dict) -> list[str]:
+    hints: list[str] = []
+    curated_self_heal_categories = {"stale", "redundancy", "contradiction"}
+    self_correct_exhausted = latest_run_used_self_correct(view) and validation["total_count"] > 0
+    if inbox["pending_count"]:
+        if validation["operator_explanation"]:
+            hints.append(f"- What this means: {validation['operator_explanation']}")
+        elif validation["total_count"]:
+            hints.append("- What this means: the validation gate passed, but the wiki still has a maintenance warning to clear.")
+        hints.append(f"- Next step: make update PROJECT={project_key}")
+        if validation["total_count"]:
+            hints.append(f"- If the warning remains after update: make compile PROJECT={project_key}")
+    elif validation["total_count"]:
+        if self_correct_exhausted:
+            hints.append(
+                "- What this means: the latest update already used one bounded self-correction pass, but this warning still needs manual review."
+            )
+            hints.append("- Review the validation report: use the path hint below for the full warning details.")
+            if validation["suggested_action"]:
+                hints.append(f"- Suggested fix: {validation['suggested_action']}")
+        elif validation["operator_explanation"]:
+            hints.append(f"- What this means: {validation['operator_explanation']}")
+        else:
+            hints.append("- What this means: the validation gate passed, but the wiki still has a maintenance warning to clear.")
+        if not self_correct_exhausted and validation["category"] in curated_self_heal_categories:
+            hints.append(f"- Next step: make update PROJECT={project_key}")
+            hints.append(f"- If the warning remains after update: make compile PROJECT={project_key}")
+        elif not self_correct_exhausted:
+            hints.append("- Review the validation report: use the path hint below for the full warning details.")
+            if validation["suggested_action"]:
+                hints.append(f"- Suggested fix: {validation['suggested_action']}")
+    return hints
+
+
 def full_output(view: dict) -> str:
     project = view["project"]
-    bootstrap = view["bootstrap"]
     freshness = view["freshness"]
-    lint = view["lint"]
-    validation = view["validation"]
-    ingest = view["ingest"]
     project_dir = view["project_dir"]
     repo_paths = project.get("repo_paths") or []
-    lines = [
-        f"Project: {scalar(project.get('key'))} ({scalar(project.get('name'))})",
-        "Repo paths:",
-    ]
+    inbox = summarize_inbox(project_dir)
+    validation = validation_summary(view["validation"])
+    lines = [f"Project: {scalar(project.get('key'))} ({scalar(project.get('name'))})"]
     if repo_paths:
-        lines.extend(f"- {path}" for path in repo_paths)
+        lines.append(f"Primary repo: {repo_paths[0]}")
+        if len(repo_paths) > 1:
+            lines.append(f"Repo paths: {len(repo_paths)}")
     else:
-        lines.append("- none")
-    lines.extend(
-        [
-            (
-                "Bootstrap: "
-                f"last_completed_stage={scalar(bootstrap.get('last_completed_stage'))} "
-                f"reconciliation_required={scalar(bootstrap.get('reconciliation_required'))} "
-                f"timestamp={scalar(view.get('last_stage_timestamp'))}"
-            ),
-            (
-                "Latest lint: "
-                f"status={scalar(lint.get('status'))} "
-                f"findings={scalar(lint.get('finding_count'), '0')} "
-                f"path={project_dir / 'state' / 'latest' / 'lint-findings.md'}"
-            ),
-            (
-                "Latest validation: "
-                f"status={scalar(validation.get('status'))} "
-                f"findings={scalar(validation.get('finding_count'), '0')} "
-                f"path={project_dir / 'state' / 'latest' / 'validation-report.md'}"
-            ),
-            (
-                "Latest ingest: "
-                f"timestamp={scalar(ingest.get('updated_at'))} "
-                f"source={scalar(ingest.get('source'))} "
-                f"path={project_dir / 'state' / 'latest' / 'ingest-report.md'}"
-            ),
-            (
-                "Freshness: "
-                f"last_seen_commit={scalar(freshness.get('last_seen_commit'))} "
-                f"impacted_pages={len(freshness.get('impacted_pages') or [])}"
-            ),
-        ]
+        lines.append("Primary repo: none")
+
+    lines.append(f"Overall: {overall_summary(view, inbox, validation)}")
+
+    inbox_line = (
+        f"Inbox: {inbox['pending_count']} pending, {inbox['processed_count']} processed"
     )
+    if inbox["oldest_pending"] is not None:
+        inbox_line += f"; oldest pending {inbox['oldest_pending'].astimezone(display_timezone()).strftime('%Y-%m-%d %H:%M %Z')}"
+    lines.append(inbox_line)
+
+    lines.append(f"Latest activity: {latest_activity_summary(view)}")
+
+    validation_line = f"Validation: {validation['summary']}"
+    if validation["detail"]:
+        validation_line += f" - {validation['detail']}"
+    lines.append(validation_line)
+
+    freshness_bits = [f"commit {shorten_commit(freshness.get('last_seen_commit'))}"]
+    impacted_count = len(freshness.get("impacted_pages") or [])
+    if impacted_count:
+        freshness_bits.append(f"{impacted_count} impacted {pluralize(impacted_count, 'page')}")
+    else:
+        freshness_bits.append("clean")
+    if freshness.get("repo_dirty"):
+        freshness_bits.append("repo dirty")
+    lines.append(f"Freshness: {', '.join(freshness_bits)}")
+
+    todos = todo_hints(view, scalar(project.get("key")), inbox, validation)
+    if todos:
+        lines.append("Todo hints:")
+        lines.extend(todos)
+
+    hints = path_hints(project_dir, inbox, validation, freshness)
+    if hints:
+        lines.append("Path hints:")
+        lines.extend(hints)
+
     return "\n".join(lines)
 
 
@@ -165,14 +426,14 @@ def one_line_output(view: dict) -> str:
     project = view["project"]
     bootstrap = view["bootstrap"]
     freshness = view["freshness"]
-    lint = view["lint"]
-    validation = view["validation"]
     ingest = view["ingest"]
+    inbox = summarize_inbox(view["project_dir"])
+    validation = validation_summary(view["validation"])
     return (
         f"{scalar(project.get('key'))} | "
         f"bootstrap={scalar(bootstrap.get('last_completed_stage'))}@{scalar(view.get('last_stage_timestamp'))} | "
-        f"lint={scalar(lint.get('status'))}/{scalar(lint.get('finding_count'), '0')} | "
-        f"validation={scalar(validation.get('status'))}/{scalar(validation.get('finding_count'), '0')} | "
+        f"inbox={inbox['pending_count']} pending | "
+        f"validation={validation['summary']} | "
         f"ingest={scalar(ingest.get('source'))}@{scalar(ingest.get('updated_at'))} | "
         f"freshness={scalar(freshness.get('last_seen_commit'))}/{len(freshness.get('impacted_pages') or [])}"
     )

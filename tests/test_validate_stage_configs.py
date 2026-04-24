@@ -128,3 +128,12 @@ def test_reconcile_config_exists():
     data = json.loads(config.read_text())
     assert data["stage"] == "reconcile"
     assert data["stage_specific"]["max_loop_iterations"] == 1
+
+
+def test_self_correct_config_exists():
+    stages_root = REPO_ROOT / "agents" / "update"
+    config = stages_root / "09-self-correct" / "config.json"
+    assert config.is_file()
+    data = json.loads(config.read_text())
+    assert data["stage"] == "self-correct"
+    assert data["stage_specific"]["max_repo_search_terms"] >= 1

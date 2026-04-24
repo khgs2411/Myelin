@@ -1,0 +1,22 @@
+{
+  "stage": "06-validate.semantic",
+  "response": {
+    "findings": [
+      {
+        "category": "redundancy",
+        "severity": "warn",
+        "pages": [
+          "wiki/systems/admin-and-configuration.md",
+          "wiki/systems/coach-and-scheduling.md"
+        ],
+        "evidence": "The updated page now documents coach-scoped exercise management in detail, while `coach-and-scheduling.md` already frames the coach portal as the gym-scoped operating layer; the boundary between the two pages is now easy to blur.",
+        "suggested_action": "Add one sentence clarifying that coach exercise CRUD is the exception routed through `admin_config`, while most other coach operations remain under `coach_config`."
+      }
+    ]
+  },
+  "tokens_consumed": {
+    "input_chars": 3200,
+    "output_chars": 220,
+    "is_estimate": true
+  }
+}

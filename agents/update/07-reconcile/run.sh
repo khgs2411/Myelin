@@ -51,7 +51,7 @@ run_dir = Path(sys.argv[3])
 root_dir = Path(sys.argv[4])
 
 sys.path.insert(0, str(root_dir))
-from agents.update._shared import llm_client
+from agents.update._shared import llm_client, proposal_citations
 
 findings = json.loads((run_dir / "validation-findings.json").read_text())
 if findings.get("status") != "fail":
@@ -73,6 +73,14 @@ prompt = json.dumps(
 result = llm_client.invoke(stage_id="07-reconcile", prompt=prompt)
 reconcile_proposal = result["response"]
 reconcile_proposal["run_id"] = run_dir.name
+project_json = json.loads((project_dir / "state" / "project.json").read_text())
+repo_root = None
+repo_paths = project_json.get("repo_paths", [])
+if repo_paths:
+    repo_root = Path(repo_paths[0])
+    if not repo_root.is_absolute():
+        repo_root = root_dir / repo_root
+reconcile_proposal = proposal_citations.normalize_proposal_citations(reconcile_proposal, repo_root)
 
 proposal_path = run_dir / "reconcile-proposal.json"
 proposal_path.write_text(json.dumps(reconcile_proposal, indent=2) + "\n")

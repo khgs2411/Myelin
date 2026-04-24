@@ -53,7 +53,43 @@ print(count)
 PY
 }
 
-pipeline_total=6
+semantic_warn_count() {
+  python3 - "$1" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+if not path.is_file():
+    print(0)
+    raise SystemExit(0)
+data = json.loads(path.read_text(encoding="utf-8"))
+count = 0
+for finding in data.get("semantic", []):
+    if str(finding.get("severity") or "").strip().lower() == "warn":
+        count += 1
+print(count)
+PY
+}
+
+proposal_ready_for_apply() {
+  python3 - "$1" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+if not path.is_file():
+    print("False")
+    raise SystemExit(0)
+data = json.loads(path.read_text(encoding="utf-8"))
+approved = bool(data.get("approved"))
+units = data.get("units") or []
+print("True" if approved and len(units) > 0 else "False")
+PY
+}
+
+pipeline_total=7
 pipeline_start=$(date +%s)
 
 progress_bar() {
@@ -193,7 +229,7 @@ run_stage 2 "apply" bash "$STAGES_ROOT/04-apply/run.sh" \
 validate_exit=0
 reason_file=""
 if [[ "$apply_exit" -eq 0 ]]; then
-  run_stage 3 "validate" env INGEST_MODE=1 bash "$STAGES_ROOT/06-validate/run.sh" \
+  run_stage 3 "validate" env INGEST_MODE=1 VALIDATE_AUTO_EMIT=0 bash "$STAGES_ROOT/06-validate/run.sh" \
     --project "$project_key" --project-dir "$project_dir" --run-dir "$run_dir" \
     || validate_exit=$?
 
@@ -226,7 +262,7 @@ if [[ "$apply_exit" -eq 0 && "$validate_exit" -ne 0 ]]; then
       || apply_exit=$?
     validate_exit=0
     if [[ "$apply_exit" -eq 0 ]]; then
-      run_stage 3 "validate (retry)" env INGEST_MODE=1 bash "$STAGES_ROOT/06-validate/run.sh" \
+      run_stage 3 "validate (retry)" env INGEST_MODE=1 VALIDATE_AUTO_EMIT=0 bash "$STAGES_ROOT/06-validate/run.sh" \
         --project "$project_key" --project-dir "$project_dir" --run-dir "$run_dir" \
         || validate_exit=$?
       if [[ -f "$run_dir/validation-findings.json" ]]; then
@@ -244,14 +280,63 @@ else
   skip_stage 4 "reconcile"
 fi
 
+self_correct_exit=0
+if [[ "$apply_exit" -eq 0 && "$validate_exit" -eq 0 ]]; then
+  remaining_warns="$(semantic_warn_count "$run_dir/validation-findings.json")"
+  if [[ "$remaining_warns" -gt 0 ]]; then
+    run_stage 5 "self-correct" bash "$STAGES_ROOT/09-self-correct/run.sh" \
+      --project "$project_key" --project-dir "$project_dir" --run-dir "$run_dir" \
+      || self_correct_exit=$?
+
+    if [[ "$self_correct_exit" -eq 0 ]]; then
+      self_correct_proposal_path="$run_dir/self-correct-proposal.json"
+      self_correct_ready="$(proposal_ready_for_apply "$self_correct_proposal_path")"
+      if [[ "$self_correct_ready" == "True" ]]; then
+        self_correct_base="$run_dir/proposal.pre-self-correct.json"
+        cp "$run_dir/proposal.json" "$self_correct_base"
+        python3 "$ROOT_DIR/scripts/merge_reconcile.py" \
+          "$self_correct_base" \
+          "$self_correct_proposal_path" \
+          "$run_dir/proposal.json"
+        apply_exit=0
+        run_stage 2 "apply (self-correct)" bash "$STAGES_ROOT/04-apply/run.sh" \
+          --project "$project_key" --project-dir "$project_dir" --run-dir "$run_dir" \
+          || apply_exit=$?
+        validate_exit=0
+        if [[ "$apply_exit" -eq 0 ]]; then
+          run_stage 3 "validate (self-correct)" env INGEST_MODE=1 VALIDATE_AUTO_EMIT=0 bash "$STAGES_ROOT/06-validate/run.sh" \
+            --project "$project_key" --project-dir "$project_dir" --run-dir "$run_dir" \
+            || validate_exit=$?
+          if [[ -f "$run_dir/validation-findings.json" ]]; then
+            python3 "$ROOT_DIR/scripts/stable_products.py" render-validation \
+              --input "$run_dir/validation-findings.json" \
+              --project-dir "$project_dir"
+            reason_file="$run_dir/validation-findings.json"
+          fi
+        else
+          reason_file="$run_dir/apply-failure.reason.md"
+          printf 'Apply self-correct failed for ingest run %s.\n' "$run_id" >"$reason_file"
+        fi
+      fi
+    else
+      reason_file="$run_dir/self-correct-failure.reason.md"
+      printf 'Self-correct stage failed for ingest run %s.\n' "$run_id" >"$reason_file"
+    fi
+  else
+    skip_stage 5 "self-correct"
+  fi
+else
+  skip_stage 5 "self-correct"
+fi
+
 final_status="pass"
 terminal_outcome="processed"
-if [[ "$apply_exit" -ne 0 || "$validate_exit" -ne 0 ]]; then
+if [[ "$apply_exit" -ne 0 || "$validate_exit" -ne 0 || "$self_correct_exit" -ne 0 ]]; then
   final_status="fail"
   terminal_outcome="needs-review"
 fi
 
-run_stage 5 "terminal-state" terminalize_items "$terminal_outcome" "$reason_file" || true
+run_stage 6 "terminal-state" terminalize_items "$terminal_outcome" "$reason_file" || true
 
 render_ingest_args=(
   python3 "$ROOT_DIR/scripts/stable_products.py" render-ingest
@@ -296,7 +381,7 @@ print(f"ingest: closed {len(items)} gap-notes ({summary})")
 PY
 )"
 
-run_stage 6 "apply_commit" env PROJECTS_ROOT="$PROJECTS_ROOT" APPLY_COMMIT_MESSAGE="$commit_message" \
+run_stage 7 "apply_commit" env PROJECTS_ROOT="$PROJECTS_ROOT" APPLY_COMMIT_MESSAGE="$commit_message" \
   bash "$ROOT_DIR/scripts/apply_commit.sh" --project "$project_key"
 
 pipeline_end=$(date +%s)

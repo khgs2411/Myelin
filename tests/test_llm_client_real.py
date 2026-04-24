@@ -28,7 +28,8 @@ def test_codex_backend_command_shape(monkeypatch):
     """Default codex path: `codex exec --skip-git-repo-check -` with prompt via stdin."""
     llm_client = _import_client()
     monkeypatch.delenv("LLM_STUB_RESPONSES_DIR", raising=False)
-    monkeypatch.setenv("MODEL", "codex")
+    monkeypatch.delenv("MODEL", raising=False)
+    monkeypatch.delenv("MODEL_REASONING_EFFORT", raising=False)
 
     captured = {}
 
@@ -54,6 +55,10 @@ def test_codex_backend_command_shape(monkeypatch):
     # to disk and replying with a markdown status message that can't be parsed.
     assert "--sandbox" in cmd
     assert cmd[cmd.index("--sandbox") + 1] == "read-only"
+    assert "--model" in cmd
+    assert cmd[cmd.index("--model") + 1] == "gpt-5.4"
+    assert "-c" in cmd
+    assert cmd[cmd.index("-c") + 1] == 'model_reasoning_effort="high"'
     assert "--add-dir" not in cmd
     assert "-o" not in cmd
     assert captured["stdin"] is not None
@@ -65,6 +70,7 @@ def test_codex_backend_model_override(monkeypatch):
     llm_client = _import_client()
     monkeypatch.delenv("LLM_STUB_RESPONSES_DIR", raising=False)
     monkeypatch.setenv("MODEL", "codex/o1")
+    monkeypatch.delenv("MODEL_REASONING_EFFORT", raising=False)
 
     captured = {}
 
@@ -77,6 +83,50 @@ def test_codex_backend_model_override(monkeypatch):
     cmd = captured["cmd"]
     assert "--model" in cmd
     assert cmd[cmd.index("--model") + 1] == "o1"
+    assert "-c" in cmd
+    assert cmd[cmd.index("-c") + 1] == 'model_reasoning_effort="high"'
+
+
+def test_non_pipeline_stage_keeps_codex_default_model_when_model_unset(monkeypatch):
+    """Non-pipeline codex calls should not pin a model or reasoning effort."""
+    llm_client = _import_client()
+    monkeypatch.delenv("LLM_STUB_RESPONSES_DIR", raising=False)
+    monkeypatch.delenv("MODEL", raising=False)
+    monkeypatch.delenv("MODEL_REASONING_EFFORT", raising=False)
+
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+        return MagicMock(returncode=0, stdout="{}", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    llm_client.invoke(stage_id="measure.q1", prompt="x")
+    cmd = captured["cmd"]
+    assert "--model" not in cmd
+    assert "-c" not in cmd
+
+
+def test_model_reasoning_effort_override_wins_for_pipeline_stage(monkeypatch):
+    """Explicit reasoning override should replace the pinned high default."""
+    llm_client = _import_client()
+    monkeypatch.delenv("LLM_STUB_RESPONSES_DIR", raising=False)
+    monkeypatch.setenv("MODEL", "codex/gpt-5.5")
+    monkeypatch.setenv("MODEL_REASONING_EFFORT", "medium")
+
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+        return MagicMock(returncode=0, stdout="{}", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    llm_client.invoke(stage_id="08-ingest", prompt="x")
+    cmd = captured["cmd"]
+    assert "--model" in cmd
+    assert cmd[cmd.index("--model") + 1] == "gpt-5.5"
+    assert "-c" in cmd
+    assert cmd[cmd.index("-c") + 1] == 'model_reasoning_effort="medium"'
 
 
 def test_claude_backend_command_shape(monkeypatch):

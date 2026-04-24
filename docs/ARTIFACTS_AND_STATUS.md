@@ -54,10 +54,10 @@ Pruning is also triggered opportunistically after successful pipeline entry poin
 
 Use `make status PROJECT=<key>` for a full project summary in one screen:
 
-- project identity and repo paths
-- update state snapshot
-- latest validation summary and stable markdown path
-- latest measurement summary and stable markdown path
-- freshness snapshot
+- project identity and primary repo
+- overall health, including pending inbox work and validation/freshness pressure
+- latest activity in human-readable time
+- short validation and freshness summaries
+- optional stable report path hints at the end
 
 Use `make status-all` for one-line summaries for all registered projects.

@@ -33,6 +33,18 @@ from typing import Any
 CODEX_BIN = os.environ.get("CODEX_BIN", "codex")
 CLAUDE_BIN = os.environ.get("CLAUDE_BIN", "claude")
 PROMPT_SIZE_LIMIT = 200_000
+PIPELINE_STAGE_PREFIXES = {
+    "01-sense",
+    "02-impact",
+    "03-propose",
+    "05-acceptance",
+    "06-validate",
+    "07-reconcile",
+    "08-ingest",
+    "09-self-correct",
+}
+DEFAULT_PIPELINE_CODEX_MODEL = "codex/gpt-5.4"
+DEFAULT_PIPELINE_REASONING_EFFORT = "high"
 
 
 def _sha256(text: str) -> str:
@@ -223,8 +235,23 @@ def _extract_balanced_json_value(text: str, start: int) -> str | None:
     return None
 
 
-def _resolve_backend(model_override: str | None = None) -> tuple[str, str]:
-    model = model_override or os.environ.get("MODEL", "codex")
+def _is_pipeline_stage(stage_id: str) -> bool:
+    return stage_id.split(".", 1)[0] in PIPELINE_STAGE_PREFIXES
+
+
+def _resolve_model(stage_id: str, model_override: str | None = None) -> str:
+    if model_override:
+        return model_override
+    model = os.environ.get("MODEL")
+    if model:
+        return model
+    if _is_pipeline_stage(stage_id):
+        return DEFAULT_PIPELINE_CODEX_MODEL
+    return "codex"
+
+
+def _resolve_backend(stage_id: str, model_override: str | None = None) -> tuple[str, str]:
+    model = _resolve_model(stage_id, model_override=model_override)
     if model == "claude":
         return "claude", ""
     if model.startswith("claude/"):
@@ -234,6 +261,17 @@ def _resolve_backend(model_override: str | None = None) -> tuple[str, str]:
     if model.startswith("codex/"):
         return "codex", model[len("codex/"):]
     return "codex", model
+
+
+def _resolve_reasoning_effort(stage_id: str, backend: str) -> str:
+    if backend != "codex":
+        return ""
+    configured = os.environ.get("MODEL_REASONING_EFFORT")
+    if configured:
+        return configured
+    if _is_pipeline_stage(stage_id):
+        return DEFAULT_PIPELINE_REASONING_EFFORT
+    return ""
 
 
 def _normalize_tokens(raw: dict, is_estimate: bool = True) -> dict[str, Any]:
@@ -252,7 +290,8 @@ def _invoke_real(
     prompt: str,
     model_override: str | None = None,
 ) -> dict[str, Any]:
-    backend, model_id = _resolve_backend(model_override)
+    backend, model_id = _resolve_backend(stage_id, model_override)
+    reasoning_effort = _resolve_reasoning_effort(stage_id, backend)
     combined = _build_combined_prompt(stage_id, prompt)
 
     if len(combined) > PROMPT_SIZE_LIMIT:
@@ -283,6 +322,8 @@ def _invoke_real(
         ]
         if model_id:
             cmd += ["--model", model_id]
+        if reasoning_effort:
+            cmd += ["-c", f'model_reasoning_effort="{reasoning_effort}"']
         cmd.append("-")
         result = subprocess.run(cmd, capture_output=True, text=True, input=combined)
         if result.returncode != 0:
@@ -309,7 +350,20 @@ def invoke(
     """Invoke LLM or return a stubbed response."""
     stub_dir = os.environ.get("LLM_STUB_RESPONSES_DIR")
     if stub_dir:
-        stub_path = Path(stub_dir) / f"{stage_id}.json"
+        stub_root = Path(stub_dir)
+        counter_path = stub_root / f".{stage_id}.count"
+        next_index = 1
+        if counter_path.is_file():
+            try:
+                next_index = int(counter_path.read_text(encoding="utf-8").strip()) + 1
+            except ValueError:
+                next_index = 1
+        sequenced_path = stub_root / f"{stage_id}.{next_index}.json"
+        if sequenced_path.is_file():
+            stub_path = sequenced_path
+            counter_path.write_text(str(next_index), encoding="utf-8")
+        else:
+            stub_path = stub_root / f"{stage_id}.json"
         if not stub_path.is_file():
             raise FileNotFoundError(f"stub not found: {stub_path}")
         data = json.loads(stub_path.read_text())

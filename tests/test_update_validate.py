@@ -141,3 +141,58 @@ def test_validate_writes_completion_marker(tmp_sample_project_with_repo, tmp_pat
     _run_validate(tmp_sample_project_with_repo, run_dir, env)
     update_state = json.loads((tmp_sample_project_with_repo / "state" / "update-state.json").read_text())
     assert update_state["stages"]["validate"]["status"] == "completed"
+
+
+def test_validate_emits_curated_semantic_warning_to_inbox(tmp_sample_project_with_repo, tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    stub_dir = tmp_path / "stubs"
+    shutil.copytree(REPO_ROOT / "tests" / "fixtures" / "stubs", stub_dir)
+    shutil.copy(
+        REPO_ROOT / "tests" / "fixtures" / "stubs" / "06-validate.semantic.redundancy.json",
+        stub_dir / "06-validate.semantic.json",
+    )
+    env = _run_pipeline_through_apply(tmp_sample_project_with_repo, stub_dir, run_dir)
+
+    rc = _run_validate(tmp_sample_project_with_repo, run_dir, env)
+
+    assert rc.returncode == 0, f"stderr={rc.stderr}"
+    inbox_files = sorted((tmp_sample_project_with_repo / "inbox").glob("*.json"))
+    assert len(inbox_files) == 1
+    item = json.loads(inbox_files[0].read_text())
+    assert item["source"] == "validate-auto"
+    assert item["target_hint"] == "wiki/systems/admin-and-configuration.md"
+    assert item["pages_read"] == [
+        "wiki/systems/admin-and-configuration.md",
+        "wiki/systems/coach-and-scheduling.md",
+    ]
+    assert "Clarify overlap between" in item["question"]
+    assert "Suggested action:" in item["enriched_notes"]
+    assert json.loads(item["operator_notes"]) == {
+        "category": "redundancy",
+        "pages": [
+            "wiki/systems/admin-and-configuration.md",
+            "wiki/systems/coach-and-scheduling.md",
+        ],
+        "suggested_action": "Add one sentence clarifying that coach exercise CRUD is the exception routed through `admin_config`, while most other coach operations remain under `coach_config`.",
+    }
+
+
+def test_validate_does_not_emit_duplicate_curated_warning_while_pending(tmp_sample_project_with_repo, tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    stub_dir = tmp_path / "stubs"
+    shutil.copytree(REPO_ROOT / "tests" / "fixtures" / "stubs", stub_dir)
+    shutil.copy(
+        REPO_ROOT / "tests" / "fixtures" / "stubs" / "06-validate.semantic.redundancy.json",
+        stub_dir / "06-validate.semantic.json",
+    )
+    env = _run_pipeline_through_apply(tmp_sample_project_with_repo, stub_dir, run_dir)
+
+    first = _run_validate(tmp_sample_project_with_repo, run_dir, env)
+    second = _run_validate(tmp_sample_project_with_repo, run_dir, env)
+
+    assert first.returncode == 0, f"stderr={first.stderr}"
+    assert second.returncode == 0, f"stderr={second.stderr}"
+    inbox_files = sorted((tmp_sample_project_with_repo / "inbox").glob("*.json"))
+    assert len(inbox_files) == 1

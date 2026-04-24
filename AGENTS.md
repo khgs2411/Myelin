@@ -163,10 +163,11 @@ The stages are:
 2. apply
 3. validate with `INGEST_MODE=1`
 4. reconcile when validate fails
-5. terminal-state handling (`processed/` or `needs-review/`)
-6. apply commit only after validate passes
+5. self-correct when validate passes with residual semantic warnings
+6. terminal-state handling (`processed/` or `needs-review/`)
+7. apply commit only after validate passes
 
-`make update` is demand-driven and cheaper than `make compile`: it batches inbox items by `target_hint`, patches existing pages when possible, and deliberately relaxes only `ranked_domain_coverage` and `domain_collapse_check`.
+`make update` is demand-driven and cheaper than `make compile`: it batches inbox items by `target_hint`, patches existing pages when possible, deliberately relaxes only `ranked_domain_coverage` and `domain_collapse_check`, and gets one bounded repo-grounded self-correction pass before falling back to manual review.
 
 ## Operator-Owned Project Config
 
@@ -230,6 +231,7 @@ Inbox item producers:
 - `mcp-auto`: `query_wiki` emits a gap-note automatically when confidence is below `0.66`
 - `agent-enriched`: `enrich_gap` appends operator or agent notes to an existing low-confidence MCP gap-note
 - `agent-flagged`: an agent calls `flag_stale_answer` after reading a confidently-wrong `query_wiki` response; the correction is written directly into `enriched_notes` and a new gap-note is created rather than appended to an existing one
+- `validate-auto`: validate emits curated non-blocking semantic warnings (`redundancy`, `stale`, `contradiction`) as pending maintenance items when the finding includes a usable `suggested_action`; these queue work for a later manual `make update`, they do not trigger another update pass automatically, and update-run validate calls suppress this emission until the bounded self-correction pass is exhausted
 - `measure-auto`: `make measure` emits gap-notes for any question that scores below full marks unless `NO_EMIT=1`
 - `manual`: operators may write the same schema by hand when they want to seed future ingest work
 
@@ -264,6 +266,7 @@ Allowed `source` values:
 - `mcp-auto`
 - `agent-enriched`
 - `agent-flagged`
+- `validate-auto`
 - `measure-auto`
 - `manual`
 

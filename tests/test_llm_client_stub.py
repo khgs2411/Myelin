@@ -82,6 +82,29 @@ def test_indexed_stub_lookup(tmp_path, monkeypatch):
     assert result["response"]["score"] == 2
 
 
+def test_sequenced_stub_lookup_across_repeated_stage_calls(tmp_path, monkeypatch):
+    llm_client = _import_client()
+    stub_dir = tmp_path / "stubs"
+    stub_dir.mkdir()
+    (stub_dir / "06-validate.semantic.1.json").write_text(json.dumps({
+        "stage": "06-validate.semantic",
+        "response": {"findings": [{"category": "coverage_gap"}]},
+        "tokens_consumed": {"input": 50, "output": 5}
+    }))
+    (stub_dir / "06-validate.semantic.2.json").write_text(json.dumps({
+        "stage": "06-validate.semantic",
+        "response": {"findings": []},
+        "tokens_consumed": {"input": 60, "output": 6}
+    }))
+    monkeypatch.setenv("LLM_STUB_RESPONSES_DIR", str(stub_dir))
+
+    first = llm_client.invoke(stage_id="06-validate.semantic", prompt="ignored")
+    second = llm_client.invoke(stage_id="06-validate.semantic", prompt="ignored")
+
+    assert first["response"]["findings"] == [{"category": "coverage_gap"}]
+    assert second["response"]["findings"] == []
+
+
 def test_stub_path_emits_normalized_tokens_consumed(tmp_path, monkeypatch):
     """Stub path must return tokens_consumed with input_chars/output_chars/is_estimate keys."""
     llm_client = _import_client()
