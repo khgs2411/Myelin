@@ -93,6 +93,32 @@ def die(message: str) -> None:
     sys.exit(1)
 
 
+def render_index_status_block(commit: str | None, updated_at: str | None) -> str:
+    lines = [
+        "## Status",
+        "- Freshness: `state/freshness.json`",
+        "- Ranking snapshot: `state/latest/ranking-snapshot.md`",
+    ]
+    if updated_at:
+        lines.append(f"- Last update: `{updated_at}`")
+    if commit:
+        lines.append(f"- Last seen commit: `{commit}`")
+    lines.append("- Update state: `state/update-state.json`")
+    return "\n".join(lines)
+
+
+def canonicalize_index_status(content: str, commit: str | None, updated_at: str | None) -> str:
+    if not commit and not updated_at:
+        return content
+    status_block = render_index_status_block(commit, updated_at)
+    marker = "\n## Status\n"
+    if marker in content:
+        prefix = content.split(marker, 1)[0].rstrip()
+        return f"{prefix}\n\n{status_block}\n"
+    stripped = content.rstrip()
+    return f"{stripped}\n\n{status_block}\n"
+
+
 if not proposal.get("approved"):
     die("proposal is not approved (set top-level approved=true)")
 
@@ -318,6 +344,19 @@ state_changes_intent = proposal.get("state_changes_intent", {})
 freshness["last_seen_commit_pending"] = state_changes_intent.get("last_seen_commit_pending")
 freshness["last_update_at_pending"] = state_changes_intent.get("last_update_at_pending")
 freshness_path.write_text(json.dumps(freshness, indent=2) + "\n")
+
+if any(unit.get("page_path") == "index.md" for unit in additive_units) or (
+    index_changes.get("action") == "update" and index_changes.get("content")
+):
+    index_path = project_dir / "index.md"
+    if index_path.is_file():
+        index_path.write_text(
+            canonicalize_index_status(
+                index_path.read_text(),
+                freshness["last_seen_commit_pending"],
+                freshness["last_update_at_pending"],
+            )
+        )
 
 changelog_path = project_dir / "changelog.md"
 if changelog_path.is_file():

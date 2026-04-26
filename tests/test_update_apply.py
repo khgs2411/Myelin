@@ -157,6 +157,77 @@ def test_apply_writes_freshness_pending(tmp_sample_project_with_repo, tmp_path):
     assert freshness["last_seen_commit"] is None
 
 
+def test_apply_canonicalizes_index_status_after_duplicate_index_units(tmp_sample_project_with_repo, tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    rc = _run_through_apply(
+        tmp_sample_project_with_repo,
+        REPO_ROOT / "tests" / "fixtures" / "stubs",
+        run_dir,
+    )
+    assert rc.returncode == 0
+
+    proposal_path = run_dir / "proposal.json"
+    proposal = json.loads(proposal_path.read_text())
+    proposal["approved"] = True
+    proposal["state_changes_intent"] = {
+        "last_seen_commit_pending": "newcommit123",
+        "last_update_at_pending": "2026-04-25T12:32:45+00:00",
+    }
+    proposal["index_changes"] = None
+    stale_index = "\n".join(
+        [
+            "# Sample",
+            "",
+            "Sample project index.",
+            "",
+            "## Status",
+            "- Freshness: `state/freshness.json`",
+            "- Ranking snapshot: `state/latest/ranking-snapshot.md`",
+            "- Last seen commit: `oldcommit456`",
+            "- Update state: `state/update-state.json`",
+        ]
+    )
+    proposal["units"] = [
+        {
+            **proposal["units"][0],
+            "id": "status-refresh",
+            "page_path": "index.md",
+            "content": stale_index.replace("oldcommit456", "newcommit123")
+            + "\n- Last update: `2026-04-25T12:32:45+00:00`",
+        },
+        {
+            **proposal["units"][0],
+            "id": "content-refresh",
+            "page_path": "index.md",
+            "content": stale_index,
+        },
+    ]
+    proposal_path.write_text(json.dumps(proposal, indent=2) + "\n")
+
+    apply_rc = subprocess.run(
+        [
+            "bash",
+            str(REPO_ROOT / "agents" / "update" / "04-apply" / "run.sh"),
+            "--project",
+            "sample",
+            "--project-dir",
+            str(tmp_sample_project_with_repo),
+            "--run-dir",
+            str(run_dir),
+        ],
+        env=os.environ,
+        capture_output=True,
+        text=True,
+    )
+
+    assert apply_rc.returncode == 0, f"stderr={apply_rc.stderr}"
+    index = (tmp_sample_project_with_repo / "index.md").read_text()
+    assert "- Last update: `2026-04-25T12:32:45+00:00`" in index
+    assert "- Last seen commit: `newcommit123`" in index
+    assert "oldcommit456" not in index
+
+
 def test_apply_writes_completion_marker(tmp_sample_project_with_repo, tmp_path):
     run_dir = tmp_path / "run"
     run_dir.mkdir()

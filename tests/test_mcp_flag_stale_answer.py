@@ -109,6 +109,77 @@ def test_flag_stale_answer_writes_gap_with_correction(monkeypatch, tmp_path: Pat
     assert result["auto_update_log_path"] is None
 
 
+def test_create_inbox_item_writes_manual_gap_from_note(monkeypatch, tmp_path: Path):
+    project_dir = _seed_project(tmp_path)
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(tmp_path))
+    module = _load_module()
+
+    result = module.create_inbox_item(
+        note="Teach the wiki how manual inbox items should work.",
+        project_key="sample",
+        target_hint="wiki/systems/incremental-ingest-and-gap-notes.md",
+        operator_notes="Seeded by an operator.",
+    )
+
+    inbox_files = sorted((project_dir / "inbox").glob("*.json"))
+    assert len(inbox_files) == 1
+    item = json.loads(inbox_files[0].read_text())
+
+    assert result["id"] == item["id"]
+    assert item["source"] == "manual"
+    assert item["question"] == "Teach the wiki how manual inbox items should work."
+    assert item["target_hint"] == "wiki/systems/incremental-ingest-and-gap-notes.md"
+    assert item["operator_notes"] == "Seeded by an operator."
+    assert item["confidence"] is None
+    assert item["pages_read"] is None
+    assert item["enriched_notes"] is None
+    assert result["auto_update_triggered"] is False
+    assert result["auto_update_status"] == "disabled"
+    assert result["auto_update_log_path"] is None
+
+
+def test_create_inbox_item_allows_default_project_and_empty_target_hint(
+    monkeypatch, tmp_path: Path
+):
+    project_dir = _seed_project(tmp_path)
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(tmp_path))
+    monkeypatch.setenv("LLM_WIKI_PROJECT", "sample")
+    module = _load_module()
+
+    result = module.create_inbox_item(note="Route this during ingest.")
+
+    item = json.loads(next((project_dir / "inbox").glob("*.json")).read_text())
+    assert result["project_key"] == "sample"
+    assert item["target_hint"] == ""
+    assert item["operator_notes"] is None
+
+
+def test_create_inbox_item_auto_update_true_triggers_spawn(monkeypatch, tmp_path: Path):
+    _seed_project(tmp_path)
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(tmp_path))
+    module = _load_module()
+
+    calls: list[tuple[str, Path]] = []
+
+    def fake_trigger(project_dir_arg: Path, project_key_arg: str):
+        calls.append((project_key_arg, project_dir_arg))
+        return True, "triggered", "projects/sample/logs/fake.log"
+
+    monkeypatch.setattr(module, "_trigger_auto_update", fake_trigger)
+
+    result = module.create_inbox_item(
+        note="Run update after creating this.",
+        project_key="sample",
+        auto_update=True,
+    )
+
+    assert len(calls) == 1
+    assert calls[0][0] == "sample"
+    assert result["auto_update_triggered"] is True
+    assert result["auto_update_status"] == "triggered"
+    assert result["auto_update_log_path"] == "projects/sample/logs/fake.log"
+
+
 def test_flag_stale_answer_auto_update_true_triggers_spawn(monkeypatch, tmp_path: Path):
     _seed_project(tmp_path)
     monkeypatch.setenv("LLM_WIKI_ROOT", str(tmp_path))
