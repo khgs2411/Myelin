@@ -115,6 +115,16 @@ def test_query_happy_path_uses_router_and_synthesizer(tmp_project, monkeypatch):
     assert result["tokens_consumed"]["input_chars"] == 240
     assert result["tokens_consumed"]["output_chars"] == 60
     assert result["tokens_consumed"]["is_estimate"] is True
+    assert list(result.keys()) == [
+        "confidence",
+        "pages_read",
+        "pages_considered",
+        "router_model",
+        "synthesizer_model",
+        "tokens_consumed",
+        "citations",
+        "answer",
+    ]
 
 
 def test_query_uses_selected_page_content_for_domain_question(tmp_project, monkeypatch):
@@ -232,6 +242,17 @@ def test_query_raw_mode_skips_synthesizer_and_returns_pages_content(tmp_project,
     ]
     assert result["tokens_consumed"]["input_chars"] == 100
     assert result["tokens_consumed"]["output_chars"] == 20
+    assert list(result.keys()) == [
+        "confidence",
+        "pages_read",
+        "pages_considered",
+        "router_model",
+        "synthesizer_model",
+        "tokens_consumed",
+        "citations",
+        "pages_content",
+        "answer",
+    ]
 
 
 def test_query_raw_mode_low_confidence_is_passed_through(tmp_project, monkeypatch):

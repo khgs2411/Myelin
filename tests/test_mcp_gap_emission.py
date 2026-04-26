@@ -57,6 +57,17 @@ def test_query_wiki_low_confidence_emits_gap(monkeypatch, tmp_path: Path):
     assert len(inbox_files) == 1
     item = json.loads(inbox_files[0].read_text())
     assert result["emitted_gap_id"] == item["id"]
+    assert list(result.keys()) == [
+        "confidence",
+        "pages_read",
+        "pages_considered",
+        "router_model",
+        "synthesizer_model",
+        "tokens_consumed",
+        "emitted_gap_id",
+        "citations",
+        "answer",
+    ]
     assert item["source"] == "mcp-auto"
     assert item["question"] == "what is missing?"
     assert item["target_hint"] == "wiki/systems/combat.md"
@@ -101,6 +112,18 @@ def test_query_wiki_raw_mode_threads_flag_and_returns_pages_content(monkeypatch,
     assert result["pages_content"][0]["page_path"] == "wiki/systems/combat.md"
     assert result["pages_content"][0]["content"] == "Full markdown here."
     assert result["emitted_gap_id"] is None
+    assert list(result.keys()) == [
+        "confidence",
+        "pages_read",
+        "pages_considered",
+        "router_model",
+        "synthesizer_model",
+        "tokens_consumed",
+        "emitted_gap_id",
+        "citations",
+        "pages_content",
+        "answer",
+    ]
     assert not list((project_dir / "inbox").glob("*.json"))
 
 

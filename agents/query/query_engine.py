@@ -145,18 +145,18 @@ def query(
 
     if raw:
         return {
-            "answer": "",
-            "citations": list(pages_read),
             "confidence": float(router_response.get("confidence", 0.0)),
             "pages_read": pages_read,
             "pages_considered": len(catalog),
             "router_model": weak_model,
             "synthesizer_model": None,
+            "tokens_consumed": _merge_tokens(router_result.get("tokens_consumed", {})),
+            "citations": list(pages_read),
             "pages_content": [
                 {"page_path": page["page_path"], "content": page["content"]}
                 for page in selected_pages
             ],
-            "tokens_consumed": _merge_tokens(router_result.get("tokens_consumed", {})),
+            "answer": "",
         }
 
     synthesizer_result = llm_client.invoke(
@@ -173,8 +173,6 @@ def query(
     ]
 
     return {
-        "answer": synthesizer_response.get("answer", ""),
-        "citations": citations,
         "confidence": float(synthesizer_response.get("confidence", 0.0)),
         "pages_read": pages_read,
         "pages_considered": len(catalog),
@@ -184,6 +182,8 @@ def query(
             router_result.get("tokens_consumed", {}),
             synthesizer_result.get("tokens_consumed", {}),
         ),
+        "citations": citations,
+        "answer": synthesizer_response.get("answer", ""),
     }
 
 
