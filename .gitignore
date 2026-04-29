@@ -37,6 +37,7 @@ tests/*
 !tests/test_render_ranking.py
 !tests/test_plan_a_acceptance.py
 !tests/test_update_validate.py
+!tests/test_update_orchestrator.py
 !tests/test_brain_metadata.py
 !tests/test_stable_metadata_products.py
 !tests/test_update_reconcile.py

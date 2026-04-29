@@ -135,7 +135,11 @@ ask:
 obsidian:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
 	@PROJECT="$(PROJECT)" PROJECTS_ROOT="$${UPDATE_PROJECTS_ROOT:-$$(pwd)/projects}" \
-	  bash -c 'python3 scripts/export_obsidian.py --project-dir "$$PROJECTS_ROOT/$$PROJECT"'
+	  bash -c '\
+	    project_dir="$$PROJECTS_ROOT/$$PROJECT"; \
+	    python3 scripts/backfill_metadata.py --project-dir "$$project_dir"; \
+	    python3 scripts/export_obsidian.py --project-dir "$$project_dir" \
+	  '
 
 measure-tokens:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)

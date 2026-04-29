@@ -100,16 +100,28 @@ def _project_key(project_dir: Path, metadata: dict[str, Any]) -> str:
     return str(project_state.get("key") or project_dir.name)
 
 
+def _hub_filename(project_key: str) -> str:
+    return f"_brain-{project_key}.md"
+
+
 def _page_properties(project_key: str, page: dict[str, Any]) -> dict[str, Any]:
     page_tags = [_obsidian_tag(str(tag)) for tag in page.get("tags", []) if str(tag).strip()]
+    page_title = str(page.get("title") or page.get("path") or "")
+    aliases = [str(alias) for alias in page.get("aliases", []) if str(alias).strip()]
+    if page.get("path") == "index.md":
+        project_index_alias = f"{project_key.replace('-', ' ').replace('_', ' ').title()} Index"
+        if project_index_alias not in aliases:
+            aliases.append(project_index_alias)
     return {
         "project": project_key,
         "brain": project_key,
+        "graph_label": f"{project_key}: {page_title}",
+        "brain_home": _hub_filename(project_key),
         "kind": page.get("page_kind"),
         "domains": page.get("domains", []),
         "topics": page.get("topics", []),
         "tags": page_tags,
-        "aliases": page.get("aliases", []),
+        "aliases": aliases,
         "freshness": page.get("freshness_status"),
         "canonical": bool(page.get("canonical")),
         "source_paths": page.get("source_paths", []),
@@ -129,6 +141,7 @@ def _write_readme(export_dir: Path, project_key: str) -> None:
                 "Do not edit these files as canonical project knowledge.",
                 "",
                 "- Projected pages live under `pages/` and mirror canonical page paths.",
+                f"- `{_hub_filename(project_key)}` is the generated graph hub for this brain.",
                 "- YAML properties come from `state/page-metadata.json`.",
                 "- Regenerate with `make obsidian PROJECT=<key>`.",
                 "",
@@ -138,12 +151,13 @@ def _write_readme(export_dir: Path, project_key: str) -> None:
     )
 
 
-def _write_graph_groups(export_dir: Path, pages: list[dict[str, Any]]) -> None:
+def _write_graph_groups(export_dir: Path, project_key: str, pages: list[dict[str, Any]]) -> None:
     tags = sorted({str(tag) for page in pages for tag in page.get("tags", []) if str(tag).strip()})
     lines = [
         "# Obsidian Graph Groups",
         "",
         "Copy these filters into Obsidian graph group settings.",
+        f"The generated `{_hub_filename(project_key)}` hub links every projected page.",
         "",
     ]
     for tag in tags:
@@ -151,6 +165,36 @@ def _write_graph_groups(export_dir: Path, pages: list[dict[str, Any]]) -> None:
         lines.append(f"- `{obsidian_tag}`")
     lines.append("")
     (export_dir / "graph-groups.md").write_text("\n".join(lines), encoding="utf-8")
+
+def _write_hub_note(export_dir: Path, project_key: str, pages: list[dict[str, Any]]) -> None:
+    lines = [
+        "---",
+        f'project: "{project_key}"',
+        f'brain: "{project_key}"',
+        f'graph_label: "{project_key}: Home"',
+        "brain_home: true",
+        "tags:",
+        f'  - "#project/{project_key}"',
+        '  - "#role/brain-home"',
+        "aliases:",
+        f'  - "{project_key}"',
+        f'  - "{project_key} Home"',
+        "---",
+        "",
+        f"# {project_key} Home",
+        "",
+        "Generated graph hub. It links every projected page in this brain.",
+        "",
+        "## Pages",
+        "",
+    ]
+    for page in sorted(pages, key=lambda item: str(item.get("path") or "")):
+        page_path = str(page.get("path") or "")
+        title = str(page.get("title") or page_path)
+        projected_path = f"pages/{page_path}"
+        lines.append(f"- [{title}]({projected_path})")
+    lines.append("")
+    (export_dir / _hub_filename(project_key)).write_text("\n".join(lines), encoding="utf-8")
 
 
 def _write_bases_readme(export_dir: Path, pages: list[dict[str, Any]]) -> None:
@@ -192,8 +236,9 @@ def export_obsidian(project_dir: Path) -> Path:
     export_dir = _safe_reset_export_dir(project_dir)
 
     _write_readme(export_dir, project_key)
-    _write_graph_groups(export_dir, metadata_pages)
+    _write_graph_groups(export_dir, project_key, metadata_pages)
     _write_bases_readme(export_dir, metadata_pages)
+    _write_hub_note(export_dir, project_key, metadata_pages)
 
     pages_dir = export_dir / "pages"
     for page in metadata_pages:
