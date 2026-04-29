@@ -131,8 +131,7 @@ def test_make_obsidian_generates_export_tree_and_preserves_canonical_pages(tmp_p
     assert (export_dir / "graph-groups.md").is_file()
     assert (export_dir / "bases" / "README.md").is_file()
     assert (export_dir / "_brain-sample.md").is_file()
-    assert (export_dir / "pages" / "index.md").is_file()
-    assert (export_dir / "pages" / "wiki" / "systems" / "auth.md").is_file()
+    assert not (export_dir / "pages").exists()
     assert (project_dir / "index.md").read_text(encoding="utf-8") == before_index
     assert (project_dir / "wiki" / "systems" / "auth.md").read_text(encoding="utf-8") == before_auth
 
@@ -153,10 +152,28 @@ def test_make_obsidian_backfills_metadata_for_legacy_project(tmp_path: Path):
     assert (project_dir / "state" / "tag-index.json").is_file()
     assert (project_dir / "state" / "alias-index.json").is_file()
     assert (project_dir / "obsidian" / "_brain-sample.md").is_file()
-    assert (project_dir / "obsidian" / "pages" / "index.md").is_file()
+    assert not (project_dir / "obsidian" / "pages").exists()
 
 
-def test_projected_page_includes_frontmatter_tags_and_canonical_content(tmp_path: Path):
+def test_export_is_helper_overlay_without_projected_page_copies(tmp_path: Path):
+    project_dir = _seed_project(tmp_path)
+    before_index = (project_dir / "index.md").read_text(encoding="utf-8")
+    before_auth = (project_dir / "wiki" / "systems" / "auth.md").read_text(encoding="utf-8")
+
+    rc = subprocess.run(
+        ["python3", str(REPO_ROOT / "scripts" / "export_obsidian.py"), "--project-dir", str(project_dir)],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+
+    assert rc.returncode == 0, rc.stderr
+    assert not (project_dir / "obsidian" / "pages").exists()
+    assert (project_dir / "index.md").read_text(encoding="utf-8") == before_index
+    assert (project_dir / "wiki" / "systems" / "auth.md").read_text(encoding="utf-8") == before_auth
+
+
+def test_readme_describes_helper_overlay_without_page_body_copies(tmp_path: Path):
     project_dir = _seed_project(tmp_path)
     rc = subprocess.run(
         ["python3", str(REPO_ROOT / "scripts" / "export_obsidian.py"), "--project-dir", str(project_dir)],
@@ -166,39 +183,13 @@ def test_projected_page_includes_frontmatter_tags_and_canonical_content(tmp_path
     )
 
     assert rc.returncode == 0, rc.stderr
-    content = (project_dir / "obsidian" / "pages" / "wiki" / "systems" / "auth.md").read_text(
-        encoding="utf-8"
-    )
-    assert content.startswith("---\n")
-    assert 'project: "sample"' in content
-    assert 'kind: "system"' in content
-    assert '  - "authentication"' in content
-    assert '  - "#project/sample"' in content
-    assert '  - "#kind/system"' in content
-    assert '  - "#status/stale"' in content
-    assert '  - "Authentication"' in content
-    assert 'freshness: "stale"' in content
-    assert 'canonical_path: "wiki/systems/auth.md"' in content
-    assert "# Auth\n\nCanonical auth page.\n" in content
+    content = (project_dir / "obsidian" / "README.md").read_text(encoding="utf-8")
+    assert "generated helper overlay" in content
+    assert "Canonical pages remain under the project root and `wiki/`." in content
+    assert "No page bodies are copied into this directory." in content
 
 
-def test_index_projection_has_graph_label_brain_home_and_project_alias(tmp_path: Path):
-    project_dir = _seed_project(tmp_path)
-    rc = subprocess.run(
-        ["python3", str(REPO_ROOT / "scripts" / "export_obsidian.py"), "--project-dir", str(project_dir)],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-    )
-
-    assert rc.returncode == 0, rc.stderr
-    content = (project_dir / "obsidian" / "pages" / "index.md").read_text(encoding="utf-8")
-    assert 'graph_label: "sample: Index"' in content
-    assert 'brain_home: "_brain-sample.md"' in content
-    assert '  - "Sample Index"' in content
-
-
-def test_hub_note_links_every_projected_page(tmp_path: Path):
+def test_hub_note_links_every_canonical_page(tmp_path: Path):
     project_dir = _seed_project(tmp_path)
     rc = subprocess.run(
         ["python3", str(REPO_ROOT / "scripts" / "export_obsidian.py"), "--project-dir", str(project_dir)],
@@ -211,12 +202,12 @@ def test_hub_note_links_every_projected_page(tmp_path: Path):
     content = (project_dir / "obsidian" / "_brain-sample.md").read_text(encoding="utf-8")
     assert 'graph_label: "sample: Home"' in content
     assert "brain_home: true" in content
-    assert "- [Index](pages/index.md)" in content
-    assert "- [Auth](pages/wiki/systems/auth.md)" in content
+    assert "- [Index](../index.md)" in content
+    assert "- [Auth](../wiki/systems/auth.md)" in content
     readme = (project_dir / "obsidian" / "README.md").read_text(encoding="utf-8")
     graph_groups = (project_dir / "obsidian" / "graph-groups.md").read_text(encoding="utf-8")
     assert "`_brain-sample.md` is the generated graph hub" in readme
-    assert "The generated `_brain-sample.md` hub links every projected page." in graph_groups
+    assert "The generated `_brain-sample.md` hub links every canonical page." in graph_groups
 
 
 def test_missing_metadata_fails_clearly(tmp_path: Path):
@@ -274,6 +265,7 @@ def test_bases_markdown_escapes_table_pipes(tmp_path: Path):
     bases = (project_dir / "obsidian" / "bases" / "README.md").read_text(encoding="utf-8")
     assert "Auth \\| Sessions" in bases
     assert "auth\\|sessions" in bases
+    assert "../wiki/systems/auth.md" in bases
 
 
 def test_graph_groups_do_not_include_path_derived_domain_tags(tmp_path: Path):

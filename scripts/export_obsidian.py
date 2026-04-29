@@ -23,38 +23,6 @@ def _load_json(path: Path, *, metadata_required: bool = False) -> dict[str, Any]
     return payload
 
 
-def _yaml_scalar(value: Any) -> str:
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if value is None:
-        return "null"
-    text = str(value)
-    escaped = text.replace("\\", "\\\\").replace('"', '\\"')
-    return f'"{escaped}"'
-
-
-def _yaml_list(values: list[Any]) -> list[str]:
-    if not values:
-        return ["[]"]
-    return [f"- {_yaml_scalar(value)}" for value in values]
-
-
-def _frontmatter(properties: dict[str, Any]) -> str:
-    lines = ["---"]
-    for key, value in properties.items():
-        if isinstance(value, list):
-            rendered = _yaml_list(value)
-            if rendered == ["[]"]:
-                lines.append(f"{key}: []")
-            else:
-                lines.append(f"{key}:")
-                lines.extend(f"  {line}" for line in rendered)
-        else:
-            lines.append(f"{key}: {_yaml_scalar(value)}")
-    lines.append("---")
-    return "\n".join(lines) + "\n\n"
-
-
 def _obsidian_tag(tag: str) -> str:
     cleaned = tag.strip().replace(" ", "-")
     return f"#{cleaned.lstrip('#')}"
@@ -104,31 +72,8 @@ def _hub_filename(project_key: str) -> str:
     return f"_brain-{project_key}.md"
 
 
-def _page_properties(project_key: str, page: dict[str, Any]) -> dict[str, Any]:
-    page_tags = [_obsidian_tag(str(tag)) for tag in page.get("tags", []) if str(tag).strip()]
-    page_title = str(page.get("title") or page.get("path") or "")
-    aliases = [str(alias) for alias in page.get("aliases", []) if str(alias).strip()]
-    if page.get("path") == "index.md":
-        project_index_alias = f"{project_key.replace('-', ' ').replace('_', ' ').title()} Index"
-        if project_index_alias not in aliases:
-            aliases.append(project_index_alias)
-    return {
-        "project": project_key,
-        "brain": project_key,
-        "graph_label": f"{project_key}: {page_title}",
-        "brain_home": _hub_filename(project_key),
-        "kind": page.get("page_kind"),
-        "domains": page.get("domains", []),
-        "topics": page.get("topics", []),
-        "tags": page_tags,
-        "aliases": aliases,
-        "freshness": page.get("freshness_status"),
-        "canonical": bool(page.get("canonical")),
-        "source_paths": page.get("source_paths", []),
-        "last_verified_commit": page.get("last_verified_commit"),
-        "last_verified_at": page.get("last_verified_at"),
-        "canonical_path": page.get("path"),
-    }
+def _canonical_link(page_path: str) -> str:
+    return f"../{page_path}"
 
 
 def _write_readme(export_dir: Path, project_key: str) -> None:
@@ -137,12 +82,13 @@ def _write_readme(export_dir: Path, project_key: str) -> None:
             [
                 f"# {project_key} Obsidian Projection",
                 "",
-                "This directory is generated from application-owned llm-wiki state.",
-                "Do not edit these files as canonical project knowledge.",
+                "This directory is a generated helper overlay from application-owned llm-wiki state.",
+                "Canonical pages remain under the project root and `wiki/`.",
+                "No page bodies are copied into this directory.",
                 "",
-                "- Projected pages live under `pages/` and mirror canonical page paths.",
                 f"- `{_hub_filename(project_key)}` is the generated graph hub for this brain.",
-                "- YAML properties come from `state/page-metadata.json`.",
+                "- Helper files link to canonical pages with relative `../` links.",
+                "- Graph filters come from `state/page-metadata.json` tags.",
                 "- Regenerate with `make obsidian PROJECT=<key>`.",
                 "",
             ]
@@ -157,7 +103,7 @@ def _write_graph_groups(export_dir: Path, project_key: str, pages: list[dict[str
         "# Obsidian Graph Groups",
         "",
         "Copy these filters into Obsidian graph group settings.",
-        f"The generated `{_hub_filename(project_key)}` hub links every projected page.",
+        f"The generated `{_hub_filename(project_key)}` hub links every canonical page.",
         "",
     ]
     for tag in tags:
@@ -165,6 +111,7 @@ def _write_graph_groups(export_dir: Path, project_key: str, pages: list[dict[str
         lines.append(f"- `{obsidian_tag}`")
     lines.append("")
     (export_dir / "graph-groups.md").write_text("\n".join(lines), encoding="utf-8")
+
 
 def _write_hub_note(export_dir: Path, project_key: str, pages: list[dict[str, Any]]) -> None:
     lines = [
@@ -183,7 +130,7 @@ def _write_hub_note(export_dir: Path, project_key: str, pages: list[dict[str, An
         "",
         f"# {project_key} Home",
         "",
-        "Generated graph hub. It links every projected page in this brain.",
+        "Generated graph hub. It links every canonical page in this brain.",
         "",
         "## Pages",
         "",
@@ -191,8 +138,7 @@ def _write_hub_note(export_dir: Path, project_key: str, pages: list[dict[str, An
     for page in sorted(pages, key=lambda item: str(item.get("path") or "")):
         page_path = str(page.get("path") or "")
         title = str(page.get("title") or page_path)
-        projected_path = f"pages/{page_path}"
-        lines.append(f"- [{title}]({projected_path})")
+        lines.append(f"- [{title}]({_canonical_link(page_path)})")
     lines.append("")
     (export_dir / _hub_filename(project_key)).write_text("\n".join(lines), encoding="utf-8")
 
@@ -217,7 +163,7 @@ def _write_bases_readme(export_dir: Path, pages: list[dict[str, Any]]) -> None:
                     _markdown_table_cell(page.get("page_kind") or ""),
                     _markdown_table_cell(page.get("freshness_status") or ""),
                     _markdown_table_cell(", ".join(str(domain) for domain in page.get("domains", []))),
-                    _markdown_table_cell(page.get("path") or ""),
+                    _markdown_table_cell(_canonical_link(str(page.get("path") or ""))),
                 ]
             )
             + " |"
@@ -233,29 +179,20 @@ def export_obsidian(project_dir: Path) -> Path:
         raise SystemExit("state/page-metadata.json must contain a pages list")
     metadata_pages = [page for page in pages if isinstance(page, dict) and page.get("path")]
     project_key = _project_key(project_dir, metadata)
+    for page in metadata_pages:
+        _canonical_page_path(project_dir, str(page["path"]))
+
     export_dir = _safe_reset_export_dir(project_dir)
 
     _write_readme(export_dir, project_key)
     _write_graph_groups(export_dir, project_key, metadata_pages)
     _write_bases_readme(export_dir, metadata_pages)
     _write_hub_note(export_dir, project_key, metadata_pages)
-
-    pages_dir = export_dir / "pages"
-    for page in metadata_pages:
-        page_path = str(page["path"])
-        canonical_path = _canonical_page_path(project_dir, page_path)
-        output_path = pages_dir / page_path
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(
-            _frontmatter(_page_properties(project_key, page))
-            + canonical_path.read_text(encoding="utf-8"),
-            encoding="utf-8",
-        )
     return export_dir
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Export Obsidian projection files for a project brain")
+    parser = argparse.ArgumentParser(description="Export Obsidian helper overlay files for a project brain")
     parser.add_argument("--project-dir", required=True)
     args = parser.parse_args()
     export_dir = export_obsidian(Path(args.project_dir))

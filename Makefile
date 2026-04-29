@@ -1,4 +1,4 @@
-.PHONY: init status status-all prune help compile compile-continue update update-continue apply-pending reject-pending measure measure-legacy measure-tokens lint ask obsidian
+.PHONY: init status status-all prune help compile compile-continue update update-continue apply-pending reject-pending measure measure-legacy measure-tokens lint ask obsidian obsidian-all
 
 SYSTEM_PATH := /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
@@ -26,6 +26,7 @@ help:
 	@echo "  make measure-legacy PROJECT=<project-key>"
 	@echo "  make ask PROJECT=<project-key> Q=\"your question\""
 	@echo "  make obsidian PROJECT=<project-key>  # generate Obsidian projection under projects/<key>/obsidian/"
+	@echo "  make obsidian-all  # regenerate Obsidian projections for all registered projects"
 	@echo "  make measure-tokens PROJECT=<project-key> TASK=\"<brief>\""
 	@echo ""
 	@echo "Common flags:"
@@ -139,6 +140,21 @@ obsidian:
 	    project_dir="$$PROJECTS_ROOT/$$PROJECT"; \
 	    python3 scripts/backfill_metadata.py --project-dir "$$project_dir"; \
 	    python3 scripts/export_obsidian.py --project-dir "$$project_dir" \
+	  '
+
+obsidian-all:
+	@PROJECTS_ROOT="$${UPDATE_PROJECTS_ROOT:-$$(pwd)/projects}" \
+	  bash -c '\
+	    rc=0; \
+	    for project_dir in "$$PROJECTS_ROOT"/*; do \
+	      [ -d "$$project_dir" ] || continue; \
+	      [ -f "$$project_dir/state/project.json" ] || continue; \
+	      project="$$(basename "$$project_dir")"; \
+	      if ! $(MAKE) --no-print-directory obsidian PROJECT="$$project"; then \
+	        rc=1; \
+	      fi; \
+	    done; \
+	    exit "$$rc" \
 	  '
 
 measure-tokens:
