@@ -57,58 +57,11 @@ sys.path.insert(0, str(root_dir))
 from agents.update._shared import ingest, llm_client, proposal_citations  # noqa: E402
 
 
-def load_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8") if path.is_file() else ""
-
-
-def gather_context_pages(project_dir: Path, item: dict) -> list[dict[str, str]]:
-    pages: list[dict[str, str]] = []
-    seen: set[str] = set()
-    pages_read = item.get("pages_read") or []
-    if not isinstance(pages_read, list):
-        return pages
-    for rel in pages_read:
-        if not isinstance(rel, str) or not rel or rel in seen:
-            continue
-        target = project_dir / rel
-        if not target.is_file():
-            continue
-        seen.add(rel)
-        pages.append({"path": rel, "content": load_text(target)})
-    return pages
-
-
 config = json.loads((agent_dir / "config.json").read_text(encoding="utf-8"))
 max_items = int(config["stage_specific"]["max_items_per_run"])
 scan = ingest.scan_inbox(project_dir, max_items_per_run=max_items)
 selected = scan["selected"]
 batches = ingest.batch_items(selected)
-
-existing_pages: dict[str, str] = {}
-prompt_batches: list[dict] = []
-for batch in batches:
-    target_hint = batch["target_hint"]
-    current_page = None
-    if target_hint != "routing-needed":
-        current_path = project_dir / target_hint
-        if current_path.is_file():
-            current_page = {"path": target_hint, "content": load_text(current_path)}
-            existing_pages[target_hint] = current_page["content"]
-
-    context_pages: dict[str, str] = {}
-    for item in batch["items"]:
-        for page in gather_context_pages(project_dir, item):
-            context_pages.setdefault(page["path"], page["content"])
-            existing_pages.setdefault(page["path"], page["content"])
-
-    prompt_batches.append(
-        {
-            "target_hint": target_hint,
-            "current_page": current_page,
-            "context_pages": [{"path": path, "content": content} for path, content in sorted(context_pages.items())],
-            "inbox_items": batch["items"],
-        }
-    )
 
 if not selected:
     snapshot = {"project": project_key, "consumed_items": [], "remaining_count": scan["remaining_count"]}
@@ -117,13 +70,7 @@ if not selected:
     print("ingest: no valid inbox items after schema validation")
     sys.exit(0)
 
-prompt = json.dumps(
-    {
-        "project_key": project_key,
-        "batches": prompt_batches,
-        "existing_pages": existing_pages,
-    }
-)
+prompt = json.dumps(ingest.build_prompt_payload(project_key, project_dir, batches))
 result = llm_client.invoke(stage_id="08-ingest", prompt=prompt)
 proposal = result["response"]
 proposal["run_id"] = run_dir.name

@@ -22,6 +22,7 @@ tests/*
 !tests/conftest.py
 !tests/fixtures/
 !tests/test_config_precedence.py
+!tests/test_ingest_batcher.py
 !tests/test_ingest_apply.py
 !tests/test_ingest_proposal.py
 !tests/test_lint_script.py

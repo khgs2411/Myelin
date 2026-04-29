@@ -130,6 +130,67 @@ def batch_items(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return list(grouped.values())
 
 
+def _load_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8") if path.is_file() else ""
+
+
+def _gather_context_pages(project_dir: Path, item: dict[str, Any]) -> list[dict[str, str]]:
+    pages: list[dict[str, str]] = []
+    seen: set[str] = set()
+    pages_read = item.get("pages_read") or []
+    if not isinstance(pages_read, list):
+        return pages
+
+    for rel in pages_read:
+        if not isinstance(rel, str) or not rel or rel in seen:
+            continue
+        target = project_dir / rel
+        if not target.is_file():
+            continue
+        seen.add(rel)
+        pages.append({"path": rel, "content": _load_text(target)})
+    return pages
+
+
+def build_prompt_payload(project_key: str, project_dir: Path, batches: list[dict[str, Any]]) -> dict[str, Any]:
+    existing_page_paths: set[str] = set()
+    prompt_batches: list[dict[str, Any]] = []
+
+    for batch in batches:
+        target_hint = batch["target_hint"]
+        current_page = None
+        if target_hint != "routing-needed":
+            current_path = project_dir / target_hint
+            if current_path.is_file():
+                current_page = {"path": target_hint, "content": _load_text(current_path)}
+                existing_page_paths.add(target_hint)
+
+        context_pages: dict[str, str] = {}
+        for item in batch["items"]:
+            for page in _gather_context_pages(project_dir, item):
+                if current_page is not None and page["path"] == current_page["path"]:
+                    continue
+                context_pages.setdefault(page["path"], page["content"])
+                existing_page_paths.add(page["path"])
+
+        prompt_batches.append(
+            {
+                "target_hint": target_hint,
+                "current_page": current_page,
+                "context_pages": [
+                    {"path": path, "content": content} for path, content in sorted(context_pages.items())
+                ],
+                "inbox_items": batch["items"],
+            }
+        )
+
+    return {
+        "project_key": project_key,
+        "batches": prompt_batches,
+        "existing_page_paths": sorted(existing_page_paths),
+    }
+
+
 def terminal_state_for_items(
     project_dir: Path,
     consumed_items: list[dict[str, Any]],

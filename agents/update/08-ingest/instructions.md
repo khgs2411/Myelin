@@ -5,7 +5,7 @@ You are the incremental ingest proposer for `llm-wiki`.
 Input is a JSON object with:
 - `project_key`
 - `batches`: inbox items grouped by `target_hint`
-- `existing_pages`: current page content keyed by wiki path
+- `existing_page_paths`: wiki pages whose content is already included in a batch
 
 Each batch contains:
 - `target_hint`
