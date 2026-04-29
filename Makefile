@@ -1,4 +1,4 @@
-.PHONY: init status status-all prune help compile compile-continue update update-continue apply-pending reject-pending measure measure-legacy measure-tokens lint ask
+.PHONY: init status status-all prune help compile compile-continue update update-continue apply-pending reject-pending measure measure-legacy measure-tokens lint ask obsidian
 
 SYSTEM_PATH := /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
@@ -25,6 +25,7 @@ help:
 	@echo "  make measure PROJECT=<project-key> [NO_EMIT=1]  # score wiki against acceptance-questions.md (emits gap-notes for partial credit unless NO_EMIT=1)"
 	@echo "  make measure-legacy PROJECT=<project-key>"
 	@echo "  make ask PROJECT=<project-key> Q=\"your question\""
+	@echo "  make obsidian PROJECT=<project-key>  # generate Obsidian projection under projects/<key>/obsidian/"
 	@echo "  make measure-tokens PROJECT=<project-key> TASK=\"<brief>\""
 	@echo ""
 	@echo "Common flags:"
@@ -126,6 +127,11 @@ ask:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
 	@test -n "$(Q)" || (echo 'Q="your question" is required' && exit 1)
 	@bash scripts/ask.sh --project $(PROJECT) --question "$(Q)"
+
+obsidian:
+	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
+	@PROJECT="$(PROJECT)" PROJECTS_ROOT="$${UPDATE_PROJECTS_ROOT:-$$(pwd)/projects}" \
+	  bash -c 'python3 scripts/export_obsidian.py --project-dir "$$PROJECTS_ROOT/$$PROJECT"'
 
 measure-tokens:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)

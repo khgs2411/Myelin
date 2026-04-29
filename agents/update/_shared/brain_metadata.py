@@ -53,6 +53,18 @@ def build_tags(
     return tags
 
 
+def is_page_reference_topic(topic: str) -> bool:
+    value = topic.strip()
+    if not value:
+        return False
+    lowered = value.lower()
+    return lowered == "index.md" or lowered.endswith(".md") or "/" in value
+
+
+def domains_from_topics(topics: list[str]) -> list[str]:
+    return [topic for topic in topics if not is_page_reference_topic(topic)]
+
+
 def title_from_path(path: str) -> str:
     if path == "index.md":
         return "Index"
@@ -102,7 +114,7 @@ def build_metadata_products(
             continue
         page_kind = page_kind_from_catalog_type(page.get("type"))
         topics = [str(topic) for topic in page.get("linked_topics", []) if str(topic).strip()]
-        domains = topics[:]
+        domains = domains_from_topics(topics)
         source_paths = [str(source) for source in page.get("linked_sources", []) if str(source).strip()]
         freshness_status = str(page.get("freshness_status") or "unknown")
         canonical = path in entry_pages or page_kind in {

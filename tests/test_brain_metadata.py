@@ -55,7 +55,12 @@ def test_build_metadata_products_uses_existing_catalog_without_mutating_pages_js
                 "type": "systems",
                 "summary": "Authentication handles sessions.",
                 "linked_sources": ["src/auth.py:1-10"],
-                "linked_topics": ["authentication", "sessions"],
+                "linked_topics": [
+                    "authentication",
+                    "sessions",
+                    "index.md",
+                    "wiki/architecture/project-state.md",
+                ],
                 "last_reviewed_at": "2026-04-29T12:00:00+00:00",
                 "freshness_status": "fresh",
             },
@@ -70,6 +75,12 @@ def test_build_metadata_products_uses_existing_catalog_without_mutating_pages_js
     assert page_metadata["pages"][0]["page_kind"] == "index"
     assert page_metadata["pages"][0]["canonical"] is True
     assert page_metadata["pages"][1]["page_kind"] == "system"
+    assert page_metadata["pages"][1]["topics"] == [
+        "authentication",
+        "sessions",
+        "index.md",
+        "wiki/architecture/project-state.md",
+    ]
     assert page_metadata["pages"][1]["domains"] == ["authentication", "sessions"]
     assert page_metadata["pages"][1]["source_paths"] == ["src/auth.py:1-10"]
     assert page_metadata["pages"][1]["last_verified_commit"] == "def456"
@@ -77,6 +88,10 @@ def test_build_metadata_products_uses_existing_catalog_without_mutating_pages_js
     tag_index = products["tag_index"]
     assert tag_index["tags"]["kind/system"] == ["wiki/systems/authentication.md"]
     assert tag_index["tags"]["role/source-backed"] == ["wiki/systems/authentication.md"]
+    assert tag_index["tags"]["domain/authentication"] == ["wiki/systems/authentication.md"]
+    assert tag_index["tags"]["domain/sessions"] == ["wiki/systems/authentication.md"]
+    assert "domain/index-md" not in tag_index["tags"]
+    assert not any(tag.startswith("domain/wiki/") for tag in tag_index["tags"])
 
     alias_index = products["alias_index"]
     assert alias_index["aliases"]["authentication"] == [

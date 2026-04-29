@@ -50,9 +50,11 @@ tests/*
 !tests/test_enrich_gap_auto_update.py
 !tests/test_auto_update_wrapper.py
 !tests/test_mcp_flag_stale_answer.py
+!tests/test_obsidian_export.py
 artifacts/*/runs
 artifacts/_global/runs
 raw/inbox
 raw/processed
 raw/rejected
 projects/*/logs/
+projects/*/obsidian/
