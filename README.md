@@ -1,38 +1,53 @@
-# llm-wiki
+# Myelin
 
-`llm-wiki` is a local-first knowledge layer for software repositories.
+Myelin is a local-first knowledge compiler for software repositories.
 
-It exists to stop agents from re-reading the same repo context every session. The maintained wiki under `projects/<key>/` is the first read surface; the source repo stays authoritative.
+It turns source code, documentation, and session notes into a maintained project wiki with provenance, freshness tracking, validation reports, and query surfaces. The goal is simple: future development sessions should start from durable project memory instead of repeatedly rediscovering the same codebase.
 
-## What This Repo Contains
+## Why Myelin Exists
 
-- `AGENTS.md`: execution contract
-- `V1_SPEC.md`: filesystem and pipeline contract
-- `SYSTEM_DESIGN.md`: architecture rationale
-- `agents/update/`: unified compile pipeline stages
-- `projects/`: one wiki space per tracked project
-- `raw/`: unclassified intake
-- `concepts/`: cross-project knowledge
-- `scripts/`: operational runners
+AI coding agents and human maintainers both lose time when project context lives only in chat history, scattered notes, or broad source scans. That context gets stale, repeated, and hard to trust.
 
-## Main Commands
+Myelin treats the source repository as the authority, then compiles a smaller knowledge layer around it:
 
-Initialize a project shell:
+- concise wiki pages for architecture, systems, modules, integrations, and runbooks
+- machine-readable state for routing, provenance, freshness, and validation
+- inbox workflows for new findings, gap notes, and corrections
+- stable outputs that can be queried by agents or inspected by humans
+
+The result is a repo-aware second brain that stays tied to implementation truth.
+
+## How It Works
+
+Myelin separates project knowledge into four layers:
+
+- `repo/`: the implementation truth
+- `raw/`: incoming source material and preserved originals
+- `wiki/`: synthesized, human-readable understanding
+- `state/`: machine-readable metadata, routing, provenance, and freshness
+
+The compiler reads the repository, ranks important domains, proposes wiki updates, applies changes, validates the result, and advances freshness only after the validation gate passes.
+
+Incremental updates use inbox items. When a query exposes stale or missing knowledge, that gap can be written into the project inbox and drained later through the lighter update pipeline.
+
+## Quick Start
+
+Initialize a project wiki:
 
 ```bash
-make init PROJECT=my_project PATH=/path/to/project
+make init PROJECT=my_project NAME="My Project" PATH=/path/to/project
 ```
 
-Run the full project recompile:
+Run a full compile:
 
 ```bash
-make compile PROJECT=my_project
+make compile PROJECT=my_project AUTO=1
 ```
 
-Drain queued inbox gaps with the lighter incremental pipeline:
+Drain queued inbox gaps:
 
 ```bash
-make update PROJECT=my_project
+make update PROJECT=my_project AUTO=1
 ```
 
 Resume a gated run after approval:
@@ -42,35 +57,77 @@ make compile-continue PROJECT=my_project
 make update-continue PROJECT=my_project
 ```
 
-Re-run validation against the latest recorded run:
+Re-run validation against the latest run:
 
 ```bash
 make lint PROJECT=my_project
 ```
 
-Score the wiki against acceptance questions:
+Measure wiki quality against acceptance questions:
 
 ```bash
 make measure PROJECT=my_project
 ```
 
-Inspect state and prune old runs:
+Inspect project status or prune old artifacts:
 
 ```bash
 make status PROJECT=my_project
 make prune PROJECT=my_project
 ```
 
-## Expected Flow
+## Expected Workflow
 
-1. run `make init`
-2. run `make compile`
-3. run `make update` whenever `projects/<key>/inbox/` has queued gap-notes
-4. review `projects/<key>/state/latest/`
-5. run `make measure` when you want an acceptance score
+1. Register a repository with `make init`.
+2. Build the first maintained wiki with `make compile`.
+3. Use the generated `projects/<key>/index.md` as the starting point for future sessions.
+4. Add gap notes or corrections to `projects/<key>/inbox/`.
+5. Run `make update` to fold queued knowledge into canonical pages.
+6. Review `projects/<key>/state/latest/` for validation, ranking, and measurement outputs.
 
-## Stable Products
+## Repository Layout
 
-Per-project stable outputs live under `projects/<key>/state/latest/`.
+- `AGENTS.md`: execution contract for agents working in this repository
+- `SYSTEM_DESIGN.md`: architecture rationale and product model
+- `V1_SPEC.md`: filesystem and pipeline contract
+- `agents/update/`: compile and update pipeline stages
+- `agents/query/`: query routing and synthesis logic
+- `projects/`: one maintained wiki space per registered project
+- `raw/`: unclassified intake
+- `concepts/`: cross-project knowledge
+- `schemas/`: source classification and structured contracts
+- `scripts/`: operational runners
+- `templates/`: scaffold templates for project pages and state
+- `tests/`: pytest suite
 
-Timestamped audit runs live under `artifacts/<key>/runs/`.
+## Stable Outputs
+
+Each project publishes stable read-side products under:
+
+```text
+projects/<key>/state/latest/
+```
+
+Timestamped pipeline artifacts live under:
+
+```text
+artifacts/<key>/runs/
+```
+
+The stable products are intended for day-to-day use. The timestamped artifacts are kept for auditability, debugging, and provenance.
+
+## Status
+
+Myelin is early-stage infrastructure. It is designed for local-first use, explicit provenance, and operator-controlled updates. The public repository is open source under the Apache License 2.0.
+
+The project favors conservative maintenance over speculative automation: source stays authoritative, durable pages are preferred over chat-only memory, and validation gates freshness advancement.
+
+## Contributing
+
+Contributions are welcome through issues and pull requests. Please read:
+
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- [SECURITY.md](SECURITY.md)
+
+The `master` branch is protected. Changes should be proposed through pull requests.
