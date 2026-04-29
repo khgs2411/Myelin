@@ -51,6 +51,7 @@ tests/*
 !tests/test_auto_update_wrapper.py
 !tests/test_mcp_flag_stale_answer.py
 !tests/test_obsidian_export.py
+!tests/test_measure_tokens.py
 artifacts/*/runs
 artifacts/_global/runs
 raw/inbox
