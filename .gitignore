@@ -11,7 +11,7 @@ __pycache__/
 projects
 !projects/sample/
 docs/*
-!docs/superpowers/
+docs/superpowers/
 !docs/superpowers/dry-run-notes/
 docs/superpowers/dry-run-notes/artifacts/
 !docs/ARTIFACTS_AND_STATUS.md
@@ -37,6 +37,8 @@ tests/*
 !tests/test_render_ranking.py
 !tests/test_plan_a_acceptance.py
 !tests/test_update_validate.py
+!tests/test_brain_metadata.py
+!tests/test_stable_metadata_products.py
 !tests/test_update_reconcile.py
 !tests/test_llm_client_real.py
 !tests/test_stage_instructions_schema.py
