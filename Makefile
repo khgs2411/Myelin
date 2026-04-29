@@ -78,18 +78,22 @@ prune:
 compile:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make compile PROJECT=sample" && exit 1)
 	@bash scripts/compile.sh --project $(PROJECT)
+	@$(MAKE) --no-print-directory obsidian PROJECT="$(PROJECT)"
 
 compile-continue:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make compile-continue PROJECT=sample" && exit 1)
 	@CONTINUE=1 bash scripts/compile.sh --project $(PROJECT)
+	@$(MAKE) --no-print-directory obsidian PROJECT="$(PROJECT)"
 
 update:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make update PROJECT=sample" && exit 1)
 	@bash scripts/update.sh --project $(PROJECT)
+	@$(MAKE) --no-print-directory obsidian PROJECT="$(PROJECT)"
 
 update-continue:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make update-continue PROJECT=sample" && exit 1)
 	@CONTINUE=1 bash scripts/update.sh --project $(PROJECT)
+	@$(MAKE) --no-print-directory obsidian PROJECT="$(PROJECT)"
 
 apply-pending:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
