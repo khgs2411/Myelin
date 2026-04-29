@@ -285,6 +285,37 @@ def test_query_raw_mode_low_confidence_is_passed_through(tmp_project, monkeypatc
     assert result["synthesizer_model"] is None
 
 
+def test_query_still_uses_pages_json_when_metadata_products_are_absent(tmp_sample_project, monkeypatch):
+    query_engine = _import_query_engine()
+
+    for name in ("page-metadata.json", "tag-index.json", "alias-index.json"):
+        path = tmp_sample_project / "state" / name
+        if path.exists():
+            path.unlink()
+
+    def fake_invoke(*, stage_id: str, prompt: str, model_override: str | None = None):
+        if stage_id == "query.router":
+            return {
+                "response": {"pages": ["index.md"], "confidence": 0.8},
+                "tokens_consumed": {"input_chars": 1, "output_chars": 1},
+            }
+        return {
+            "response": {"answer": "ok", "confidence": 0.8, "citations": ["index.md"]},
+            "tokens_consumed": {"input_chars": 1, "output_chars": 1},
+        }
+
+    monkeypatch.setattr(query_engine.llm_client, "invoke", fake_invoke)
+
+    result = query_engine.query(
+        project_key="sample",
+        question="what is this",
+        projects_root=tmp_sample_project.parent,
+    )
+
+    assert result["answer"] == "ok"
+    assert result["citations"] == ["index.md"]
+
+
 @pytest.mark.parametrize(
     ("model_env", "expected"),
     [

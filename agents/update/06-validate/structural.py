@@ -48,6 +48,36 @@ _WIKI_META_PRIORITIES_PHRASES = (
     "bootstrap against the mapped repo",
 )
 
+_ALLOWED_PAGE_KINDS = {
+    "index",
+    "architecture",
+    "system",
+    "module",
+    "integration",
+    "runbook",
+    "decision",
+    "session",
+    "glossary",
+    "open_question",
+    "source_reference",
+}
+
+_ALLOWED_CONFIDENCE = {"high", "medium", "low"}
+_ALLOWED_RELATIONSHIP_TYPES = {
+    "links_to",
+    "related_to",
+    "depends_on",
+    "documents",
+    "implemented_by",
+    "source_backed_by",
+    "entrypoint_for",
+    "supersedes",
+    "contradicts",
+    "stale_due_to",
+    "answers",
+    "references",
+}
+
 
 def _wiki_pages(project_dir: Path) -> list[Path]:
     wiki = project_dir / "wiki"
@@ -247,6 +277,173 @@ def pages_json_filesystem_agreement(project_dir: Path) -> list[dict]:
                 "pages_json_filesystem_agreement",
             )
         )
+    return findings
+
+
+def _known_page_paths(project_dir: Path) -> set[str]:
+    pages_path = project_dir / "state" / "pages.json"
+    if not pages_path.is_file():
+        return set()
+    return {
+        entry["path"]
+        for entry in json.loads(pages_path.read_text()).get("pages", [])
+        if isinstance(entry, dict) and isinstance(entry.get("path"), str)
+    }
+
+
+def _looks_like_project_markdown_path(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and (value == "index.md" or value.startswith("wiki/"))
+        and value.endswith(".md")
+    )
+
+
+def _load_state_json(project_dir: Path, name: str, rule_id: str) -> tuple[dict | None, list[dict]]:
+    path = project_dir / "state" / name
+    if not path.is_file():
+        return None, [_finding(f"state/{name}", "required metadata product is missing", rule_id)]
+    try:
+        payload = json.loads(path.read_text())
+    except json.JSONDecodeError as exc:
+        return None, [_finding(f"state/{name}", f"invalid JSON: {exc}", rule_id)]
+    if not isinstance(payload, dict):
+        return None, [_finding(f"state/{name}", "metadata product must be a JSON object", rule_id)]
+    return payload, []
+
+
+def page_metadata_shape(project_dir: Path) -> list[dict]:
+    payload, findings = _load_state_json(project_dir, "page-metadata.json", "page_metadata_shape")
+    if payload is None:
+        return findings
+    pages = payload.get("pages")
+    if payload.get("schema_version") != 1:
+        findings.append(_finding("state/page-metadata.json", "schema_version must be 1", "page_metadata_shape"))
+    if not isinstance(pages, list):
+        findings.append(_finding("state/page-metadata.json", "pages must be a list", "page_metadata_shape"))
+        return findings
+    seen_paths: set[str] = set()
+    for page in pages:
+        if not isinstance(page, dict):
+            findings.append(_finding("state/page-metadata.json", "page entry must be an object", "page_metadata_shape"))
+            continue
+        path = page.get("path")
+        if not isinstance(path, str) or not path:
+            findings.append(_finding("state/page-metadata.json", "page entry missing path", "page_metadata_shape"))
+            continue
+        seen_paths.add(path)
+        if page.get("page_kind") not in _ALLOWED_PAGE_KINDS:
+            findings.append(_finding(path, f"invalid page_kind: {page.get('page_kind')}", "page_metadata_shape"))
+        if page.get("confidence") not in _ALLOWED_CONFIDENCE:
+            findings.append(_finding(path, f"invalid confidence: {page.get('confidence')}", "page_metadata_shape"))
+        tags = page.get("tags")
+        if not isinstance(tags, list) or f"project/{payload.get('project_key')}" not in tags:
+            findings.append(_finding(path, "page tags must include project/<key>", "page_metadata_shape"))
+        kind_tag = f"kind/{page.get('page_kind')}"
+        if not isinstance(tags, list) or kind_tag not in tags:
+            findings.append(_finding(path, f"page tags must include {kind_tag}", "page_metadata_shape"))
+    catalog_path = project_dir / "state" / "pages.json"
+    if catalog_path.is_file():
+        catalog_pages = {
+            entry["path"]
+            for entry in json.loads(catalog_path.read_text()).get("pages", [])
+            if isinstance(entry, dict) and "path" in entry
+        }
+        for missing in sorted(catalog_pages - seen_paths):
+            findings.append(_finding(missing, "page missing from page-metadata.json", "page_metadata_shape"))
+    return findings
+
+
+def tag_index_consistency(project_dir: Path) -> list[dict]:
+    metadata, findings = _load_state_json(project_dir, "page-metadata.json", "tag_index_consistency")
+    tag_index, tag_findings = _load_state_json(project_dir, "tag-index.json", "tag_index_consistency")
+    findings.extend(tag_findings)
+    if metadata is None or tag_index is None:
+        return findings
+    tags = tag_index.get("tags")
+    if not isinstance(tags, dict):
+        return findings + [_finding("state/tag-index.json", "tags must be an object", "tag_index_consistency")]
+    for page in metadata.get("pages", []):
+        if not isinstance(page, dict):
+            continue
+        path = page.get("path")
+        for tag in page.get("tags", []):
+            if path not in tags.get(tag, []):
+                findings.append(_finding(path, f"tag-index missing {tag}", "tag_index_consistency"))
+    known_paths = {
+        page.get("path")
+        for page in metadata.get("pages", [])
+        if isinstance(page, dict) and isinstance(page.get("path"), str)
+    }
+    for tag, paths in tags.items():
+        if not isinstance(paths, list):
+            findings.append(_finding("state/tag-index.json", f"tag {tag} must map to a list", "tag_index_consistency"))
+            continue
+        for path in paths:
+            if path not in known_paths:
+                findings.append(_finding(str(path), f"tag-index references unknown page for {tag}", "tag_index_consistency"))
+    return findings
+
+
+def alias_index_consistency(project_dir: Path) -> list[dict]:
+    metadata, findings = _load_state_json(project_dir, "page-metadata.json", "alias_index_consistency")
+    alias_index, alias_findings = _load_state_json(project_dir, "alias-index.json", "alias_index_consistency")
+    findings.extend(alias_findings)
+    if metadata is None or alias_index is None:
+        return findings
+    aliases = alias_index.get("aliases")
+    if not isinstance(aliases, dict):
+        return findings + [_finding("state/alias-index.json", "aliases must be an object", "alias_index_consistency")]
+    for page in metadata.get("pages", []):
+        if not isinstance(page, dict):
+            continue
+        path = page.get("path")
+        for alias in page.get("aliases", []):
+            candidates = aliases.get(str(alias).lower(), [])
+            if not any(isinstance(candidate, dict) and candidate.get("path") == path for candidate in candidates):
+                findings.append(_finding(path, f"alias-index missing {alias}", "alias_index_consistency"))
+    known_paths = {
+        page.get("path")
+        for page in metadata.get("pages", [])
+        if isinstance(page, dict) and isinstance(page.get("path"), str)
+    }
+    for alias, candidates in aliases.items():
+        if not isinstance(candidates, list):
+            findings.append(_finding("state/alias-index.json", f"alias {alias} must map to a list", "alias_index_consistency"))
+            continue
+        for candidate in candidates:
+            if not isinstance(candidate, dict) or candidate.get("path") not in known_paths:
+                findings.append(_finding(str(candidate), f"alias-index references unknown page for {alias}", "alias_index_consistency"))
+    return findings
+
+
+def relationship_schema(project_dir: Path) -> list[dict]:
+    payload, findings = _load_state_json(project_dir, "relationships.json", "relationship_schema")
+    if payload is None:
+        return findings
+    relationships = payload.get("relationships")
+    if not isinstance(relationships, list):
+        return findings + [_finding("state/relationships.json", "relationships must be a list", "relationship_schema")]
+    known_paths = _known_page_paths(project_dir)
+    for relationship in relationships:
+        if not isinstance(relationship, dict):
+            findings.append(_finding("state/relationships.json", "relationship entry must be an object", "relationship_schema"))
+            continue
+        source = relationship.get("from")
+        target = relationship.get("to")
+        rel_type = relationship.get("relationship_type")
+        confidence = relationship.get("confidence")
+        if not isinstance(source, str) or not source:
+            findings.append(_finding("state/relationships.json", "relationship missing from", "relationship_schema"))
+        if not isinstance(target, str) or not target:
+            findings.append(_finding("state/relationships.json", "relationship missing to", "relationship_schema"))
+        if rel_type not in _ALLOWED_RELATIONSHIP_TYPES:
+            findings.append(_finding(str(source or "state/relationships.json"), f"invalid relationship_type: {rel_type}", "relationship_schema"))
+        if confidence not in _ALLOWED_CONFIDENCE:
+            findings.append(_finding(str(source or "state/relationships.json"), f"invalid confidence: {confidence}", "relationship_schema"))
+        for endpoint_name, endpoint in (("from", source), ("to", target)):
+            if _looks_like_project_markdown_path(endpoint) and endpoint not in known_paths:
+                findings.append(_finding(str(endpoint), f"relationship {endpoint_name} endpoint not listed in pages.json", "relationship_schema"))
     return findings
 
 

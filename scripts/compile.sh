@@ -213,6 +213,9 @@ EOM
     skip_stage 6 "reconcile"
   fi
 
+  python3 "$ROOT_DIR/scripts/stable_products.py" render-metadata \
+    --project-dir "$project_dir" || return 1
+
   # Auto-generate acceptance questions by dogfooding the fresh wiki. Non-fatal:
   # failures here don't block commit-pointer advancement, because the wiki is
   # already valid and the questions file can always be regenerated or edited.

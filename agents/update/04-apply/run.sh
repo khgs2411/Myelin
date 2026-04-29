@@ -56,7 +56,10 @@ project_dir = Path(sys.argv[2])
 run_dir = Path(sys.argv[3])
 agent_dir = Path(sys.argv[4])
 root_dir = Path(sys.argv[5])
+sys.path.insert(0, str(root_dir))
 auto = sys.argv[6] == "1"
+
+from agents.update._shared import brain_metadata
 
 proposal = json.loads((run_dir / "proposal.json").read_text())
 ranking = json.loads((run_dir / "ranking-snapshot.json").read_text())
@@ -344,6 +347,26 @@ state_changes_intent = proposal.get("state_changes_intent", {})
 freshness["last_seen_commit_pending"] = state_changes_intent.get("last_seen_commit_pending")
 freshness["last_update_at_pending"] = state_changes_intent.get("last_update_at_pending")
 freshness_path.write_text(json.dumps(freshness, indent=2) + "\n")
+
+project_state = json.loads((project_dir / "state" / "project.json").read_text())
+pages_payload = json.loads((project_dir / "state" / "pages.json").read_text())
+freshness_payload = json.loads((project_dir / "state" / "freshness.json").read_text())
+products = brain_metadata.build_metadata_products(
+    project_key=project_key,
+    project_state=project_state,
+    pages=pages_payload.get("pages", []),
+    freshness=freshness_payload,
+    generated_at=now,
+)
+(project_dir / "state" / "page-metadata.json").write_text(
+    json.dumps(products["page_metadata"], indent=2) + "\n"
+)
+(project_dir / "state" / "tag-index.json").write_text(
+    json.dumps(products["tag_index"], indent=2) + "\n"
+)
+(project_dir / "state" / "alias-index.json").write_text(
+    json.dumps(products["alias_index"], indent=2) + "\n"
+)
 
 if any(unit.get("page_path") == "index.md" for unit in additive_units) or (
     index_changes.get("action") == "update" and index_changes.get("content")

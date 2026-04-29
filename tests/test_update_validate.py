@@ -143,6 +143,180 @@ def test_validate_writes_completion_marker(tmp_sample_project_with_repo, tmp_pat
     assert update_state["stages"]["validate"]["status"] == "completed"
 
 
+def test_apply_generates_brain_metadata_products(tmp_sample_project_with_repo, tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    env = _run_pipeline_through_apply(
+        tmp_sample_project_with_repo,
+        REPO_ROOT / "tests" / "fixtures" / "stubs",
+        run_dir,
+    )
+
+    state_dir = tmp_sample_project_with_repo / "state"
+    page_metadata = json.loads((state_dir / "page-metadata.json").read_text())
+    tag_index = json.loads((state_dir / "tag-index.json").read_text())
+    alias_index = json.loads((state_dir / "alias-index.json").read_text())
+
+    assert page_metadata["schema_version"] == 1
+    assert page_metadata["project_key"] == "sample"
+    assert page_metadata["pages"]
+    assert tag_index["tags"]["project/sample"]
+    assert alias_index["aliases"]
+    assert env["AUTO"] == "1"
+
+
+def test_apply_preserves_existing_pages_json_fields(tmp_sample_project_with_repo, tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    before_payload = json.loads((tmp_sample_project_with_repo / "state" / "pages.json").read_text())
+    before_keys = {
+        entry["path"]: set(entry.keys())
+        for entry in before_payload.get("pages", [])
+        if isinstance(entry, dict) and "path" in entry
+    }
+
+    _run_pipeline_through_apply(
+        tmp_sample_project_with_repo,
+        REPO_ROOT / "tests" / "fixtures" / "stubs",
+        run_dir,
+    )
+
+    after_payload = json.loads((tmp_sample_project_with_repo / "state" / "pages.json").read_text())
+    after_by_path = {
+        entry["path"]: entry
+        for entry in after_payload.get("pages", [])
+        if isinstance(entry, dict) and "path" in entry
+    }
+    for path, keys in before_keys.items():
+        assert path in after_by_path
+        assert keys <= set(after_by_path[path].keys())
+
+
+def test_validate_fails_when_metadata_products_are_missing(tmp_sample_project_with_repo, tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    env = _run_pipeline_through_apply(
+        tmp_sample_project_with_repo,
+        REPO_ROOT / "tests" / "fixtures" / "stubs",
+        run_dir,
+    )
+    for name in ("page-metadata.json", "tag-index.json", "alias-index.json"):
+        (tmp_sample_project_with_repo / "state" / name).unlink()
+
+    rc = _run_validate(tmp_sample_project_with_repo, run_dir, env)
+
+    assert rc.returncode != 0
+    findings = json.loads((run_dir / "validation-findings.json").read_text())
+    rule_ids = {finding["rule_id"] for finding in findings["structural"]}
+    assert "page_metadata_shape" in rule_ids
+    assert "tag_index_consistency" in rule_ids
+    assert "alias_index_consistency" in rule_ids
+
+
+def test_make_lint_backfills_metadata_for_legacy_project(tmp_sample_project_with_repo, tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    env = _run_pipeline_through_apply(
+        tmp_sample_project_with_repo,
+        REPO_ROOT / "tests" / "fixtures" / "stubs",
+        run_dir,
+    )
+    for name in ("page-metadata.json", "tag-index.json", "alias-index.json"):
+        (tmp_sample_project_with_repo / "state" / name).unlink()
+
+    rc = subprocess.run(
+        ["make", "lint", "PROJECT=sample"],
+        cwd=REPO_ROOT,
+        env={**env, "UPDATE_PROJECTS_ROOT": str(tmp_sample_project_with_repo.parent)},
+        capture_output=True,
+        text=True,
+    )
+
+    assert rc.returncode == 0, f"stdout={rc.stdout} stderr={rc.stderr}"
+    state_dir = tmp_sample_project_with_repo / "state"
+    assert (state_dir / "page-metadata.json").is_file()
+    assert (state_dir / "tag-index.json").is_file()
+    assert (state_dir / "alias-index.json").is_file()
+
+
+def test_validate_accepts_legacy_references_relationship(tmp_sample_project_with_repo, tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    env = _run_pipeline_through_apply(
+        tmp_sample_project_with_repo,
+        REPO_ROOT / "tests" / "fixtures" / "stubs",
+        run_dir,
+    )
+    relationships_path = tmp_sample_project_with_repo / "state" / "relationships.json"
+    relationships_path.write_text(json.dumps({
+        "relationships": [
+            {
+                "from": "index.md",
+                "to": "wiki/systems/authentication.md",
+                "relationship_type": "references",
+                "confidence": "high",
+            }
+        ]
+    }) + "\n")
+
+    rc = _run_validate(tmp_sample_project_with_repo, run_dir, env)
+
+    assert rc.returncode == 0, rc.stderr
+
+
+def test_validate_accepts_legacy_relationship_extra_fields(tmp_sample_project_with_repo, tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    env = _run_pipeline_through_apply(
+        tmp_sample_project_with_repo,
+        REPO_ROOT / "tests" / "fixtures" / "stubs",
+        run_dir,
+    )
+    relationships_path = tmp_sample_project_with_repo / "state" / "relationships.json"
+    relationships_path.write_text(json.dumps({
+        "relationships": [
+            {
+                "from": "index.md",
+                "to": "wiki/systems/authentication.md",
+                "relationship_type": "references",
+                "confidence": "high",
+                "legacy_note": "preserve additive fields",
+            }
+        ]
+    }) + "\n")
+
+    rc = _run_validate(tmp_sample_project_with_repo, run_dir, env)
+
+    assert rc.returncode == 0, rc.stderr
+
+
+def test_validate_rejects_unknown_relationship_page_endpoint(tmp_sample_project_with_repo, tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    env = _run_pipeline_through_apply(
+        tmp_sample_project_with_repo,
+        REPO_ROOT / "tests" / "fixtures" / "stubs",
+        run_dir,
+    )
+    relationships_path = tmp_sample_project_with_repo / "state" / "relationships.json"
+    relationships_path.write_text(json.dumps({
+        "relationships": [
+            {
+                "from": "index.md",
+                "to": "wiki/systems/missing.md",
+                "relationship_type": "references",
+                "confidence": "high",
+            }
+        ]
+    }) + "\n")
+
+    rc = _run_validate(tmp_sample_project_with_repo, run_dir, env)
+
+    assert rc.returncode != 0
+    findings = json.loads((run_dir / "validation-findings.json").read_text())
+    assert any(finding["rule_id"] == "relationship_schema" for finding in findings["structural"])
+
+
 def test_validate_emits_curated_semantic_warning_to_inbox(tmp_sample_project_with_repo, tmp_path):
     run_dir = tmp_path / "run"
     run_dir.mkdir()

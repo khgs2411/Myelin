@@ -336,6 +336,11 @@ if [[ "$apply_exit" -ne 0 || "$validate_exit" -ne 0 || "$self_correct_exit" -ne 
   terminal_outcome="needs-review"
 fi
 
+if [[ "$final_status" == "pass" ]]; then
+  python3 "$ROOT_DIR/scripts/stable_products.py" render-metadata \
+    --project-dir "$project_dir"
+fi
+
 run_stage 6 "terminal-state" terminalize_items "$terminal_outcome" "$reason_file" || true
 
 render_ingest_args=(

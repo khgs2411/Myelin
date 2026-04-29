@@ -110,6 +110,7 @@ lint:
 	      echo "error: no prior run found (latest_run_dir empty in update-state.json). Run make compile first." >&2; \
 	      exit 1; \
 	    fi; \
+	    python3 scripts/backfill_metadata.py --project-dir "$$project_dir"; \
 	    bash agents/update/06-validate/run.sh --project "$$PROJECT" --project-dir "$$project_dir" --run-dir "$$latest" \
 	  '
 

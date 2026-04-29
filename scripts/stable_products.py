@@ -218,6 +218,19 @@ def cmd_render_ingest(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_render_metadata(args: argparse.Namespace) -> int:
+    project_dir = Path(args.project_dir)
+    latest_dir = ensure_latest_dir(project_dir)
+    state_dir = project_dir / "state"
+    for name in ("page-metadata.json", "tag-index.json", "alias-index.json", "relationships.json"):
+        source = state_dir / name
+        if not source.is_file():
+            raise SystemExit(f"missing metadata product: {source}")
+        payload = load_json(source)
+        write_json(latest_dir / name, payload)
+    return 0
+
+
 def cmd_render_ranking(args: argparse.Namespace) -> int:
     """Render ranking-snapshot.json → state/latest/ranking-snapshot.{json,md}."""
     input_path = Path(args.input)
@@ -300,6 +313,10 @@ def build_parser() -> argparse.ArgumentParser:
     ranking.add_argument("--input", required=True)
     ranking.add_argument("--project-dir", required=True)
     ranking.set_defaults(func=cmd_render_ranking)
+
+    metadata = sub.add_parser("render-metadata")
+    metadata.add_argument("--project-dir", required=True)
+    metadata.set_defaults(func=cmd_render_metadata)
 
     return parser
 
