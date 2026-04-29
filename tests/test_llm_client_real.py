@@ -107,6 +107,32 @@ def test_non_pipeline_stage_keeps_codex_default_model_when_model_unset(monkeypat
     assert "-c" not in cmd
 
 
+def test_codex_query_stage_uses_medium_reasoning(monkeypatch):
+    """Query stages use the weak model with explicit medium reasoning."""
+    llm_client = _import_client()
+    monkeypatch.delenv("LLM_STUB_RESPONSES_DIR", raising=False)
+    monkeypatch.delenv("MODEL", raising=False)
+    monkeypatch.delenv("MODEL_REASONING_EFFORT", raising=False)
+
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+        return MagicMock(returncode=0, stdout="{}", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    llm_client.invoke(
+        stage_id="query.router",
+        prompt="x",
+        model_override="codex/gpt-5.4-mini",
+    )
+    cmd = captured["cmd"]
+    assert "--model" in cmd
+    assert cmd[cmd.index("--model") + 1] == "gpt-5.4-mini"
+    assert "-c" in cmd
+    assert cmd[cmd.index("-c") + 1] == 'model_reasoning_effort="medium"'
+
+
 def test_model_reasoning_effort_override_wins_for_pipeline_stage(monkeypatch):
     """Explicit reasoning override should replace the pinned high default."""
     llm_client = _import_client()

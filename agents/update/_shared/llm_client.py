@@ -45,6 +45,7 @@ PIPELINE_STAGE_PREFIXES = {
 }
 DEFAULT_PIPELINE_CODEX_MODEL = "codex/gpt-5.4"
 DEFAULT_PIPELINE_REASONING_EFFORT = "high"
+DEFAULT_QUERY_REASONING_EFFORT = "medium"
 
 
 def _sha256(text: str) -> str:
@@ -239,6 +240,10 @@ def _is_pipeline_stage(stage_id: str) -> bool:
     return stage_id.split(".", 1)[0] in PIPELINE_STAGE_PREFIXES
 
 
+def _is_query_stage(stage_id: str) -> bool:
+    return stage_id in {"query.router", "query.synthesizer"}
+
+
 def _resolve_model(stage_id: str, model_override: str | None = None) -> str:
     if model_override:
         return model_override
@@ -271,6 +276,8 @@ def _resolve_reasoning_effort(stage_id: str, backend: str) -> str:
         return configured
     if _is_pipeline_stage(stage_id):
         return DEFAULT_PIPELINE_REASONING_EFFORT
+    if _is_query_stage(stage_id):
+        return DEFAULT_QUERY_REASONING_EFFORT
     return ""
 
 
