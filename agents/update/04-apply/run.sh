@@ -100,7 +100,7 @@ def render_index_status_block(commit: str | None, updated_at: str | None) -> str
     lines = [
         "## Status",
         "- Freshness: `state/freshness.json`",
-        "- Ranking snapshot: `state/latest/ranking-snapshot.md`",
+        "- Ranking snapshot: `state/latest/ranking-snapshot.json`",
     ]
     if updated_at:
         lines.append(f"- Last update: `{updated_at}`")
