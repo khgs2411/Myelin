@@ -77,6 +77,77 @@ def _seed_query_project(project_dir: Path) -> None:
     )
 
 
+def _write_query_metadata(project_dir: Path, *, combat_freshness: str = "fresh") -> None:
+    (project_dir / "state" / "page-metadata.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "project_key": "sample",
+                "pages": [
+                    {
+                        "path": "wiki/systems/combat.md",
+                        "title": "Combat",
+                        "page_kind": "system",
+                        "domains": ["combat", "atb"],
+                        "topics": ["combat", "atb"],
+                        "aliases": ["Combat", "combat", "ATB", "atb"],
+                        "tags": ["project/sample", "kind/system", "domain/combat", "status/fresh", "role/source-backed", "role/canonical"],
+                        "source_paths": ["src/combat.py:1-10"],
+                        "freshness_status": combat_freshness,
+                        "summary": "Combat loop and ATB scheduling.",
+                        "entrypoint_rank": None,
+                        "canonical": True,
+                    },
+                    {
+                        "path": "wiki/runbooks/deploy.md",
+                        "title": "Deploy",
+                        "page_kind": "runbook",
+                        "domains": ["deployment"],
+                        "topics": ["deployment"],
+                        "aliases": ["Deploy", "deploy"],
+                        "tags": ["project/sample", "kind/runbook", "domain/deployment", "status/fresh", "role/canonical"],
+                        "source_paths": [],
+                        "freshness_status": "fresh",
+                        "summary": "Deployment checklist and smoke tests.",
+                        "entrypoint_rank": None,
+                        "canonical": True,
+                    },
+                ],
+            },
+            indent=2,
+        )
+    )
+    (project_dir / "state" / "tag-index.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "project_key": "sample",
+                "tags": {
+                    "domain/combat": ["wiki/systems/combat.md"],
+                    "domain/deployment": ["wiki/runbooks/deploy.md"],
+                    "kind/system": ["wiki/systems/combat.md"],
+                    "kind/runbook": ["wiki/runbooks/deploy.md"],
+                },
+            },
+            indent=2,
+        )
+    )
+    (project_dir / "state" / "alias-index.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "project_key": "sample",
+                "aliases": {
+                    "atb": [{"path": "wiki/systems/combat.md", "title": "Combat", "page_kind": "system"}],
+                    "combat": [{"path": "wiki/systems/combat.md", "title": "Combat", "page_kind": "system"}],
+                    "deploy": [{"path": "wiki/runbooks/deploy.md", "title": "Deploy", "page_kind": "runbook"}],
+                },
+            },
+            indent=2,
+        )
+    )
+
+
 def test_query_happy_path_uses_router_and_synthesizer(tmp_project, monkeypatch):
     _seed_query_project(tmp_project)
     stub_dir = tmp_project.parent / "stubs"
@@ -109,7 +180,7 @@ def test_query_happy_path_uses_router_and_synthesizer(tmp_project, monkeypatch):
     assert result["citations"] == ["wiki/systems/combat.md"]
     assert result["confidence"] == pytest.approx(0.91)
     assert result["pages_read"] == ["wiki/systems/combat.md"]
-    assert result["pages_considered"] == 2
+    assert result["pages_considered"] == 1
     assert result["router_model"] == "codex/gpt-5.4-mini"
     assert result["synthesizer_model"] == "codex/gpt-5.4-mini"
     assert result["tokens_consumed"]["input_chars"] == 240
@@ -117,8 +188,11 @@ def test_query_happy_path_uses_router_and_synthesizer(tmp_project, monkeypatch):
     assert result["tokens_consumed"]["is_estimate"] is True
     assert list(result.keys()) == [
         "confidence",
+        "route_confidence",
         "pages_read",
         "pages_considered",
+        "selected_pages",
+        "freshness_warnings",
         "router_model",
         "synthesizer_model",
         "tokens_consumed",
@@ -244,8 +318,11 @@ def test_query_raw_mode_skips_synthesizer_and_returns_pages_content(tmp_project,
     assert result["tokens_consumed"]["output_chars"] == 20
     assert list(result.keys()) == [
         "confidence",
+        "route_confidence",
         "pages_read",
         "pages_considered",
+        "selected_pages",
+        "freshness_warnings",
         "router_model",
         "synthesizer_model",
         "tokens_consumed",
@@ -314,6 +391,144 @@ def test_query_still_uses_pages_json_when_metadata_products_are_absent(tmp_sampl
 
     assert result["answer"] == "ok"
     assert result["citations"] == ["index.md"]
+    assert result["selected_pages"][0]["path"] == "index.md"
+    assert result["route_confidence"] >= 0.0
+
+
+def test_query_metadata_alias_routing_feeds_compact_candidates(tmp_project, monkeypatch):
+    _seed_query_project(tmp_project)
+    _write_query_metadata(tmp_project)
+    captured_prompts: list[tuple[str, str]] = []
+
+    def fake_invoke(*, stage_id: str, prompt: str, model_override: str | None = None):
+        captured_prompts.append((stage_id, prompt))
+        if stage_id == "query.router":
+            return {
+                "response": {"pages": ["wiki/systems/combat.md"], "confidence": 0.9},
+                "tokens_consumed": {"input_chars": 1, "output_chars": 1},
+            }
+        return {
+            "response": {"answer": "ATB answer", "confidence": 0.8, "citations": ["wiki/systems/combat.md"]},
+            "tokens_consumed": {"input_chars": 1, "output_chars": 1},
+        }
+
+    query_engine = _import_query_engine()
+    monkeypatch.setattr(query_engine.llm_client, "invoke", fake_invoke)
+
+    result = query_engine.query("sample", "how does ATB work?", projects_root=tmp_project.parent)
+
+    router_prompt = json.loads(captured_prompts[0][1])
+    assert router_prompt["planner_candidates"][0]["path"] == "wiki/systems/combat.md"
+    assert "alias match" in router_prompt["planner_candidates"][0]["selection_reason"]
+    assert "alias match" in result["selected_pages"][0]["selection_reason"]
+    assert result["pages_considered"] == 1
+
+
+def test_query_metadata_stale_page_warning(tmp_project, monkeypatch):
+    _seed_query_project(tmp_project)
+    _write_query_metadata(tmp_project, combat_freshness="stale")
+
+    def fake_invoke(*, stage_id: str, prompt: str, model_override: str | None = None):
+        if stage_id == "query.router":
+            return {
+                "response": {"pages": ["wiki/systems/combat.md"], "confidence": 0.9},
+                "tokens_consumed": {"input_chars": 1, "output_chars": 1},
+            }
+        return {
+            "response": {"answer": "Combat answer", "confidence": 0.8, "citations": ["wiki/systems/combat.md"]},
+            "tokens_consumed": {"input_chars": 1, "output_chars": 1},
+        }
+
+    query_engine = _import_query_engine()
+    monkeypatch.setattr(query_engine.llm_client, "invoke", fake_invoke)
+
+    result = query_engine.query("sample", "combat?", projects_root=tmp_project.parent)
+
+    assert result["freshness_warnings"] == [
+        {
+            "path": "wiki/systems/combat.md",
+            "freshness_status": "stale",
+            "message": "wiki/systems/combat.md is marked stale",
+        }
+    ]
+    assert result["selected_pages"][0]["freshness_status"] == "stale"
+
+
+def test_query_metadata_one_hop_relationship_expansion(tmp_project, monkeypatch):
+    _seed_query_project(tmp_project)
+    _write_query_metadata(tmp_project)
+    (tmp_project / "state" / "relationships.json").write_text(
+        json.dumps(
+            {
+                "relationships": [
+                    {
+                        "from": "wiki/systems/combat.md",
+                        "to": "wiki/runbooks/deploy.md",
+                        "relationship_type": "references",
+                        "confidence": "high",
+                    }
+                ]
+            },
+            indent=2,
+        )
+    )
+    captured_prompts: list[tuple[str, str]] = []
+
+    def fake_invoke(*, stage_id: str, prompt: str, model_override: str | None = None):
+        captured_prompts.append((stage_id, prompt))
+        if stage_id == "query.router":
+            return {
+                "response": {"pages": ["wiki/systems/combat.md", "wiki/runbooks/deploy.md"], "confidence": 0.9},
+                "tokens_consumed": {"input_chars": 1, "output_chars": 1},
+            }
+        return {
+            "response": {
+                "answer": "Expanded answer",
+                "confidence": 0.8,
+                "citations": ["wiki/systems/combat.md", "wiki/runbooks/deploy.md"],
+            },
+            "tokens_consumed": {"input_chars": 1, "output_chars": 1},
+        }
+
+    query_engine = _import_query_engine()
+    monkeypatch.setattr(query_engine.llm_client, "invoke", fake_invoke)
+
+    result = query_engine.query("sample", "combat?", projects_root=tmp_project.parent)
+
+    router_prompt = json.loads(captured_prompts[0][1])
+    assert [page["path"] for page in router_prompt["planner_candidates"]] == [
+        "wiki/systems/combat.md",
+        "wiki/runbooks/deploy.md",
+    ]
+    assert router_prompt["relationship_hints"] == [
+        {
+            "from": "wiki/systems/combat.md",
+            "to": "wiki/runbooks/deploy.md",
+            "relationship_type": "references",
+        }
+    ]
+    assert result["pages_read"] == ["wiki/systems/combat.md", "wiki/runbooks/deploy.md"]
+
+
+def test_query_raw_mode_keeps_answer_last_and_skips_synthesizer_with_metadata(tmp_project, monkeypatch):
+    _seed_query_project(tmp_project)
+    _write_query_metadata(tmp_project)
+
+    def fake_invoke(*, stage_id: str, prompt: str, model_override: str | None = None):
+        assert stage_id == "query.router"
+        return {
+            "response": {"pages": ["wiki/systems/combat.md"], "confidence": 0.82},
+            "tokens_consumed": {"input_chars": 1, "output_chars": 1},
+        }
+
+    query_engine = _import_query_engine()
+    monkeypatch.setattr(query_engine.llm_client, "invoke", fake_invoke)
+
+    result = query_engine.query("sample", "ATB?", projects_root=tmp_project.parent, raw=True)
+
+    assert result["answer"] == ""
+    assert result["synthesizer_model"] is None
+    assert list(result.keys())[-1] == "answer"
 
 
 @pytest.mark.parametrize(

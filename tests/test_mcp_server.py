@@ -23,6 +23,86 @@ def _load_module():
     return module
 
 
+def _seed_metadata_project(root: Path, project_key: str = "sample") -> Path:
+    project_dir = root / "projects" / project_key
+    state_dir = project_dir / "state"
+    state_dir.mkdir(parents=True)
+    (state_dir / "project.json").write_text(json.dumps({"key": project_key, "name": "Sample"}))
+    (state_dir / "page-metadata.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "project_key": project_key,
+                "pages": [
+                    {
+                        "path": "index.md",
+                        "title": "Index",
+                        "page_kind": "index",
+                        "domains": ["overview"],
+                        "freshness_status": "fresh",
+                        "canonical": True,
+                        "entrypoint_rank": 1,
+                    },
+                    {
+                        "path": "wiki/systems/auth.md",
+                        "title": "Auth",
+                        "page_kind": "system",
+                        "domains": ["authentication"],
+                        "freshness_status": "stale",
+                        "canonical": True,
+                        "entrypoint_rank": None,
+                    },
+                ],
+            }
+        )
+    )
+    (state_dir / "tag-index.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "project_key": project_key,
+                "tags": {
+                    "kind/index": ["index.md"],
+                    "kind/system": ["wiki/systems/auth.md"],
+                    "status/stale": ["wiki/systems/auth.md"],
+                },
+            }
+        )
+    )
+    (state_dir / "alias-index.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "project_key": project_key,
+                "aliases": {
+                    "auth": [
+                        {
+                            "path": "wiki/systems/auth.md",
+                            "title": "Auth",
+                            "page_kind": "system",
+                        }
+                    ]
+                },
+            }
+        )
+    )
+    (state_dir / "relationships.json").write_text(
+        json.dumps(
+            {
+                "relationships": [
+                    {
+                        "from": "index.md",
+                        "to": "wiki/systems/auth.md",
+                        "relationship_type": "references",
+                        "confidence": "high",
+                    }
+                ]
+            }
+        )
+    )
+    return project_dir
+
+
 def test_mcp_module_loads_and_exposes_tools(monkeypatch, tmp_path):
     monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
     module = _load_module()
@@ -51,6 +131,12 @@ def test_mcp_module_registers_discovery_resources(monkeypatch):
     assert "llm-wiki://project/{project_key}/index" in module.mcp._resource_templates
     assert "llm-wiki://project/{project_key}/latest/{product}{?format}" in module.mcp._resource_templates
     assert "llm-wiki://project/{project_key}/page/{page_path*}" in module.mcp._resource_templates
+    assert "llm-wiki://project/{project_key}/metadata" in module.mcp._resource_templates
+    assert "llm-wiki://project/{project_key}/pages" in module.mcp._resource_templates
+    assert "llm-wiki://project/{project_key}/tags" in module.mcp._resource_templates
+    assert "llm-wiki://project/{project_key}/aliases" in module.mcp._resource_templates
+    assert "llm-wiki://project/{project_key}/relationships" in module.mcp._resource_templates
+    assert "llm-wiki://project/{project_key}/map" in module.mcp._resource_templates
 
 
 def test_list_wiki_projects_reads_registered_projects(monkeypatch, tmp_path):
@@ -92,8 +178,12 @@ def test_capabilities_resource_reports_tools_and_templates(monkeypatch):
     assert data["server"] == "llm-wiki"
     assert "query_wiki" in data["tools"]
     assert "llm-wiki://project/{project_key}/latest/{product}{?format}" in data["resource_templates"]
+    assert "llm-wiki://project/{project_key}/metadata" in data["resource_templates"]
+    assert "llm-wiki://project/{project_key}/map" in data["resource_templates"]
     assert data["recommended_flow"] == [
         "list_wiki_projects",
+        "metadata resource",
+        "map resource",
         "query_wiki",
         "get_wiki_page",
     ]
@@ -158,6 +248,80 @@ def test_wiki_page_resource_reads_nested_page_and_blocks_traversal(monkeypatch, 
     assert module.wiki_page_resource("sample", "wiki/systems/auth.md") == "auth page\n"
     with pytest.raises(ValueError):
         module.wiki_page_resource("sample", "../sample-evil/secret.md")
+
+
+def test_metadata_resources_read_generated_state(monkeypatch, tmp_path):
+    _seed_metadata_project(tmp_path)
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(tmp_path))
+    module = _load_module()
+
+    metadata = module.project_metadata_resource("sample")
+    pages = module.project_pages_resource("sample")
+    tags = module.project_tags_resource("sample")
+    aliases = module.project_aliases_resource("sample")
+    relationships = module.project_relationships_resource("sample")
+
+    assert metadata["pages"][1]["path"] == "wiki/systems/auth.md"
+    assert pages["pages"] == metadata["pages"]
+    assert tags["tags"]["kind/system"] == ["wiki/systems/auth.md"]
+    assert aliases["aliases"]["auth"][0]["path"] == "wiki/systems/auth.md"
+    assert relationships["relationships"][0]["relationship_type"] == "references"
+
+
+def test_metadata_resource_missing_state_raises_clear_error(monkeypatch, tmp_path):
+    project_dir = tmp_path / "projects" / "sample"
+    (project_dir / "state").mkdir(parents=True)
+    (project_dir / "state" / "project.json").write_text(json.dumps({"key": "sample", "name": "Sample"}))
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(tmp_path))
+    module = _load_module()
+
+    with pytest.raises(FileNotFoundError, match="metadata has not been generated yet"):
+        module.project_metadata_resource("sample")
+
+
+def test_project_map_resource_returns_compact_summary(monkeypatch, tmp_path):
+    _seed_metadata_project(tmp_path)
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(tmp_path))
+    module = _load_module()
+
+    data = module.project_map_resource("sample")
+
+    assert data == {
+        "project_key": "sample",
+        "page_count": 2,
+        "canonical_pages": [
+            {
+                "path": "index.md",
+                "title": "Index",
+                "page_kind": "index",
+                "domains": ["overview"],
+                "freshness_status": "fresh",
+            },
+            {
+                "path": "wiki/systems/auth.md",
+                "title": "Auth",
+                "page_kind": "system",
+                "domains": ["authentication"],
+                "freshness_status": "stale",
+            },
+        ],
+        "stale_pages": [
+            {
+                "path": "wiki/systems/auth.md",
+                "title": "Auth",
+                "page_kind": "system",
+                "domains": ["authentication"],
+                "freshness_status": "stale",
+            }
+        ],
+        "tags_summary": [
+            {"tag": "kind/index", "page_count": 1},
+            {"tag": "kind/system", "page_count": 1},
+            {"tag": "status/stale", "page_count": 1},
+        ],
+        "aliases_count": 1,
+        "relationship_count": 1,
+    }
 
 
 def test_project_default_env_resolution(monkeypatch):

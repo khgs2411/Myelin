@@ -100,6 +100,17 @@ make prune PROJECT=my_project
 - `templates/`: scaffold templates for project pages and state
 - `tests/`: pytest suite
 
+## MCP Package Surface
+
+The `mcp/` directory is intentionally ignored by the root repository. It is the separately maintained PyPI package surface for the MCP server, not normal application source tracked by this repo.
+
+Query behavior can still span both layers:
+
+- application query engine: `agents/query/`
+- MCP adapter package: `mcp/llm_wiki_mcp.py`
+
+When a change affects MCP responses, review the root application diff and the `mcp/` package diff deliberately.
+
 ## Stable Outputs
 
 Each project publishes stable read-side products under:
