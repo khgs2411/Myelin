@@ -10,6 +10,7 @@ from pathlib import Path
 _REQUIRED_SECTIONS = ("## Repo pointers", "## Related")
 _CITATION_RE = re.compile(r"`([^`:\n]+):(\d+)-(\d+)`")
 _MD_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)#]+\.md)\)")
+_ARCHIVAL_SESSION_NOTE_RE = re.compile(r"^wiki/sessions/\d{4}-\d{2}-\d{2}-.+\.md$")
 _ALLOWED_SOURCE_KINDS = {
     "spec",
     "design",
@@ -178,6 +179,10 @@ def _resolve_markdown_link(source: Path, raw: str, project_dir: Path) -> Path | 
     return (source.parent / raw).resolve()
 
 
+def _is_archival_session_note(rel: str) -> bool:
+    return bool(_ARCHIVAL_SESSION_NOTE_RE.fullmatch(rel))
+
+
 def no_orphan_pages(project_dir: Path) -> list[dict]:
     findings: list[dict] = []
     referenced: set[str] = set()
@@ -200,6 +205,8 @@ def no_orphan_pages(project_dir: Path) -> list[dict]:
                 continue
     for page in _wiki_pages(project_dir):
         rel = str(page.relative_to(project_dir))
+        if _is_archival_session_note(rel):
+            continue
         if rel not in referenced:
             findings.append(
                 _finding(

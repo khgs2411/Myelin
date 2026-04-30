@@ -89,6 +89,86 @@ def token_totals(tokens: list[dict[str, Any]]) -> dict[str, Any] | None:
     }
 
 
+def load_json(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def proposal_metrics(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    proposal = load_json(path)
+    units = [unit for unit in proposal.get("units", []) if isinstance(unit, dict)]
+    touched_pages = {
+        page
+        for unit in units
+        for page in [unit.get("page_path")]
+        if isinstance(page, str) and page
+    }
+    affected_cross_refs = {
+        ref
+        for unit in units
+        for ref in (unit.get("affected_cross_refs") or [])
+        if isinstance(ref, str) and ref.endswith(".md")
+    }
+    return {
+        "proposal_unit_count": len(units),
+        "touched_page_count": len(touched_pages),
+        "affected_cross_ref_count": len(affected_cross_refs),
+    }
+
+
+def validation_metrics(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    findings = load_json(path)
+    structural = [item for item in findings.get("structural", []) if isinstance(item, dict)]
+    semantic = [item for item in findings.get("semantic", []) if isinstance(item, dict)]
+    return {
+        "structural_blocker_count": sum(1 for item in structural if item.get("severity") == "blocker"),
+        "structural_warning_count": sum(1 for item in structural if item.get("severity") in {"warn", "warning"}),
+        "semantic_blocker_count": sum(1 for item in semantic if item.get("severity") == "blocker"),
+        "semantic_warning_count": sum(1 for item in semantic if item.get("severity") in {"warn", "warning"}),
+    }
+
+
+def stage_artifact_metrics(stage_name: str, run_dir: Path) -> dict[str, Any]:
+    base = base_stage_name(stage_name)
+    if base in {"propose", "ingest", "self-correct"}:
+        if base == "self-correct":
+            return proposal_metrics(run_dir / "self-correct-proposal.json")
+        return proposal_metrics(run_dir / "proposal.json")
+    if base == "reconcile":
+        metrics = proposal_metrics(run_dir / "reconcile-proposal.json")
+        metrics.update(validation_metrics(run_dir / "validation-findings.json"))
+        return metrics
+    if base == "validate":
+        return validation_metrics(run_dir / "validation-findings.json")
+    return {}
+
+
+def llm_metadata_summary(matches: list[dict[str, Any]]) -> dict[str, Any]:
+    metadata_items = [item.get("metadata") for item in matches if isinstance(item.get("metadata"), dict)]
+    if not metadata_items:
+        return {}
+    backends = sorted({str(item.get("backend")) for item in metadata_items if item.get("backend")})
+    models = sorted({str(item.get("model")) for item in metadata_items if item.get("model")})
+    reasoning = sorted({str(item.get("reasoning_effort")) for item in metadata_items if item.get("reasoning_effort")})
+    return {
+        "backends": backends,
+        "models": models,
+        "reasoning_efforts": reasoning,
+        "runtime_prompt_chars": sum(int(item.get("runtime_prompt_chars") or 0) for item in metadata_items),
+        "combined_prompt_chars": sum(int(item.get("combined_prompt_chars") or 0) for item in metadata_items),
+        "recorded_output_chars": sum(int(item.get("output_chars") or 0) for item in metadata_items),
+    }
+
+
 def attach_tokens(profile: dict[str, Any], run_dir: Path) -> None:
     llm_results = load_llm_results(run_dir)
     prefixes = sorted(
@@ -128,10 +208,24 @@ def attach_tokens(profile: dict[str, Any], run_dir: Path) -> None:
             stage["tokens"] = tokens
             stage["llm_call_count"] = len(matches)
             stage["llm_stage_ids"] = [str(item.get("stage_id")) for item in matches]
+            metadata = llm_metadata_summary(matches)
+            if metadata:
+                stage["llm_metadata"] = metadata
         else:
             stage.pop("tokens", None)
             stage.pop("llm_call_count", None)
             stage.pop("llm_stage_ids", None)
+            stage.pop("llm_metadata", None)
+        stage_status = str(stage.get("status") or "")
+        artifact_metrics = (
+            stage_artifact_metrics(str(stage.get("name") or ""), run_dir)
+            if stage_status in {"completed", "failed"}
+            else {}
+        )
+        if artifact_metrics and not isinstance(stage.get("profile"), dict):
+            stage["profile"] = artifact_metrics
+        elif not artifact_metrics:
+            stage.pop("profile", None)
 
 
 def recompute_summary(profile: dict[str, Any], run_dir: Path) -> None:
@@ -178,6 +272,7 @@ def render_markdown(profile: dict[str, Any]) -> str:
             "| --- | ---: | --- | ---: | ---: | ---: | ---: |",
         ]
     )
+    detail_lines: list[str] = []
     for stage in profile.get("stages") or []:
         tokens = stage.get("tokens") or {}
         lines.append(
@@ -191,8 +286,38 @@ def render_markdown(profile: dict[str, Any]) -> str:
                 output_chars=tokens.get("output_chars", 0),
             )
         )
+        compact = compact_stage_detail(stage)
+        if compact:
+            detail_lines.append(f"- `{stage.get('name', '')}`: {compact}")
+    if detail_lines:
+        lines.extend(["", "## LLM Stage Details", "", *detail_lines])
     lines.append("")
     return "\n".join(lines)
+
+
+def compact_stage_detail(stage: dict[str, Any]) -> str:
+    parts: list[str] = []
+    metadata = stage.get("llm_metadata") or {}
+    if metadata:
+        models = ", ".join(metadata.get("models") or [])
+        backends = ", ".join(metadata.get("backends") or [])
+        reasoning = ", ".join(metadata.get("reasoning_efforts") or [])
+        if models:
+            parts.append(f"model {models}")
+        if backends:
+            parts.append(f"backend {backends}")
+        if reasoning:
+            parts.append(f"reasoning {reasoning}")
+        if metadata.get("combined_prompt_chars"):
+            parts.append(f"prompt {metadata.get('combined_prompt_chars')} chars")
+    profile = stage.get("profile") or {}
+    if profile.get("proposal_unit_count") is not None:
+        parts.append(f"units {profile.get('proposal_unit_count')}")
+    if profile.get("touched_page_count") is not None:
+        parts.append(f"touched pages {profile.get('touched_page_count')}")
+    if profile.get("structural_blocker_count") is not None:
+        parts.append(f"structural blockers {profile.get('structural_blocker_count')}")
+    return "; ".join(parts)
 
 
 def write_outputs(profile: dict[str, Any], run_dir: Path, project_dir: Path) -> None:

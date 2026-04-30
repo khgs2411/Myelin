@@ -6,10 +6,18 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).parent.parent
+
+
+def _import_semantic_context():
+    stage_dir = REPO_ROOT / "agents" / "update" / "06-validate"
+    sys.path.insert(0, str(stage_dir))
+    import semantic_context
+    return semantic_context
 
 
 def _run_pipeline_through_apply(project_dir: Path, stub_dir: Path, run_dir: Path, auto: bool = True, pre_apply=None):
@@ -113,7 +121,7 @@ def test_validate_fails_on_unprescribed_shelf(tmp_sample_project_with_repo, tmp_
     assert any("runtime" in finding["issue"] for finding in shelf_findings)
 
 
-def test_validate_collects_semantic_even_when_structural_blocks(tmp_sample_project_with_repo, tmp_path):
+def test_validate_skips_semantic_when_structural_blocks(tmp_sample_project_with_repo, tmp_path):
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     stub_dir = tmp_path / "stubs"
@@ -128,8 +136,127 @@ def test_validate_collects_semantic_even_when_structural_blocks(tmp_sample_proje
     assert rc.returncode != 0
     findings = json.loads((run_dir / "validation-findings.json").read_text())
     assert findings["status"] == "fail"
-    assert findings["semantic"], findings
-    assert findings["semantic"][0]["category"] == "coverage_gap"
+    assert findings["semantic"] == []
+    assert findings["semantic_skipped_reason"] == "structural_blockers"
+    assert not (stub_dir / ".06-validate.semantic.count").exists()
+
+
+def test_ingest_semantic_context_includes_only_touched_and_cross_ref_pages(tmp_path):
+    semantic_context = _import_semantic_context()
+    project_dir = tmp_path / "project"
+    (project_dir / "wiki" / "systems").mkdir(parents=True)
+    (project_dir / "index.md").write_text("Index body\n")
+    (project_dir / "wiki" / "systems" / "touched.md").write_text("Touched body\n")
+    (project_dir / "wiki" / "systems" / "related.md").write_text("Related body\n")
+    (project_dir / "wiki" / "systems" / "unrelated.md").write_text("Unrelated body\n")
+    proposal = {
+        "units": [
+            {
+                "page_path": "wiki/systems/touched.md",
+                "affected_cross_refs": ["wiki/systems/related.md"],
+            }
+        ],
+        "index_changes": None,
+    }
+
+    payload = semantic_context.build_semantic_prompt_payload(
+        project_key="sample",
+        project_dir=project_dir,
+        ranking={},
+        proposal=proposal,
+        enabled_rules=["coverage_gap"],
+        ingest_mode=True,
+    )
+
+    assert payload["index_md"] == ""
+    assert [page["path"] for page in payload["wiki_pages"]] == [
+        "wiki/systems/related.md",
+        "wiki/systems/touched.md",
+    ]
+    assert "Unrelated body" not in json.dumps(payload)
+    assert payload["semantic_context"]["scope"] == "ingest_touched"
+    assert payload["semantic_context"]["omitted_wiki_page_count"] == 1
+
+
+def test_ingest_semantic_context_includes_index_only_when_touched(tmp_path):
+    semantic_context = _import_semantic_context()
+    project_dir = tmp_path / "project"
+    (project_dir / "wiki" / "systems").mkdir(parents=True)
+    (project_dir / "index.md").write_text("Index body\n")
+    (project_dir / "wiki" / "systems" / "touched.md").write_text("Touched body\n")
+    proposal = {
+        "units": [{"page_path": "wiki/systems/touched.md", "affected_cross_refs": []}],
+        "index_changes": {"action": "update"},
+    }
+
+    payload = semantic_context.build_semantic_prompt_payload(
+        project_key="sample",
+        project_dir=project_dir,
+        ranking={},
+        proposal=proposal,
+        enabled_rules=["coverage_gap"],
+        ingest_mode=True,
+    )
+
+    assert payload["index_md"] == "Index body\n"
+    assert payload["semantic_context"]["included_pages"] == [
+        "index.md",
+        "wiki/systems/touched.md",
+    ]
+
+
+def test_ingest_semantic_context_falls_back_to_full_wiki_when_no_pages_resolve(tmp_path):
+    semantic_context = _import_semantic_context()
+    project_dir = tmp_path / "project"
+    (project_dir / "wiki" / "systems").mkdir(parents=True)
+    (project_dir / "index.md").write_text("Index body\n")
+    (project_dir / "wiki" / "systems" / "kept.md").write_text("Kept body\n")
+    proposal = {
+        "units": [{"page_path": "wiki/systems/missing.md", "affected_cross_refs": []}],
+        "index_changes": None,
+    }
+
+    payload = semantic_context.build_semantic_prompt_payload(
+        project_key="sample",
+        project_dir=project_dir,
+        ranking={},
+        proposal=proposal,
+        enabled_rules=["coverage_gap"],
+        ingest_mode=True,
+    )
+
+    assert payload["index_md"] == "Index body\n"
+    assert [page["path"] for page in payload["wiki_pages"]] == ["wiki/systems/kept.md"]
+    assert payload["semantic_context"]["scope"] == "full"
+
+
+def test_compile_semantic_context_uses_full_wiki(tmp_path):
+    semantic_context = _import_semantic_context()
+    project_dir = tmp_path / "project"
+    (project_dir / "wiki" / "systems").mkdir(parents=True)
+    (project_dir / "index.md").write_text("Index body\n")
+    (project_dir / "wiki" / "systems" / "touched.md").write_text("Touched body\n")
+    (project_dir / "wiki" / "systems" / "unrelated.md").write_text("Unrelated body\n")
+    proposal = {
+        "units": [{"page_path": "wiki/systems/touched.md", "affected_cross_refs": []}],
+        "index_changes": None,
+    }
+
+    payload = semantic_context.build_semantic_prompt_payload(
+        project_key="sample",
+        project_dir=project_dir,
+        ranking={},
+        proposal=proposal,
+        enabled_rules=["coverage_gap"],
+        ingest_mode=False,
+    )
+
+    assert payload["index_md"] == "Index body\n"
+    assert [page["path"] for page in payload["wiki_pages"]] == [
+        "wiki/systems/touched.md",
+        "wiki/systems/unrelated.md",
+    ]
+    assert payload["semantic_context"]["scope"] == "full"
 
 
 def test_validate_writes_completion_marker(tmp_sample_project_with_repo, tmp_path):

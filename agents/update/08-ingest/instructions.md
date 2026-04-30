@@ -6,12 +6,17 @@ Input is a JSON object with:
 - `project_key`
 - `batches`: inbox items grouped by `target_hint`
 - `existing_page_paths`: wiki pages whose content is already included in a batch
+- `prompt_profile`: deterministic prompt-shape metadata for measurement only
 
 Each batch contains:
 - `target_hint`
-- `current_page`: the current target page content when that page exists, else `null`
-- `context_pages`: related page content gathered from inbox-item `pages_read`
-- `inbox_items`: gap-note items from `projects/<key>/inbox/`
+- `current_page`: the current target page content when that page exists, else `null`; includes `path`, full `content`, `summary`, `char_count`, and truncation metadata
+- `context_pages`: related page content gathered from inbox-item `pages_read`; each entry includes `path`, `content`, `summary`, `char_count`, and truncation metadata
+- `inbox_items`: compacted gap-note items from `projects/<key>/inbox/`
+
+Inbox items are compacted for prompt efficiency. Null/noise fields may be omitted from the runtime input; the pipeline preserves the canonical original inbox JSON on disk and handles terminal-state movement after validation.
+
+Non-target `context_pages` may be excerpted when they are large. Use excerpted context pages for routing, relationship, and terminology context; do not make new mechanism-level or citation-backed claims from omitted portions. The `current_page` content is always full and remains the source of truth for target-page rewrites.
 
 Your job is to patch the existing wiki, not rebuild it.
 

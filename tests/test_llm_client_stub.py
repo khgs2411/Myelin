@@ -123,6 +123,32 @@ def test_stub_path_emits_normalized_tokens_consumed(tmp_path, monkeypatch):
     assert tc["is_estimate"] is True
 
 
+def test_stub_path_records_invocation_metadata(tmp_path, monkeypatch):
+    llm_client = _import_client()
+    stub_dir = tmp_path / "stubs"
+    result_dir = tmp_path / "llm-results"
+    stub_dir.mkdir()
+    (stub_dir / "08-ingest.json").write_text(json.dumps({
+        "stage": "08-ingest",
+        "response": {},
+        "tokens_consumed": {"input_chars": 1000, "output_chars": 200, "is_estimate": True},
+    }))
+    monkeypatch.setenv("LLM_STUB_RESPONSES_DIR", str(stub_dir))
+    monkeypatch.setenv("LLM_WIKI_LLM_RESULTS_DIR", str(result_dir))
+    monkeypatch.delenv("MODEL", raising=False)
+    monkeypatch.delenv("MODEL_REASONING_EFFORT", raising=False)
+
+    llm_client.invoke(stage_id="08-ingest", prompt="runtime-prompt")
+
+    record = json.loads((result_dir / "08-ingest.1.json").read_text())
+    assert record["stage_id"] == "08-ingest"
+    assert record["metadata"]["backend"] == "codex"
+    assert record["metadata"]["model"] == "gpt-5.4"
+    assert record["metadata"]["reasoning_effort"] == "high"
+    assert record["metadata"]["runtime_prompt_chars"] == len("runtime-prompt")
+    assert record["metadata"]["combined_prompt_chars"] >= len("runtime-prompt")
+
+
 def test_baseline_stubs_present_and_valid():
     """Baseline stubs under tests/fixtures/stubs/ must load and parse."""
     stub_dir = Path(__file__).parent / "fixtures" / "stubs"

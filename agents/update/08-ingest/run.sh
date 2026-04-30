@@ -70,7 +70,7 @@ if not selected:
     print("ingest: no valid inbox items after schema validation")
     sys.exit(0)
 
-prompt = json.dumps(ingest.build_prompt_payload(project_key, project_dir, batches))
+prompt = json.dumps(ingest.build_prompt_payload(project_key, project_dir, batches), separators=(",", ":"))
 result = llm_client.invoke(stage_id="08-ingest", prompt=prompt)
 proposal = result["response"]
 proposal["run_id"] = run_dir.name

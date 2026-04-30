@@ -44,7 +44,8 @@ def build_tags(
     source_paths: list[str],
     canonical: bool,
 ) -> list[str]:
-    tags = [f"project/{slug(project_key)}", f"kind/{slug(page_kind)}"]
+    canonical_page_kind = page_kind.strip().lower()
+    tags = [f"project/{slug(project_key)}", f"kind/{canonical_page_kind}"]
     tags.extend(f"domain/{slug(domain)}" for domain in domains if domain.strip())
     tags.append(f"status/{slug(freshness_status or 'unknown')}")
     if source_paths:

@@ -36,6 +36,30 @@ def test_build_tags_includes_project_kind_status_domain_and_source_role():
     ]
 
 
+def test_build_tags_preserves_canonical_page_kind_values_with_underscores():
+    source_reference_tags = brain_metadata.build_tags(
+        project_key="sample",
+        page_kind="source_reference",
+        domains=[],
+        freshness_status="fresh",
+        source_paths=[],
+        canonical=False,
+    )
+    open_question_tags = brain_metadata.build_tags(
+        project_key="sample",
+        page_kind="open_question",
+        domains=[],
+        freshness_status="fresh",
+        source_paths=[],
+        canonical=False,
+    )
+
+    assert "kind/source_reference" in source_reference_tags
+    assert "kind/source-reference" not in source_reference_tags
+    assert "kind/open_question" in open_question_tags
+    assert "kind/open-question" not in open_question_tags
+
+
 def test_build_metadata_products_uses_existing_catalog_without_mutating_pages_json():
     products = brain_metadata.build_metadata_products(
         project_key="sample",

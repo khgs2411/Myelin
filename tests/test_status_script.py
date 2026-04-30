@@ -181,6 +181,48 @@ def test_status_script_generic_warning_points_to_validation_report(repo_root: Pa
     assert "Next step: make compile PROJECT=sample" not in result.stdout
 
 
+def test_status_script_tolerates_semantic_skip_marker(repo_root: Path, tmp_project: Path) -> None:
+    latest_dir = tmp_project / "state" / "latest"
+    latest_dir.mkdir(parents=True, exist_ok=True)
+
+    bootstrap_state = json.loads((tmp_project / "state" / "bootstrap-state.json").read_text())
+    bootstrap_state["last_completed_stage"] = "validate"
+    bootstrap_state["stages"]["validate"]["last_completed_at"] = "2026-04-18T10:00:00+00:00"
+    (tmp_project / "state" / "bootstrap-state.json").write_text(json.dumps(bootstrap_state, indent=2))
+    (latest_dir / "validation-findings.json").write_text(json.dumps({
+        "status": "fail",
+        "semantic_skipped_reason": "structural_blockers",
+        "structural": [
+            {
+                "page": "wiki/runtime/bad.md",
+                "issue": "shelf directory is not in the allowed set",
+                "severity": "blocker",
+                "rule_id": "shelf_allowlist",
+            }
+        ],
+        "semantic": [],
+    }, indent=2))
+    (latest_dir / "validation-report.md").write_text("# Validation report\n")
+
+    result = subprocess.run(
+        [
+            "bash",
+            str(repo_root / "scripts" / "status.sh"),
+            "--project",
+            "sample",
+            "--project-dir",
+            str(tmp_project),
+        ],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "TZ": "Asia/Jerusalem"},
+    )
+
+    assert result.returncode == 0, f"stdout={result.stdout} stderr={result.stderr}"
+    assert "Overall: needs attention - 1 validation blocker" in result.stdout
+    assert "Validation: fail with 1 finding" in result.stdout
+
+
 def test_status_script_ignores_route_measurement_with_malformed_numeric_values(repo_root: Path, tmp_project: Path) -> None:
     latest_dir = tmp_project / "state" / "latest"
     latest_dir.mkdir(parents=True, exist_ok=True)

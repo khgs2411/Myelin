@@ -293,7 +293,27 @@ def _normalize_tokens(raw: dict, is_estimate: bool = True) -> dict[str, Any]:
     }
 
 
-def _record_result(stage_id: str, result: dict[str, Any]) -> None:
+def _invocation_metadata(
+    *,
+    stage_id: str,
+    prompt: str,
+    model_override: str | None = None,
+    output_chars: int | None = None,
+) -> dict[str, Any]:
+    backend, model_id = _resolve_backend(stage_id, model_override)
+    reasoning_effort = _resolve_reasoning_effort(stage_id, backend)
+    combined = _build_combined_prompt(stage_id, prompt)
+    return {
+        "backend": backend,
+        "model": model_id or backend,
+        "reasoning_effort": reasoning_effort or None,
+        "runtime_prompt_chars": len(prompt),
+        "combined_prompt_chars": len(combined),
+        "output_chars": output_chars,
+    }
+
+
+def _record_result(stage_id: str, result: dict[str, Any], metadata: dict[str, Any] | None = None) -> None:
     """Write run-local LLM metadata when an orchestrator asks for it."""
     result_dir = os.environ.get("LLM_WIKI_LLM_RESULTS_DIR")
     if not result_dir:
@@ -312,6 +332,8 @@ def _record_result(stage_id: str, result: dict[str, Any]) -> None:
             "stage_id": stage_id,
             "tokens_consumed": result.get("tokens_consumed", {}),
         }
+        if metadata:
+            payload["metadata"] = metadata
         candidate.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     except OSError as exc:
         print(f"warning: LLM result metadata write failed for {stage_id}: {exc}", file=sys.stderr)
@@ -371,7 +393,16 @@ def _invoke_real(
             is_estimate=True,
         ),
     }
-    _record_result(stage_id, result_payload)
+    _record_result(
+        stage_id,
+        result_payload,
+        _invocation_metadata(
+            stage_id=stage_id,
+            prompt=prompt,
+            model_override=model_override,
+            output_chars=len(result.stdout),
+        ),
+    )
     return result_payload
 
 
@@ -413,7 +444,16 @@ def invoke(
             "response": data["response"],
             "tokens_consumed": _normalize_tokens(data.get("tokens_consumed", {})),
         }
-        _record_result(stage_id, result_payload)
+        _record_result(
+            stage_id,
+            result_payload,
+            _invocation_metadata(
+                stage_id=stage_id,
+                prompt=prompt,
+                model_override=model_override,
+                output_chars=result_payload["tokens_consumed"]["output_chars"],
+            ),
+        )
         return result_payload
 
     return _invoke_real(stage_id, prompt, model_override)

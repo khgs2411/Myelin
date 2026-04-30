@@ -356,6 +356,30 @@ def test_real_path_emits_normalized_tokens_consumed(monkeypatch):
     assert tc["is_estimate"] is True
 
 
+def test_real_path_records_invocation_metadata(tmp_path, monkeypatch):
+    """Run-local metadata should include backend/model/reasoning without changing selection."""
+    llm_client = _import_client()
+    result_dir = tmp_path / "llm-results"
+    monkeypatch.delenv("LLM_STUB_RESPONSES_DIR", raising=False)
+    monkeypatch.delenv("MODEL", raising=False)
+    monkeypatch.delenv("MODEL_REASONING_EFFORT", raising=False)
+    monkeypatch.setenv("LLM_WIKI_LLM_RESULTS_DIR", str(result_dir))
+
+    def fake_run(cmd, **kwargs):
+        return MagicMock(returncode=0, stdout='{"ok": true}', stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    llm_client.invoke(stage_id="03-propose", prompt="hello")
+
+    record = json.loads((result_dir / "03-propose.1.json").read_text())
+    assert record["metadata"]["backend"] == "codex"
+    assert record["metadata"]["model"] == "gpt-5.4"
+    assert record["metadata"]["reasoning_effort"] == "high"
+    assert record["metadata"]["runtime_prompt_chars"] == len("hello")
+    assert record["metadata"]["combined_prompt_chars"] > len("hello")
+    assert record["metadata"]["output_chars"] == len('{"ok": true}')
+
+
 def test_invoke_signature_allows_model_override_only(monkeypatch):
     """invoke() may accept model_override, but must not accept the deprecated model kwarg."""
     llm_client = _import_client()

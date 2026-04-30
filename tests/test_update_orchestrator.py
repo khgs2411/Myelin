@@ -375,5 +375,21 @@ def test_update_writes_run_profile_with_retry_stages_and_tokens(tmp_sample_proje
     assert run_profile["summary"]["total_input_chars"] == 1921
     assert run_profile["summary"]["total_output_chars"] == 805
     assert run_profile["summary"]["llm_stage_count"] == 4
+    ingest_stage = next(stage for stage in run_profile["stages"] if stage["name"] == "ingest")
+    assert ingest_stage["profile"]["proposal_unit_count"] == 1
+    assert ingest_stage["profile"]["touched_page_count"] == 1
+    assert ingest_stage["llm_metadata"]["models"] == ["gpt-5.4"]
+    assert ingest_stage["llm_metadata"]["reasoning_efforts"] == ["high"]
+    assert ingest_stage["llm_metadata"]["combined_prompt_chars"] > ingest_stage["llm_metadata"]["runtime_prompt_chars"]
+    validate_stage = next(stage for stage in run_profile["stages"] if stage["name"] == "validate")
+    validate_self_correct_stage = next(
+        stage for stage in run_profile["stages"] if stage["name"] == "validate (self-correct)"
+    )
+    assert validate_stage["profile"]["semantic_warning_count"] == 1
+    assert validate_self_correct_stage["profile"]["semantic_warning_count"] == 0
+    assert validate_self_correct_stage["profile"] != validate_stage["profile"]
+    profile_md = (latest_run / "run-profile.md").read_text()
+    assert "## LLM Stage Details" in profile_md
+    assert "`ingest`: model gpt-5.4; backend codex; reasoning high;" in profile_md
     assert (latest_run / "run-profile.md").is_file()
     assert (tmp_sample_project_with_repo / "state" / "latest" / "run-profile.md").is_file()

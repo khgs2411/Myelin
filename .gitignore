@@ -36,6 +36,7 @@ tests/*
 !tests/test_update_impact.py
 !tests/test_render_ranking.py
 !tests/test_plan_a_acceptance.py
+!tests/test_validate_structural.py
 !tests/test_update_validate.py
 !tests/test_update_orchestrator.py
 !tests/test_brain_metadata.py
