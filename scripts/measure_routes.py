@@ -18,6 +18,7 @@ def _repo_root() -> Path:
 
 sys.path.insert(0, str(_repo_root()))
 
+from agents._shared import inbox_writer  # noqa: E402
 from agents.query import query_engine, query_planner  # noqa: E402
 
 
@@ -25,6 +26,7 @@ _NUMBERED_QUESTION_RE = re.compile(r"^\s*(\d+)\.\s*(.*?)\s*$")
 _COMMENT_RE = re.compile(r"\s*<!--(.*?)-->\s*$")
 _EXPECTED_PAGE_RE = re.compile(r"(?:^|\|)\s*expected:\s*([^|]+?)\s*(?:$|\|)")
 _TAG_RE = re.compile(r"^\[[^\]]+\]\s*(.*)$")
+LOW_ROUTE_CONFIDENCE_THRESHOLD = 0.66
 
 
 def _projects_root() -> Path:
@@ -53,6 +55,14 @@ def _strip_question_markup(value: str) -> str:
     return text
 
 
+def _question_tag(value: str) -> str | None:
+    text = _COMMENT_RE.sub("", value).strip()
+    tag_match = _TAG_RE.match(text)
+    if not tag_match:
+        return None
+    return tag_match.group(1).strip() or None
+
+
 def _expected_page(value: str) -> str | None:
     comment_match = _COMMENT_RE.search(value)
     if not comment_match:
@@ -75,7 +85,9 @@ def parse_acceptance_questions(markdown: str) -> list[dict[str, Any]]:
         if question:
             questions.append(
                 {
+                    "index": int(match.group(1)),
                     "question": question,
+                    "question_tag": _question_tag(raw_question),
                     "expected_page": _expected_page(raw_question),
                 }
             )
@@ -145,6 +157,74 @@ def _summary(questions: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _failure_reasons(item: dict[str, Any]) -> list[str]:
+    reasons: list[str] = []
+    if float(item.get("route_confidence", 0.0)) < LOW_ROUTE_CONFIDENCE_THRESHOLD:
+        reasons.append("low_route_confidence")
+    if item.get("expected_page") is not None and item.get("expected_page_selected") is False:
+        reasons.append("expected_page_not_selected")
+    return reasons
+
+
+def _target_hint(item: dict[str, Any]) -> str:
+    if item.get("expected_page"):
+        return str(item["expected_page"])
+    selected_pages = item.get("selected_pages", [])
+    if isinstance(selected_pages, list) and selected_pages:
+        return str(selected_pages[0])
+    return "index.md"
+
+
+def _operator_notes(item: dict[str, Any], failure_reasons: list[str]) -> str:
+    return json.dumps(
+        {
+            "failure_reasons": failure_reasons,
+            "route_confidence": item["route_confidence"],
+            "route_reason": item["route_reason"],
+            "expected_page": item["expected_page"],
+            "expected_page_selected": item["expected_page_selected"],
+            "selected_pages": item["selected_pages"],
+            "freshness_warning_count": item["freshness_warning_count"],
+            "metadata_available": item["metadata_available"],
+            "router_prompt_chars": item["router_prompt_chars"],
+        },
+        sort_keys=True,
+    )
+
+
+def _emit_route_gaps(
+    *,
+    project_dir: Path,
+    measured_questions: list[dict[str, Any]],
+    question_items: list[dict[str, Any]],
+    measurement_run_id: str,
+    no_emit: bool,
+) -> int:
+    if no_emit:
+        return 0
+
+    emitted_count = 0
+    for item, question_item in zip(measured_questions, question_items):
+        failure_reasons = _failure_reasons(item)
+        if not failure_reasons:
+            continue
+        inbox_writer.write_gap(
+            project_dir,
+            source="measure-auto",
+            question=item["question"],
+            target_hint=_target_hint(item),
+            confidence=item["route_confidence"],
+            pages_read=item["selected_pages"],
+            expected_page=item["expected_page"],
+            measurement_run_id=measurement_run_id,
+            question_index=question_item.get("index"),
+            question_tag=question_item.get("question_tag"),
+            operator_notes=_operator_notes(item, failure_reasons),
+        )
+        emitted_count += 1
+    return emitted_count
+
+
 def _markdown_table(report: dict[str, Any]) -> str:
     def cell(value: object) -> str:
         return str(value).replace("\n", " ").replace("|", "\\|")
@@ -188,6 +268,8 @@ def _markdown_table(report: dict[str, Any]) -> str:
             f"- Low confidence routes: {report['summary']['low_confidence_count']}",
             f"- Freshness warnings: {report['summary']['freshness_warning_count']}",
             f"- Expected page hits: {report['summary']['expected_page_hit_count']} / {report['summary']['expected_page_count']}",
+            f"- Emitted gap notes: {report['summary']['emitted_gap_count']}",
+            f"- Emission suppressed: {'yes' if report['summary']['no_emit'] else 'no'}",
         ]
     )
     return "\n".join(lines) + "\n"
@@ -219,12 +301,24 @@ def measure_routes(*, project_key: str, projects_root: Path | None = None) -> di
         )
         for question in questions
     ]
+    no_emit = os.environ.get("NO_EMIT") == "1"
+    measurement_run_id = datetime.now(timezone.utc).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+    emitted_gap_count = _emit_route_gaps(
+        project_dir=project_dir,
+        measured_questions=measured_questions,
+        question_items=questions,
+        measurement_run_id=measurement_run_id,
+        no_emit=no_emit,
+    )
+    summary = _summary(measured_questions)
+    summary["emitted_gap_count"] = emitted_gap_count
+    summary["no_emit"] = no_emit
     report = {
         "project_key": project_key,
         "question_count": len(measured_questions),
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "questions": measured_questions,
-        "summary": _summary(measured_questions),
+        "summary": summary,
     }
 
     latest_dir = project_dir / "state" / "latest"
