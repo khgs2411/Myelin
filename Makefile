@@ -1,4 +1,4 @@
-.PHONY: init status status-all prune help compile compile-continue update update-continue apply-pending reject-pending measure measure-legacy measure-tokens lint ask obsidian obsidian-all
+.PHONY: init status status-all prune help compile compile-continue update update-continue apply-pending reject-pending measure measure-legacy measure-tokens measure-routes lint ask obsidian obsidian-all
 
 SYSTEM_PATH := /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
@@ -24,6 +24,7 @@ help:
 	@echo "  make reject-pending PROJECT=<project-key> PROPOSAL=<proposal-id>  # archive slice without applying"
 	@echo "  make measure PROJECT=<project-key> [NO_EMIT=1]  # score wiki against acceptance-questions.md (emits gap-notes for partial credit unless NO_EMIT=1)"
 	@echo "  make measure-legacy PROJECT=<project-key>"
+	@echo "  make measure-routes PROJECT=<project-key>  # score deterministic query planner routes without LLM calls"
 	@echo "  make ask PROJECT=<project-key> Q=\"your question\""
 	@echo "  make obsidian PROJECT=<project-key>  # generate Obsidian projection under projects/<key>/obsidian/"
 	@echo "  make obsidian-all  # regenerate Obsidian projections for all registered projects"
@@ -161,3 +162,7 @@ measure-tokens:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
 	@test -n "$(TASK)" || (echo "TASK is required, for example: make measure-tokens PROJECT=sample TASK=\"implement rate limiting\"" && exit 1)
 	@bash scripts/measure_tokens.sh --project $(PROJECT) --task "$(TASK)"
+
+measure-routes:
+	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
+	@python3 scripts/measure_routes.py --project $(PROJECT)

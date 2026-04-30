@@ -53,6 +53,7 @@ tests/*
 !tests/test_mcp_flag_stale_answer.py
 !tests/test_obsidian_export.py
 !tests/test_measure_tokens.py
+!tests/test_measure_routes.py
 artifacts/*/runs
 artifacts/_global/runs
 raw/inbox
