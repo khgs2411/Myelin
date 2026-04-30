@@ -44,6 +44,32 @@ def _valid_item(*, gap_id: str, emitted_at: str, target_hint: str) -> dict:
     }
 
 
+def _route_repair_item(*, gap_id: str, emitted_at: str) -> dict:
+    item = _valid_item(
+        gap_id=gap_id,
+        emitted_at=emitted_at,
+        target_hint="wiki/systems/auth.md",
+    )
+    item["source"] = "measure-auto"
+    item["question"] = "How does the auth router find sessions?"
+    item["expected_page"] = "wiki/systems/auth.md"
+    item["pages_read"] = ["wiki/systems/wrong.md"]
+    item["operator_notes"] = json.dumps(
+        {
+            "failure_reasons": ["expected_page_not_selected"],
+            "route_confidence": 0.42,
+            "route_reason": "metadata products used",
+            "expected_page": "wiki/systems/auth.md",
+            "expected_page_selected": False,
+            "selected_pages": ["wiki/systems/wrong.md"],
+            "freshness_warning_count": 0,
+            "metadata_available": True,
+            "router_prompt_chars": 1234,
+        }
+    )
+    return item
+
+
 def test_scan_inbox_routes_malformed_items_to_needs_review(tmp_project: Path):
     valid = _valid_item(
         gap_id="2026-04-19T20-30-00Z_aaaaaa",
@@ -153,3 +179,36 @@ def test_build_prompt_payload_does_not_duplicate_page_bodies(tmp_project: Path):
 
     assert serialized.count("Unique authentication page body.") == 1
     assert payload["existing_page_paths"] == ["wiki/systems/authentication.md"]
+
+
+def test_scan_inbox_classifies_route_repair_measurement_items(tmp_project: Path):
+    item = _route_repair_item(
+        gap_id="2026-04-19T20-30-00Z_aaaaaa",
+        emitted_at="2026-04-19T20:30:00Z",
+    )
+    _write_item(tmp_project, f"{item['id']}.json", item)
+
+    result = ingest.scan_inbox(tmp_project, max_items_per_run=50)
+    record = result["selected"][0]
+
+    assert record["route_repair"]["is_route_repair"] is True
+    assert record["route_repair"]["failure_reasons"] == ["expected_page_not_selected"]
+    assert record["route_repair"]["expected_page"] == "wiki/systems/auth.md"
+    assert record["route_repair"]["selected_pages"] == ["wiki/systems/wrong.md"]
+
+
+def test_build_prompt_payload_includes_compact_route_repair_evidence(tmp_project: Path):
+    item = _route_repair_item(
+        gap_id="2026-04-19T20-30-00Z_aaaaaa",
+        emitted_at="2026-04-19T20:30:00Z",
+    )
+    _write_item(tmp_project, f"{item['id']}.json", item)
+
+    scan = ingest.scan_inbox(tmp_project, max_items_per_run=50)
+    batches = ingest.batch_items(scan["selected"])
+    payload = ingest.build_prompt_payload("sample", tmp_project, batches)
+    unit = payload["batches"][0]["inbox_items"][0]
+
+    assert unit["route_repair"]["is_route_repair"] is True
+    assert unit["route_repair"]["expected_page"] == "wiki/systems/auth.md"
+    assert unit["route_repair"]["selected_pages"] == ["wiki/systems/wrong.md"]

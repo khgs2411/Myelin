@@ -1,4 +1,4 @@
-.PHONY: init status status-all prune help compile compile-continue update update-continue apply-pending reject-pending measure measure-legacy measure-tokens measure-routes lint ask obsidian obsidian-all
+.PHONY: init status status-all prune help compile compile-continue update update-continue post-brain-refresh apply-pending reject-pending measure measure-legacy measure-tokens measure-routes measure-routes-all lint ask obsidian obsidian-all
 
 SYSTEM_PATH := /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
@@ -16,6 +16,7 @@ help:
 	@echo "  make compile-continue PROJECT=<project-key>  # resume after gated approval"
 	@echo "  make update PROJECT=<project-key> [AUTO=1]  # drain inbox, apply gap-note patches (lighter than compile)"
 	@echo "  make update-continue PROJECT=<project-key>  # resume a gated ingest proposal"
+	@echo "  make post-brain-refresh PROJECT=<project-key>  # refresh Obsidian, route health, and status after a successful brain mutation"
 	@echo "  make lint PROJECT=<project-key>  # standalone validate against latest run"
 	@echo "  make status PROJECT=<project-key>"
 	@echo "  make status-all"
@@ -25,6 +26,7 @@ help:
 	@echo "  make measure PROJECT=<project-key> [NO_EMIT=1]  # score wiki against acceptance-questions.md (emits gap-notes for partial credit unless NO_EMIT=1)"
 	@echo "  make measure-legacy PROJECT=<project-key>"
 	@echo "  make measure-routes PROJECT=<project-key>  # score deterministic query planner routes without LLM calls"
+	@echo "  make measure-routes-all [NO_EMIT=1]  # score deterministic query planner routes for all registered projects"
 	@echo "  make ask PROJECT=<project-key> Q=\"your question\""
 	@echo "  make obsidian PROJECT=<project-key>  # generate Obsidian projection under projects/<key>/obsidian/"
 	@echo "  make obsidian-all  # regenerate Obsidian projections for all registered projects"
@@ -80,22 +82,28 @@ prune:
 compile:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make compile PROJECT=sample" && exit 1)
 	@bash scripts/compile.sh --project $(PROJECT)
-	@$(MAKE) --no-print-directory obsidian PROJECT="$(PROJECT)"
+	@$(MAKE) --no-print-directory post-brain-refresh PROJECT="$(PROJECT)"
 
 compile-continue:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make compile-continue PROJECT=sample" && exit 1)
 	@CONTINUE=1 bash scripts/compile.sh --project $(PROJECT)
-	@$(MAKE) --no-print-directory obsidian PROJECT="$(PROJECT)"
+	@$(MAKE) --no-print-directory post-brain-refresh PROJECT="$(PROJECT)"
 
 update:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make update PROJECT=sample" && exit 1)
 	@bash scripts/update.sh --project $(PROJECT)
-	@$(MAKE) --no-print-directory obsidian PROJECT="$(PROJECT)"
+	@$(MAKE) --no-print-directory post-brain-refresh PROJECT="$(PROJECT)"
 
 update-continue:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make update-continue PROJECT=sample" && exit 1)
 	@CONTINUE=1 bash scripts/update.sh --project $(PROJECT)
+	@$(MAKE) --no-print-directory post-brain-refresh PROJECT="$(PROJECT)"
+
+post-brain-refresh:
+	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
 	@$(MAKE) --no-print-directory obsidian PROJECT="$(PROJECT)"
+	@NO_EMIT=1 $(MAKE) --no-print-directory measure-routes PROJECT="$(PROJECT)" >/dev/null
+	@$(MAKE) --no-print-directory status PROJECT="$(PROJECT)"
 
 apply-pending:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
@@ -166,3 +174,6 @@ measure-tokens:
 measure-routes:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
 	@python3 scripts/measure_routes.py --project $(PROJECT)
+
+measure-routes-all:
+	@python3 scripts/measure_routes.py --all

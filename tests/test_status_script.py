@@ -52,6 +52,21 @@ def test_status_script_renders_human_dashboard(repo_root: Path, tmp_project: Pat
     (latest_dir / "validation-report.md").write_text("# Validation report\n")
     (latest_dir / "ingest-report.md").write_text("# Ingest report\n")
     (latest_dir / "measurement-report.md").write_text("# Measurement report\n")
+    (latest_dir / "route-measurement.json").write_text(json.dumps({
+        "project_key": "sample",
+        "question_count": 4,
+        "generated_at": "2026-04-30T00:00:00+00:00",
+        "summary": {
+            "average_route_confidence": 0.75,
+            "low_confidence_count": 1,
+            "expected_page_count": 4,
+            "expected_page_hit_count": 3,
+            "expected_page_hit_ratio": 0.75,
+            "emitted_gap_count": 1,
+            "no_emit": False,
+        },
+    }, indent=2))
+    (latest_dir / "route-measurement.md").write_text("# Route measurement\n")
     (latest_dir / "ranking-snapshot.md").write_text("# Ranking snapshot\n")
     (latest_dir / "bootstrap-summary.md").write_text("# Bootstrap summary\n")
     (tmp_project / "inbox" / "2026-04-18T10-15-00Z_cccccc.json").write_text("{}")
@@ -78,6 +93,7 @@ def test_status_script_renders_human_dashboard(repo_root: Path, tmp_project: Pat
     assert "Inbox: 1 pending, 1 processed; oldest pending 2026-04-18 13:15 IDT" in result.stdout
     assert "Latest activity: validate completed 2026-04-18 13:00 IDT; last ingest 2026-04-18 13:10 IDT updated 4 units from 2 gap-notes" in result.stdout
     assert "Validation: pass with 1 warning - index status metadata is behind the latest reviewed commit" in result.stdout
+    assert "Route health: 3/4 expected pages hit across 4 questions, avg confidence 0.75, 1 low-confidence route, 1 emitted gap note, measured 2026-04-30T00:00:00+00:00" in result.stdout
     assert "Freshness: commit abc12345, clean, repo dirty" in result.stdout
     assert "Todo hints:" in result.stdout
     assert "What this means: the wiki passed validation, but the status block in index.md still points at an older reviewed commit." in result.stdout
@@ -86,6 +102,7 @@ def test_status_script_renders_human_dashboard(repo_root: Path, tmp_project: Pat
     assert "Path hints:" in result.stdout
     assert str(tmp_project / "state" / "latest" / "validation-report.md") in result.stdout
     assert str(tmp_project / "state" / "latest" / "ingest-report.md") in result.stdout
+    assert str(tmp_project / "state" / "latest" / "route-measurement.md") in result.stdout
     assert str(tmp_project / "state" / "latest" / "measurement-report.md") not in result.stdout
     assert str(tmp_project / "state" / "latest" / "ranking-snapshot.md") not in result.stdout
     assert str(tmp_project / "state" / "latest" / "bootstrap-summary.md") not in result.stdout
@@ -147,6 +164,40 @@ def test_status_script_generic_warning_points_to_validation_report(repo_root: Pa
     assert "Review the validation report: " in result.stdout
     assert "Suggested fix: Update the MCP entries in `index.md` to mention resources/resource templates in addition to tools and auto-update behavior." in result.stdout
     assert "Next step: make compile PROJECT=sample" not in result.stdout
+
+
+def test_status_script_ignores_route_measurement_with_malformed_numeric_values(repo_root: Path, tmp_project: Path) -> None:
+    latest_dir = tmp_project / "state" / "latest"
+    latest_dir.mkdir(parents=True, exist_ok=True)
+    (latest_dir / "route-measurement.json").write_text(json.dumps({
+        "project_key": "sample",
+        "question_count": "not-a-number",
+        "generated_at": "2026-04-30T00:00:00+00:00",
+        "summary": {
+            "average_route_confidence": "bad",
+            "low_confidence_count": "bad",
+            "expected_page_count": "bad",
+            "expected_page_hit_count": "bad",
+            "emitted_gap_count": "bad",
+        },
+    }, indent=2))
+
+    result = subprocess.run(
+        [
+            "bash",
+            str(repo_root / "scripts" / "status.sh"),
+            "--project",
+            "sample",
+            "--project-dir",
+            str(tmp_project),
+        ],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "TZ": "Asia/Jerusalem"},
+    )
+
+    assert result.returncode == 0, f"stdout={result.stdout} stderr={result.stderr}"
+    assert "Route health:" not in result.stdout
 
 
 def test_status_script_marks_residual_warning_after_self_correct_for_manual_review(repo_root: Path, tmp_project: Path) -> None:

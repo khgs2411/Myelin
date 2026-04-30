@@ -67,7 +67,10 @@ project_dir_override = sys.argv[4]
 def load_json(path: Path) -> dict:
     if not path.exists():
         return {}
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
 
 
 def load_pipeline_state(project_dir: Path) -> dict:
@@ -87,6 +90,7 @@ def status_view(project_dir: Path) -> dict:
     freshness = load_json(project_dir / "state" / "freshness.json")
     validation = load_json(project_dir / "state" / "latest" / "validation-findings.json")
     ingest = load_json(project_dir / "state" / "latest" / "ingest-findings.json")
+    route_measurement = load_json(project_dir / "state" / "latest" / "route-measurement.json")
     last_stage = bootstrap.get("last_completed_stage")
     last_stage_data = (bootstrap.get("stages") or {}).get(last_stage or "", {}) if last_stage else {}
     return {
@@ -95,6 +99,7 @@ def status_view(project_dir: Path) -> dict:
         "freshness": freshness,
         "validation": validation,
         "ingest": ingest,
+        "route_measurement": route_measurement,
         "last_stage_timestamp": last_stage_data.get("last_completed_at"),
         "project_dir": project_dir,
     }
@@ -257,6 +262,75 @@ def validation_summary(validation: dict) -> dict:
     }
 
 
+def route_health_summary(route_measurement: dict) -> dict:
+    if not isinstance(route_measurement, dict) or not route_measurement:
+        return {"available": False}
+    summary = route_measurement.get("summary")
+    if not isinstance(summary, dict):
+        return {"available": False}
+
+    def int_value(value: object) -> int | None:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    def float_value(value: object) -> float | None:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    question_count = int_value(route_measurement.get("question_count"))
+    expected_page_count = int_value(summary.get("expected_page_count"))
+    expected_page_hit_count = int_value(summary.get("expected_page_hit_count"))
+    low_confidence_count = int_value(summary.get("low_confidence_count"))
+    emitted_gap_count = int_value(summary.get("emitted_gap_count"))
+    average_route_confidence = float_value(summary.get("average_route_confidence"))
+    if None in {
+        question_count,
+        expected_page_count,
+        expected_page_hit_count,
+        low_confidence_count,
+        emitted_gap_count,
+    } or average_route_confidence is None:
+        return {"available": False}
+    generated_at = scalar(route_measurement.get("generated_at"), "unknown")
+    has_attention = (
+        low_confidence_count > 0
+        or emitted_gap_count > 0
+        or (
+            expected_page_count > 0
+            and expected_page_hit_count < expected_page_count
+        )
+    )
+    return {
+        "available": True,
+        "question_count": question_count,
+        "expected_page_count": expected_page_count,
+        "expected_page_hit_count": expected_page_hit_count,
+        "low_confidence_count": low_confidence_count,
+        "emitted_gap_count": emitted_gap_count,
+        "average_route_confidence": average_route_confidence,
+        "generated_at": generated_at,
+        "has_attention": has_attention,
+    }
+
+
+def route_health_line(route_health: dict) -> str:
+    low_count = route_health["low_confidence_count"]
+    emitted_count = route_health["emitted_gap_count"]
+    return (
+        "Route health: "
+        f"{route_health['expected_page_hit_count']}/{route_health['expected_page_count']} expected pages hit "
+        f"across {route_health['question_count']} {pluralize(route_health['question_count'], 'question')}, "
+        f"avg confidence {route_health['average_route_confidence']:.2f}, "
+        f"{low_count} low-confidence {pluralize(low_count, 'route')}, "
+        f"{emitted_count} emitted gap {pluralize(emitted_count, 'note')}, "
+        f"measured {route_health['generated_at']}"
+    )
+
+
 def latest_activity_summary(view: dict) -> str:
     bootstrap = view["bootstrap"]
     ingest = view["ingest"]
@@ -317,6 +391,9 @@ def path_hints(project_dir: Path, inbox: dict, validation: dict, freshness: dict
         wanted.append(("ingest report", "ingest-report.md"))
     if len(freshness.get("impacted_pages") or []) > 0:
         wanted.append(("ranking snapshot", "ranking-snapshot.md"))
+    route_health = route_health_summary(load_json(latest_dir / "route-measurement.json"))
+    if route_health.get("available") and route_health.get("has_attention"):
+        wanted.append(("route measurement", "route-measurement.md"))
     if not wanted:
         wanted.append(("measurement report", "measurement-report.md"))
     for label, filename in wanted:
@@ -375,6 +452,7 @@ def full_output(view: dict) -> str:
     repo_paths = project.get("repo_paths") or []
     inbox = summarize_inbox(project_dir)
     validation = validation_summary(view["validation"])
+    route_health = route_health_summary(view["route_measurement"])
     lines = [f"Project: {scalar(project.get('key'))} ({scalar(project.get('name'))})"]
     if repo_paths:
         lines.append(f"Primary repo: {repo_paths[0]}")
@@ -398,6 +476,8 @@ def full_output(view: dict) -> str:
     if validation["detail"]:
         validation_line += f" - {validation['detail']}"
     lines.append(validation_line)
+    if route_health.get("available"):
+        lines.append(route_health_line(route_health))
 
     freshness_bits = [f"commit {shorten_commit(freshness.get('last_seen_commit'))}"]
     impacted_count = len(freshness.get("impacted_pages") or [])

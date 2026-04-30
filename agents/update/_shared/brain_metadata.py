@@ -6,6 +6,7 @@ from typing import Any
 
 
 SCHEMA_VERSION = 1
+CONFIDENCE_RANK = {"unknown": 0, "low": 1, "medium": 2, "high": 3}
 
 
 _PAGE_KIND_BY_TYPE = {
@@ -182,4 +183,61 @@ def build_metadata_products(
             "project_key": project_key,
             "aliases": dict(sorted(aliases.items())),
         },
+    }
+
+
+def normalize_relationships(
+    relationships: list[dict[str, Any]],
+    pages: list[dict[str, Any]],
+) -> dict[str, Any]:
+    known_paths = {str(page.get("path")) for page in pages if isinstance(page, dict) and page.get("path")}
+    best_by_key: dict[tuple[str, str, str], dict[str, str]] = {}
+    dropped_count = 0
+
+    sorted_relationships = sorted(
+        (relationship for relationship in relationships if isinstance(relationship, dict)),
+        key=lambda relationship: (
+            str(relationship.get("from") or relationship.get("source") or ""),
+            str(relationship.get("to") or relationship.get("target") or ""),
+            str(relationship.get("relationship_type") or relationship.get("type") or ""),
+            str(relationship.get("confidence") or "unknown"),
+        ),
+    )
+
+    for relationship in sorted_relationships:
+        source = str(relationship.get("from") or relationship.get("source") or "").strip()
+        target = str(relationship.get("to") or relationship.get("target") or "").strip()
+        relationship_type = str(relationship.get("relationship_type") or relationship.get("type") or "").strip()
+        if not source or not target or not relationship_type:
+            dropped_count += 1
+            continue
+        if source not in known_paths or target not in known_paths:
+            dropped_count += 1
+            continue
+
+        confidence = str(relationship.get("confidence") or "unknown").strip().lower() or "unknown"
+        if confidence not in CONFIDENCE_RANK:
+            confidence = "unknown"
+        key = (source, target, relationship_type)
+        extras = {
+            str(extra_key): extra_value
+            for extra_key, extra_value in relationship.items()
+            if extra_key not in {"from", "source", "to", "target", "relationship_type", "type", "confidence"}
+        }
+        normalized = {
+            **extras,
+            "from": source,
+            "to": target,
+            "relationship_type": relationship_type,
+            "confidence": confidence,
+        }
+        current = best_by_key.get(key)
+        if current is None:
+            best_by_key[key] = normalized
+        elif CONFIDENCE_RANK[confidence] > CONFIDENCE_RANK[str(current["confidence"])]:
+            current["confidence"] = confidence
+
+    return {
+        "relationships": [best_by_key[key] for key in sorted(best_by_key)],
+        "dropped_count": dropped_count,
     }

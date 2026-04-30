@@ -4,9 +4,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from agents.update._shared import brain_metadata
 
 
 def now_iso() -> str:
@@ -222,6 +227,13 @@ def cmd_render_metadata(args: argparse.Namespace) -> int:
     project_dir = Path(args.project_dir)
     latest_dir = ensure_latest_dir(project_dir)
     state_dir = project_dir / "state"
+    pages_payload = load_json(state_dir / "pages.json")
+    relationships_payload = load_json(state_dir / "relationships.json")
+    normalized = brain_metadata.normalize_relationships(
+        relationships_payload.get("relationships", []) if isinstance(relationships_payload, dict) else [],
+        pages_payload.get("pages", []) if isinstance(pages_payload, dict) else [],
+    )
+    write_json(state_dir / "relationships.json", {"relationships": normalized["relationships"]})
     for name in ("page-metadata.json", "tag-index.json", "alias-index.json", "relationships.json"):
         source = state_dir / name
         if not source.is_file():

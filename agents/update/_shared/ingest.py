@@ -68,6 +68,40 @@ def validate_item(item: dict[str, Any], *, expected_project_key: str) -> list[st
     return errors
 
 
+def route_repair_from_item(item: dict[str, Any]) -> dict[str, Any]:
+    if item.get("source") != "measure-auto":
+        return {"is_route_repair": False}
+
+    notes_raw = item.get("operator_notes")
+    if not isinstance(notes_raw, str) or not notes_raw.strip():
+        return {"is_route_repair": False}
+
+    try:
+        notes = json.loads(notes_raw)
+    except json.JSONDecodeError:
+        return {"is_route_repair": False}
+
+    reasons = notes.get("failure_reasons")
+    if not isinstance(reasons, list) or not reasons:
+        return {"is_route_repair": False}
+
+    selected_pages = notes.get("selected_pages")
+    if not isinstance(selected_pages, list):
+        selected_pages = []
+
+    return {
+        "is_route_repair": True,
+        "failure_reasons": [str(reason) for reason in reasons],
+        "route_confidence": notes.get("route_confidence"),
+        "route_reason": notes.get("route_reason"),
+        "expected_page": notes.get("expected_page"),
+        "expected_page_selected": notes.get("expected_page_selected"),
+        "selected_pages": [str(page) for page in selected_pages],
+        "freshness_warning_count": notes.get("freshness_warning_count"),
+        "metadata_available": notes.get("metadata_available"),
+    }
+
+
 def scan_inbox(project_dir: Path, max_items_per_run: int) -> dict[str, Any]:
     inbox_dir = project_dir / "inbox"
     inbox_dir.mkdir(parents=True, exist_ok=True)
@@ -95,6 +129,7 @@ def scan_inbox(project_dir: Path, max_items_per_run: int) -> dict[str, Any]:
             {
                 "path": str(entry),
                 "item": item,
+                "route_repair": route_repair_from_item(item),
             }
         )
 
@@ -115,6 +150,9 @@ def batch_items(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     grouped: dict[str, dict[str, Any]] = {}
     for record in records:
         item = record["item"]
+        route_repair = record.get("route_repair") or {"is_route_repair": False}
+        if route_repair.get("is_route_repair"):
+            item = {**item, "route_repair": route_repair}
         raw_target = str(item.get("target_hint") or "").strip()
         target_hint = raw_target or "routing-needed"
         batch = grouped.setdefault(

@@ -239,3 +239,63 @@ def test_no_emit_measure_routes_does_not_require_page_bodies_or_write_inbox(tmp_
     written = sorted(path.relative_to(project_dir / "state").as_posix() for path in (project_dir / "state").rglob("*"))
     assert "latest/route-measurement.json" in written
     assert "latest/route-measurement.md" in written
+
+
+def test_measure_routes_all_measures_projects_and_skips_missing_prerequisites(tmp_path: Path):
+    projects_root = tmp_path / "projects"
+    measured_project = projects_root / "sample"
+    missing_metadata_project = projects_root / "missing-metadata"
+    missing_questions_project = projects_root / "missing-questions"
+    _seed_route_project(measured_project)
+    _seed_route_project(missing_metadata_project)
+    (missing_metadata_project / "state" / "page-metadata.json").unlink()
+    _seed_route_project(missing_questions_project)
+    (missing_questions_project / "acceptance-questions.md").unlink()
+
+    rc = subprocess.run(
+        ["python3", "scripts/measure_routes.py", "--all"],
+        cwd=REPO_ROOT,
+        env={**os.environ, "PROJECTS_ROOT": str(projects_root), "NO_EMIT": "1"},
+        capture_output=True,
+        text=True,
+    )
+
+    assert rc.returncode == 0, rc.stderr
+    report = json.loads(rc.stdout)
+    assert report["summary"] == {
+        "project_count": 3,
+        "measured_count": 1,
+        "skipped_count": 2,
+        "failed_count": 0,
+        "no_emit": True,
+    }
+    rows = {row["project_key"]: row for row in report["projects"]}
+    assert rows["sample"]["status"] == "measured"
+    assert rows["sample"]["question_count"] == 4
+    assert rows["sample"]["emitted_gap_count"] == 0
+    assert rows["missing-metadata"]["status"] == "skipped"
+    assert "missing metadata products: page-metadata.json" in rows["missing-metadata"]["reason"]
+    assert rows["missing-questions"]["status"] == "skipped"
+    assert "missing acceptance questions" in rows["missing-questions"]["reason"]
+    assert (measured_project / "state" / "latest" / "route-measurement.json").is_file()
+    assert not (measured_project / "inbox").exists()
+
+
+def test_make_measure_routes_all_respects_project_root_and_no_emit(tmp_path: Path):
+    project_dir = tmp_path / "projects" / "sample"
+    _seed_route_project(project_dir)
+
+    rc = subprocess.run(
+        ["make", "measure-routes-all"],
+        cwd=REPO_ROOT,
+        env={**os.environ, "PROJECTS_ROOT": str(project_dir.parent), "NO_EMIT": "1"},
+        capture_output=True,
+        text=True,
+    )
+
+    assert rc.returncode == 0, rc.stderr
+    report = json.loads(rc.stdout)
+    assert report["summary"]["measured_count"] == 1
+    assert report["summary"]["no_emit"] is True
+    assert report["projects"][0]["project_key"] == "sample"
+    assert report["projects"][0]["emitted_gap_count"] == 0

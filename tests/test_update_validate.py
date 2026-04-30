@@ -12,7 +12,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).parent.parent
 
 
-def _run_pipeline_through_apply(project_dir: Path, stub_dir: Path, run_dir: Path, auto: bool = True):
+def _run_pipeline_through_apply(project_dir: Path, stub_dir: Path, run_dir: Path, auto: bool = True, pre_apply=None):
     env = {**os.environ, "LLM_STUB_RESPONSES_DIR": str(stub_dir)}
     if auto:
         env["AUTO"] = "1"
@@ -37,6 +37,8 @@ def _run_pipeline_through_apply(project_dir: Path, stub_dir: Path, run_dir: Path
         proposal = json.loads((run_dir / "proposal.json").read_text())
         proposal["approved"] = True
         (run_dir / "proposal.json").write_text(json.dumps(proposal, indent=2) + "\n")
+    if pre_apply is not None:
+        pre_apply(project_dir)
     rc = subprocess.run(
         [
             "bash",
@@ -163,6 +165,51 @@ def test_apply_generates_brain_metadata_products(tmp_sample_project_with_repo, t
     assert tag_index["tags"]["project/sample"]
     assert alias_index["aliases"]
     assert env["AUTO"] == "1"
+
+
+def test_apply_normalizes_legacy_relationships_before_building_keys(tmp_sample_project_with_repo, tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+
+    def write_legacy_relationships(project_dir: Path) -> None:
+        (project_dir / "state" / "relationships.json").write_text(json.dumps({
+            "relationships": [
+                {
+                    "source": "index.md",
+                    "target": "wiki/systems/authentication.md",
+                    "type": "references",
+                    "confidence": "medium",
+                },
+                {
+                    "from": "index.md",
+                    "to": "wiki/systems/authentication.md",
+                    "relationship_type": "references",
+                    "confidence": "high",
+                },
+                {
+                    "source": "missing.md",
+                    "target": "wiki/systems/authentication.md",
+                    "type": "references",
+                },
+            ]
+        }, indent=2) + "\n")
+
+    _run_pipeline_through_apply(
+        tmp_sample_project_with_repo,
+        REPO_ROOT / "tests" / "fixtures" / "stubs",
+        run_dir,
+        pre_apply=write_legacy_relationships,
+    )
+
+    relationships = json.loads((tmp_sample_project_with_repo / "state" / "relationships.json").read_text())
+    assert {
+        "from": "index.md",
+        "to": "wiki/systems/authentication.md",
+        "relationship_type": "references",
+        "confidence": "high",
+    } in relationships["relationships"]
+    assert all("source" not in relationship for relationship in relationships["relationships"])
+    assert all(relationship.get("from") != "missing.md" for relationship in relationships["relationships"])
 
 
 def test_apply_preserves_existing_pages_json_fields(tmp_sample_project_with_repo, tmp_path):

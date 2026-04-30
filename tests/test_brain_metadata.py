@@ -101,3 +101,45 @@ def test_build_metadata_products_uses_existing_catalog_without_mutating_pages_js
             "page_kind": "system",
         }
     ]
+
+
+def test_normalize_relationships_dedupes_legacy_shapes_and_drops_unknown_pages():
+    result = brain_metadata.normalize_relationships(
+        relationships=[
+            {
+                "from": "index.md",
+                "to": "wiki/systems/auth.md",
+                "relationship_type": "references",
+                "confidence": "low",
+            },
+            {
+                "source": "index.md",
+                "target": "wiki/systems/auth.md",
+                "type": "references",
+                "confidence": "high",
+            },
+            {
+                "from": "missing.md",
+                "to": "wiki/systems/auth.md",
+                "relationship_type": "references",
+            },
+            {
+                "from": "index.md",
+                "to": "wiki/systems/auth.md",
+            },
+        ],
+        pages=[
+            {"path": "index.md"},
+            {"path": "wiki/systems/auth.md"},
+        ],
+    )
+
+    assert result["relationships"] == [
+        {
+            "from": "index.md",
+            "to": "wiki/systems/auth.md",
+            "relationship_type": "references",
+            "confidence": "high",
+        }
+    ]
+    assert result["dropped_count"] == 2

@@ -302,6 +302,11 @@ pages_path.write_text(json.dumps({"pages": list(pages_by_path.values())}, indent
 
 relationships_path = project_dir / "state" / "relationships.json"
 existing_relationships = json.loads(relationships_path.read_text()).get("relationships", [])
+normalized_existing_relationships = brain_metadata.normalize_relationships(
+    existing_relationships,
+    list(pages_by_path.values()),
+)
+existing_relationships = normalized_existing_relationships["relationships"]
 relationship_keys = {
     (relationship["from"], relationship["to"], relationship["relationship_type"])
     for relationship in existing_relationships
@@ -319,7 +324,13 @@ for unit in additive_units:
             "confidence": "high",
         })
         relationship_keys.add(key)
-relationships_path.write_text(json.dumps({"relationships": existing_relationships}, indent=2) + "\n")
+normalized_relationships = brain_metadata.normalize_relationships(
+    existing_relationships,
+    list(pages_by_path.values()),
+)
+relationships_path.write_text(
+    json.dumps({"relationships": normalized_relationships["relationships"]}, indent=2) + "\n"
+)
 
 sources_path = project_dir / "state" / "sources.json"
 existing_sources = json.loads(sources_path.read_text()).get("sources", [])

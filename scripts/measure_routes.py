@@ -37,6 +37,16 @@ def _projects_root() -> Path:
     )
 
 
+def _registered_project_dirs(projects_root: Path) -> list[Path]:
+    if not projects_root.is_dir():
+        return []
+    return sorted(
+        path
+        for path in projects_root.iterdir()
+        if path.is_dir() and (path / "state" / "project.json").is_file()
+    )
+
+
 def _load_project_config(project_dir: Path) -> dict[str, Any]:
     return query_engine._load_json(project_dir / "state" / "project.json", default={})
 
@@ -45,6 +55,11 @@ def _acceptance_questions_path(project_dir: Path) -> Path:
     project_config = _load_project_config(project_dir)
     relative = str(project_config.get("acceptance_questions_path") or "acceptance-questions.md")
     return project_dir / relative
+
+
+def _missing_metadata_products(project_dir: Path) -> list[str]:
+    required = ("page-metadata.json", "tag-index.json", "alias-index.json", "relationships.json")
+    return [name for name in required if not (project_dir / "state" / name).is_file()]
 
 
 def _strip_question_markup(value: str) -> str:
@@ -328,15 +343,94 @@ def measure_routes(*, project_key: str, projects_root: Path | None = None) -> di
     return report
 
 
+def _project_summary_row(report: dict[str, Any]) -> dict[str, Any]:
+    summary = report.get("summary") if isinstance(report.get("summary"), dict) else {}
+    return {
+        "project_key": report.get("project_key"),
+        "status": "measured",
+        "question_count": report.get("question_count", 0),
+        "expected_page_hit_ratio": summary.get("expected_page_hit_ratio", 0.0),
+        "average_route_confidence": summary.get("average_route_confidence", 0.0),
+        "low_confidence_count": summary.get("low_confidence_count", 0),
+        "emitted_gap_count": summary.get("emitted_gap_count", 0),
+    }
+
+
+def measure_all_routes(*, projects_root: Path | None = None) -> tuple[dict[str, Any], int]:
+    root = projects_root or _projects_root()
+    rows: list[dict[str, Any]] = []
+    measured_count = 0
+    skipped_count = 0
+    failed_count = 0
+
+    for project_dir in _registered_project_dirs(root):
+        project_key = project_dir.name
+        aq_path = _acceptance_questions_path(project_dir)
+        if not aq_path.is_file():
+            skipped_count += 1
+            rows.append({
+                "project_key": project_key,
+                "status": "skipped",
+                "reason": f"missing acceptance questions: {aq_path.relative_to(project_dir)}",
+            })
+            continue
+
+        missing_metadata = _missing_metadata_products(project_dir)
+        if missing_metadata:
+            skipped_count += 1
+            rows.append({
+                "project_key": project_key,
+                "status": "skipped",
+                "reason": "missing metadata products: " + ", ".join(missing_metadata),
+            })
+            continue
+
+        try:
+            report = measure_routes(project_key=project_key, projects_root=root)
+        except Exception as exc:  # noqa: BLE001 - all-mode should finish every project.
+            failed_count += 1
+            rows.append({
+                "project_key": project_key,
+                "status": "failed",
+                "reason": str(exc),
+            })
+            continue
+
+        measured_count += 1
+        rows.append(_project_summary_row(report))
+
+    payload = {
+        "projects_root": str(root),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "summary": {
+            "project_count": len(rows),
+            "measured_count": measured_count,
+            "skipped_count": skipped_count,
+            "failed_count": failed_count,
+            "no_emit": os.environ.get("NO_EMIT") == "1",
+        },
+        "projects": rows,
+    }
+    return payload, 1 if failed_count else 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Measure deterministic query planner routes for acceptance questions")
-    parser.add_argument("--project", required=True)
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--project")
+    group.add_argument("--all", action="store_true")
     parser.add_argument("--projects-root")
     args = parser.parse_args()
 
+    projects_root = Path(args.projects_root) if args.projects_root else None
+    if args.all:
+        report, rc = measure_all_routes(projects_root=projects_root)
+        print(json.dumps(report, indent=2))
+        return rc
+
     report = measure_routes(
         project_key=args.project,
-        projects_root=Path(args.projects_root) if args.projects_root else None,
+        projects_root=projects_root,
     )
     print(json.dumps(report, indent=2))
     return 0
