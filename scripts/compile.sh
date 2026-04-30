@@ -89,6 +89,17 @@ run_project() {
       "$key" "$num" "$pipeline_total" "$name" "$(progress_bar "$completed" "$pipeline_total")" "$status" >&2
   }
 
+  profile_event() {
+    [[ -n "${run_dir:-}" ]] || return 0
+    python3 "$ROOT_DIR/scripts/run_profile.py" "$@" \
+      --profile "$run_dir/run-profile.json" \
+      --project-dir "$project_dir" \
+      --project-key "$key" \
+      --run-id "$run_id" \
+      --pipeline "compile" \
+      || echo "warn: [$key] run profile update failed for event $1" >&2
+  }
+
   run_stage() {
     local num="$1"
     local name="$2"
@@ -96,6 +107,7 @@ run_project() {
     local start end elapsed rc start_progress
     start_progress=$((num > 1 ? num - 1 : 0))
     emit_stage_line "$num" "$name" "(running)" "$start_progress"
+    profile_event stage-started --stage-name "$name"
     start=$(date +%s)
     set +e
     "$@"
@@ -105,8 +117,10 @@ run_project() {
     elapsed=$((end - start))
     if [[ "$rc" -eq 0 ]]; then
       emit_stage_line "$num" "$name" "${elapsed}s" "$num"
+      profile_event stage-finished --stage-name "$name" --status completed --exit-code "$rc"
     else
       emit_stage_line "$num" "$name" "${elapsed}s FAILED (rc=$rc)" "$num"
+      profile_event stage-finished --stage-name "$name" --status failed --exit-code "$rc"
     fi
     return "$rc"
   }
@@ -115,6 +129,7 @@ run_project() {
     local num="$1"
     local name="$2"
     emit_stage_line "$num" "$name" "skipped" "$num"
+    profile_event stage-skipped --stage-name "$name"
   }
 
   local run_id
@@ -127,11 +142,15 @@ run_project() {
     [[ -f "$latest/proposal.json" ]] || die "CONTINUE=1 set but $latest has no proposal.json"
     run_dir="$latest"
     run_id="$(basename "$run_dir")"
+    export LLM_WIKI_LLM_RESULTS_DIR="$run_dir/llm-results"
+    profile_event run-started
     echo "[$key] CONTINUE=1; resuming at apply (run_dir: $run_dir)" >&2
   else
     run_id="$(date -u +%Y%m%d-%H%M%S)-update"
     run_dir="$ARTIFACTS_ROOT/$key/runs/$run_id"
     mkdir -p "$run_dir"
+    export LLM_WIKI_LLM_RESULTS_DIR="$run_dir/llm-results"
+    profile_event run-started
     echo "[$key] run_dir: $run_dir" >&2
 
     run_stage 1 "sense" bash "$STAGES_ROOT/01-sense/run.sh" \
@@ -161,6 +180,7 @@ run_project() {
   Edit:   $proposal_path (set "approved": true)
   Apply:  make compile-continue PROJECT=$key
 EOM
+    profile_event run-finished --status awaiting-approval
     return 0
   fi
 
@@ -228,6 +248,7 @@ EOM
   local pipeline_end total_elapsed
   pipeline_end=$(date +%s)
   total_elapsed=$((pipeline_end - pipeline_start))
+  profile_event run-finished --status completed
   echo "[$key] pipeline complete in ${total_elapsed}s" >&2
 }
 

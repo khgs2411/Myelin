@@ -26,6 +26,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -292,6 +293,30 @@ def _normalize_tokens(raw: dict, is_estimate: bool = True) -> dict[str, Any]:
     }
 
 
+def _record_result(stage_id: str, result: dict[str, Any]) -> None:
+    """Write run-local LLM metadata when an orchestrator asks for it."""
+    result_dir = os.environ.get("LLM_WIKI_LLM_RESULTS_DIR")
+    if not result_dir:
+        return
+    try:
+        path = Path(result_dir)
+        path.mkdir(parents=True, exist_ok=True)
+        safe_stage_id = re.sub(r"[^A-Za-z0-9_.-]+", "_", stage_id)
+        index = 1
+        while True:
+            candidate = path / f"{safe_stage_id}.{index}.json"
+            if not candidate.exists():
+                break
+            index += 1
+        payload = {
+            "stage_id": stage_id,
+            "tokens_consumed": result.get("tokens_consumed", {}),
+        }
+        candidate.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    except OSError as exc:
+        print(f"warning: LLM result metadata write failed for {stage_id}: {exc}", file=sys.stderr)
+
+
 def _invoke_real(
     stage_id: str,
     prompt: str,
@@ -339,13 +364,15 @@ def _invoke_real(
             )
         response = _parse_codex_response(result.stdout)
 
-    return {
+    result_payload = {
         "response": response,
         "tokens_consumed": _normalize_tokens(
             {"input_chars": len(combined), "output_chars": len(result.stdout)},
             is_estimate=True,
         ),
     }
+    _record_result(stage_id, result_payload)
+    return result_payload
 
 
 def invoke(
@@ -382,9 +409,11 @@ def invoke(
                     f"prompt_hash mismatch for {stage_id}: "
                     f"stub expects {expected_hash}, got {actual}"
                 )
-        return {
+        result_payload = {
             "response": data["response"],
             "tokens_consumed": _normalize_tokens(data.get("tokens_consumed", {})),
         }
+        _record_result(stage_id, result_payload)
+        return result_payload
 
     return _invoke_real(stage_id, prompt, model_override)

@@ -67,6 +67,20 @@ def test_status_script_renders_human_dashboard(repo_root: Path, tmp_project: Pat
         },
     }, indent=2))
     (latest_dir / "route-measurement.md").write_text("# Route measurement\n")
+    (latest_dir / "run-profile.json").write_text(json.dumps({
+        "project_key": "sample",
+        "run_id": "20260430-120000-update",
+        "pipeline": "update",
+        "duration_seconds": 125.4,
+        "status": "completed",
+        "summary": {
+            "stage_count": 7,
+            "llm_stage_count": 3,
+            "total_input_chars": 1911,
+            "total_output_chars": 802,
+            "slowest_stage": "ingest",
+        },
+    }, indent=2))
     (latest_dir / "ranking-snapshot.md").write_text("# Ranking snapshot\n")
     (latest_dir / "bootstrap-summary.md").write_text("# Bootstrap summary\n")
     (tmp_project / "inbox" / "2026-04-18T10-15-00Z_cccccc.json").write_text("{}")
@@ -94,6 +108,7 @@ def test_status_script_renders_human_dashboard(repo_root: Path, tmp_project: Pat
     assert "Latest activity: validate completed 2026-04-18 13:00 IDT; last ingest 2026-04-18 13:10 IDT updated 4 units from 2 gap-notes" in result.stdout
     assert "Validation: pass with 1 warning - index status metadata is behind the latest reviewed commit" in result.stdout
     assert "Route health: 3/4 expected pages hit across 4 questions, avg confidence 0.75, 1 low-confidence route, 1 emitted gap note, measured 2026-04-30T00:00:00+00:00" in result.stdout
+    assert "Runtime: update completed in 125.4s across 7 stages, 3 LLM stages, 1911 input chars, 802 output chars, slowest ingest" in result.stdout
     assert "Freshness: commit abc12345, clean, repo dirty" in result.stdout
     assert "Todo hints:" in result.stdout
     assert "What this means: the wiki passed validation, but the status block in index.md still points at an older reviewed commit." in result.stdout
@@ -198,6 +213,44 @@ def test_status_script_ignores_route_measurement_with_malformed_numeric_values(r
 
     assert result.returncode == 0, f"stdout={result.stdout} stderr={result.stderr}"
     assert "Route health:" not in result.stdout
+
+
+def test_status_script_ignores_running_zero_stage_profile(repo_root: Path, tmp_project: Path) -> None:
+    latest_dir = tmp_project / "state" / "latest"
+    latest_dir.mkdir(parents=True, exist_ok=True)
+    (latest_dir / "run-profile.json").write_text(json.dumps({
+        "project_key": "sample",
+        "run_id": "test",
+        "pipeline": "update",
+        "completed_at": None,
+        "duration_seconds": 0,
+        "status": "running",
+        "stages": [],
+        "summary": {
+            "stage_count": 0,
+            "llm_stage_count": 0,
+            "total_input_chars": 0,
+            "total_output_chars": 0,
+            "slowest_stage": None,
+        },
+    }, indent=2))
+
+    result = subprocess.run(
+        [
+            "bash",
+            str(repo_root / "scripts" / "status.sh"),
+            "--project",
+            "sample",
+            "--project-dir",
+            str(tmp_project),
+        ],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "TZ": "Asia/Jerusalem"},
+    )
+
+    assert result.returncode == 0, f"stdout={result.stdout} stderr={result.stderr}"
+    assert "Runtime:" not in result.stdout
 
 
 def test_status_script_marks_residual_warning_after_self_correct_for_manual_review(repo_root: Path, tmp_project: Path) -> None:

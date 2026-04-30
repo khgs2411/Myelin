@@ -91,6 +91,7 @@ def status_view(project_dir: Path) -> dict:
     validation = load_json(project_dir / "state" / "latest" / "validation-findings.json")
     ingest = load_json(project_dir / "state" / "latest" / "ingest-findings.json")
     route_measurement = load_json(project_dir / "state" / "latest" / "route-measurement.json")
+    run_profile = load_json(project_dir / "state" / "latest" / "run-profile.json")
     last_stage = bootstrap.get("last_completed_stage")
     last_stage_data = (bootstrap.get("stages") or {}).get(last_stage or "", {}) if last_stage else {}
     return {
@@ -100,6 +101,7 @@ def status_view(project_dir: Path) -> dict:
         "validation": validation,
         "ingest": ingest,
         "route_measurement": route_measurement,
+        "run_profile": run_profile,
         "last_stage_timestamp": last_stage_data.get("last_completed_at"),
         "project_dir": project_dir,
     }
@@ -331,6 +333,65 @@ def route_health_line(route_health: dict) -> str:
     )
 
 
+def run_profile_summary(run_profile: dict) -> dict:
+    if not isinstance(run_profile, dict) or not run_profile:
+        return {"available": False}
+    status = scalar(run_profile.get("status"))
+    if status == "running":
+        return {"available": False}
+    if status not in {"completed", "failed", "awaiting-approval"} and not run_profile.get("completed_at"):
+        return {"available": False}
+    summary = run_profile.get("summary")
+    if not isinstance(summary, dict):
+        return {"available": False}
+
+    def int_value(value: object) -> int | None:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    def float_value(value: object) -> float | None:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    duration = float_value(run_profile.get("duration_seconds"))
+    stage_count = int_value(summary.get("stage_count"))
+    llm_stage_count = int_value(summary.get("llm_stage_count"))
+    total_input_chars = int_value(summary.get("total_input_chars"))
+    total_output_chars = int_value(summary.get("total_output_chars"))
+    if None in {duration, stage_count, llm_stage_count, total_input_chars, total_output_chars}:
+        return {"available": False}
+    if stage_count == 0:
+        return {"available": False}
+    return {
+        "available": True,
+        "pipeline": scalar(run_profile.get("pipeline")),
+        "status": status,
+        "duration_seconds": duration,
+        "stage_count": stage_count,
+        "llm_stage_count": llm_stage_count,
+        "total_input_chars": total_input_chars,
+        "total_output_chars": total_output_chars,
+        "slowest_stage": scalar(summary.get("slowest_stage"), "none"),
+    }
+
+
+def run_profile_line(profile_summary: dict) -> str:
+    return (
+        "Runtime: "
+        f"{profile_summary['pipeline']} {profile_summary['status']} "
+        f"in {profile_summary['duration_seconds']:g}s "
+        f"across {profile_summary['stage_count']} {pluralize(profile_summary['stage_count'], 'stage')}, "
+        f"{profile_summary['llm_stage_count']} LLM {pluralize(profile_summary['llm_stage_count'], 'stage')}, "
+        f"{profile_summary['total_input_chars']} input chars, "
+        f"{profile_summary['total_output_chars']} output chars, "
+        f"slowest {profile_summary['slowest_stage']}"
+    )
+
+
 def latest_activity_summary(view: dict) -> str:
     bootstrap = view["bootstrap"]
     ingest = view["ingest"]
@@ -453,6 +514,7 @@ def full_output(view: dict) -> str:
     inbox = summarize_inbox(project_dir)
     validation = validation_summary(view["validation"])
     route_health = route_health_summary(view["route_measurement"])
+    runtime = run_profile_summary(view["run_profile"])
     lines = [f"Project: {scalar(project.get('key'))} ({scalar(project.get('name'))})"]
     if repo_paths:
         lines.append(f"Primary repo: {repo_paths[0]}")
@@ -478,6 +540,8 @@ def full_output(view: dict) -> str:
     lines.append(validation_line)
     if route_health.get("available"):
         lines.append(route_health_line(route_health))
+    if runtime.get("available"):
+        lines.append(run_profile_line(runtime))
 
     freshness_bits = [f"commit {shorten_commit(freshness.get('last_seen_commit'))}"]
     impacted_count = len(freshness.get("impacted_pages") or [])

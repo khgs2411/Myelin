@@ -311,3 +311,69 @@ def test_update_runs_one_self_correct_pass_after_semantic_warning(tmp_sample_pro
     assert "[sample] [5/7] self-correct" in rc.stderr
     assert "[sample] [2/7] apply (self-correct)" in rc.stderr
     assert "[sample] [3/7] validate (self-correct)" in rc.stderr
+
+
+def test_update_writes_run_profile_with_retry_stages_and_tokens(tmp_sample_project_with_repo: Path, tmp_path: Path):
+    _write_item(
+        tmp_sample_project_with_repo,
+        gap_id="2026-04-19T20-30-00Z_aaaaaa",
+        question="Where are sessions stored?",
+        target_hint="wiki/systems/authentication.md",
+    )
+    stub_dir = tmp_path / "stubs"
+    stub_dir.mkdir()
+    (stub_dir / "08-ingest.json").write_text(json.dumps(_passing_ingest_stub(), indent=2) + "\n")
+    (stub_dir / "06-validate.semantic.1.json").write_text(json.dumps({
+        "stage": "06-validate.semantic",
+        "response": {
+            "findings": [
+                {
+                    "category": "coverage_gap",
+                    "severity": "warn",
+                    "pages": ["wiki/systems/authentication.md"],
+                    "evidence": "Auth page still needs one scoped clarification.",
+                    "suggested_action": "Add one sentence clarifying the page boundary.",
+                }
+            ]
+        },
+        "tokens_consumed": {"input_chars": 10, "output_chars": 2, "is_estimate": True},
+    }, indent=2) + "\n")
+    (stub_dir / "06-validate.semantic.2.json").write_text(json.dumps({
+        "stage": "06-validate.semantic",
+        "response": {"findings": []},
+        "tokens_consumed": {"input_chars": 11, "output_chars": 3, "is_estimate": True},
+    }, indent=2) + "\n")
+    (stub_dir / "09-self-correct.1.json").write_text(json.dumps(_passing_self_correct_stub(), indent=2) + "\n")
+    env = {
+        **os.environ,
+        "LLM_STUB_RESPONSES_DIR": str(stub_dir),
+        "UPDATE_PROJECTS_ROOT": str(tmp_sample_project_with_repo.parent),
+        "UPDATE_ARTIFACTS_ROOT": str(tmp_path / "artifacts"),
+        "PROJECTS_ROOT": str(tmp_sample_project_with_repo.parent),
+        "AUTO": "1",
+    }
+
+    rc = subprocess.run(
+        ["bash", str(REPO_ROOT / "scripts" / "update.sh"), "--project", "sample"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    assert rc.returncode == 0, f"stdout={rc.stdout}\nstderr={rc.stderr}"
+    latest_run = sorted((tmp_path / "artifacts" / "sample" / "runs").glob("*-update"))[-1]
+    run_profile = json.loads((latest_run / "run-profile.json").read_text())
+    latest_profile = json.loads((tmp_sample_project_with_repo / "state" / "latest" / "run-profile.json").read_text())
+    assert run_profile["pipeline"] == "update"
+    assert run_profile["status"] == "completed"
+    assert latest_profile["run_id"] == run_profile["run_id"]
+    stage_names = [stage["name"] for stage in run_profile["stages"]]
+    assert "self-correct" in stage_names
+    assert "apply (self-correct)" in stage_names
+    assert "validate (self-correct)" in stage_names
+    assert any(stage["status"] == "skipped" and stage["name"] == "reconcile" for stage in run_profile["stages"])
+    assert run_profile["summary"]["total_input_chars"] == 1921
+    assert run_profile["summary"]["total_output_chars"] == 805
+    assert run_profile["summary"]["llm_stage_count"] == 4
+    assert (latest_run / "run-profile.md").is_file()
+    assert (tmp_sample_project_with_repo / "state" / "latest" / "run-profile.md").is_file()
