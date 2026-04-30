@@ -5,8 +5,8 @@ Behavior:
   <stub-dir>/<stage_id>.json.
 - Otherwise, shell out to the codex or claude CLI selected via MODEL.
 
-Backend selection is by the MODEL env var only. There is no `model=` kwarg
-on invoke(). Supported MODEL values:
+Backend selection is controlled by llm-wiki.config, with MODEL as a per-run
+override. There is no `model=` kwarg on invoke(). Supported MODEL values:
 
     codex
     codex/<id>
@@ -44,9 +44,16 @@ PIPELINE_STAGE_PREFIXES = {
     "08-ingest",
     "09-self-correct",
 }
-DEFAULT_PIPELINE_CODEX_MODEL = "codex/gpt-5.4"
-DEFAULT_PIPELINE_REASONING_EFFORT = "high"
-DEFAULT_QUERY_REASONING_EFFORT = "medium"
+DEFAULT_CONFIG_FILE = Path(__file__).resolve().parents[3] / "llm-wiki.config"
+FALLBACK_MODEL_CONFIG = {
+    "DEFAULT_PROVIDER": "codex",
+    "PIPELINE_CODEX_MODEL": "gpt-5.5",
+    "PIPELINE_CODEX_REASONING_EFFORT": "medium",
+    "QUERY_CODEX_MODEL": "gpt-5.4-mini",
+    "QUERY_CODEX_REASONING_EFFORT": "medium",
+    "PIPELINE_CLAUDE_MODEL": "",
+    "QUERY_CLAUDE_MODEL": "claude-haiku-4-5",
+}
 
 
 def _sha256(text: str) -> str:
@@ -245,6 +252,60 @@ def _is_query_stage(stage_id: str) -> bool:
     return stage_id in {"query.router", "query.synthesizer"}
 
 
+def _load_model_config() -> dict[str, str]:
+    config = dict(FALLBACK_MODEL_CONFIG)
+    path = Path(os.environ.get("LLM_WIKI_CONFIG", str(DEFAULT_CONFIG_FILE)))
+    if not path.is_file():
+        return config
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip("'\"")
+        if key:
+            config[key] = value
+    return config
+
+
+def _provider_name(raw: str) -> str:
+    if raw.startswith("claude"):
+        return "claude"
+    if raw.startswith("codex"):
+        return "codex"
+    return raw
+
+
+def _configured_default_provider() -> str:
+    provider = _load_model_config().get("DEFAULT_PROVIDER", "codex").strip()
+    return _provider_name(provider or "codex")
+
+
+def _scoped_default_model(scope: str, provider: str | None = None) -> str:
+    config = _load_model_config()
+    provider = _provider_name(provider or _configured_default_provider())
+    provider_key = provider.upper()
+    model = config.get(f"{scope.upper()}_{provider_key}_MODEL", "").strip()
+    if provider == "codex":
+        return f"codex/{model}" if model else "codex"
+    if provider == "claude":
+        return f"claude/{model}" if model else "claude"
+    return provider
+
+
+def resolve_query_model(provider: str | None = None) -> str:
+    """Return the configured default query-surface model."""
+    if provider is None or not provider.strip():
+        return _scoped_default_model("query")
+    selector = provider.strip()
+    if selector in {"codex", "claude"}:
+        return _scoped_default_model("query", provider=selector)
+    if selector.startswith("codex/") or selector.startswith("claude/"):
+        return selector
+    return f"codex/{selector}"
+
+
 def _resolve_model(stage_id: str, model_override: str | None = None) -> str:
     if model_override:
         return model_override
@@ -252,8 +313,10 @@ def _resolve_model(stage_id: str, model_override: str | None = None) -> str:
     if model:
         return model
     if _is_pipeline_stage(stage_id):
-        return DEFAULT_PIPELINE_CODEX_MODEL
-    return "codex"
+        return _scoped_default_model("pipeline")
+    if _is_query_stage(stage_id):
+        return resolve_query_model()
+    return _configured_default_provider()
 
 
 def _resolve_backend(stage_id: str, model_override: str | None = None) -> tuple[str, str]:
@@ -275,10 +338,11 @@ def _resolve_reasoning_effort(stage_id: str, backend: str) -> str:
     configured = os.environ.get("MODEL_REASONING_EFFORT")
     if configured:
         return configured
+    config = _load_model_config()
     if _is_pipeline_stage(stage_id):
-        return DEFAULT_PIPELINE_REASONING_EFFORT
+        return config.get("PIPELINE_CODEX_REASONING_EFFORT", "").strip()
     if _is_query_stage(stage_id):
-        return DEFAULT_QUERY_REASONING_EFFORT
+        return config.get("QUERY_CODEX_REASONING_EFFORT", "").strip()
     return ""
 
 

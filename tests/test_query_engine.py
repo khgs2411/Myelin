@@ -536,9 +536,9 @@ def test_query_raw_mode_keeps_answer_last_and_skips_synthesizer_with_metadata(tm
     [
         (None, "codex/gpt-5.4-mini"),
         ("codex", "codex/gpt-5.4-mini"),
-        ("codex/gpt-5.4", "codex/gpt-5.4-mini"),
         ("claude", "claude/claude-haiku-4-5"),
-        ("claude/claude-sonnet-4-5", "claude/claude-haiku-4-5"),
+        ("codex/gpt-x", "codex/gpt-x"),
+        ("claude/sonnet-x", "claude/sonnet-x"),
     ],
 )
 def test_resolve_weak_model(model_env, expected, monkeypatch):
@@ -549,3 +549,18 @@ def test_resolve_weak_model(model_env, expected, monkeypatch):
         monkeypatch.setenv("MODEL", model_env)
 
     assert query_engine._resolve_weak_model() == expected
+
+
+def test_resolve_weak_model_uses_default_provider_claude_config(tmp_path, monkeypatch):
+    config_path = tmp_path / "llm-wiki.config"
+    config_path.write_text(
+        "DEFAULT_PROVIDER=claude\n"
+        "QUERY_CLAUDE_MODEL=claude-haiku-test\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("LLM_WIKI_CONFIG", str(config_path))
+    monkeypatch.delenv("MODEL", raising=False)
+
+    query_engine = _import_query_engine()
+
+    assert query_engine._resolve_weak_model() == "claude/claude-haiku-test"

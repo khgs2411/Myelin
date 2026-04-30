@@ -1,4 +1,4 @@
-.PHONY: init status status-all prune help compile compile-continue update update-continue post-brain-refresh apply-pending reject-pending measure measure-legacy measure-tokens measure-routes measure-routes-all lint ask obsidian obsidian-all
+.PHONY: init status dashboard prune help compile compile-continue update update-continue post-brain-refresh apply-pending reject-pending measure measure-legacy measure-tokens measure-routes measure-routes-all lint ask obsidian obsidian-all
 
 SYSTEM_PATH := /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
@@ -31,8 +31,8 @@ help:
 	@echo "Status and post-refresh:"
 	@echo "  make status PROJECT=<project-key>"
 	@echo "      Show inbox, validation, route health, runtime profile, freshness, and next-step hints."
-	@echo "  make status-all"
-	@echo "      One-line status for all registered projects."
+	@echo "  make dashboard"
+	@echo "      Compact inbox and health overview for all registered projects."
 	@echo "  make post-brain-refresh PROJECT=<project-key>"
 	@echo "      Refresh Obsidian, run NO_EMIT=1 route measurement, then print status."
 	@echo "      compile/update already run this automatically after a successful pipeline."
@@ -70,7 +70,8 @@ help:
 	@echo "  MODEL=<backend>           override LLM backend (see MODEL selector below) -"
 	@echo "                            applies to compile, update, measure, ask, and measure-tokens"
 	@echo "  MODEL_REASONING_EFFORT=<level>"
-	@echo "                            override Codex reasoning effort; compile/update default to high"
+	@echo "                            override Codex reasoning effort; compile/update default to medium"
+	@echo "  LLM_WIKI_CONFIG=<path>    override model config file (default: llm-wiki.config)"
 	@echo "  RANKING_CUTOFF=<n>        override ranking snapshot cutoff (compile)"
 	@echo "  CODEX_BIN / CLAUDE_BIN    override CLI binary path (default: looked up on PATH)"
 	@echo "  GLOBAL=1                  scope prune to global (non-project) artifacts"
@@ -84,7 +85,8 @@ help:
 	@echo "  MODEL=<id>               legacy: pass <id> to Codex as the model"
 	@echo ""
 	@echo "Pipeline default when MODEL is unset:"
-	@echo "  compile/update stages use codex/gpt-5.4 with MODEL_REASONING_EFFORT=high"
+	@echo "  compile/update stages use codex/gpt-5.5 with MODEL_REASONING_EFFORT=medium"
+	@echo "  defaults are configured in llm-wiki.config"
 
 init:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required, for example: make init PROJECT=my_project" && exit 1)
@@ -99,7 +101,7 @@ status:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
 	@./scripts/status.sh --project "$(PROJECT)"
 
-status-all:
+dashboard:
 	@./scripts/status.sh --all
 
 prune:

@@ -22,11 +22,8 @@ def _default_projects_root() -> Path:
 
 
 def _resolve_weak_model() -> str:
-    """Map the pipeline MODEL env to a weak-model variant for query ops."""
-    backend = os.environ.get("MODEL", "codex")
-    if backend.startswith("claude"):
-        return "claude/claude-haiku-4-5"
-    return "codex/gpt-5.4-mini"
+    """Resolve the configured weak-model variant for query ops."""
+    return llm_client.resolve_query_model(os.environ.get("MODEL"))
 
 
 def _load_json(path: Path, *, default: dict | None = None) -> dict:

@@ -101,20 +101,20 @@ def test_status_script_renders_human_dashboard(repo_root: Path, tmp_project: Pat
     )
 
     assert result.returncode == 0, f"stdout={result.stdout} stderr={result.stderr}"
-    assert "Project: sample (Sample)" in result.stdout
-    assert "Primary repo: /tmp/source-repo" in result.stdout
-    assert "Overall: needs attention - 1 pending inbox item, 1 validation warning" in result.stdout
-    assert "Inbox: 1 pending, 1 processed; oldest pending 2026-04-18 13:15 IDT" in result.stdout
-    assert "Latest activity: validate completed 2026-04-18 13:00 IDT; last ingest 2026-04-18 13:10 IDT updated 4 units from 2 gap-notes" in result.stdout
-    assert "Validation: pass with 1 warning - index status metadata is behind the latest reviewed commit" in result.stdout
-    assert "Route health: 3/4 expected pages hit across 4 questions, avg confidence 0.75, 1 low-confidence route, 1 emitted gap note, measured 2026-04-30T00:00:00+00:00" in result.stdout
-    assert "Runtime: update completed in 125.4s across 7 stages, 3 LLM stages, 1911 input chars, 802 output chars, slowest ingest" in result.stdout
-    assert "Freshness: commit abc12345, clean, repo dirty" in result.stdout
-    assert "Todo hints:" in result.stdout
+    assert "Project\n  key: sample\n  name: Sample\n  repo: /tmp/source-repo" in result.stdout
+    assert "  overall: needs attention - 1 pending inbox item, 1 validation warning" in result.stdout
+    assert "Health\n  inbox: 1 pending, 1 processed; oldest pending 2026-04-18 13:15 IDT" in result.stdout
+    assert "  validation: pass with 1 warning - index status metadata is behind the latest reviewed commit" in result.stdout
+    assert "  route health: 3/4 expected pages hit across 4 questions, avg confidence 0.75, 1 low-confidence route, 1 emitted gap note, measured 2026-04-30T00:00:00+00:00" in result.stdout
+    assert "  freshness: commit abc12345, clean, repo dirty" in result.stdout
+    assert "Activity\n  latest: validate completed 2026-04-18 13:00 IDT" in result.stdout
+    assert "  last ingest: updated 4 units from 2 gap-notes at 2026-04-18 13:10 IDT" in result.stdout
+    assert "  last runtime: update completed in 125.4s across 7 stages, 3 LLM stages, 1911 input chars, 802 output chars, slowest ingest" in result.stdout
+    assert "Todo Hints" in result.stdout
     assert "What this means: the wiki passed validation, but the status block in index.md still points at an older reviewed commit." in result.stdout
     assert "Next step: make update PROJECT=sample" in result.stdout
     assert "If the warning remains after update: make compile PROJECT=sample" in result.stdout
-    assert "Path hints:" in result.stdout
+    assert "Path Hints" in result.stdout
     assert str(tmp_project / "state" / "latest" / "validation-report.md") in result.stdout
     assert str(tmp_project / "state" / "latest" / "ingest-report.md") in result.stdout
     assert str(tmp_project / "state" / "latest" / "route-measurement.md") in result.stdout
@@ -174,7 +174,7 @@ def test_status_script_generic_warning_points_to_validation_report(repo_root: Pa
     )
 
     assert result.returncode == 0, f"stdout={result.stdout} stderr={result.stderr}"
-    assert "Validation: pass with 1 warning - index_routing on index.md, wiki/integrations/mcp-server-and-auto-update.md" in result.stdout
+    assert "  validation: pass with 1 warning - index_routing on index.md, wiki/integrations/mcp-server-and-auto-update.md" in result.stdout
     assert "What this means: the validation gate passed, but the wiki still has a maintenance warning to clear." in result.stdout
     assert "Review the validation report: " in result.stdout
     assert "Suggested fix: Update the MCP entries in `index.md` to mention resources/resource templates in addition to tools and auto-update behavior." in result.stdout
@@ -219,8 +219,8 @@ def test_status_script_tolerates_semantic_skip_marker(repo_root: Path, tmp_proje
     )
 
     assert result.returncode == 0, f"stdout={result.stdout} stderr={result.stderr}"
-    assert "Overall: needs attention - 1 validation blocker" in result.stdout
-    assert "Validation: fail with 1 finding" in result.stdout
+    assert "  overall: needs attention - 1 validation blocker" in result.stdout
+    assert "  validation: fail with 1 finding" in result.stdout
 
 
 def test_status_script_ignores_route_measurement_with_malformed_numeric_values(repo_root: Path, tmp_project: Path) -> None:
@@ -295,6 +295,50 @@ def test_status_script_ignores_running_zero_stage_profile(repo_root: Path, tmp_p
     assert "Runtime:" not in result.stdout
 
 
+def test_status_script_shows_newer_empty_update_noop_without_hiding_last_runtime(repo_root: Path, tmp_project: Path) -> None:
+    latest_dir = tmp_project / "state" / "latest"
+    latest_dir.mkdir(parents=True, exist_ok=True)
+    (latest_dir / "run-profile.json").write_text(json.dumps({
+        "project_key": "sample",
+        "run_id": "20260430-120000-update",
+        "pipeline": "update",
+        "completed_at": "2026-04-30T10:00:00+00:00",
+        "duration_seconds": 67.1,
+        "status": "completed",
+        "summary": {
+            "stage_count": 7,
+            "llm_stage_count": 2,
+            "total_input_chars": 82632,
+            "total_output_chars": 7105,
+            "slowest_stage": "ingest",
+        },
+    }, indent=2))
+    (latest_dir / "update-noop.json").write_text(json.dumps({
+        "pipeline": "update",
+        "status": "no-op",
+        "reason": "inbox_empty",
+        "updated_at": "2026-04-30T11:00:00+00:00",
+    }, indent=2))
+
+    result = subprocess.run(
+        [
+            "bash",
+            str(repo_root / "scripts" / "status.sh"),
+            "--project",
+            "sample",
+            "--project-dir",
+            str(tmp_project),
+        ],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "TZ": "Asia/Jerusalem"},
+    )
+
+    assert result.returncode == 0, f"stdout={result.stdout} stderr={result.stderr}"
+    assert "  last update command: no-op (inbox empty) at 2026-04-30 14:00 IDT" in result.stdout
+    assert "  last runtime: update completed in 67.1s across 7 stages, 2 LLM stages, 82632 input chars, 7105 output chars, slowest ingest" in result.stdout
+
+
 def test_status_script_marks_residual_warning_after_self_correct_for_manual_review(repo_root: Path, tmp_project: Path) -> None:
     latest_dir = tmp_project / "state" / "latest"
     latest_dir.mkdir(parents=True, exist_ok=True)
@@ -357,7 +401,7 @@ def test_status_script_marks_residual_warning_after_self_correct_for_manual_revi
     )
 
     assert result.returncode == 0, f"stdout={result.stdout} stderr={result.stderr}"
-    assert "Validation: pass with 1 warning - coverage_gap on wiki/systems/admin-and-configuration.md" in result.stdout
+    assert "  validation: pass with 1 warning - coverage_gap on wiki/systems/admin-and-configuration.md" in result.stdout
     assert "What this means: the latest update already used one bounded self-correction pass, but this warning still needs manual review." in result.stdout
     assert "Review the validation report: " in result.stdout
     assert "Suggested fix: Either verify the current stats/analytics routes or screens and add a short grounded subsection, or trim the broader admin-shell wording to the verified surfaces only." in result.stdout

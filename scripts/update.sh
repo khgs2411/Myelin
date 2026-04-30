@@ -208,12 +208,30 @@ if [[ "${CONTINUE:-}" == "1" ]]; then
 else
   inbox_count="$(count_top_level_inbox_items)"
   if [[ "$inbox_count" == "0" ]]; then
+    python3 - "$project_dir" <<'PY'
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+project_dir = Path(sys.argv[1])
+latest_dir = project_dir / "state" / "latest"
+latest_dir.mkdir(parents=True, exist_ok=True)
+payload = {
+    "pipeline": "update",
+    "status": "no-op",
+    "reason": "inbox_empty",
+    "updated_at": datetime.now(timezone.utc).isoformat(),
+}
+(latest_dir / "update-noop.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+PY
     echo "update: inbox empty, nothing to ingest"
     exit 0
   fi
   run_id="$(date -u +%Y%m%d-%H%M%S)-update"
   run_dir="$ARTIFACTS_ROOT/$project_key/runs/$run_id"
   mkdir -p "$run_dir"
+  rm -f "$project_dir/state/latest/update-noop.json"
   export LLM_WIKI_LLM_RESULTS_DIR="$run_dir/llm-results"
   profile_event run-started
   echo "[$project_key] run_dir: $run_dir" >&2

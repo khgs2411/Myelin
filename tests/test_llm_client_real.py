@@ -56,9 +56,9 @@ def test_codex_backend_command_shape(monkeypatch):
     assert "--sandbox" in cmd
     assert cmd[cmd.index("--sandbox") + 1] == "read-only"
     assert "--model" in cmd
-    assert cmd[cmd.index("--model") + 1] == "gpt-5.4"
+    assert cmd[cmd.index("--model") + 1] == "gpt-5.5"
     assert "-c" in cmd
-    assert cmd[cmd.index("-c") + 1] == 'model_reasoning_effort="high"'
+    assert cmd[cmd.index("-c") + 1] == 'model_reasoning_effort="medium"'
     assert "--add-dir" not in cmd
     assert "-o" not in cmd
     assert captured["stdin"] is not None
@@ -84,7 +84,7 @@ def test_codex_backend_model_override(monkeypatch):
     assert "--model" in cmd
     assert cmd[cmd.index("--model") + 1] == "o1"
     assert "-c" in cmd
-    assert cmd[cmd.index("-c") + 1] == 'model_reasoning_effort="high"'
+    assert cmd[cmd.index("-c") + 1] == 'model_reasoning_effort="medium"'
 
 
 def test_non_pipeline_stage_keeps_codex_default_model_when_model_unset(monkeypatch):
@@ -134,7 +134,7 @@ def test_codex_query_stage_uses_medium_reasoning(monkeypatch):
 
 
 def test_model_reasoning_effort_override_wins_for_pipeline_stage(monkeypatch):
-    """Explicit reasoning override should replace the pinned high default."""
+    """Explicit reasoning override should replace the pinned medium default."""
     llm_client = _import_client()
     monkeypatch.delenv("LLM_STUB_RESPONSES_DIR", raising=False)
     monkeypatch.setenv("MODEL", "codex/gpt-5.5")
@@ -153,6 +153,90 @@ def test_model_reasoning_effort_override_wins_for_pipeline_stage(monkeypatch):
     assert cmd[cmd.index("--model") + 1] == "gpt-5.5"
     assert "-c" in cmd
     assert cmd[cmd.index("-c") + 1] == 'model_reasoning_effort="medium"'
+
+
+def test_repo_config_controls_pipeline_defaults(tmp_path, monkeypatch):
+    """Repo config should own provider/model/reasoning defaults when env is unset."""
+    config_path = tmp_path / "llm-wiki.config"
+    config_path.write_text(
+        "DEFAULT_PROVIDER=codex\n"
+        "PIPELINE_CODEX_MODEL=gpt-test-strong\n"
+        "PIPELINE_CODEX_REASONING_EFFORT=low\n"
+        "QUERY_CODEX_MODEL=gpt-test-mini\n"
+        "QUERY_CODEX_REASONING_EFFORT=medium\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("LLM_WIKI_CONFIG", str(config_path))
+    llm_client = _import_client()
+    monkeypatch.delenv("LLM_STUB_RESPONSES_DIR", raising=False)
+    monkeypatch.delenv("MODEL", raising=False)
+    monkeypatch.delenv("MODEL_REASONING_EFFORT", raising=False)
+
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+        return MagicMock(returncode=0, stdout="{}", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    llm_client.invoke(stage_id="08-ingest", prompt="x")
+    cmd = captured["cmd"]
+    assert cmd[cmd.index("--model") + 1] == "gpt-test-strong"
+    assert cmd[cmd.index("-c") + 1] == 'model_reasoning_effort="low"'
+    assert llm_client.resolve_query_model() == "codex/gpt-test-mini"
+
+
+@pytest.mark.parametrize(
+    ("selector", "expected"),
+    [
+        (None, "codex/gpt-5.4-mini"),
+        ("codex", "codex/gpt-5.4-mini"),
+        ("claude", "claude/claude-haiku-4-5"),
+        ("codex/gpt-x", "codex/gpt-x"),
+        ("claude/sonnet-x", "claude/sonnet-x"),
+        ("legacy-model-x", "codex/legacy-model-x"),
+    ],
+)
+def test_resolve_query_model_distinguishes_provider_from_explicit_model(selector, expected, monkeypatch):
+    llm_client = _import_client()
+    monkeypatch.delenv("LLM_WIKI_CONFIG", raising=False)
+    assert llm_client.resolve_query_model(selector) == expected
+
+
+def test_repo_config_default_provider_controls_claude_defaults(tmp_path, monkeypatch):
+    """DEFAULT_PROVIDER=claude should select configured Claude models when MODEL is unset."""
+    config_path = tmp_path / "llm-wiki.config"
+    config_path.write_text(
+        "DEFAULT_PROVIDER=claude\n"
+        "QUERY_CLAUDE_MODEL=claude-haiku-test\n"
+        "PIPELINE_CLAUDE_MODEL=claude-sonnet-test\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("LLM_WIKI_CONFIG", str(config_path))
+    llm_client = _import_client()
+    monkeypatch.delenv("LLM_STUB_RESPONSES_DIR", raising=False)
+    monkeypatch.delenv("MODEL", raising=False)
+    monkeypatch.delenv("MODEL_REASONING_EFFORT", raising=False)
+
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+        return MagicMock(
+            returncode=0,
+            stdout=json.dumps({"result": "{}"}),
+            stderr="",
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert llm_client.resolve_query_model() == "claude/claude-haiku-test"
+    llm_client.invoke(stage_id="08-ingest", prompt="x")
+
+    cmd = captured["cmd"]
+    assert Path(cmd[0]).name == "claude"
+    assert "--model" in cmd
+    assert cmd[cmd.index("--model") + 1] == "claude-sonnet-test"
 
 
 def test_claude_backend_command_shape(monkeypatch):
@@ -373,8 +457,8 @@ def test_real_path_records_invocation_metadata(tmp_path, monkeypatch):
 
     record = json.loads((result_dir / "03-propose.1.json").read_text())
     assert record["metadata"]["backend"] == "codex"
-    assert record["metadata"]["model"] == "gpt-5.4"
-    assert record["metadata"]["reasoning_effort"] == "high"
+    assert record["metadata"]["model"] == "gpt-5.5"
+    assert record["metadata"]["reasoning_effort"] == "medium"
     assert record["metadata"]["runtime_prompt_chars"] == len("hello")
     assert record["metadata"]["combined_prompt_chars"] > len("hello")
     assert record["metadata"]["output_chars"] == len('{"ok": true}')
