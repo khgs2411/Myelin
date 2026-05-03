@@ -161,7 +161,29 @@ def test_enrich_gap_auto_update_env_var_controls_default(monkeypatch, tmp_path: 
     assert len(popen_calls) == 1
 
 
-def test_enrich_gap_auto_update_disabled_when_env_unset(monkeypatch, tmp_path: Path):
+def test_enrich_gap_auto_update_defaults_to_enabled_when_env_unset(monkeypatch, tmp_path: Path):
+    _project_dir, gap_id = _seed_project(tmp_path)
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
+    monkeypatch.delenv("LLM_WIKI_AUTO_UPDATE", raising=False)
+    module = _load_module()
+    monkeypatch.setattr(module, "LLM_WIKI_ROOT", str(tmp_path))
+
+    popen_calls: list[list[str]] = []
+
+    class FakePopen:
+        def __init__(self, args, **_kwargs):
+            popen_calls.append(args)
+
+    monkeypatch.setattr(module.subprocess, "Popen", FakePopen)
+
+    updated = module.enrich_gap("sample", gap_id, "first note")
+
+    assert updated["auto_update_triggered"] is True
+    assert updated["auto_update_status"] == "triggered"
+    assert len(popen_calls) == 1
+
+
+def test_enrich_gap_auto_update_none_honors_env_when_env_unset(monkeypatch, tmp_path: Path):
     _project_dir, gap_id = _seed_project(tmp_path)
     monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
     monkeypatch.delenv("LLM_WIKI_AUTO_UPDATE", raising=False)
@@ -169,11 +191,11 @@ def test_enrich_gap_auto_update_disabled_when_env_unset(monkeypatch, tmp_path: P
     monkeypatch.setattr(module, "LLM_WIKI_ROOT", str(tmp_path))
 
     def fail_popen(*_args, **_kwargs):
-        raise AssertionError("Popen should not be called when auto-update is disabled")
+        raise AssertionError("Popen should not be called when auto_update=None and env is unset")
 
     monkeypatch.setattr(module.subprocess, "Popen", fail_popen)
 
-    updated = module.enrich_gap("sample", gap_id, "first note")
+    updated = module.enrich_gap("sample", gap_id, "first note", auto_update=None)
 
     assert updated["auto_update_triggered"] is False
     assert updated["auto_update_status"] == "disabled"

@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import typing
+from types import ModuleType
 from pathlib import Path
 
 import pytest
@@ -560,6 +561,35 @@ def test_mcp_module_does_not_depend_on_importable_agents_package(monkeypatch, tm
     module = _load_module()
 
     assert callable(module.query_wiki)
+
+
+def test_query_wiki_ignores_cached_non_repo_llm_client(monkeypatch, tmp_path):
+    project_dir = _seed_metadata_project(tmp_path)
+    (project_dir / "wiki" / "systems").mkdir(parents=True, exist_ok=True)
+    (project_dir / "wiki" / "systems" / "auth.md").write_text("Auth uses sessions.")
+
+    stub_dir = tmp_path / "stubs"
+    stub_dir.mkdir()
+    (stub_dir / "query.router.json").write_text(
+        json.dumps(
+            {
+                "stage": "query.router",
+                "response": {"pages": ["wiki/systems/auth.md"], "confidence": 0.9},
+                "tokens_consumed": {"input_chars": 1, "output_chars": 1, "is_estimate": True},
+            }
+        )
+    )
+
+    stale_client = ModuleType("agents.update._shared.llm_client")
+    monkeypatch.setitem(sys.modules, "agents.update._shared.llm_client", stale_client)
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
+    monkeypatch.setenv("LLM_STUB_RESPONSES_DIR", str(stub_dir))
+    module = _load_module()
+    monkeypatch.setattr(module, "_projects_root", lambda: tmp_path / "projects")
+
+    data = module.query_wiki("sample", "How does auth work?", raw=True)
+
+    assert data["pages_read"] == ["wiki/systems/auth.md"]
 
 
 def test_get_wiki_page_blocks_sibling_prefix_traversal(monkeypatch, tmp_path):

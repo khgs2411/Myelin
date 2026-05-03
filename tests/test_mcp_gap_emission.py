@@ -296,13 +296,13 @@ def test_enrich_gap_appends_notes_flips_source_and_writes_atomically(monkeypatch
         + "\n"
     )
 
-    updated = module.enrich_gap("sample", gap_id, "first note")
-    updated = module.enrich_gap("sample", gap_id, "second note")
+    updated = module.enrich_gap("sample", gap_id, "first note", auto_update=False)
+    updated = module.enrich_gap("sample", gap_id, "second note", auto_update=False)
 
     assert updated["source"] == "agent-enriched"
     assert updated["enriched_notes"] == "first note\n\n---\n\nsecond note"
     assert updated["auto_update_triggered"] is False
-    assert updated["auto_update_status"] == "disabled"
+    assert updated["auto_update_status"] == "skipped:override"
     assert updated["auto_update_log_path"] is None
     assert json.loads(path.read_text())["enriched_notes"] == "first note\n\n---\n\nsecond note"
     assert not list(inbox_dir.glob("*.tmp"))
