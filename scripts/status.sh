@@ -584,7 +584,7 @@ def todo_hints(view: dict, project_key: str, inbox: dict, validation: dict) -> l
     elif validation["total_count"]:
         if self_correct_exhausted:
             hints.append(
-                "- What this means: the latest update already used one bounded self-correction pass, but this warning still needs manual review."
+                "- What this means: the latest pipeline already used one bounded self-correction pass, but this warning still needs manual review."
             )
             hints.append("- Review the validation report: use the path hint below for the full warning details.")
             if validation["suggested_action"]:

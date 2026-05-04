@@ -402,7 +402,7 @@ def test_status_script_marks_residual_warning_after_self_correct_for_manual_revi
 
     assert result.returncode == 0, f"stdout={result.stdout} stderr={result.stderr}"
     assert "  validation: pass with 1 warning - coverage_gap on wiki/systems/admin-and-configuration.md" in result.stdout
-    assert "What this means: the latest update already used one bounded self-correction pass, but this warning still needs manual review." in result.stdout
+    assert "What this means: the latest pipeline already used one bounded self-correction pass, but this warning still needs manual review." in result.stdout
     assert "Review the validation report: " in result.stdout
     assert "Suggested fix: Either verify the current stats/analytics routes or screens and add a short grounded subsection, or trim the broader admin-shell wording to the verified surfaces only." in result.stdout
     assert "Next step: make update PROJECT=sample" not in result.stdout

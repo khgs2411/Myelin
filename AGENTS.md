@@ -14,7 +14,7 @@ If any instruction here conflicts with ad hoc conversation phrasing, prefer this
 # Scaffold a new project
 make init PROJECT=<key> NAME="<Display>" PATH=/abs/path/to/repo
 
-# Full recompile of the project brain (sense -> impact -> propose -> apply -> validate -> [reconcile] -> acceptance -> commit)
+# Full recompile of the project brain (sense -> impact -> propose -> apply -> validate -> [reconcile] -> [self-correct] -> acceptance -> commit)
 make compile PROJECT=<key> AUTO=1
 
 # Incremental inbox drain (08-ingest -> apply -> validate -> [reconcile] -> terminal-state -> commit)

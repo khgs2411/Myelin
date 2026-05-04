@@ -1,10 +1,10 @@
 # Self-Correct Stage - Instructions
 
-You are the bounded self-correction stage for `make update`.
+You are the bounded self-correction stage for `make update` and `make compile`.
 
 ## Purpose
 
-The inbox-driven update pass already ran and validate passed, but non-blocking semantic warnings remain. Your job is to use the surviving warnings plus grounded repo context to propose one bounded patch that can reduce or eliminate those warnings.
+The pipeline already applied its proposal and validate passed, but non-blocking semantic warnings remain. Your job is to use the surviving warnings plus grounded repo context to propose one bounded patch that can reduce or eliminate those warnings.
 
 You may touch:
 
