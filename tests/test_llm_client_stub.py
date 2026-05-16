@@ -26,7 +26,7 @@ def test_stub_returns_canned_response(tmp_path, monkeypatch):
     stub_file = stub_dir / "01-sense.classifier.json"
     stub_file.write_text(json.dumps({
         "stage": "01-sense.classifier",
-        "response": {"source_kind_hint": "spec", "confidence": "high"},
+        "response": {"source_kind_hint": "spec", "confidence": "medium"},
         "tokens_consumed": {"input": 100, "output": 10}
     }))
     monkeypatch.setenv("LLM_STUB_RESPONSES_DIR", str(stub_dir))
@@ -34,7 +34,7 @@ def test_stub_returns_canned_response(tmp_path, monkeypatch):
         stage_id="01-sense.classifier",
         prompt="anything",
     )
-    assert result["response"] == {"source_kind_hint": "spec", "confidence": "high"}
+    assert result["response"] == {"source_kind_hint": "spec", "confidence": "medium"}
     assert result["tokens_consumed"] == {
         "input_chars": 100,
         "output_chars": 10,
@@ -121,6 +121,32 @@ def test_stub_path_emits_normalized_tokens_consumed(tmp_path, monkeypatch):
     assert set(tc.keys()) == {"input_chars", "output_chars", "is_estimate"}
     assert tc["input_chars"] == 1000
     assert tc["is_estimate"] is True
+
+
+def test_stub_path_records_invocation_metadata(tmp_path, monkeypatch):
+    llm_client = _import_client()
+    stub_dir = tmp_path / "stubs"
+    result_dir = tmp_path / "llm-results"
+    stub_dir.mkdir()
+    (stub_dir / "08-ingest.json").write_text(json.dumps({
+        "stage": "08-ingest",
+        "response": {},
+        "tokens_consumed": {"input_chars": 1000, "output_chars": 200, "is_estimate": True},
+    }))
+    monkeypatch.setenv("LLM_STUB_RESPONSES_DIR", str(stub_dir))
+    monkeypatch.setenv("LLM_WIKI_LLM_RESULTS_DIR", str(result_dir))
+    monkeypatch.delenv("MODEL", raising=False)
+    monkeypatch.delenv("MODEL_REASONING_EFFORT", raising=False)
+
+    llm_client.invoke(stage_id="08-ingest", prompt="runtime-prompt")
+
+    record = json.loads((result_dir / "08-ingest.1.json").read_text())
+    assert record["stage_id"] == "08-ingest"
+    assert record["metadata"]["backend"] == "codex"
+    assert record["metadata"]["model"] == "gpt-5.5"
+    assert record["metadata"]["reasoning_effort"] == "medium"
+    assert record["metadata"]["runtime_prompt_chars"] == len("runtime-prompt")
+    assert record["metadata"]["combined_prompt_chars"] >= len("runtime-prompt")
 
 
 def test_baseline_stubs_present_and_valid():

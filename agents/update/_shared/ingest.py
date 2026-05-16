@@ -8,6 +8,30 @@ from agents._shared.inbox_writer import ALLOWED_SOURCES, INBOX_ITEM_KEYS, canoni
 
 
 RELAXED_VALIDATOR_RULES = ("ranked_domain_coverage", "domain_collapse_check")
+COMPACT_ITEM_KEYS = (
+    "id",
+    "source",
+    "emitted_at",
+    "question",
+    "target_hint",
+    "confidence",
+    "pages_read",
+    "pages_considered",
+    "enriched_notes",
+    "operator_notes",
+    "route_repair",
+)
+MEANINGFUL_MEASUREMENT_KEYS = (
+    "expected_page",
+    "score_awarded",
+    "score_max",
+    "question_tag",
+)
+SUMMARY_CHAR_LIMIT = 120
+CONTEXT_PAGE_FULL_CHAR_LIMIT = 4000
+CONTEXT_PAGE_HEAD_CHAR_LIMIT = 1800
+CONTEXT_PAGE_TAIL_CHAR_LIMIT = 800
+CONTEXT_PAGE_OMITTED_MARKER = "\n\n[... non-target context page excerpted for prompt size ...]\n\n"
 
 
 def _project_key(project_dir: Path) -> str:
@@ -68,6 +92,40 @@ def validate_item(item: dict[str, Any], *, expected_project_key: str) -> list[st
     return errors
 
 
+def route_repair_from_item(item: dict[str, Any]) -> dict[str, Any]:
+    if item.get("source") != "measure-auto":
+        return {"is_route_repair": False}
+
+    notes_raw = item.get("operator_notes")
+    if not isinstance(notes_raw, str) or not notes_raw.strip():
+        return {"is_route_repair": False}
+
+    try:
+        notes = json.loads(notes_raw)
+    except json.JSONDecodeError:
+        return {"is_route_repair": False}
+
+    reasons = notes.get("failure_reasons")
+    if not isinstance(reasons, list) or not reasons:
+        return {"is_route_repair": False}
+
+    selected_pages = notes.get("selected_pages")
+    if not isinstance(selected_pages, list):
+        selected_pages = []
+
+    return {
+        "is_route_repair": True,
+        "failure_reasons": [str(reason) for reason in reasons],
+        "route_confidence": notes.get("route_confidence"),
+        "route_reason": notes.get("route_reason"),
+        "expected_page": notes.get("expected_page"),
+        "expected_page_selected": notes.get("expected_page_selected"),
+        "selected_pages": [str(page) for page in selected_pages],
+        "freshness_warning_count": notes.get("freshness_warning_count"),
+        "metadata_available": notes.get("metadata_available"),
+    }
+
+
 def scan_inbox(project_dir: Path, max_items_per_run: int) -> dict[str, Any]:
     inbox_dir = project_dir / "inbox"
     inbox_dir.mkdir(parents=True, exist_ok=True)
@@ -95,6 +153,7 @@ def scan_inbox(project_dir: Path, max_items_per_run: int) -> dict[str, Any]:
             {
                 "path": str(entry),
                 "item": item,
+                "route_repair": route_repair_from_item(item),
             }
         )
 
@@ -115,6 +174,9 @@ def batch_items(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     grouped: dict[str, dict[str, Any]] = {}
     for record in records:
         item = record["item"]
+        route_repair = record.get("route_repair") or {"is_route_repair": False}
+        if route_repair.get("is_route_repair"):
+            item = {**item, "route_repair": route_repair}
         raw_target = str(item.get("target_hint") or "").strip()
         target_hint = raw_target or "routing-needed"
         batch = grouped.setdefault(
@@ -134,8 +196,68 @@ def _load_text(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.is_file() else ""
 
 
-def _gather_context_pages(project_dir: Path, item: dict[str, Any]) -> list[dict[str, str]]:
-    pages: list[dict[str, str]] = []
+def _first_summary_line(content: str, *, limit: int = SUMMARY_CHAR_LIMIT) -> str:
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if len(stripped) <= limit:
+            return stripped
+        return stripped[: max(0, limit - 3)].rstrip() + "..."
+    return ""
+
+
+def _truncate_context_content(content: str) -> tuple[str, bool]:
+    if len(content) <= CONTEXT_PAGE_FULL_CHAR_LIMIT:
+        return content, False
+    return (
+        content[:CONTEXT_PAGE_HEAD_CHAR_LIMIT]
+        + CONTEXT_PAGE_OMITTED_MARKER
+        + content[-CONTEXT_PAGE_TAIL_CHAR_LIMIT:],
+        True,
+    )
+
+
+def _page_context(path: str, content: str, *, truncate_context: bool = False) -> dict[str, Any]:
+    included_content, truncated = _truncate_context_content(content) if truncate_context else (content, False)
+    return {
+        "path": path,
+        "content": included_content,
+        "summary": _first_summary_line(content),
+        "char_count": len(content),
+        "content_truncated": truncated,
+        "original_char_count": len(content),
+        "included_char_count": len(included_content),
+    }
+
+
+def _meaningful(value: Any) -> bool:
+    return value is not None and value != "" and value != [] and value != {}
+
+
+def _compact_prompt_value(key: str, value: Any) -> Any:
+    if key != "operator_notes" or not isinstance(value, str):
+        return value
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return value
+    return parsed if isinstance(parsed, dict) else value
+
+
+def compact_prompt_item(item: dict[str, Any]) -> dict[str, Any]:
+    compact: dict[str, Any] = {}
+    for key in COMPACT_ITEM_KEYS:
+        if key in item and _meaningful(item.get(key)):
+            compact[key] = _compact_prompt_value(key, item[key])
+    for key in MEANINGFUL_MEASUREMENT_KEYS:
+        if key in item and _meaningful(item.get(key)):
+            compact[key] = item[key]
+    return compact
+
+
+def _gather_context_pages(project_dir: Path, item: dict[str, Any]) -> list[dict[str, Any]]:
+    pages: list[dict[str, Any]] = []
     seen: set[str] = set()
     pages_read = item.get("pages_read") or []
     if not isinstance(pages_read, list):
@@ -148,13 +270,21 @@ def _gather_context_pages(project_dir: Path, item: dict[str, Any]) -> list[dict[
         if not target.is_file():
             continue
         seen.add(rel)
-        pages.append({"path": rel, "content": _load_text(target)})
+        pages.append(_page_context(rel, _load_text(target), truncate_context=True))
     return pages
 
 
 def build_prompt_payload(project_key: str, project_dir: Path, batches: list[dict[str, Any]]) -> dict[str, Any]:
     existing_page_paths: set[str] = set()
     prompt_batches: list[dict[str, Any]] = []
+    inbox_item_count = 0
+    current_page_count = 0
+    context_page_count = 0
+    total_page_body_chars = 0
+    compact_item_chars = 0
+    truncated_context_page_count = 0
+    original_context_page_body_chars = 0
+    included_context_page_body_chars = 0
 
     for batch in batches:
         target_hint = batch["target_hint"]
@@ -162,25 +292,36 @@ def build_prompt_payload(project_key: str, project_dir: Path, batches: list[dict
         if target_hint != "routing-needed":
             current_path = project_dir / target_hint
             if current_path.is_file():
-                current_page = {"path": target_hint, "content": _load_text(current_path)}
+                current_page = _page_context(target_hint, _load_text(current_path))
                 existing_page_paths.add(target_hint)
+                current_page_count += 1
+                total_page_body_chars += current_page["char_count"]
 
-        context_pages: dict[str, str] = {}
+        context_pages: dict[str, dict[str, Any]] = {}
         for item in batch["items"]:
             for page in _gather_context_pages(project_dir, item):
                 if current_page is not None and page["path"] == current_page["path"]:
                     continue
-                context_pages.setdefault(page["path"], page["content"])
+                context_pages.setdefault(page["path"], page)
                 existing_page_paths.add(page["path"])
+
+        compact_items = [compact_prompt_item(item) for item in batch["items"]]
+        inbox_item_count += len(compact_items)
+        compact_item_chars += sum(len(json.dumps(item, sort_keys=True)) for item in compact_items)
+        context_page_count += len(context_pages)
+        total_page_body_chars += sum(page["char_count"] for page in context_pages.values())
+        truncated_context_page_count += sum(1 for page in context_pages.values() if page["content_truncated"])
+        original_context_page_body_chars += sum(page["original_char_count"] for page in context_pages.values())
+        included_context_page_body_chars += sum(page["included_char_count"] for page in context_pages.values())
 
         prompt_batches.append(
             {
                 "target_hint": target_hint,
                 "current_page": current_page,
                 "context_pages": [
-                    {"path": path, "content": content} for path, content in sorted(context_pages.items())
+                    context_pages[path] for path in sorted(context_pages)
                 ],
-                "inbox_items": batch["items"],
+                "inbox_items": compact_items,
             }
         )
 
@@ -188,6 +329,17 @@ def build_prompt_payload(project_key: str, project_dir: Path, batches: list[dict
         "project_key": project_key,
         "batches": prompt_batches,
         "existing_page_paths": sorted(existing_page_paths),
+        "prompt_profile": {
+            "batch_count": len(prompt_batches),
+            "inbox_item_count": inbox_item_count,
+            "current_page_count": current_page_count,
+            "context_page_count": context_page_count,
+            "total_page_body_chars": total_page_body_chars,
+            "compact_item_chars": compact_item_chars,
+            "truncated_context_page_count": truncated_context_page_count,
+            "original_context_page_body_chars": original_context_page_body_chars,
+            "included_context_page_body_chars": included_context_page_body_chars,
+        },
     }
 
 

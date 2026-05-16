@@ -14,7 +14,7 @@ If any instruction here conflicts with ad hoc conversation phrasing, prefer this
 # Scaffold a new project
 make init PROJECT=<key> NAME="<Display>" PATH=/abs/path/to/repo
 
-# Full recompile of the project brain (sense -> impact -> propose -> apply -> validate -> [reconcile] -> acceptance -> commit)
+# Full recompile of the project brain (sense -> impact -> propose -> apply -> validate -> [reconcile] -> [self-correct] -> acceptance -> commit)
 make compile PROJECT=<key> AUTO=1
 
 # Incremental inbox drain (08-ingest -> apply -> validate -> [reconcile] -> terminal-state -> commit)
@@ -168,6 +168,19 @@ The stages are:
 7. apply commit only after validate passes
 
 `make update` is demand-driven and cheaper than `make compile`: it batches inbox items by `target_hint`, patches existing pages when possible, deliberately relaxes only `ranked_domain_coverage` and `domain_collapse_check`, and gets one bounded repo-grounded self-correction pass before falling back to manual review.
+
+### Live Pipeline State Checks
+
+When checking the state of `make compile`, `make update`, or `make *-continue`, distinguish persisted state from live process state.
+
+Before saying a run is stopped, incomplete, pending, or finished:
+
+1. read `projects/<project-key>/state/update-state.json`
+2. inspect the latest run directory under `artifacts/<project-key>/runs/`
+3. check whether a matching `make compile`, `make update`, `make compile-continue`, `make update-continue`, or stage process is still running
+4. phrase artifact-only findings as "last persisted state" unless live process state was also checked
+
+If a run is still active, report both the last completed persisted stage and the currently observed live stage when that is visible from process output or logs. If live state cannot be observed, say that explicitly instead of implying the persisted state is current.
 
 ## Operator-Owned Project Config
 

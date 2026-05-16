@@ -119,6 +119,13 @@ def test_validate_config_exists():
         "open-questions",
     }
     assert set(allowed) == expected
+    for rule in {
+        "page_metadata_shape",
+        "tag_index_consistency",
+        "alias_index_consistency",
+        "relationship_schema",
+    }:
+        assert rule in data["stage_specific"]["structural_rules"]
 
 
 def test_reconcile_config_exists():

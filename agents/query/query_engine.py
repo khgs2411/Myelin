@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+from agents.query import query_planner
 from agents.update._shared import llm_client
 
 
@@ -21,11 +22,8 @@ def _default_projects_root() -> Path:
 
 
 def _resolve_weak_model() -> str:
-    """Map the pipeline MODEL env to a weak-model variant for query ops."""
-    backend = os.environ.get("MODEL", "codex")
-    if backend.startswith("claude"):
-        return "claude/claude-haiku-4-5"
-    return "codex/gpt-5.4-mini"
+    """Resolve the configured weak-model variant for query ops."""
+    return llm_client.resolve_query_model(os.environ.get("MODEL"))
 
 
 def _load_json(path: Path, *, default: dict | None = None) -> dict:
@@ -51,23 +49,17 @@ def _catalog_pages(project_dir: Path) -> list[dict[str, Any]]:
 def _router_prompt(
     *,
     question: str,
-    catalog: list[dict[str, Any]],
-    index_text: str,
+    route_plan: dict[str, Any],
     ranking_snapshot: dict[str, Any],
 ) -> str:
     return json.dumps(
         {
             "question": question,
-            "catalog": [
-                {
-                    "path": page.get("path"),
-                    "type": page.get("type"),
-                    "summary": page.get("summary", ""),
-                    "linked_topics": page.get("linked_topics", []),
-                }
-                for page in catalog
-            ],
-            "index_md": index_text,
+            "planner_candidates": route_plan.get("candidate_pages", []),
+            "relationship_hints": route_plan.get("relationship_hops", []),
+            "freshness_warnings": route_plan.get("freshness_warnings", []),
+            "route_confidence": route_plan.get("route_confidence", 0.0),
+            "route_reason": route_plan.get("route_reason", ""),
             "ranking_snapshot": ranking_snapshot,
             "page_limit": 5,
         }
@@ -88,8 +80,23 @@ def _read_selected_pages(project_dir: Path, selected_paths: list[str]) -> list[d
     return pages
 
 
-def _synthesizer_prompt(*, question: str, selected_pages: list[dict[str, str]]) -> str:
-    return json.dumps({"question": question, "pages": selected_pages})
+def _synthesizer_prompt(
+    *,
+    question: str,
+    selected_pages: list[dict[str, str]],
+    route_plan: dict[str, Any],
+) -> str:
+    return json.dumps(
+        {
+            "question": question,
+            "route_context": {
+                "selected_pages": route_plan.get("selected_pages", []),
+                "freshness_warnings": route_plan.get("freshness_warnings", []),
+                "route_confidence": route_plan.get("route_confidence", 0.0),
+            },
+            "pages": selected_pages,
+        }
+    )
 
 
 def _merge_tokens(*token_sets: dict[str, Any]) -> dict[str, Any]:
@@ -123,15 +130,20 @@ def query(
         project_dir / "state" / "latest" / "ranking-snapshot.json",
         default={"ranked_domains": []},
     )
-    index_text = (project_dir / "index.md").read_text() if (project_dir / "index.md").is_file() else ""
+    route_plan = query_planner.plan_query(
+        project_key=project_key,
+        question=question,
+        project_dir=project_dir,
+        catalog=catalog,
+        ranking_snapshot=ranking_snapshot,
+    )
     weak_model = _resolve_weak_model()
 
     router_result = llm_client.invoke(
         stage_id="query.router",
         prompt=_router_prompt(
             question=question,
-            catalog=catalog,
-            index_text=index_text,
+            route_plan=route_plan,
             ranking_snapshot=ranking_snapshot,
         ),
         model_override=weak_model,
@@ -142,12 +154,40 @@ def query(
         selected_paths = []
     selected_pages = _read_selected_pages(project_dir, [str(path) for path in selected_paths])
     pages_read = [page["page_path"] for page in selected_pages]
+    route_selected_by_path = {
+        str(page.get("path")): page
+        for page in route_plan.get("candidate_pages", [])
+        if isinstance(page, dict)
+    }
+    route_selected_pages = [
+        route_selected_by_path.get(
+            path,
+            {
+                "path": path,
+                "title": Path(path).stem.replace("-", " ").replace("_", " ").title(),
+                "page_kind": "source_reference",
+                "domains": [],
+                "freshness_status": "unknown",
+                "selection_reason": "router-selected fallback",
+                "score": 0.0,
+            },
+        )
+        for path in pages_read
+    ]
+    active_freshness_warnings = [
+        warning
+        for warning in route_plan.get("freshness_warnings", [])
+        if isinstance(warning, dict) and warning.get("path") in pages_read
+    ]
 
     if raw:
         return {
             "confidence": float(router_response.get("confidence", 0.0)),
+            "route_confidence": float(route_plan.get("route_confidence", 0.0)),
             "pages_read": pages_read,
-            "pages_considered": len(catalog),
+            "pages_considered": len(route_plan.get("candidate_pages", [])),
+            "selected_pages": route_selected_pages,
+            "freshness_warnings": active_freshness_warnings,
             "router_model": weak_model,
             "synthesizer_model": None,
             "tokens_consumed": _merge_tokens(router_result.get("tokens_consumed", {})),
@@ -161,7 +201,11 @@ def query(
 
     synthesizer_result = llm_client.invoke(
         stage_id="query.synthesizer",
-        prompt=_synthesizer_prompt(question=question, selected_pages=selected_pages),
+        prompt=_synthesizer_prompt(
+            question=question,
+            selected_pages=selected_pages,
+            route_plan={**route_plan, "selected_pages": route_selected_pages},
+        ),
         model_override=weak_model,
     )
     synthesizer_response = synthesizer_result["response"]
@@ -174,8 +218,11 @@ def query(
 
     return {
         "confidence": float(synthesizer_response.get("confidence", 0.0)),
+        "route_confidence": float(route_plan.get("route_confidence", 0.0)),
         "pages_read": pages_read,
-        "pages_considered": len(catalog),
+        "pages_considered": len(route_plan.get("candidate_pages", [])),
+        "selected_pages": route_selected_pages,
+        "freshness_warnings": active_freshness_warnings,
         "router_model": weak_model,
         "synthesizer_model": weak_model,
         "tokens_consumed": _merge_tokens(

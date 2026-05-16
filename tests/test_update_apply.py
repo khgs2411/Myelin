@@ -183,7 +183,7 @@ def test_apply_canonicalizes_index_status_after_duplicate_index_units(tmp_sample
             "",
             "## Status",
             "- Freshness: `state/freshness.json`",
-            "- Ranking snapshot: `state/latest/ranking-snapshot.md`",
+            "- Ranking snapshot: `state/latest/ranking-snapshot.json`",
             "- Last seen commit: `oldcommit456`",
             "- Update state: `state/update-state.json`",
         ]
@@ -225,6 +225,8 @@ def test_apply_canonicalizes_index_status_after_duplicate_index_units(tmp_sample
     index = (tmp_sample_project_with_repo / "index.md").read_text()
     assert "- Last update: `2026-04-25T12:32:45+00:00`" in index
     assert "- Last seen commit: `newcommit123`" in index
+    assert "- Ranking snapshot: `state/latest/ranking-snapshot.json`" in index
+    assert "- Ranking snapshot: `state/latest/ranking-snapshot.md`" not in index
     assert "oldcommit456" not in index
 
 

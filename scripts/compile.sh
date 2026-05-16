@@ -33,6 +33,42 @@ EOF
 
 die() { echo "error: $*" >&2; exit 1; }
 
+semantic_warn_count() {
+  python3 - "$1" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+if not path.is_file():
+    print(0)
+    raise SystemExit(0)
+data = json.loads(path.read_text(encoding="utf-8"))
+count = 0
+for finding in data.get("semantic", []):
+    if str(finding.get("severity") or "").strip().lower() == "warn":
+        count += 1
+print(count)
+PY
+}
+
+proposal_ready_for_apply() {
+  python3 - "$1" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+if not path.is_file():
+    print("False")
+    raise SystemExit(0)
+data = json.loads(path.read_text(encoding="utf-8"))
+approved = bool(data.get("approved"))
+units = data.get("units") or []
+print("True" if approved and len(units) > 0 else "False")
+PY
+}
+
 project_key=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -61,7 +97,7 @@ run_project() {
   local project_dir="$PROJECTS_ROOT/$key"
   [[ -d "$project_dir" ]] || { echo "warn: project not found: $key" >&2; return 1; }
 
-  local pipeline_total=8
+  local pipeline_total=9
   local pipeline_start
   pipeline_start=$(date +%s)
 
@@ -89,6 +125,17 @@ run_project() {
       "$key" "$num" "$pipeline_total" "$name" "$(progress_bar "$completed" "$pipeline_total")" "$status" >&2
   }
 
+  profile_event() {
+    [[ -n "${run_dir:-}" ]] || return 0
+    python3 "$ROOT_DIR/scripts/run_profile.py" "$@" \
+      --profile "$run_dir/run-profile.json" \
+      --project-dir "$project_dir" \
+      --project-key "$key" \
+      --run-id "$run_id" \
+      --pipeline "compile" \
+      || echo "warn: [$key] run profile update failed for event $1" >&2
+  }
+
   run_stage() {
     local num="$1"
     local name="$2"
@@ -96,6 +143,7 @@ run_project() {
     local start end elapsed rc start_progress
     start_progress=$((num > 1 ? num - 1 : 0))
     emit_stage_line "$num" "$name" "(running)" "$start_progress"
+    profile_event stage-started --stage-name "$name"
     start=$(date +%s)
     set +e
     "$@"
@@ -105,8 +153,10 @@ run_project() {
     elapsed=$((end - start))
     if [[ "$rc" -eq 0 ]]; then
       emit_stage_line "$num" "$name" "${elapsed}s" "$num"
+      profile_event stage-finished --stage-name "$name" --status completed --exit-code "$rc"
     else
       emit_stage_line "$num" "$name" "${elapsed}s FAILED (rc=$rc)" "$num"
+      profile_event stage-finished --stage-name "$name" --status failed --exit-code "$rc"
     fi
     return "$rc"
   }
@@ -115,6 +165,7 @@ run_project() {
     local num="$1"
     local name="$2"
     emit_stage_line "$num" "$name" "skipped" "$num"
+    profile_event stage-skipped --stage-name "$name"
   }
 
   local run_id
@@ -127,11 +178,15 @@ run_project() {
     [[ -f "$latest/proposal.json" ]] || die "CONTINUE=1 set but $latest has no proposal.json"
     run_dir="$latest"
     run_id="$(basename "$run_dir")"
+    export LLM_WIKI_LLM_RESULTS_DIR="$run_dir/llm-results"
+    profile_event run-started
     echo "[$key] CONTINUE=1; resuming at apply (run_dir: $run_dir)" >&2
   else
     run_id="$(date -u +%Y%m%d-%H%M%S)-update"
     run_dir="$ARTIFACTS_ROOT/$key/runs/$run_id"
     mkdir -p "$run_dir"
+    export LLM_WIKI_LLM_RESULTS_DIR="$run_dir/llm-results"
+    profile_event run-started
     echo "[$key] run_dir: $run_dir" >&2
 
     run_stage 1 "sense" bash "$STAGES_ROOT/01-sense/run.sh" \
@@ -161,6 +216,7 @@ run_project() {
   Edit:   $proposal_path (set "approved": true)
   Apply:  make compile-continue PROJECT=$key
 EOM
+    profile_event run-finished --status awaiting-approval
     return 0
   fi
 
@@ -168,7 +224,7 @@ EOM
     --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" || return 1
 
   local validate_exit=0
-  run_stage 5 "validate" bash "$STAGES_ROOT/06-validate/run.sh" \
+  run_stage 5 "validate" env VALIDATE_AUTO_EMIT=0 bash "$STAGES_ROOT/06-validate/run.sh" \
     --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" \
     || validate_exit=$?
 
@@ -195,7 +251,7 @@ EOM
       run_stage 4 "apply (retry)" bash "$STAGES_ROOT/04-apply/run.sh" \
         --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" || return 1
       validate_exit=0
-      run_stage 5 "validate (retry)" bash "$STAGES_ROOT/06-validate/run.sh" \
+      run_stage 5 "validate (retry)" env VALIDATE_AUTO_EMIT=0 bash "$STAGES_ROOT/06-validate/run.sh" \
         --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" \
         || validate_exit=$?
       if [[ -f "$run_dir/validation-findings.json" ]]; then
@@ -213,18 +269,67 @@ EOM
     skip_stage 6 "reconcile"
   fi
 
+  local self_correct_exit=0
+  local remaining_warns=0
+  remaining_warns="$(semantic_warn_count "$run_dir/validation-findings.json")"
+  if [[ "$remaining_warns" -gt 0 ]]; then
+    run_stage 7 "self-correct" bash "$STAGES_ROOT/09-self-correct/run.sh" \
+      --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" \
+      || self_correct_exit=$?
+
+    if [[ "$self_correct_exit" -eq 0 ]]; then
+      local self_correct_proposal_path="$run_dir/self-correct-proposal.json"
+      local self_correct_ready
+      self_correct_ready="$(proposal_ready_for_apply "$self_correct_proposal_path")"
+      if [[ "$self_correct_ready" == "True" ]]; then
+        local self_correct_base="$run_dir/proposal.pre-self-correct.json"
+        cp "$run_dir/proposal.json" "$self_correct_base"
+        python3 "$ROOT_DIR/scripts/merge_reconcile.py" \
+          "$self_correct_base" \
+          "$self_correct_proposal_path" \
+          "$run_dir/proposal.json" || return 1
+        run_stage 4 "apply (self-correct)" bash "$STAGES_ROOT/04-apply/run.sh" \
+          --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" || return 1
+        validate_exit=0
+        run_stage 5 "validate (self-correct)" env INGEST_MODE=1 VALIDATE_AUTO_EMIT=0 bash "$STAGES_ROOT/06-validate/run.sh" \
+          --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" \
+          || validate_exit=$?
+        if [[ -f "$run_dir/validation-findings.json" ]]; then
+          python3 "$ROOT_DIR/scripts/stable_products.py" render-validation \
+            --input "$run_dir/validation-findings.json" \
+            --project-dir "$project_dir" || return 1
+        fi
+        if [[ "$validate_exit" -ne 0 ]]; then
+          echo "[$key] validate failed after self-correct; commit pointer NOT advanced" >&2
+          return 1
+        fi
+      fi
+    fi
+
+    if [[ "$self_correct_exit" -ne 0 ]]; then
+      echo "[$key] self-correct failed; commit pointer NOT advanced" >&2
+      return 1
+    fi
+  else
+    skip_stage 7 "self-correct"
+  fi
+
+  python3 "$ROOT_DIR/scripts/stable_products.py" render-metadata \
+    --project-dir "$project_dir" || return 1
+
   # Auto-generate acceptance questions by dogfooding the fresh wiki. Non-fatal:
   # failures here don't block commit-pointer advancement, because the wiki is
   # already valid and the questions file can always be regenerated or edited.
-  run_stage 7 "acceptance" bash "$STAGES_ROOT/05-acceptance/run.sh" \
+  run_stage 8 "acceptance" bash "$STAGES_ROOT/05-acceptance/run.sh" \
     --project "$key" --project-dir "$project_dir" --run-dir "$run_dir" \
     || echo "[$key] acceptance question generation skipped (non-fatal)" >&2
 
-  run_stage 8 "apply_commit" env PROJECTS_ROOT="$PROJECTS_ROOT" bash "$ROOT_DIR/scripts/apply_commit.sh" --project "$key" || return 1
+  run_stage 9 "apply_commit" env PROJECTS_ROOT="$PROJECTS_ROOT" bash "$ROOT_DIR/scripts/apply_commit.sh" --project "$key" || return 1
 
   local pipeline_end total_elapsed
   pipeline_end=$(date +%s)
   total_elapsed=$((pipeline_end - pipeline_start))
+  profile_event run-finished --status completed
   echo "[$key] pipeline complete in ${total_elapsed}s" >&2
 }
 

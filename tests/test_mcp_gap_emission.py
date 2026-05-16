@@ -42,8 +42,21 @@ def test_query_wiki_low_confidence_emits_gap(monkeypatch, tmp_path: Path):
             "answer": "Not sure.",
             "citations": ["wiki/systems/combat.md"],
             "confidence": 0.3,
+            "route_confidence": 0.4,
             "pages_read": ["wiki/systems/combat.md"],
             "pages_considered": 21,
+            "selected_pages": [
+                {
+                    "path": "wiki/systems/combat.md",
+                    "title": "Combat",
+                    "page_kind": "system",
+                    "domains": ["combat"],
+                    "freshness_status": "fresh",
+                    "selection_reason": "alias match",
+                    "score": 8.0,
+                }
+            ],
+            "freshness_warnings": [],
             "router_model": "gpt-5.4-mini",
             "synthesizer_model": "gpt-5.4-mini",
             "tokens_consumed": {"input_chars": 1, "output_chars": 1, "is_estimate": True},
@@ -59,8 +72,11 @@ def test_query_wiki_low_confidence_emits_gap(monkeypatch, tmp_path: Path):
     assert result["emitted_gap_id"] == item["id"]
     assert list(result.keys()) == [
         "confidence",
+        "route_confidence",
         "pages_read",
         "pages_considered",
+        "selected_pages",
+        "freshness_warnings",
         "router_model",
         "synthesizer_model",
         "tokens_consumed",
@@ -77,6 +93,8 @@ def test_query_wiki_low_confidence_emits_gap(monkeypatch, tmp_path: Path):
     assert item["router_model"] == "gpt-5.4-mini"
     assert item["synthesizer_model"] == "gpt-5.4-mini"
     assert item["enriched_notes"] is None
+    assert result["route_confidence"] == pytest.approx(0.4)
+    assert result["selected_pages"][0]["path"] == "wiki/systems/combat.md"
 
 
 def test_query_wiki_raw_mode_threads_flag_and_returns_pages_content(monkeypatch, tmp_path: Path):
@@ -93,8 +111,21 @@ def test_query_wiki_raw_mode_threads_flag_and_returns_pages_content(monkeypatch,
             "answer": "",
             "citations": ["wiki/systems/combat.md"],
             "confidence": 0.82,
+            "route_confidence": 0.9,
             "pages_read": ["wiki/systems/combat.md"],
             "pages_considered": 21,
+            "selected_pages": [
+                {
+                    "path": "wiki/systems/combat.md",
+                    "title": "Combat",
+                    "page_kind": "system",
+                    "domains": ["combat"],
+                    "freshness_status": "fresh",
+                    "selection_reason": "alias match",
+                    "score": 8.0,
+                }
+            ],
+            "freshness_warnings": [],
             "router_model": "gpt-5.4-mini",
             "synthesizer_model": None,
             "pages_content": [
@@ -114,8 +145,11 @@ def test_query_wiki_raw_mode_threads_flag_and_returns_pages_content(monkeypatch,
     assert result["emitted_gap_id"] is None
     assert list(result.keys()) == [
         "confidence",
+        "route_confidence",
         "pages_read",
         "pages_considered",
+        "selected_pages",
+        "freshness_warnings",
         "router_model",
         "synthesizer_model",
         "tokens_consumed",
@@ -138,8 +172,11 @@ def test_query_wiki_raw_mode_low_router_confidence_emits_gap(monkeypatch, tmp_pa
             "answer": "",
             "citations": ["wiki/systems/combat.md"],
             "confidence": 0.25,
+            "route_confidence": 0.2,
             "pages_read": ["wiki/systems/combat.md"],
             "pages_considered": 21,
+            "selected_pages": [],
+            "freshness_warnings": [],
             "router_model": "gpt-5.4-mini",
             "synthesizer_model": None,
             "pages_content": [
@@ -157,7 +194,7 @@ def test_query_wiki_raw_mode_low_router_confidence_emits_gap(monkeypatch, tmp_pa
     item = json.loads(inbox_files[0].read_text())
     assert result["emitted_gap_id"] == item["id"]
     assert item["source"] == "mcp-auto"
-    assert item["confidence"] == pytest.approx(0.25)
+    assert item["confidence"] == pytest.approx(0.2)
     assert item["synthesizer_model"] is None
     assert item["router_model"] == "gpt-5.4-mini"
 
@@ -172,8 +209,11 @@ def test_query_wiki_high_confidence_does_not_emit_gap(monkeypatch, tmp_path: Pat
             "answer": "Grounded answer.",
             "citations": ["wiki/systems/combat.md"],
             "confidence": 0.7,
+            "route_confidence": 0.7,
             "pages_read": ["wiki/systems/combat.md"],
             "pages_considered": 21,
+            "selected_pages": [],
+            "freshness_warnings": [],
             "router_model": "gpt-5.4-mini",
             "synthesizer_model": "gpt-5.4-mini",
             "tokens_consumed": {"input_chars": 1, "output_chars": 1, "is_estimate": True},
@@ -185,6 +225,37 @@ def test_query_wiki_high_confidence_does_not_emit_gap(monkeypatch, tmp_path: Pat
 
     assert result["emitted_gap_id"] is None
     assert not list((project_dir / "inbox").glob("*.json"))
+
+
+def test_query_wiki_low_route_confidence_emits_gap(monkeypatch, tmp_path: Path):
+    project_dir = _seed_project(tmp_path)
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(tmp_path))
+    module = _load_module()
+
+    def fake_query(_project_key: str, _question: str, *, projects_root: Path | None = None, raw: bool = False):
+        return {
+            "answer": "Plausible answer.",
+            "citations": ["wiki/systems/combat.md"],
+            "confidence": 0.9,
+            "route_confidence": 0.4,
+            "pages_read": ["wiki/systems/combat.md"],
+            "pages_considered": 1,
+            "selected_pages": [],
+            "freshness_warnings": [],
+            "router_model": "gpt-5.4-mini",
+            "synthesizer_model": "gpt-5.4-mini",
+            "tokens_consumed": {"input_chars": 1, "output_chars": 1, "is_estimate": True},
+        }
+
+    monkeypatch.setattr(module, "_load_query_function", lambda: fake_query)
+
+    result = module.query_wiki("sample", "ambiguous route?")
+
+    inbox_files = sorted((project_dir / "inbox").glob("*.json"))
+    assert len(inbox_files) == 1
+    item = json.loads(inbox_files[0].read_text())
+    assert result["emitted_gap_id"] == item["id"]
+    assert item["confidence"] == pytest.approx(0.4)
 
 
 def test_enrich_gap_appends_notes_flips_source_and_writes_atomically(monkeypatch, tmp_path: Path):
@@ -225,13 +296,13 @@ def test_enrich_gap_appends_notes_flips_source_and_writes_atomically(monkeypatch
         + "\n"
     )
 
-    updated = module.enrich_gap("sample", gap_id, "first note")
-    updated = module.enrich_gap("sample", gap_id, "second note")
+    updated = module.enrich_gap("sample", gap_id, "first note", auto_update=False)
+    updated = module.enrich_gap("sample", gap_id, "second note", auto_update=False)
 
     assert updated["source"] == "agent-enriched"
     assert updated["enriched_notes"] == "first note\n\n---\n\nsecond note"
     assert updated["auto_update_triggered"] is False
-    assert updated["auto_update_status"] == "disabled"
+    assert updated["auto_update_status"] == "skipped:override"
     assert updated["auto_update_log_path"] is None
     assert json.loads(path.read_text())["enriched_notes"] == "first note\n\n---\n\nsecond note"
     assert not list(inbox_dir.glob("*.tmp"))

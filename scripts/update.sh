@@ -116,6 +116,17 @@ emit_stage_line() {
     "$project_key" "$num" "$pipeline_total" "$name" "$(progress_bar "$completed" "$pipeline_total")" "$status" >&2
 }
 
+profile_event() {
+  [[ -n "${run_dir:-}" ]] || return 0
+  python3 "$ROOT_DIR/scripts/run_profile.py" "$@" \
+    --profile "$run_dir/run-profile.json" \
+    --project-dir "$project_dir" \
+    --project-key "$project_key" \
+    --run-id "$run_id" \
+    --pipeline "update" \
+    || echo "warn: [$project_key] run profile update failed for event $1" >&2
+}
+
 run_stage() {
   local num="$1"
   local name="$2"
@@ -123,6 +134,7 @@ run_stage() {
   local start end elapsed rc start_progress
   start_progress=$((num > 1 ? num - 1 : 0))
   emit_stage_line "$num" "$name" "(running)" "$start_progress"
+  profile_event stage-started --stage-name "$name"
   start=$(date +%s)
   set +e
   "$@"
@@ -132,8 +144,10 @@ run_stage() {
   elapsed=$((end - start))
   if [[ "$rc" -eq 0 ]]; then
     emit_stage_line "$num" "$name" "${elapsed}s" "$num"
+    profile_event stage-finished --stage-name "$name" --status completed --exit-code "$rc"
   else
     emit_stage_line "$num" "$name" "${elapsed}s FAILED (rc=$rc)" "$num"
+    profile_event stage-finished --stage-name "$name" --status failed --exit-code "$rc"
   fi
   return "$rc"
 }
@@ -142,6 +156,7 @@ skip_stage() {
   local num="$1"
   local name="$2"
   emit_stage_line "$num" "$name" "skipped" "$num"
+  profile_event stage-skipped --stage-name "$name"
 }
 
 terminalize_items() {
@@ -187,16 +202,38 @@ if [[ "${CONTINUE:-}" == "1" ]]; then
   [[ -f "$latest/proposal.json" ]] || die "CONTINUE=1 set but $latest has no proposal.json"
   run_dir="$latest"
   run_id="$(basename "$run_dir")"
+  export LLM_WIKI_LLM_RESULTS_DIR="$run_dir/llm-results"
+  profile_event run-started
   echo "[$project_key] CONTINUE=1; resuming at apply (run_dir: $run_dir)" >&2
 else
   inbox_count="$(count_top_level_inbox_items)"
   if [[ "$inbox_count" == "0" ]]; then
+    python3 - "$project_dir" <<'PY'
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+project_dir = Path(sys.argv[1])
+latest_dir = project_dir / "state" / "latest"
+latest_dir.mkdir(parents=True, exist_ok=True)
+payload = {
+    "pipeline": "update",
+    "status": "no-op",
+    "reason": "inbox_empty",
+    "updated_at": datetime.now(timezone.utc).isoformat(),
+}
+(latest_dir / "update-noop.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+PY
     echo "update: inbox empty, nothing to ingest"
     exit 0
   fi
   run_id="$(date -u +%Y%m%d-%H%M%S)-update"
   run_dir="$ARTIFACTS_ROOT/$project_key/runs/$run_id"
   mkdir -p "$run_dir"
+  rm -f "$project_dir/state/latest/update-noop.json"
+  export LLM_WIKI_LLM_RESULTS_DIR="$run_dir/llm-results"
+  profile_event run-started
   echo "[$project_key] run_dir: $run_dir" >&2
 
   run_stage 1 "ingest" bash "$STAGES_ROOT/08-ingest/run.sh" \
@@ -204,6 +241,7 @@ else
 
   if [[ ! -f "$run_dir/proposal.json" ]]; then
     echo "update: no valid inbox items after schema validation"
+    profile_event run-finished --status completed
     exit 0
   fi
 fi
@@ -218,6 +256,7 @@ if [[ "$approved" != "True" ]]; then
   Edit:   $proposal_path (set "approved": true)
   Apply:  make update-continue PROJECT=$project_key
 EOM
+  profile_event run-finished --status awaiting-approval
   exit 0
 fi
 
@@ -336,6 +375,11 @@ if [[ "$apply_exit" -ne 0 || "$validate_exit" -ne 0 || "$self_correct_exit" -ne 
   terminal_outcome="needs-review"
 fi
 
+if [[ "$final_status" == "pass" ]]; then
+  python3 "$ROOT_DIR/scripts/stable_products.py" render-metadata \
+    --project-dir "$project_dir"
+fi
+
 run_stage 6 "terminal-state" terminalize_items "$terminal_outcome" "$reason_file" || true
 
 render_ingest_args=(
@@ -359,6 +403,7 @@ python3 "$ROOT_DIR/agents/update/_shared/state.py" record-ingest \
 
 if [[ "$final_status" != "pass" ]]; then
   echo "[$project_key] update failed; consumed inbox items moved to needs-review" >&2
+  profile_event run-finished --status failed
   exit 1
 fi
 
@@ -386,4 +431,5 @@ run_stage 7 "apply_commit" env PROJECTS_ROOT="$PROJECTS_ROOT" APPLY_COMMIT_MESSA
 
 pipeline_end=$(date +%s)
 total_elapsed=$((pipeline_end - pipeline_start))
+profile_event run-finished --status completed
 echo "[$project_key] update complete in ${total_elapsed}s" >&2

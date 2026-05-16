@@ -55,6 +55,7 @@ sys.path.insert(0, str(root_dir))
 sys.path.insert(0, str(agent_dir))
 
 import structural
+from semantic_context import build_semantic_prompt_payload
 from agents._shared import inbox_writer
 from agents.update._shared import llm_client
 
@@ -87,6 +88,10 @@ structural_findings.extend(structural.no_dead_cross_refs(project_dir))
 structural_findings.extend(structural.no_orphan_pages(project_dir))
 structural_findings.extend(structural.index_routing_resolves(project_dir))
 structural_findings.extend(structural.pages_json_filesystem_agreement(project_dir))
+structural_findings.extend(structural.page_metadata_shape(project_dir))
+structural_findings.extend(structural.tag_index_consistency(project_dir))
+structural_findings.extend(structural.alias_index_consistency(project_dir))
+structural_findings.extend(structural.relationship_schema(project_dir))
 structural_findings.extend(structural.index_not_wiki_meta(project_dir))
 if "ranked_domain_coverage" not in relaxed_rules:
     structural_findings.extend(structural.ranked_domain_coverage(run_dir, ranking))
@@ -96,6 +101,7 @@ structural_findings.extend(structural.validate_proposal(run_dir, ranking, allowe
 
 structural_blockers = [finding for finding in structural_findings if finding.get("severity") == "blocker"]
 semantic_findings: list[dict] = []
+semantic_skipped_reason = None
 CURATED_INBOX_CATEGORIES = {"redundancy", "stale", "contradiction"}
 
 
@@ -176,26 +182,20 @@ def _emit_curated_validation_items(project_dir: Path, findings: list[dict]) -> N
             operator_notes=signature,
         )
 
-wiki_dump: list[dict[str, str]] = []
-for page in sorted((project_dir / "wiki").rglob("*.md")) if (project_dir / "wiki").is_dir() else []:
-    wiki_dump.append(
-        {
-            "path": str(page.relative_to(project_dir)),
-            "content": page.read_text(),
-        }
+if structural_blockers:
+    semantic_skipped_reason = "structural_blockers"
+else:
+    prompt_payload = build_semantic_prompt_payload(
+        project_key=project_key,
+        project_dir=project_dir,
+        ranking=ranking,
+        proposal=proposal,
+        enabled_rules=config["stage_specific"]["semantic_rules_enabled"],
+        ingest_mode=ingest_mode,
     )
-prompt = json.dumps(
-    {
-        "project_key": project_key,
-        "ranking_snapshot": ranking,
-        "proposal": proposal,
-        "index_md": (project_dir / "index.md").read_text() if (project_dir / "index.md").is_file() else "",
-        "wiki_pages": wiki_dump,
-        "enabled_rules": config["stage_specific"]["semantic_rules_enabled"],
-    }
-)
-result = llm_client.invoke(stage_id="06-validate.semantic", prompt=prompt)
-semantic_findings = result["response"].get("findings", [])
+    prompt = json.dumps(prompt_payload)
+    result = llm_client.invoke(stage_id="06-validate.semantic", prompt=prompt)
+    semantic_findings = result["response"].get("findings", [])
 
 semantic_blockers = [finding for finding in semantic_findings if finding.get("severity") == "blocker"]
 status = "fail" if structural_blockers or semantic_blockers else "pass"
@@ -223,6 +223,8 @@ report = {
     "structural": structural_findings,
     "semantic": semantic_findings,
 }
+if semantic_skipped_reason is not None:
+    report["semantic_skipped_reason"] = semantic_skipped_reason
 report_path = run_dir / "validation-findings.json"
 report_path.write_text(json.dumps(report, indent=2) + "\n")
 if os.environ.get("VALIDATE_AUTO_EMIT", "1") != "0":
