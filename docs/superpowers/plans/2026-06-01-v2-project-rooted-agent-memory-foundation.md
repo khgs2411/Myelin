@@ -19,7 +19,7 @@ This plan implements Phase 1-3 from the design:
 - `off | queue | auto` mode parsing
 - project-scoped session records and latest-session pointer
 - CLI commands for memory init, event capture, and session summary
-- MCP `query`, `how`, and `what` facade tools
+- MCP `query`, `how`, and `what` facade tools with stable response metadata
 - documentation of automation boundaries
 
 This plan deliberately does not implement:
@@ -40,6 +40,7 @@ Those are separate follow-up plans once this foundation proves useful.
 - Create: `agents/memory/store.py` - deterministic persistence API for events, candidates, sessions, and latest-session reads.
 - Create: `agents/memory/project_resolver.py` - resolve project keys from cwd/repo paths using existing project config.
 - Create: `scripts/memory.py` - CLI entrypoint for init, record-event, session-summary, and latest-session.
+- Modify: `.gitignore` - unignore new memory tests and ignore generated root memory DB state.
 - Modify: `Makefile` - add `memory-init`, `memory-record-event`, `memory-session`, and `memory-latest-session` targets.
 - Modify: `mcp/llm_wiki_mcp.py` - add `query`, `how`, and `what` facade tools without removing existing tools.
 - Modify: `tests/test_mcp_server.py` - verify new tool registration and facade behavior.
@@ -65,6 +66,7 @@ CREATE TABLE IF NOT EXISTS memory_events (
   id TEXT PRIMARY KEY,
   project_key TEXT NOT NULL,
   session_id TEXT,
+  source TEXT NOT NULL,
   event_type TEXT NOT NULL,
   mode TEXT NOT NULL,
   occurred_at TEXT NOT NULL,
@@ -79,6 +81,7 @@ CREATE TABLE IF NOT EXISTS memory_candidates (
   id TEXT PRIMARY KEY,
   project_key TEXT NOT NULL,
   session_id TEXT,
+  source TEXT NOT NULL,
   candidate_type TEXT NOT NULL,
   mode TEXT NOT NULL,
   status TEXT NOT NULL,
@@ -121,6 +124,60 @@ Allowed candidate statuses:
 {"pending", "processed", "needs-review"}
 ```
 
+Allowed session statuses:
+
+```python
+{"open", "closed"}
+```
+
+## Task 0: Prepare Git Ignore Rules For Memory Tests And Generated DB
+
+**Files:**
+- Modify: `.gitignore`
+
+- [ ] **Step 1: Verify the current ignore behavior**
+
+Run:
+
+```bash
+git check-ignore -v tests/test_memory_store.py tests/test_memory_cli.py tests/test_memory_project_resolver.py state/memory.db
+```
+
+Expected: the three test files are ignored by the existing `tests/*` rule, and `state/memory.db` is not ignored.
+
+- [ ] **Step 2: Update `.gitignore`**
+
+Add these lines near the existing test exceptions and generated-state ignores:
+
+```gitignore
+state/memory.db
+!tests/test_memory_store.py
+!tests/test_memory_cli.py
+!tests/test_memory_project_resolver.py
+```
+
+- [ ] **Step 3: Verify the new ignore behavior**
+
+Run:
+
+```bash
+git check-ignore -v tests/test_memory_store.py tests/test_memory_cli.py tests/test_memory_project_resolver.py state/memory.db
+```
+
+Expected:
+
+- the three test paths are not reported as ignored
+- `state/memory.db` is reported as ignored by the new `state/memory.db` rule
+
+- [ ] **Step 4: Commit**
+
+Run:
+
+```bash
+git add .gitignore
+git commit -m "chore: prepare memory generated-state ignores"
+```
+
 ## Task 1: Add Memory Schema Helper
 
 **Files:**
@@ -134,6 +191,8 @@ Create `tests/test_memory_store.py` with:
 
 ```python
 import sqlite3
+
+import pytest
 
 from agents.memory.schema import SCHEMA_VERSION, initialize_memory_db
 
@@ -153,6 +212,12 @@ def test_initialize_memory_db_creates_schema(tmp_path):
         version = conn.execute(
             "SELECT value FROM meta WHERE key = 'schema_version'"
         ).fetchone()[0]
+        event_columns = {
+            row[1] for row in conn.execute("PRAGMA table_info(memory_events)")
+        }
+        candidate_columns = {
+            row[1] for row in conn.execute("PRAGMA table_info(memory_candidates)")
+        }
 
     assert version == str(SCHEMA_VERSION)
     assert {
@@ -162,6 +227,8 @@ def test_initialize_memory_db_creates_schema(tmp_path):
         "memory_sessions",
         "project_memory_state",
     }.issubset(tables)
+    assert "source" in event_columns
+    assert "source" in candidate_columns
 ```
 
 - [ ] **Step 2: Run the focused test and verify it fails**
@@ -210,6 +277,7 @@ def initialize_memory_db(db_path: Path) -> None:
               id TEXT PRIMARY KEY,
               project_key TEXT NOT NULL,
               session_id TEXT,
+              source TEXT NOT NULL,
               event_type TEXT NOT NULL,
               mode TEXT NOT NULL,
               occurred_at TEXT NOT NULL,
@@ -224,6 +292,7 @@ def initialize_memory_db(db_path: Path) -> None:
               id TEXT PRIMARY KEY,
               project_key TEXT NOT NULL,
               session_id TEXT,
+              source TEXT NOT NULL,
               candidate_type TEXT NOT NULL,
               mode TEXT NOT NULL,
               status TEXT NOT NULL,
@@ -282,7 +351,7 @@ git commit -m "feat: add memory database schema"
 ## Task 2: Add Deterministic Memory Store
 
 **Files:**
-- Modify: `agents/memory/store.py`
+- Create: `agents/memory/store.py`
 - Modify: `tests/test_memory_store.py`
 
 - [ ] **Step 1: Add failing tests for event and candidate storage**
@@ -298,6 +367,7 @@ def test_record_event_persists_json_payload(tmp_path):
 
     event = store.record_event(
         project_key="wodnix",
+        source="cli",
         event_type="codex.stop",
         mode="queue",
         session_id="session-1",
@@ -318,6 +388,7 @@ def test_queue_candidate_defaults_to_pending(tmp_path):
 
     candidate = store.queue_candidate(
         project_key="wodnix",
+        source="cli",
         candidate_type="session-summary",
         mode="queue",
         title="Manual QA next steps",
@@ -327,6 +398,19 @@ def test_queue_candidate_defaults_to_pending(tmp_path):
 
     assert candidate["status"] == "pending"
     assert store.list_candidates(project_key="wodnix") == [candidate]
+
+
+def test_invalid_mode_is_rejected(tmp_path):
+    store = MemoryStore(tmp_path / "memory.db")
+
+    with pytest.raises(ValueError, match="mode must be one of"):
+        store.record_event(
+            project_key="wodnix",
+            source="cli",
+            event_type="codex.stop",
+            mode="immediate",
+            payload={},
+        )
 ```
 
 - [ ] **Step 2: Run the tests and verify failure**
@@ -358,6 +442,7 @@ from agents.memory.schema import initialize_memory_db
 
 ALLOWED_MODES = {"off", "queue", "auto"}
 ALLOWED_CANDIDATE_STATUSES = {"pending", "processed", "needs-review"}
+ALLOWED_SESSION_STATUSES = {"open", "closed"}
 
 
 def utc_now() -> str:
@@ -389,7 +474,7 @@ class MemoryStore:
         return conn
 ```
 
-Then add `record_event`, `list_events`, `queue_candidate`, and `list_candidates`. Deserialize `payload_json` to `payload` before returning records.
+Then add `record_event`, `list_events`, `queue_candidate`, and `list_candidates`. `record_event` and `queue_candidate` must require a non-empty `source` string and persist it in the matching table. Deserialize `payload_json` to `payload` before returning records.
 
 - [ ] **Step 4: Run the store tests**
 
@@ -535,6 +620,21 @@ def test_upsert_session_sets_latest_session(tmp_path):
         "coach mobile",
         "student mobile",
     ]
+
+
+def test_invalid_session_status_is_rejected(tmp_path):
+    store = MemoryStore(tmp_path / "memory.db")
+
+    with pytest.raises(ValueError, match="status must be one of"):
+        store.upsert_session(
+            session_id="session-1",
+            project_key="wodnix",
+            title="Manual QA",
+            status="paused",
+            summary="Invalid status should fail.",
+            next_actions=[],
+            source_event_ids=[],
+        )
 ```
 
 - [ ] **Step 2: Run and verify failure**
@@ -552,6 +652,7 @@ Expected: FAIL because session methods do not exist.
 Add methods to `MemoryStore` that:
 
 - validate non-empty `project_key`, `session_id`, and `title`
+- validate `status` is one of `open` or `closed`
 - store `next_actions` as JSON
 - store `source_event_ids` as JSON
 - upsert `project_memory_state.latest_session_id`
@@ -613,6 +714,8 @@ def test_memory_cli_records_event(tmp_path):
         "record-event",
         "--project",
         "wodnix",
+        "--source",
+        "cli",
         "--event-type",
         "codex.stop",
         "--mode",
@@ -625,6 +728,7 @@ def test_memory_cli_records_event(tmp_path):
 
     payload = json.loads(result.stdout)
     assert payload["project_key"] == "wodnix"
+    assert payload["source"] == "cli"
     assert payload["payload"]["card"] == "C4ufaxDz"
 
 
@@ -671,6 +775,7 @@ Create `scripts/memory.py` with subcommands:
 - `latest-session`
 
 All commands print JSON to stdout. `--db` defaults to `state/memory.db`.
+`record-event` and `queue-candidate` require `--source`; the Make target defaults it to `cli`.
 
 - [ ] **Step 4: Run CLI tests**
 
@@ -704,10 +809,13 @@ Append to `tests/test_memory_cli.py`:
 ```python
 def test_makefile_exposes_memory_targets():
     content = open("Makefile", encoding="utf-8").read()
+    assert ".PHONY:" in content
     assert "memory-init:" in content
     assert "memory-record-event:" in content
     assert "memory-session:" in content
     assert "memory-latest-session:" in content
+    assert "make memory-init" in content
+    assert "make memory-latest-session PROJECT=<project-key>" in content
 ```
 
 - [ ] **Step 2: Run and verify failure**
@@ -720,18 +828,31 @@ Run:
 
 Expected: FAIL until targets are added.
 
-- [ ] **Step 3: Add Make targets**
+- [ ] **Step 3: Add Make targets and help text**
 
-Modify `Makefile`:
+Modify the existing `Makefile`: add the memory targets to the existing `.PHONY` line, add the help `echo` lines inside the existing `help:` target, then add the concrete targets:
 
 ```make
+# Add these names to the existing .PHONY line:
+memory-init memory-record-event memory-session memory-latest-session
+
+# Add these lines inside the existing help target:
+	@echo "  make memory-init"
+	@echo "      Initialize the repo-root SQLite memory database."
+	@echo "  make memory-record-event PROJECT=<project-key> EVENT_TYPE=<type> [MODE=queue] [SOURCE=cli]"
+	@echo "      Record a deterministic memory event."
+	@echo "  make memory-session PROJECT=<project-key> SESSION_ID=<id> TITLE=<title> SUMMARY=<summary> [NEXT_ACTION=<action>]"
+	@echo "      Store a project-scoped session summary and latest-session pointer."
+	@echo "  make memory-latest-session PROJECT=<project-key>"
+	@echo "      Print the latest project session memory as JSON."
+
 memory-init:
 	@python3 scripts/memory.py init
 
 memory-record-event:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
 	@test -n "$(EVENT_TYPE)" || (echo "EVENT_TYPE is required" && exit 1)
-	@python3 scripts/memory.py record-event --project "$(PROJECT)" --event-type "$(EVENT_TYPE)" --mode "$${MODE:-queue}" --input-summary "$(INPUT_SUMMARY)" --output-summary "$(OUTPUT_SUMMARY)" --payload-json "$${PAYLOAD_JSON:-{}}"
+	@python3 scripts/memory.py record-event --project "$(PROJECT)" --source "$${SOURCE:-cli}" --event-type "$(EVENT_TYPE)" --mode "$${MODE:-queue}" --input-summary "$(INPUT_SUMMARY)" --output-summary "$(OUTPUT_SUMMARY)" --payload-json "$${PAYLOAD_JSON:-{}}"
 
 memory-session:
 	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
@@ -764,7 +885,7 @@ git add Makefile tests/test_memory_cli.py
 git commit -m "feat: expose memory cli through make"
 ```
 
-## Task 7: Add MCP Tool Registration For `query`, `how`, And `what`
+## Task 7: Add MCP Facade Tools With Stable Response Metadata
 
 **Files:**
 - Modify: `mcp/llm_wiki_mcp.py`
@@ -775,11 +896,65 @@ git commit -m "feat: expose memory cli through make"
 Add or extend an MCP registration test:
 
 ```python
-def test_v2_memory_facade_tools_are_registered():
-    import mcp.llm_wiki_mcp as server
+def test_v2_memory_facade_tools_are_registered(monkeypatch):
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
+    module = _load_module()
 
     for name in ("query", "how", "what"):
-        assert name in server.TOOL_NAMES
+        assert name in module.TOOL_NAMES
+```
+
+Also add a response-shape test that monkeypatches `query_wiki` and proves the facade is not a raw alias:
+
+```python
+def test_query_facade_wraps_query_wiki_response(monkeypatch):
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
+    module = _load_module()
+
+    monkeypatch.setattr(
+        module,
+        "query_wiki",
+        lambda project_key=None, question="", raw=False: {
+            "answer": "Known from wiki.",
+            "confidence": 0.9,
+            "citations": ["index.md"],
+            "emitted_gap_id": None,
+        },
+    )
+
+    response = module.query(project_key="llm-wiki", question="what is known")
+
+    assert response["answer"] == "Known from wiki."
+    assert response["confidence"] == 0.9
+    assert response["memory_scope"] == "project_wiki"
+    assert response["citations"] == ["index.md"]
+    assert response["candidate_ids"] == []
+    assert response["degraded"] is False
+    assert response["degraded_reason"] is None
+    assert response["source_tools"] == ["query_wiki"]
+
+
+def test_query_facade_marks_unavailable_personal_memory_degraded(monkeypatch):
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
+    module = _load_module()
+
+    monkeypatch.setattr(
+        module,
+        "query_wiki",
+        lambda project_key=None, question="", raw=False: {
+            "answer": "The project wiki does not yet have personal preference memory.",
+            "confidence": 0.4,
+            "citations": [],
+            "emitted_gap_id": None,
+        },
+    )
+
+    response = module.query(project_key="llm-wiki", question="What does Liad prefer for tests?")
+
+    assert response["memory_scope"] == "project_wiki"
+    assert response["degraded"] is True
+    assert response["degraded_reason"] == "personal workflow memory is not implemented in this slice"
+    assert response["source_tools"] == ["query_wiki"]
 ```
 
 - [ ] **Step 2: Run and verify failure**
@@ -790,13 +965,56 @@ Run:
 .venv/bin/pytest tests/test_mcp_server.py::test_v2_memory_facade_tools_are_registered -q
 ```
 
-Expected: FAIL because the tools are not registered.
+Expected: FAIL because the tools are not registered and response wrapping does not exist.
+
+These tests must follow the existing `tests/test_mcp_server.py` import pattern: set `LLM_WIKI_ROOT`, call `_load_module()`, and patch attributes on the returned module.
 
 - [ ] **Step 3: Register tool names**
 
 Add `query`, `how`, and `what` to `TOOL_NAMES` without removing existing tools.
 
-- [ ] **Step 4: Add thin facade functions**
+- [ ] **Step 4: Add facade response helpers**
+
+In `mcp/llm_wiki_mcp.py`, add a helper equivalent to:
+
+```python
+def _query_degraded_reason(question: str) -> str | None:
+    normalized = question.lower()
+    if "liad" in normalized or "prefer" in normalized or "preference" in normalized:
+        return "personal workflow memory is not implemented in this slice"
+    if "recipe" in normalized or "how we do" in normalized or "how do we" in normalized:
+        return "recipe memory is not implemented in this slice"
+    if "vector" in normalized or "semantic search" in normalized:
+        return "vector memory is not implemented in this slice"
+    return None
+
+
+def _facade_response(
+    response: dict,
+    *,
+    memory_scope: str,
+    source_tools: list[str],
+    degraded: bool = False,
+    degraded_reason: str | None = None,
+) -> dict:
+    candidate_ids = []
+    emitted_gap_id = response.get("emitted_gap_id")
+    if emitted_gap_id:
+        candidate_ids.append(str(emitted_gap_id))
+    return {
+        **response,
+        "answer": response.get("answer", ""),
+        "confidence": response.get("confidence", 0.0),
+        "memory_scope": memory_scope,
+        "citations": response.get("citations") or [],
+        "candidate_ids": candidate_ids,
+        "degraded": degraded,
+        "degraded_reason": degraded_reason,
+        "source_tools": source_tools,
+    }
+```
+
+- [ ] **Step 5: Add first-slice facade functions**
 
 In `mcp/llm_wiki_mcp.py`, add:
 
@@ -804,24 +1022,88 @@ In `mcp/llm_wiki_mcp.py`, add:
 @mcp.tool()
 def query(project_key: str | None = None, question: str = "", raw: bool = False) -> dict:
     """Ask what is true or known across project-rooted memory."""
-    return query_wiki(project_key=project_key, question=question, raw=raw)
+    degraded_reason = _query_degraded_reason(question)
+    return _facade_response(
+        query_wiki(project_key=project_key, question=question, raw=raw),
+        memory_scope="project_wiki",
+        source_tools=["query_wiki"],
+        degraded=degraded_reason is not None,
+        degraded_reason=degraded_reason,
+    )
 
 
 @mcp.tool()
 def how(project_key: str | None = None, question: str = "", raw: bool = False) -> dict:
     """Ask for operating guidance from project memory and future recipes."""
-    return query_wiki(project_key=project_key, question=question, raw=raw)
+    return _facade_response(
+        query_wiki(project_key=project_key, question=question, raw=raw),
+        memory_scope="project_wiki",
+        source_tools=["query_wiki"],
+        degraded=True,
+        degraded_reason="recipe and personal workflow routing are not implemented in this slice",
+    )
 
 
 @mcp.tool()
 def what(project_key: str | None = None, question: str = "", raw: bool = False) -> dict:
     """Ask for current state or inventory from project memory."""
-    return query_wiki(project_key=project_key, question=question, raw=raw)
+    return _facade_response(
+        query_wiki(project_key=project_key, question=question, raw=raw),
+        memory_scope="project_wiki",
+        source_tools=["query_wiki"],
+        degraded=True,
+        degraded_reason="structured state routing is only implemented for latest-session queries in this slice",
+    )
 ```
 
-V1 behavior may delegate to `query_wiki`; later tasks can route to SQLite session state.
+First-slice `query` may delegate to `query_wiki`, but it must expose the stable facade fields. First-slice `how` and fallback `what` must explicitly mark degraded routing until recipe, personal, and broader state routing exist.
 
-- [ ] **Step 5: Run MCP tests**
+Add focused tests for the degraded first-slice facades:
+
+```python
+def test_how_facade_marks_recipe_and_personal_routing_degraded(monkeypatch):
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
+    module = _load_module()
+    monkeypatch.setattr(
+        module,
+        "query_wiki",
+        lambda project_key=None, question="", raw=False: {
+            "answer": "Use the project runbook.",
+            "confidence": 0.8,
+            "citations": ["wiki/runbooks/local.md"],
+        },
+    )
+
+    response = module.how(project_key="sample", question="how do we run this")
+
+    assert response["memory_scope"] == "project_wiki"
+    assert response["degraded"] is True
+    assert response["degraded_reason"] == "recipe and personal workflow routing are not implemented in this slice"
+    assert response["source_tools"] == ["query_wiki"]
+
+
+def test_what_fallback_marks_structured_state_routing_degraded(monkeypatch):
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
+    module = _load_module()
+    monkeypatch.setattr(
+        module,
+        "query_wiki",
+        lambda project_key=None, question="", raw=False: {
+            "answer": "Known project state.",
+            "confidence": 0.7,
+            "citations": ["index.md"],
+        },
+    )
+
+    response = module.what(project_key="sample", question="what features exist")
+
+    assert response["memory_scope"] == "project_wiki"
+    assert response["degraded"] is True
+    assert response["degraded_reason"] == "structured state routing is only implemented for latest-session queries in this slice"
+    assert response["source_tools"] == ["query_wiki"]
+```
+
+- [ ] **Step 6: Run MCP tests**
 
 Run:
 
@@ -831,7 +1113,7 @@ Run:
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 Run:
 
@@ -853,10 +1135,62 @@ Add a test that prepares a temporary memory database with a latest session and p
 Expected response fields:
 
 ```python
-assert response["answer"].startswith("Last session:")
-assert response["memory_scope"] == "project_session"
-assert response["confidence"] == 1.0
-assert response["citations"] == ["memory_sessions:session-1"]
+from agents.memory.store import MemoryStore
+
+
+def test_what_latest_session_uses_memory_without_query_wiki(monkeypatch, tmp_path):
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
+    module = _load_module()
+    monkeypatch.setattr(module, "_memory_db_path", lambda: tmp_path / "memory.db")
+    monkeypatch.setattr(
+        module,
+        "query_wiki",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("query_wiki should not be called")),
+    )
+    MemoryStore(tmp_path / "memory.db").upsert_session(
+        session_id="session-1",
+        project_key="wodnix",
+        title="S6 social friends visibility QA",
+        status="open",
+        summary="Prepared local Supabase reset and manual QA sequence.",
+        next_actions=["reset db", "coach web", "coach mobile", "student mobile"],
+        source_event_ids=[],
+    )
+
+    response = module.what(project_key="wodnix", question="what did we work on last session")
+
+    assert response["answer"].startswith("Last session:")
+    assert response["memory_scope"] == "project_session"
+    assert response["confidence"] == 1.0
+    assert response["citations"] == ["memory_sessions:session-1"]
+    assert response["candidate_ids"] == []
+    assert response["degraded"] is False
+    assert response["degraded_reason"] is None
+    assert response["source_tools"] == ["memory_sessions"]
+```
+
+Add a second test for the empty-state behavior:
+
+```python
+def test_what_latest_session_returns_degraded_when_missing(monkeypatch, tmp_path):
+    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
+    module = _load_module()
+
+    monkeypatch.setattr(module, "_memory_db_path", lambda: tmp_path / "memory.db")
+    monkeypatch.setattr(
+        module,
+        "query_wiki",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("query_wiki should not be called")),
+    )
+
+    response = module.what(project_key="wodnix", question="what did we work on last session")
+
+    assert response["confidence"] == 0.0
+    assert response["memory_scope"] == "project_session"
+    assert response["citations"] == []
+    assert response["candidate_ids"] == []
+    assert response["degraded"] is True
+    assert response["degraded_reason"] == "no latest session memory exists for this project"
 ```
 
 - [ ] **Step 2: Run and verify failure**
@@ -874,12 +1208,16 @@ Expected: FAIL because `what` delegates to `query_wiki`.
 Implement a helper in `mcp/llm_wiki_mcp.py`:
 
 ```python
+def _memory_db_path() -> Path:
+    return _root() / "state" / "memory.db"
+
+
 def _is_latest_session_question(question: str) -> bool:
     normalized = question.lower()
     return "last session" in normalized or "worked on last session" in normalized
 ```
 
-If matched, read from `MemoryStore(_memory_db_path()).latest_session(resolved_project_key)`. Return a structured answer when found; otherwise return a low-confidence empty result that tells the caller no session memory exists yet.
+If matched, read from `MemoryStore(_memory_db_path()).latest_session(resolved_project_key)`. Return a structured facade response when found; otherwise return a low-confidence response with `memory_scope: "project_session"`, `degraded: true`, and `degraded_reason: "no latest session memory exists for this project"`. Do not fall through to `query_wiki` for latest-session misses.
 
 - [ ] **Step 4: Run MCP tests**
 
@@ -913,6 +1251,7 @@ Add an assertion that `capabilities_resource()` includes:
 ```python
 automation = capabilities["automation_policy"]
 assert automation["hooks_call_llms"] is False
+assert automation["hooks_mutate_curated_memory"] is False
 assert automation["curated_memory_modes"] == ["off", "queue", "auto"]
 assert automation["recipe_promotion_default"] == "queue"
 assert automation["preference_promotion_default"] == "queue"
@@ -1095,6 +1434,7 @@ Create follow-up issues or plan files for:
 Spec coverage:
 
 - Project-rooted memory substrate: Tasks 1-4.
+- Repo ignore rules for new tests and generated SQLite state: Task 0.
 - Deterministic capture and queue modes: Tasks 2, 5, 9.
 - Project-scoped session continuity: Tasks 4, 5, 8.
 - High-level MCP surface: Tasks 7-9.
@@ -1110,4 +1450,6 @@ Type consistency:
 
 - `mode` values are consistently `off`, `queue`, and `auto`.
 - Candidate statuses are consistently `pending`, `processed`, and `needs-review`.
+- Session statuses are consistently `open` and `closed`.
 - Session APIs consistently use `project_key`, `session_id`, `next_actions`, and `source_event_ids`.
+- Event and candidate APIs consistently include `source`.

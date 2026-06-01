@@ -49,6 +49,38 @@ Project docs should capture what code does not cheaply reveal:
 
 The system should not spend tokens summarizing code that an agent can inspect directly.
 
+## V2 North Star And First Slice
+
+The V2 north star is a project-rooted memory system with curated project docs, project-scoped session continuity, canonical recipes, personal workflow memory, raw experience capture, SQLite structured memory, and vector recall.
+
+The first implementation slice is narrower. It must build:
+
+- a repo-root SQLite memory database partitioned by `project_key`
+- deterministic event and candidate storage
+- `off | queue | auto` mode parsing
+- project-scoped session storage and a latest-session pointer
+- a useful deterministic answer for "what did we work on last session?"
+- `query`, `how`, and `what` MCP facades with stable response fields
+- explicit automation policy metadata that says hooks do not call LLMs
+
+The first implementation slice must not build:
+
+- vector search
+- Gemini embedding calls
+- Codex hook installation
+- automatic recipe promotion
+- automatic personal preference promotion
+- a rewrite of the project wiki compiler
+
+The invariants that must hold across every slice are:
+
+- markdown wiki plus state JSON remain human-reviewable curated truth
+- SQLite/vector memory is serving, recall, and queue state unless a curator promotes content back to a durable artifact
+- project references in recipes are provenance, not live instructions
+- hooks append events and candidates only
+- agentic workers require explicit mode, lock, budget, and debounce controls
+- `enrich_gap(auto_update=True)` keeps the current detached `make update AUTO=1` behavior and lockfile guard
+
 ## Memory Model
 
 ### Project Brain
@@ -113,19 +145,19 @@ It is evidence, not truth. It feeds session memory, gap notes, project updates, 
 
 ## Serving Model
 
-V2 adds SQLite as the structured local memory substrate and vector search as a derived retrieval layer.
+V2 adds SQLite as the structured local memory substrate and, in a later slice, vector search as a derived retrieval layer.
 
-SQLite stores:
+The first slice uses one repo-root SQLite database at `state/memory.db`, partitioned by `project_key`. It stores:
 
-- projects
+- project references
 - sessions
 - event log rows
 - memory candidates
 - recipe candidates
 - preference candidates
-- index chunks
-- embedding metadata
 - queue items
+
+Later vector slices add index chunks and embedding metadata to the same serving layer.
 
 Vector search stores embeddings for curated and semi-curated text:
 
@@ -137,6 +169,59 @@ Vector search stores embeddings for curated and semi-curated text:
 - raw event compactions
 
 Markdown and JSON remain the human-reviewable durable truth. SQLite/vector indexes are serving and recall layers unless a specific promoted artifact is written back into the project wiki, recipe brain, or personal brain.
+
+First-slice session summaries are stored only in SQLite. Existing `projects/<key>/wiki/sessions/` pages remain curated durable wiki artifacts written by the existing update/compile flows or by later project-brain curation. A SQLite session can become source evidence for a future wiki session page, but it is not automatically a wiki page.
+
+### First-Slice Data Contract
+
+The first slice must define stable storage fields before any agentic curation depends on them.
+
+Events require:
+
+- `id`
+- `project_key`
+- `session_id`
+- `source`
+- `event_type`
+- `mode`
+- `occurred_at`
+- `cwd`
+- `tool_name`
+- `input_summary`
+- `output_summary`
+- `payload_json`
+
+Candidates require:
+
+- `id`
+- `project_key`
+- `session_id`
+- `source`
+- `candidate_type`
+- `mode`
+- `status`
+- `created_at`
+- `source_event_id`
+- `title`
+- `summary`
+- `payload_json`
+
+Sessions require:
+
+- `id`
+- `project_key`
+- `title`
+- `started_at`
+- `ended_at`
+- `status`
+- `summary`
+- `next_actions_json`
+- `source_event_ids_json`
+- `updated_at`
+
+Allowed modes are `off`, `queue`, and `auto`. Candidate statuses are `pending`, `processed`, and `needs-review`.
+
+Session ids can come from hooks, an explicit CLI/MCP argument, a task/card id, or a generated id. The store must accept explicit ids so an agent can continue a known session. If no latest session exists for a project, `what` must return a deterministic low-confidence response with `memory_scope: "project_session"` and `degraded: true`, not fall through silently to a weak model.
 
 ## MCP Surface
 
@@ -155,6 +240,8 @@ Examples:
 
 `query` should route across project wiki, session memory, personal memory, recipes, and vector recall. It should return answer text, confidence, source memory scopes, citations/provenance, and any emitted candidate ids.
 
+First-slice behavior: `query` may delegate to the existing `query_wiki` path for factual project answers, but it must wrap the result in the facade response contract below and set `degraded` when personal, recipe, or vector routing was requested but is not available yet.
+
 ### `how`
 
 Ask for operating guidance.
@@ -167,6 +254,8 @@ Examples:
 - "How should I approach this repo?"
 
 `how` should prefer recipes, personal workflow guidance, project-specific runbooks, and current project overrides.
+
+First-slice behavior: `how` may delegate to the existing `query_wiki` path while recipe and personal routing are not implemented, but it must say so through response metadata. It must not pretend canonical recipe or personal memory was consulted before those stores exist.
 
 ### `what`
 
@@ -182,16 +271,51 @@ Examples:
 
 `what` should be mostly deterministic and cheap.
 
-### Supporting Tools
+First-slice behavior: `what` must deterministically answer latest-session questions from SQLite. Other `what` inventory queries may fall back to existing project metadata or return a deterministic degraded response that names the missing capability.
 
-Lower-level tools still exist for agents that need control:
+### Facade Response Contract
+
+All high-level MCP facades return these stable fields:
+
+- `answer`
+- `confidence`
+- `memory_scope`
+- `citations`
+- `candidate_ids`
+- `degraded`
+- `degraded_reason`
+- `source_tools`
+
+`memory_scope` is one of:
+
+- `project_wiki`
+- `project_session`
+- `project_state`
+- `recipe`
+- `personal`
+- `mixed`
+- `none`
+
+`degraded` is `true` when the facade could not consult a planned V2 memory source and used a fallback or returned no data.
+
+### Existing Supporting Tools
+
+Current lower-level MCP tools still exist for agents that need control:
 
 - `plan_query`
+- `list_brain_pages`
+- `find_brain_pages`
+- `get_page_neighbors`
 - `get_wiki_page`
 - `list_wiki_projects`
 - `enrich_gap`
 - `flag_stale_answer`
 - `create_inbox_item`
+
+### Future Or Internal Supporting Tools
+
+These are planned or internal capabilities, not existing MCP contracts:
+
 - `record_observation`
 - `refresh_index`
 
@@ -274,8 +398,19 @@ Every write-ish memory action has a mode:
 ```text
 off   -> capture raw events only
 queue -> create candidates/inbox items, do not run agents
-auto  -> create candidates/inbox items and spawn bounded background processing
+auto  -> create candidates/inbox items and make them eligible for bounded background processing
 ```
+
+`auto` does not mean hooks can run agents inline. The current `enrich_gap(auto_update=True)` path is the exception that already exists: it spawns detached `make update AUTO=1` behind the project lockfile. New auto workers must be lockfile-gated, budgeted, and debounced before they run model-backed work.
+
+Minimum controls:
+
+- project-scoped lock for project-brain and session curation jobs
+- global lock for cross-project recipe and preference promotion
+- no hook-side LLM calls
+- debounce repeated candidate processing for the same project/session
+- per-job token or model-call budget recorded in job metadata
+- deterministic queue status transitions: `pending`, `processed`, or `needs-review`
 
 Default V2 policy:
 
