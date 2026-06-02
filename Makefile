@@ -213,3 +213,5 @@ measure-routes:
 
 measure-routes-all:
 	@python3 scripts/measure_routes.py --all
+
+include .symphony-reviewer/reviewer.mk
