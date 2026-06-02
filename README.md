@@ -102,12 +102,12 @@ make prune PROJECT=my_project
 
 ## MCP Package Surface
 
-The `mcp/` directory is intentionally ignored by the root repository. It is the separately maintained PyPI package surface for the MCP server, not normal application source tracked by this repo.
+The `mcp/` directory is the separately maintained TypeScript/npm package surface for the MCP server. The published runtime is `topsyde-llm-wiki-mcp` and should run through `bunx`.
 
 Query behavior can still span both layers:
 
 - application query engine: `agents/query/`
-- MCP adapter package: `mcp/llm_wiki_mcp.py`
+- MCP adapter package: `mcp/src/index.ts`
 
 When a change affects MCP responses, review the root application diff and the `mcp/` package diff deliberately.
 

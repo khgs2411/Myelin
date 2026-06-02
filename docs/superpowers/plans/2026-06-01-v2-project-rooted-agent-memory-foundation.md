@@ -1,1455 +1,595 @@
-# V2 Project-Rooted Agent Memory Foundation Implementation Plan
+# V2 TypeScript Core Migration Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the first V2 slice: a SQLite-backed, project-rooted memory substrate with deterministic capture, queue modes, project-scoped session continuity, and high-level MCP facades that preserve the existing wiki/query/update behavior.
+**Goal:** Fully migrate the core llm-wiki runtime from Python/Bash to Bun/TypeScript while keeping `/mcp` detached as the agent interface and optimizing for the V2 brain product over V1 compatibility.
 
-**Architecture:** Add a new memory layer beside the current project wiki instead of rewriting the compiler. Deterministic scripts own event/candidate storage, project/session resolution, queue modes, and latest-session reads; agentic curation is limited to an explicit session-summary command and the existing correction-driven update loop. The MCP server exposes `query`, `how`, and `what` as semantic facades while retaining existing lower-level tools.
+**Architecture:** The core repo becomes Bun/TypeScript-first. Root TypeScript code owns project discovery, config, state, query planning, pipeline orchestration, validation, measurement, inbox handling, and operator commands. The migration may redesign directory and data structures where the current Python/Bash layout is no longer the right shape. Existing Python/Bash files are reference material during the migration, not compatibility wrappers to keep indefinitely. Breaking V1 behavior is acceptable when it advances the V2 brain. `/mcp` remains ignored and detached; integration happens through stable files, commands, environment variables, schemas, and JSON contracts.
 
-**Tech Stack:** Python 3.13, SQLite via stdlib `sqlite3`, existing Bash/Make orchestration, FastMCP wrapper, file-backed project wiki/state, pytest. Vector search and Gemini embeddings are deferred to a follow-up plan after the memory substrate is stable.
+**Tech Stack:** Bun, TypeScript, root `src/runtime/*`, root `src/cli.ts`, Bun tests, existing markdown/state artifacts, and existing LLM stage instruction files. SQLite memory, Gemini embeddings, `sqlite-vec`, Codex hooks, and MCP facade changes are deferred until the core migration is complete.
 
 ---
 
 ## Scope
 
-This plan implements Phase 1-3 from the design:
+This slice ports the current core runtime to TypeScript:
 
-- SQLite-backed memory database
-- deterministic event and candidate capture
-- `off | queue | auto` mode parsing
-- project-scoped session records and latest-session pointer
-- CLI commands for memory init, event capture, and session summary
-- MCP `query`, `how`, and `what` facade tools with stable response metadata
-- documentation of automation boundaries
+- root Bun package and TypeScript config
+- runtime helpers for fs, JSON, config, projects, state, artifacts, and process execution
+- TypeScript-native directory/data layout decisions for pipeline stages, runtime modules, schemas, and durable generated outputs
+- TypeScript query planner/query engine behavior selected from the current implementation or redesigned for V2 value
+- TypeScript inbox/gap-note/auto-update primitives
+- TypeScript pipeline stage runner and orchestration for compile/update/lint/measure/ask/status/init
+- TypeScript validation and metadata helpers currently in `agents/update/_shared`, `agents/update/06-validate`, `agents/query`, and `scripts`
+- V2 CLI vocabulary that names product concepts directly
+- Make targets retained only as convenience aliases where useful
+- targeted parity or golden checks only for behavior selected as worth preserving
 
-This plan deliberately does not implement:
+This slice deliberately does not implement:
 
+- SQLite memory tables
+- memory event/candidate/session storage
 - Gemini embeddings
-- sqlite-vec / Bun indexing
-- automatic recipe promotion
-- automatic personal preference promotion
+- `sqlite-vec`
 - Codex hook installation
-- full project-brain rewrite
+- detached MCP facade changes
+- automatic practice or personal preference promotion
 
-Those are separate follow-up plans once this foundation proves useful.
+## Current Core Baseline
+
+The root product core is currently Python/Bash:
+
+- `agents/query/*.py`
+- `agents/_shared/*.py`
+- `agents/update/_shared/*.py`
+- `agents/update/06-validate/*.py`
+- `agents/update/**/run.sh`
+- `scripts/*.sh`
+- `scripts/*.py`
+- root `tests/` with pytest
+- root `Makefile`
+
+The Python layer is thin enough to port. The current stage instruction markdown and JSON configs are useful reference assets, but their directory structure is not sacred. The migration should choose a TypeScript-native structure deliberately, then provide migration/adaptation for existing project data and operator workflows.
+
+`/mcp` is TypeScript/Bun already, but it is detached by design:
+
+- `/mcp/` remains ignored.
+- `/mcp` is not a workspace member.
+- core repo code must not import `/mcp` source.
+- `/mcp` must not become owner of core product logic.
 
 ## File Map
 
-- Create: `agents/memory/__init__.py` - package marker for memory modules.
-- Create: `agents/memory/schema.py` - SQLite schema creation and migration helpers.
-- Create: `agents/memory/store.py` - deterministic persistence API for events, candidates, sessions, and latest-session reads.
-- Create: `agents/memory/project_resolver.py` - resolve project keys from cwd/repo paths using existing project config.
-- Create: `scripts/memory.py` - CLI entrypoint for init, record-event, session-summary, and latest-session.
-- Modify: `.gitignore` - unignore new memory tests and ignore generated root memory DB state.
-- Modify: `Makefile` - add `memory-init`, `memory-record-event`, `memory-session`, and `memory-latest-session` targets.
-- Modify: `mcp/llm_wiki_mcp.py` - add `query`, `how`, and `what` facade tools without removing existing tools.
-- Modify: `tests/test_mcp_server.py` - verify new tool registration and facade behavior.
-- Create: `tests/test_memory_store.py` - verify SQLite schema and deterministic memory store behavior.
-- Create: `tests/test_memory_cli.py` - verify CLI command behavior.
-- Create: `tests/test_memory_project_resolver.py` - verify cwd/project resolution.
-- Modify: `docs/superpowers/specs/2026-06-01-v2-project-rooted-agent-memory-design.md` only if implementation discoveries require clarifying the design.
+- Create: `package.json` - private root package with Bun scripts.
+- Create: `tsconfig.json` - root compiler settings.
+- Create: `src/runtime/fs.ts`
+- Create: `src/runtime/json.ts`
+- Create: `src/runtime/config.ts`
+- Create: `src/runtime/projects.ts`
+- Create: `src/runtime/state.ts`
+- Create: `src/runtime/artifacts.ts`
+- Create: `src/runtime/process.ts`
+- Create: `src/query/planner.ts`
+- Create: `src/query/engine.ts`
+- Create: `src/inbox/items.ts`
+- Create: `src/pipeline/stages.ts`
+- Create: `src/pipeline/compile.ts`
+- Create: `src/pipeline/update.ts`
+- Create: `src/pipeline/validate.ts`
+- Create: `src/pipeline/measure.ts`
+- Create: `src/cli.ts`
+- Create: Bun tests under `src/**/*.test.ts` or `tests-ts/**/*.test.ts`.
+- Modify: `Makefile` to call Bun entrypoints for normal commands.
+- Modify: `README.md` and `AGENTS.md` to document the TypeScript runtime and detached MCP boundary.
+- Do not modify: `/mcp` unless a separate MCP-interface task is explicitly scoped.
 
-## Data Contracts
+## Migration Rules
 
-The first slice uses one SQLite file per llm-wiki root:
+### Complete Port, Not Thin Wrapper
 
-```text
-state/memory.db
-```
+Normal operation must end on TypeScript entrypoints. Temporary wrappers may call old Python/Bash only while a specific command is being ported and tested. Final acceptance cannot depend on Python/Bash for core commands.
 
-The schema version is stored in `meta(key, value)`.
+### Prefer V2 Shape Over Compatibility
 
-Tables:
+Do not preserve weak V1 behavior merely because it exists. This is a large refactor and it may deliberately change command behavior, directory/data structures, and pipeline semantics. Preserve useful project knowledge, raw sources, provenance, and operator intent. If a layout, artifact, or state shape changes, document the reason and provide migration only for data that still matters to the V2 brain.
 
-```sql
-CREATE TABLE IF NOT EXISTS memory_events (
-  id TEXT PRIMARY KEY,
-  project_key TEXT NOT NULL,
-  session_id TEXT,
-  source TEXT NOT NULL,
-  event_type TEXT NOT NULL,
-  mode TEXT NOT NULL,
-  occurred_at TEXT NOT NULL,
-  cwd TEXT,
-  tool_name TEXT,
-  input_summary TEXT,
-  output_summary TEXT,
-  payload_json TEXT NOT NULL
-);
+### Keep MCP Detached
 
-CREATE TABLE IF NOT EXISTS memory_candidates (
-  id TEXT PRIMARY KEY,
-  project_key TEXT NOT NULL,
-  session_id TEXT,
-  source TEXT NOT NULL,
-  candidate_type TEXT NOT NULL,
-  mode TEXT NOT NULL,
-  status TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  source_event_id TEXT,
-  title TEXT NOT NULL,
-  summary TEXT NOT NULL,
-  payload_json TEXT NOT NULL
-);
+The detached MCP interface communicates through:
 
-CREATE TABLE IF NOT EXISTS memory_sessions (
-  id TEXT PRIMARY KEY,
-  project_key TEXT NOT NULL,
-  title TEXT NOT NULL,
-  started_at TEXT,
-  ended_at TEXT,
-  status TEXT NOT NULL,
-  summary TEXT NOT NULL,
-  next_actions_json TEXT NOT NULL,
-  source_event_ids_json TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
+- `LLM_WIKI_ROOT`
+- optional `LLM_WIKI_PROJECT`
+- explicit `project_key`
+- project/state files
+- inbox schemas
+- generated artifacts
+- documented JSON contracts
 
-CREATE TABLE IF NOT EXISTS project_memory_state (
-  project_key TEXT PRIMARY KEY,
-  latest_session_id TEXT,
-  updated_at TEXT NOT NULL
-);
-```
+No source imports cross the `/mcp` boundary.
 
-Allowed modes:
+### Required Migration Records
 
-```python
-{"off", "queue", "auto"}
-```
+Before retiring or replacing V1 surfaces, write a migration record that states:
 
-Allowed candidate statuses:
+- what was preserved, migrated, adapted, retired, or left as legacy reference
+- why retired behavior is not valuable to V2
+- where preserved provenance now lives
+- how to inspect the last useful V1 run state when needed
 
-```python
-{"pending", "processed", "needs-review"}
-```
+The migration must not silently lose curated wiki pages, raw source evidence, original inbox items, source provenance, freshness/stale signals, pending or terminal inbox state, session summaries, changelog history, operator-owned project config, or detached MCP contracts.
 
-Allowed session statuses:
+### Milestone Gates
 
-```python
-{"open", "closed"}
-```
+This is one large migration, but implementation must stop at these gates unless the gate passes:
 
-## Task 0: Prepare Git Ignore Rules For Memory Tests And Generated DB
+| Gate | Required proof |
+| --- | --- |
+| Gate A: Inventory and layout | V1 keep/drop/redesign matrix exists; runtime layout doc exists; schema transition is decided. |
+| Gate B: TypeScript foundation | Root Bun package, runtime primitives, tests, and typecheck pass without `/mcp` joining the package graph. |
+| Gate C: Schema-first runtime | Schema check/build/candidates/apply work with Zod validation and generated schema context. |
+| Gate D: Query/learn command surface | `memory query`, `project learn`, `project ingest`, and status commands use schema context and fail closed where required. |
+| Gate E: Pipeline parity where valuable | Preserved V1 behavior has Bun tests or smoke tests; dropped behavior is recorded with rationale. |
+| Gate F: Retirement | Normal core commands no longer require Python/Bash or `.venv`; legacy escape hatches are explicit. |
+
+Do not advance to a later gate while an earlier gate has unresolved critical findings.
+
+## Tasks
+
+### Task 0: Inventory And Parity Map
 
 **Files:**
-- Modify: `.gitignore`
 
-- [ ] **Step 1: Verify the current ignore behavior**
+- Create: `docs/v2-migration-inventory.md`
+- Update: this plan when the inventory changes command or layout decisions.
 
-Run:
+- [ ] Map each Python/Bash entrypoint to its TypeScript target:
+  - `scripts/init_project.sh`
+  - `scripts/compile.sh`
+  - `scripts/update.sh`
+  - `scripts/status.sh`
+  - `scripts/ask.sh`
+  - `scripts/measure*.sh`
+  - `scripts/measure_routes.py`
+  - `scripts/apply_commit.sh`
+  - `scripts/*pending*.sh`
+  - `scripts/prune_artifacts.sh`
+  - `agents/query/*.py`
+  - `agents/update/_shared/*.py`
+  - `agents/update/06-validate/*.py`
+  - `agents/update/**/run.sh`
+- [ ] Mark stage instruction markdown/config JSON as data assets to keep.
+- [ ] Create a keep/drop/redesign matrix for every mapped entrypoint and V1 behavior.
+- [ ] Classify each item as:
+  - preserve with parity
+  - preserve as data/reference only
+  - redesign for V2
+  - retire after replacement
+  - retire immediately
+- [ ] Record why each retired behavior is not valuable to V2.
+- [ ] Record which tests, smoke tests, or migration checks protect each preserved behavior.
+- [ ] Explicitly classify:
+  - current low-confidence gap-note behavior
+  - enrich-gap auto-update behavior
+  - auto-update lockfile/log behavior
+  - proposal/apply/reconcile artifact shapes
+  - bounded reconcile behavior
+  - current query planner behavior
+  - current measurement behavior
+  - current pending approval behavior
 
-```bash
-git check-ignore -v tests/test_memory_store.py tests/test_memory_cli.py tests/test_memory_project_resolver.py state/memory.db
-```
-
-Expected: the three test files are ignored by the existing `tests/*` rule, and `state/memory.db` is not ignored.
-
-- [ ] **Step 2: Update `.gitignore`**
-
-Add these lines near the existing test exceptions and generated-state ignores:
-
-```gitignore
-state/memory.db
-!tests/test_memory_store.py
-!tests/test_memory_cli.py
-!tests/test_memory_project_resolver.py
-```
-
-- [ ] **Step 3: Verify the new ignore behavior**
-
-Run:
-
-```bash
-git check-ignore -v tests/test_memory_store.py tests/test_memory_cli.py tests/test_memory_project_resolver.py state/memory.db
-```
-
-Expected:
-
-- the three test paths are not reported as ignored
-- `state/memory.db` is reported as ignored by the new `state/memory.db` rule
-
-- [ ] **Step 4: Commit**
-
-Run:
-
-```bash
-git add .gitignore
-git commit -m "chore: prepare memory generated-state ignores"
-```
-
-## Task 1: Add Memory Schema Helper
+### Task 0.5: Design The TypeScript-Native Layout
 
 **Files:**
-- Create: `agents/memory/__init__.py`
-- Create: `agents/memory/schema.py`
-- Test: `tests/test_memory_store.py`
 
-- [ ] **Step 1: Write the failing schema test**
+- Create or update: `docs/runtime-layout.md`
+- Update this plan if the layout decision changes the file map.
 
-Create `tests/test_memory_store.py` with:
+- [ ] Use Karpathy's LLM Wiki pattern as the source taxonomy: raw sources, maintained wiki, schema/instructions, index, and chronological log.
+- [ ] Decide the TypeScript code layout for:
+  - runtime primitives
+  - query
+  - inbox
+  - pipeline orchestration
+  - validation
+  - measurement
+  - command modules
+- [ ] Decide the data layout for:
+  - raw source/evidence preservation
+  - maintained markdown wiki
+  - global schema/instruction contracts
+  - project-local schema/instruction contracts
+  - content-oriented index
+  - chronological log/session layer
+  - stage configs
+  - stage instructions
+  - schemas
+  - generated artifacts
+  - project state
+- [ ] Use this target project layout unless implementation finds a stronger shape:
+  - `projects/<key>/sources/`
+  - `projects/<key>/wiki/`
+  - `projects/<key>/schema/`
+  - `projects/<key>/state/`
+  - `projects/<key>/log/`
+  - `projects/<key>/runs/`
+- [ ] Treat old global artifacts as migration reference material, not the target project-owned layout.
+- [ ] Keep curated Project Memory as markdown plus metadata JSON.
+- [ ] Do not move curated Project Memory into SQLite in this migration.
+- [ ] Define the V2 treatment for existing surfaces:
+  - `projects/<key>/wiki/`
+  - `projects/<key>/index.md`
+  - `projects/<key>/state/*.json`
+  - `projects/<key>/state/latest/`
+  - `projects/<key>/inbox/`
+  - `projects/<key>/wiki/sessions/`
+  - `projects/<key>/changelog.md`
+  - `raw/`
+  - `artifacts/<key>/runs/`
+  - `agents/update/**/instructions.md`
+  - `agents/update/**/config.json`
+  - `agents/update/**/run.sh`
+  - `agents/**/*.py`
+  - `scripts/*`
+- [ ] For each existing surface, choose preserve, migrate, adapt, retire, or ignore with rationale.
+- [ ] Explicitly classify each current `agents/update/**` asset as:
+  - move into new layout
+  - keep as durable data
+  - convert to TypeScript/module config
+  - retire after parity
+- [ ] Preserve existing project knowledge, raw sources, and provenance through a migration/adaptation path when they still matter.
+- [ ] Document why the chosen layout is better than mirroring the old Python/Bash tree.
+- [ ] Define how project-local schemas inherit from or specialize the global schema without duplicating global rules.
+- [ ] Allow project-local schemas to extend or narrow global schema rules by default.
+- [ ] Require a typed override record with an explicit reason to weaken or replace a global schema rule.
+- [ ] Queue schema candidates by default when `project learn` discovers project-local conventions.
+- [ ] Auto-apply only narrow additive project-local schema conventions with high confidence.
+- [ ] Store schema candidates as generated project state JSON, for example `projects/<key>/state/schema-candidates.json`.
+- [ ] Store global schema candidates as generated root state JSON, for example `state/schema-candidates.json`.
+- [ ] Do not use SQLite for schema candidates in this migration slice.
+- [ ] Create or document root `state/` ownership and `.gitignore` policy before writing global generated state.
+- [ ] Generate globally unique schema candidate ids.
+- [ ] Store `project_key` on every schema candidate.
+- [ ] Use schema candidate statuses: `pending`, `applied`, `rejected`, `superseded`, and `failed`.
+- [ ] Make `schema candidates <key>` list project-local candidates by default.
+- [ ] Add `schema candidates <key> --include-global` for relevant global schema candidates.
+- [ ] Require `schema apply <candidate-id> --global` when applying global schema candidates.
+- [ ] Do not generate global schema candidates from `project learn`.
+- [ ] Reserve global schema candidates for explicit cross-project workflows, operator intent, or later Practice/Personal promotion logic.
+- [ ] Defer global schema candidate generation commands until cross-project Practice/Personal promotion exists.
+- [ ] Make project-local `schema apply` rebuild that project's schema context.
+- [ ] Make global `schema apply --global` rebuild schema context for all registered projects or fail/roll back.
+- [ ] Place global authored schema under root `schema/`.
+- [ ] Place project-local authored schema under `projects/<key>/schema/`.
+- [ ] Migrate or classify existing root `schemas/source-classification.md` as source material for the new root `schema/` authored guidance.
+- [ ] Fold the source-classification rules currently repeated in `AGENTS.md` into the global schema model.
+- [ ] Ensure `schemas/` and `schema/` do not remain two active authored schema roots.
+- [ ] Support markdown guidance files for human/agent-readable schema intent.
+- [ ] Support typed JSON rule files for enforceable schema contracts.
+- [ ] Do not use YAML for typed schema rules by default.
+- [ ] Treat typed schema JSON as hand-authored source files.
+- [ ] Do not introduce a higher-level schema-rule generator in this slice.
+- [ ] Validate typed schema JSON with Zod validators in TypeScript.
+- [ ] Do not make JSON Schema the primary validator in this slice.
+- [ ] Include typed rules for page taxonomy, review gates, allowed memory scopes, required provenance fields, CLI vocabulary, and validation requirements.
+- [ ] Generate compiled agent-facing schema context under project state, for example `projects/<key>/state/schema-context.json`.
+- [ ] Treat compiled schema context as generated state, not hand-edited source.
+- [ ] Regenerate schema context when global or project-local schema inputs change.
+- [ ] Verify schema-context freshness during `project learn`.
+- [ ] Avoid rewriting schema context when inputs are unchanged.
+- [ ] Update or document `.gitignore` so new authored schema files, TypeScript source, tests, and docs are not accidentally hidden, while generated state is intentionally tracked or ignored.
 
-```python
-import sqlite3
+### Task 1: Add Root TypeScript Package
 
-import pytest
+**Files:**
 
-from agents.memory.schema import SCHEMA_VERSION, initialize_memory_db
+- Create: `package.json`
+- Create: `tsconfig.json`
 
-
-def test_initialize_memory_db_creates_schema(tmp_path):
-    db_path = tmp_path / "memory.db"
-
-    initialize_memory_db(db_path)
-
-    with sqlite3.connect(db_path) as conn:
-        tables = {
-            row[0]
-            for row in conn.execute(
-                "SELECT name FROM sqlite_master WHERE type = 'table'"
-            )
-        }
-        version = conn.execute(
-            "SELECT value FROM meta WHERE key = 'schema_version'"
-        ).fetchone()[0]
-        event_columns = {
-            row[1] for row in conn.execute("PRAGMA table_info(memory_events)")
-        }
-        candidate_columns = {
-            row[1] for row in conn.execute("PRAGMA table_info(memory_candidates)")
-        }
-
-    assert version == str(SCHEMA_VERSION)
-    assert {
-        "meta",
-        "memory_events",
-        "memory_candidates",
-        "memory_sessions",
-        "project_memory_state",
-    }.issubset(tables)
-    assert "source" in event_columns
-    assert "source" in candidate_columns
-```
-
-- [ ] **Step 2: Run the focused test and verify it fails**
-
-Run:
-
-```bash
-.venv/bin/pytest tests/test_memory_store.py::test_initialize_memory_db_creates_schema -q
-```
-
-Expected: FAIL with `ModuleNotFoundError: No module named 'agents.memory'`.
-
-- [ ] **Step 3: Add the package marker**
-
-Create `agents/memory/__init__.py`:
-
-```python
-"""Project-rooted memory substrate for llm-wiki V2."""
-```
-
-- [ ] **Step 4: Implement the schema helper**
-
-Create `agents/memory/schema.py`:
-
-```python
-from __future__ import annotations
-
-import sqlite3
-from pathlib import Path
-
-
-SCHEMA_VERSION = 1
-
-
-def initialize_memory_db(db_path: Path) -> None:
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(db_path) as conn:
-        conn.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS meta (
-              key TEXT PRIMARY KEY,
-              value TEXT NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS memory_events (
-              id TEXT PRIMARY KEY,
-              project_key TEXT NOT NULL,
-              session_id TEXT,
-              source TEXT NOT NULL,
-              event_type TEXT NOT NULL,
-              mode TEXT NOT NULL,
-              occurred_at TEXT NOT NULL,
-              cwd TEXT,
-              tool_name TEXT,
-              input_summary TEXT,
-              output_summary TEXT,
-              payload_json TEXT NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS memory_candidates (
-              id TEXT PRIMARY KEY,
-              project_key TEXT NOT NULL,
-              session_id TEXT,
-              source TEXT NOT NULL,
-              candidate_type TEXT NOT NULL,
-              mode TEXT NOT NULL,
-              status TEXT NOT NULL,
-              created_at TEXT NOT NULL,
-              source_event_id TEXT,
-              title TEXT NOT NULL,
-              summary TEXT NOT NULL,
-              payload_json TEXT NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS memory_sessions (
-              id TEXT PRIMARY KEY,
-              project_key TEXT NOT NULL,
-              title TEXT NOT NULL,
-              started_at TEXT,
-              ended_at TEXT,
-              status TEXT NOT NULL,
-              summary TEXT NOT NULL,
-              next_actions_json TEXT NOT NULL,
-              source_event_ids_json TEXT NOT NULL,
-              updated_at TEXT NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS project_memory_state (
-              project_key TEXT PRIMARY KEY,
-              latest_session_id TEXT,
-              updated_at TEXT NOT NULL
-            );
-            """
-        )
-        conn.execute(
-            "INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)",
-            ("schema_version", str(SCHEMA_VERSION)),
-        )
-```
-
-- [ ] **Step 5: Run the focused test and verify it passes**
-
-Run:
+- [ ] Add `"private": true`.
+- [ ] Add scripts:
+  - `typecheck`
+  - `test`
+  - `cli`
+  - `compile`
+  - `update`
+  - `lint`
+  - `measure`
+  - `ask`
+  - `status`
+- [ ] Treat `compile`, `update`, `ask`, and `status` package scripts as compatibility/convenience aliases only; the primary operator vocabulary is the V2 CLI command surface.
+- [ ] Do not include `/mcp` as a workspace member.
+- [ ] Run:
 
 ```bash
-.venv/bin/pytest tests/test_memory_store.py::test_initialize_memory_db_creates_schema -q
+bun install
+bun run typecheck
 ```
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
-
-Run:
-
-```bash
-git add agents/memory/__init__.py agents/memory/schema.py tests/test_memory_store.py
-git commit -m "feat: add memory database schema"
-```
-
-## Task 2: Add Deterministic Memory Store
+### Task 2: Port Runtime Primitives
 
 **Files:**
-- Create: `agents/memory/store.py`
-- Modify: `tests/test_memory_store.py`
 
-- [ ] **Step 1: Add failing tests for event and candidate storage**
+- Create: `src/runtime/fs.ts`
+- Create: `src/runtime/json.ts`
+- Create: `src/runtime/config.ts`
+- Create: `src/runtime/projects.ts`
+- Create: `src/runtime/state.ts`
+- Create: `src/runtime/artifacts.ts`
+- Create: `src/runtime/process.ts`
 
-Append to `tests/test_memory_store.py`:
-
-```python
-from agents.memory.store import MemoryStore
-
-
-def test_record_event_persists_json_payload(tmp_path):
-    store = MemoryStore(tmp_path / "memory.db")
-
-    event = store.record_event(
-        project_key="wodnix",
-        source="cli",
-        event_type="codex.stop",
-        mode="queue",
-        session_id="session-1",
-        cwd="/repo/wodnix",
-        tool_name=None,
-        input_summary="manual qa session ended",
-        output_summary="ready for mobile testing",
-        payload={"card": "C4ufaxDz"},
-    )
-
-    rows = store.list_events(project_key="wodnix")
-    assert rows == [event]
-    assert rows[0]["payload"]["card"] == "C4ufaxDz"
-
-
-def test_queue_candidate_defaults_to_pending(tmp_path):
-    store = MemoryStore(tmp_path / "memory.db")
-
-    candidate = store.queue_candidate(
-        project_key="wodnix",
-        source="cli",
-        candidate_type="session-summary",
-        mode="queue",
-        title="Manual QA next steps",
-        summary="Coach web, coach mobile, then student mobile.",
-        payload={"next": ["coach web", "coach mobile", "student mobile"]},
-    )
-
-    assert candidate["status"] == "pending"
-    assert store.list_candidates(project_key="wodnix") == [candidate]
-
-
-def test_invalid_mode_is_rejected(tmp_path):
-    store = MemoryStore(tmp_path / "memory.db")
-
-    with pytest.raises(ValueError, match="mode must be one of"):
-        store.record_event(
-            project_key="wodnix",
-            source="cli",
-            event_type="codex.stop",
-            mode="immediate",
-            payload={},
-        )
-```
-
-- [ ] **Step 2: Run the tests and verify failure**
-
-Run:
+- [ ] Port root/path helpers, safe path resolution, deterministic JSON IO, config loading, project discovery, state reads/writes, artifact path helpers, and subprocess helpers.
+- [ ] Tests cover missing files, safe-path rejection, project discovery, config precedence, deterministic JSON, and artifact path generation.
+- [ ] Run:
 
 ```bash
-.venv/bin/pytest tests/test_memory_store.py -q
-```
-
-Expected: FAIL because `agents.memory.store` does not exist.
-
-- [ ] **Step 3: Implement `MemoryStore`**
-
-Create `agents/memory/store.py` with methods:
-
-```python
-from __future__ import annotations
-
-import json
-import sqlite3
-import uuid
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any
-
-from agents.memory.schema import initialize_memory_db
-
-
-ALLOWED_MODES = {"off", "queue", "auto"}
-ALLOWED_CANDIDATE_STATUSES = {"pending", "processed", "needs-review"}
-ALLOWED_SESSION_STATUSES = {"open", "closed"}
-
-
-def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _new_id(prefix: str) -> str:
-    return f"{prefix}_{uuid.uuid4().hex[:16]}"
-
-
-def _json(data: dict[str, Any] | list[Any]) -> str:
-    return json.dumps(data, sort_keys=True)
-
-
-def _require_mode(mode: str) -> str:
-    if mode not in ALLOWED_MODES:
-        raise ValueError(f"mode must be one of {sorted(ALLOWED_MODES)}")
-    return mode
-
-
-class MemoryStore:
-    def __init__(self, db_path: Path):
-        self.db_path = db_path
-        initialize_memory_db(db_path)
-
-    def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
-```
-
-Then add `record_event`, `list_events`, `queue_candidate`, and `list_candidates`. `record_event` and `queue_candidate` must require a non-empty `source` string and persist it in the matching table. Deserialize `payload_json` to `payload` before returning records.
-
-- [ ] **Step 4: Run the store tests**
-
-Run:
-
-```bash
-.venv/bin/pytest tests/test_memory_store.py -q
+bun test
+bun run typecheck
 ```
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
-
-Run:
-
-```bash
-git add agents/memory/store.py tests/test_memory_store.py
-git commit -m "feat: add deterministic memory store"
-```
-
-## Task 3: Add Project Resolution For Memory Events
+### Task 3: Implement Schema Runtime And CLI
 
 **Files:**
-- Create: `agents/memory/project_resolver.py`
-- Test: `tests/test_memory_project_resolver.py`
 
-- [ ] **Step 1: Write failing resolver tests**
+- Create: `src/schema/*`
+- Create: schema command modules under `src/commands/schema*`
+- Create tests for schema validation, context build, candidates, and apply.
 
-Create `tests/test_memory_project_resolver.py`:
+- [ ] Implement `schema check`.
+- [ ] Implement `schema build`.
+- [ ] Implement `schema candidates`.
+- [ ] Implement `schema apply`.
+- [ ] Build and validate `schema-context.json`.
+- [ ] Validate hand-authored JSON schema rules with Zod.
+- [ ] Support global and project-local schema layers.
+- [ ] Enforce project-local extend/narrow/override semantics.
+- [ ] Add tests proving future `project learn` behavior can stop when schema validation fails.
+- [ ] Keep `schema check <key>` read-only.
+- [ ] Do not implement automatic schema fixing inside `schema check`.
 
-```python
-import json
+Expected: schema context exists before query and learn command implementations.
 
-from agents.memory.project_resolver import resolve_project_key
-
-
-def test_resolve_project_key_from_registered_repo_path(tmp_path):
-    projects_root = tmp_path / "projects"
-    project_dir = projects_root / "wodnix"
-    state_dir = project_dir / "state"
-    state_dir.mkdir(parents=True)
-    repo_dir = tmp_path / "repos" / "wodnix"
-    repo_dir.mkdir(parents=True)
-    (state_dir / "project.json").write_text(
-        json.dumps({"key": "wodnix", "repo_paths": [str(repo_dir)]})
-    )
-
-    assert resolve_project_key(projects_root, repo_dir / "app") == "wodnix"
-
-
-def test_resolve_project_key_returns_none_for_unknown_path(tmp_path):
-    projects_root = tmp_path / "projects"
-    projects_root.mkdir()
-
-    assert resolve_project_key(projects_root, tmp_path / "elsewhere") is None
-```
-
-- [ ] **Step 2: Run the tests and verify failure**
-
-Run:
-
-```bash
-.venv/bin/pytest tests/test_memory_project_resolver.py -q
-```
-
-Expected: FAIL because the resolver module does not exist.
-
-- [ ] **Step 3: Implement the resolver**
-
-Create `agents/memory/project_resolver.py`:
-
-```python
-from __future__ import annotations
-
-import json
-from pathlib import Path
-
-
-def resolve_project_key(projects_root: Path, cwd: Path) -> str | None:
-    resolved_cwd = cwd.resolve()
-    if not projects_root.is_dir():
-        return None
-    for project_json in sorted(projects_root.glob("*/state/project.json")):
-        data = json.loads(project_json.read_text(encoding="utf-8"))
-        key = str(data.get("key") or project_json.parents[1].name)
-        for raw_repo_path in data.get("repo_paths") or []:
-            repo_path = Path(str(raw_repo_path)).expanduser().resolve()
-            try:
-                resolved_cwd.relative_to(repo_path)
-                return key
-            except ValueError:
-                continue
-    return None
-```
-
-- [ ] **Step 4: Run resolver tests**
-
-Run:
-
-```bash
-.venv/bin/pytest tests/test_memory_project_resolver.py -q
-```
-
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
-
-Run:
-
-```bash
-git add agents/memory/project_resolver.py tests/test_memory_project_resolver.py
-git commit -m "feat: resolve memory project from cwd"
-```
-
-## Task 4: Add Session Storage And Latest-Session Pointer
+### Task 4: Port Query Runtime On Schema Context
 
 **Files:**
-- Modify: `agents/memory/store.py`
-- Modify: `tests/test_memory_store.py`
 
-- [ ] **Step 1: Add failing latest-session test**
+- Create: `src/query/planner.ts`
+- Create: `src/query/engine.ts`
+- Create tests using schema-context-aware query behavior.
 
-Append:
+- [ ] Use schema context for taxonomy, memory scopes, freshness rules, and provenance expectations.
+- [ ] Treat current `agents/query/*.py` behavior as reference material only.
+- [ ] Preserve detached interface contracts that still matter.
+- [ ] Do not recreate V1 routing assumptions when schema context says otherwise.
+- [ ] Make `memory query` fail closed when schema context is missing or invalid.
+- [ ] Missing/invalid schema responses must suggest `schema build <key>` or `schema check <key>`.
+- [ ] Do not fall back to unschematized query behavior.
+- [ ] Do not auto-run `schema build` from `memory query`.
+- [ ] Keep `memory query` side-effect-light.
 
-```python
-def test_upsert_session_sets_latest_session(tmp_path):
-    store = MemoryStore(tmp_path / "memory.db")
+Expected: TypeScript query behavior is schema-aware from the start.
 
-    session = store.upsert_session(
-        session_id="session-1",
-        project_key="wodnix",
-        title="S6 social friends visibility QA",
-        status="open",
-        summary="Prepared local Supabase reset and manual QA sequence.",
-        next_actions=["reset db", "coach web", "coach mobile", "student mobile"],
-        source_event_ids=["event_1"],
-    )
-
-    assert store.latest_session("wodnix") == session
-    assert session["next_actions"] == [
-        "reset db",
-        "coach web",
-        "coach mobile",
-        "student mobile",
-    ]
-
-
-def test_invalid_session_status_is_rejected(tmp_path):
-    store = MemoryStore(tmp_path / "memory.db")
-
-    with pytest.raises(ValueError, match="status must be one of"):
-        store.upsert_session(
-            session_id="session-1",
-            project_key="wodnix",
-            title="Manual QA",
-            status="paused",
-            summary="Invalid status should fail.",
-            next_actions=[],
-            source_event_ids=[],
-        )
-```
-
-- [ ] **Step 2: Run and verify failure**
-
-Run:
-
-```bash
-.venv/bin/pytest tests/test_memory_store.py::test_upsert_session_sets_latest_session -q
-```
-
-Expected: FAIL because session methods do not exist.
-
-- [ ] **Step 3: Implement `upsert_session` and `latest_session`**
-
-Add methods to `MemoryStore` that:
-
-- validate non-empty `project_key`, `session_id`, and `title`
-- validate `status` is one of `open` or `closed`
-- store `next_actions` as JSON
-- store `source_event_ids` as JSON
-- upsert `project_memory_state.latest_session_id`
-- return deserialized session dictionaries
-
-- [ ] **Step 4: Run store tests**
-
-Run:
-
-```bash
-.venv/bin/pytest tests/test_memory_store.py -q
-```
-
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
-
-Run:
-
-```bash
-git add agents/memory/store.py tests/test_memory_store.py
-git commit -m "feat: store project session continuity"
-```
-
-## Task 5: Add Memory CLI
+### Task 5: Port Inbox And Auto-Update Primitives
 
 **Files:**
-- Create: `scripts/memory.py`
-- Create: `tests/test_memory_cli.py`
 
-- [ ] **Step 1: Write failing CLI tests**
+- Create: `src/inbox/items.ts`
+- Create: `src/inbox/auto-update.ts`
+- Port tests from current inbox, gap emission, enrich-gap auto-update, flag-stale-answer, and auto-update wrapper tests where applicable.
 
-Create `tests/test_memory_cli.py`:
+- [ ] Preserve inbox item schema and filename conventions.
+- [ ] Preserve low-confidence gap-note behavior.
+- [ ] Preserve auto-update lockfile semantics and detached update log paths.
+- [ ] Do not change `/mcp`; this task ports core primitives and documented contracts only.
 
-```python
-import json
-import subprocess
-import sys
-
-
-def run_memory(tmp_path, *args):
-    return subprocess.run(
-        [
-            sys.executable,
-            "scripts/memory.py",
-            "--db",
-            str(tmp_path / "memory.db"),
-            *args,
-        ],
-        check=True,
-        text=True,
-        capture_output=True,
-    )
-
-
-def test_memory_cli_records_event(tmp_path):
-    result = run_memory(
-        tmp_path,
-        "record-event",
-        "--project",
-        "wodnix",
-        "--source",
-        "cli",
-        "--event-type",
-        "codex.stop",
-        "--mode",
-        "queue",
-        "--input-summary",
-        "qa stopped",
-        "--payload-json",
-        '{"card":"C4ufaxDz"}',
-    )
-
-    payload = json.loads(result.stdout)
-    assert payload["project_key"] == "wodnix"
-    assert payload["source"] == "cli"
-    assert payload["payload"]["card"] == "C4ufaxDz"
-
-
-def test_memory_cli_latest_session(tmp_path):
-    run_memory(
-        tmp_path,
-        "session-summary",
-        "--project",
-        "wodnix",
-        "--session-id",
-        "session-1",
-        "--title",
-        "Manual QA",
-        "--summary",
-        "Ready for coach web testing.",
-        "--next-action",
-        "reset db",
-    )
-
-    result = run_memory(tmp_path, "latest-session", "--project", "wodnix")
-    payload = json.loads(result.stdout)
-    assert payload["title"] == "Manual QA"
-    assert payload["next_actions"] == ["reset db"]
-```
-
-- [ ] **Step 2: Run and verify failure**
-
-Run:
-
-```bash
-.venv/bin/pytest tests/test_memory_cli.py -q
-```
-
-Expected: FAIL because `scripts/memory.py` does not exist.
-
-- [ ] **Step 3: Implement CLI commands**
-
-Create `scripts/memory.py` with subcommands:
-
-- `init`
-- `record-event`
-- `queue-candidate`
-- `session-summary`
-- `latest-session`
-
-All commands print JSON to stdout. `--db` defaults to `state/memory.db`.
-`record-event` and `queue-candidate` require `--source`; the Make target defaults it to `cli`.
-
-- [ ] **Step 4: Run CLI tests**
-
-Run:
-
-```bash
-.venv/bin/pytest tests/test_memory_cli.py -q
-```
-
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
-
-Run:
-
-```bash
-git add scripts/memory.py tests/test_memory_cli.py
-git commit -m "feat: add memory cli"
-```
-
-## Task 6: Add Make Targets
+### Task 6: Port Validation And Metadata Helpers
 
 **Files:**
+
+- Create: `src/pipeline/validate.ts`
+- Create: `src/pipeline/metadata.ts`
+- Port behavior from `agents/update/06-validate/structural.py`, semantic context helpers, and brain metadata helpers.
+
+- [ ] Preserve structural rule names and finding shapes.
+- [ ] Preserve ingest-mode relaxations.
+- [ ] Preserve latest metadata product generation.
+- [ ] Port current pytest expectations into Bun tests.
+
+### Task 7: Port Pipeline Stage Runner
+
+**Files:**
+
+- Create: `src/pipeline/stages.ts`
+- Create: `src/pipeline/llm-client.ts`
+- Create: `src/pipeline/apply.ts`
+- Create: `src/pipeline/reconcile.ts`
+
+- [ ] Run existing stage instruction markdown/config JSON as data.
+- [ ] Preserve Codex/Claude model selection behavior from `llm_client.py`.
+- [ ] Preserve Codex read-only sandbox behavior for JSON-returning LLM stages.
+- [ ] Preserve proposal/apply/reconcile artifact shapes.
+- [ ] Preserve bounded reconcile behavior.
+
+### Task 8: Design And Port V2 CLI
+
+**Files:**
+
+- Create/extend: `src/cli.ts`
+- Create command modules under `src/commands/*`.
+- Create or update: `docs/v2-cli.md`
+
+- [ ] Design a V2 CLI vocabulary that names product concepts rather than V1 mechanics.
+- [ ] Use the initial command mapping unless Task 0.5 finds a better vocabulary:
+  - `compile` -> `project learn <key>`
+  - `update` -> `project ingest <key>`
+  - `ask` -> `memory query <key> "<question>"`
+  - session continuity -> `session close <key>`
+  - schema maintenance -> `schema check <key>`, `schema build <key>`, `schema candidates <key>`, `schema apply <candidate-id>`
+- [ ] Implement these required first-slice commands:
+  - `llm-wiki schema check <key>`
+  - `llm-wiki schema build <key>`
+  - `llm-wiki schema candidates <key>`
+  - `llm-wiki schema apply <candidate-id>`
+  - `llm-wiki memory query <key> "<question>"`
+  - `llm-wiki project learn <key>`
+  - `llm-wiki project ingest <key>`
+  - `llm-wiki project onboard <key>` if project init remains available
+  - `llm-wiki project status <key>`
+- [ ] Keep project initialization in V2 as `llm-wiki project onboard <key>` unless Task 0 proves it should be retired; if retired, record the rationale and replacement path.
+- [ ] Add first-slice command acceptance coverage:
+
+| Command | Required acceptance proof |
+| --- | --- |
+| `llm-wiki schema check <key>` | Passes on valid authored schema; fails read-only with deterministic validation errors on invalid schema. |
+| `llm-wiki schema build <key>` | Writes `projects/<key>/state/schema-context.json` by default; `--dry-run` produces preview output without writing. |
+| `llm-wiki schema candidates <key>` | Lists project-local candidates from `projects/<key>/state/schema-candidates.json`; `--include-global` includes relevant root candidates. |
+| `llm-wiki schema apply <candidate-id>` | Applies a project-local candidate, rebuilds schema context, updates candidate status, and fails or rolls back on validation failure. |
+| `llm-wiki schema apply <candidate-id> --global` | Applies only global candidates, rebuilds all registered project schema contexts, and refuses global apply without `--global`. |
+| `llm-wiki memory query <key> "<question>"` | Uses schema context when valid; fails closed with `schema build` / `schema check` guidance when schema context is missing or invalid. |
+| `llm-wiki project learn <key>` | Rebuilds stale schema context, stops on invalid schema, auto-applies routine updates, and writes `projects/<key>/runs/<run-id>/applied-changeset.json`. |
+| `llm-wiki project ingest <key>` | Processes queued source/inbox items and preserves pending, processed, needs-review, and rejected terminal-state behavior. |
+| `llm-wiki project onboard <key>` | Creates or migrates a project using V2 layout/config rules while preserving operator-owned project config semantics. |
+| `llm-wiki project status <key>` | Returns deterministic project/runtime status and does not depend on model synthesis. |
+
+- [ ] Add direct Bun tests or smoke commands for each acceptance proof above.
+- [ ] Treat `session close`, `practice promote`, and `personal promote` as deferred unless this migration explicitly implements their underlying storage/curation behavior.
+- [ ] Deferred commands must return explicit degraded or not-implemented responses, not silent weak fallbacks.
+- [ ] Implement `project learn` so it may read the live repo directly.
+- [ ] Require durable Project Memory writes from `project learn` to include traceable evidence/provenance.
+- [ ] Make routine `project learn` writes auto-apply by default.
+- [ ] Provide review/dry-run controls for risky or manual workflows.
+- [ ] Force review/dry-run for destructive deletes, decision-record supersession, low-confidence synthesis, conflicting sources, broad multi-area rewrites, and explicit `--review` / `--dry-run`.
+- [ ] Always leave reviewable artifacts, provenance, and a rollback/review trail for applied learning changes.
+- [ ] Write an applied changeset record for every auto-applied `project learn` run before reporting success.
+- [ ] Store applied changeset records at `projects/<key>/runs/<run-id>/applied-changeset.json` unless Task 0.5 defines a stronger V2 run layout.
+- [ ] Include in each applied changeset record:
+  - command, project key, timestamps, and run id
+  - schema-context id/hash used for the run
+  - changed files and before/after hashes
+  - source evidence used for each durable wiki or state change
+  - risk classification and why auto-apply was allowed
+  - validation results
+  - rollback or review instructions
+- [ ] If validation fails after an auto-applied write, stop in degraded or needs-review state and leave the changeset record for inspection.
+- [ ] Map old commands to new concepts:
+  - `init`
+  - `compile`
+  - `compile-continue`
+  - `update`
+  - `update-continue`
+  - `lint`
+  - `measure`
+  - `measure-routes`
+  - `measure-tokens`
+  - `ask`
+  - `status`
+  - `dashboard`
+  - `prune`
+  - `obsidian`
+  - `apply-pending`
+  - `reject-pending`
+- [ ] Mark each old command as:
+  - replaced by a new V2 command
+  - kept as Make alias
+  - retired
+- [ ] Implement the new V2 commands in TypeScript.
+- [ ] Default CLI output should be human-readable.
+- [ ] Add `--json` for machine-readable output.
+- [ ] Treat detached MCP as the primary agent API; do not optimize core CLI defaults around agent consumption.
+- [ ] Include schema command surface implemented in Task 3.
+- [ ] Make `schema build <key>` write generated schema context by default.
+- [ ] Add `schema build <key> --dry-run` to preview without writing.
+- [ ] Make `schema apply <candidate-id>` rebuild generated schema context immediately after applying authored schema changes.
+- [ ] Make `schema apply <candidate-id>` fail or roll back when schema rebuild/validation fails.
+- [ ] Make `project learn <key>` verify schema-context freshness before learning.
+- [ ] Make `project learn <key>` automatically rebuild stale schema context.
+- [ ] Make `project learn <key>` stop when schema validation fails.
+- [ ] Preserve stdout/stderr behavior only where it still matters to operator workflows or detached interface contracts.
+- [ ] Replace generated file layouts when Task 0.5 defines a better V2 layout.
+
+### Task 9: Convert Makefile To Convenience Aliases
+
+**Files:**
+
 - Modify: `Makefile`
-- Test: `tests/test_memory_cli.py`
 
-- [ ] **Step 1: Add a failing test for Makefile target presence**
+- [ ] Make should call V2 CLI commands, not old product concepts by default.
+- [ ] Keep old Make target names only where they are useful shortcuts.
+- [ ] Retire Make targets that reinforce obsolete V1 concepts.
+- [ ] Keep `/mcp` untouched.
+- [ ] Keep a temporary explicit legacy escape hatch only if needed, named clearly.
 
-Append to `tests/test_memory_cli.py`:
-
-```python
-def test_makefile_exposes_memory_targets():
-    content = open("Makefile", encoding="utf-8").read()
-    assert ".PHONY:" in content
-    assert "memory-init:" in content
-    assert "memory-record-event:" in content
-    assert "memory-session:" in content
-    assert "memory-latest-session:" in content
-    assert "make memory-init" in content
-    assert "make memory-latest-session PROJECT=<project-key>" in content
-```
-
-- [ ] **Step 2: Run and verify failure**
-
-Run:
-
-```bash
-.venv/bin/pytest tests/test_memory_cli.py::test_makefile_exposes_memory_targets -q
-```
-
-Expected: FAIL until targets are added.
-
-- [ ] **Step 3: Add Make targets and help text**
-
-Modify the existing `Makefile`: add the memory targets to the existing `.PHONY` line, add the help `echo` lines inside the existing `help:` target, then add the concrete targets:
-
-```make
-# Add these names to the existing .PHONY line:
-memory-init memory-record-event memory-session memory-latest-session
-
-# Add these lines inside the existing help target:
-	@echo "  make memory-init"
-	@echo "      Initialize the repo-root SQLite memory database."
-	@echo "  make memory-record-event PROJECT=<project-key> EVENT_TYPE=<type> [MODE=queue] [SOURCE=cli]"
-	@echo "      Record a deterministic memory event."
-	@echo "  make memory-session PROJECT=<project-key> SESSION_ID=<id> TITLE=<title> SUMMARY=<summary> [NEXT_ACTION=<action>]"
-	@echo "      Store a project-scoped session summary and latest-session pointer."
-	@echo "  make memory-latest-session PROJECT=<project-key>"
-	@echo "      Print the latest project session memory as JSON."
-
-memory-init:
-	@python3 scripts/memory.py init
-
-memory-record-event:
-	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
-	@test -n "$(EVENT_TYPE)" || (echo "EVENT_TYPE is required" && exit 1)
-	@python3 scripts/memory.py record-event --project "$(PROJECT)" --source "$${SOURCE:-cli}" --event-type "$(EVENT_TYPE)" --mode "$${MODE:-queue}" --input-summary "$(INPUT_SUMMARY)" --output-summary "$(OUTPUT_SUMMARY)" --payload-json "$${PAYLOAD_JSON:-{}}"
-
-memory-session:
-	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
-	@test -n "$(SESSION_ID)" || (echo "SESSION_ID is required" && exit 1)
-	@test -n "$(TITLE)" || (echo "TITLE is required" && exit 1)
-	@test -n "$(SUMMARY)" || (echo "SUMMARY is required" && exit 1)
-	@python3 scripts/memory.py session-summary --project "$(PROJECT)" --session-id "$(SESSION_ID)" --title "$(TITLE)" --summary "$(SUMMARY)" $(if $(NEXT_ACTION),--next-action "$(NEXT_ACTION)",)
-
-memory-latest-session:
-	@test -n "$(PROJECT)" || (echo "PROJECT is required" && exit 1)
-	@python3 scripts/memory.py latest-session --project "$(PROJECT)"
-```
-
-- [ ] **Step 4: Run CLI tests**
-
-Run:
-
-```bash
-.venv/bin/pytest tests/test_memory_cli.py -q
-```
-
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
-
-Run:
-
-```bash
-git add Makefile tests/test_memory_cli.py
-git commit -m "feat: expose memory cli through make"
-```
-
-## Task 7: Add MCP Facade Tools With Stable Response Metadata
+### Task 10: Retire Python/Bash Runtime
 
 **Files:**
-- Modify: `mcp/llm_wiki_mcp.py`
-- Modify: `tests/test_mcp_server.py`
 
-- [ ] **Step 1: Write failing registration test**
+- Modify or delete migrated Python/Bash files after parity is verified.
+- Modify root tests to Bun equivalents or remove superseded pytest tests.
+- Modify `pyproject.toml` only when no root Python runtime remains.
 
-Add or extend an MCP registration test:
+- [ ] Remove or quarantine old Python/Bash entrypoints after TypeScript parity.
+- [ ] Keep stage markdown/config data assets.
+- [ ] Ensure normal operation does not require `.venv`.
+- [ ] Ensure old tests have Bun equivalents before removal.
 
-```python
-def test_v2_memory_facade_tools_are_registered(monkeypatch):
-    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
-    module = _load_module()
-
-    for name in ("query", "how", "what"):
-        assert name in module.TOOL_NAMES
-```
-
-Also add a response-shape test that monkeypatches `query_wiki` and proves the facade is not a raw alias:
-
-```python
-def test_query_facade_wraps_query_wiki_response(monkeypatch):
-    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
-    module = _load_module()
-
-    monkeypatch.setattr(
-        module,
-        "query_wiki",
-        lambda project_key=None, question="", raw=False: {
-            "answer": "Known from wiki.",
-            "confidence": 0.9,
-            "citations": ["index.md"],
-            "emitted_gap_id": None,
-        },
-    )
-
-    response = module.query(project_key="llm-wiki", question="what is known")
-
-    assert response["answer"] == "Known from wiki."
-    assert response["confidence"] == 0.9
-    assert response["memory_scope"] == "project_wiki"
-    assert response["citations"] == ["index.md"]
-    assert response["candidate_ids"] == []
-    assert response["degraded"] is False
-    assert response["degraded_reason"] is None
-    assert response["source_tools"] == ["query_wiki"]
-
-
-def test_query_facade_marks_unavailable_personal_memory_degraded(monkeypatch):
-    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
-    module = _load_module()
-
-    monkeypatch.setattr(
-        module,
-        "query_wiki",
-        lambda project_key=None, question="", raw=False: {
-            "answer": "The project wiki does not yet have personal preference memory.",
-            "confidence": 0.4,
-            "citations": [],
-            "emitted_gap_id": None,
-        },
-    )
-
-    response = module.query(project_key="llm-wiki", question="What does Liad prefer for tests?")
-
-    assert response["memory_scope"] == "project_wiki"
-    assert response["degraded"] is True
-    assert response["degraded_reason"] == "personal workflow memory is not implemented in this slice"
-    assert response["source_tools"] == ["query_wiki"]
-```
-
-- [ ] **Step 2: Run and verify failure**
-
-Run:
-
-```bash
-.venv/bin/pytest tests/test_mcp_server.py::test_v2_memory_facade_tools_are_registered -q
-```
-
-Expected: FAIL because the tools are not registered and response wrapping does not exist.
-
-These tests must follow the existing `tests/test_mcp_server.py` import pattern: set `LLM_WIKI_ROOT`, call `_load_module()`, and patch attributes on the returned module.
-
-- [ ] **Step 3: Register tool names**
-
-Add `query`, `how`, and `what` to `TOOL_NAMES` without removing existing tools.
-
-- [ ] **Step 4: Add facade response helpers**
-
-In `mcp/llm_wiki_mcp.py`, add a helper equivalent to:
-
-```python
-def _query_degraded_reason(question: str) -> str | None:
-    normalized = question.lower()
-    if "liad" in normalized or "prefer" in normalized or "preference" in normalized:
-        return "personal workflow memory is not implemented in this slice"
-    if "recipe" in normalized or "how we do" in normalized or "how do we" in normalized:
-        return "recipe memory is not implemented in this slice"
-    if "vector" in normalized or "semantic search" in normalized:
-        return "vector memory is not implemented in this slice"
-    return None
-
-
-def _facade_response(
-    response: dict,
-    *,
-    memory_scope: str,
-    source_tools: list[str],
-    degraded: bool = False,
-    degraded_reason: str | None = None,
-) -> dict:
-    candidate_ids = []
-    emitted_gap_id = response.get("emitted_gap_id")
-    if emitted_gap_id:
-        candidate_ids.append(str(emitted_gap_id))
-    return {
-        **response,
-        "answer": response.get("answer", ""),
-        "confidence": response.get("confidence", 0.0),
-        "memory_scope": memory_scope,
-        "citations": response.get("citations") or [],
-        "candidate_ids": candidate_ids,
-        "degraded": degraded,
-        "degraded_reason": degraded_reason,
-        "source_tools": source_tools,
-    }
-```
-
-- [ ] **Step 5: Add first-slice facade functions**
-
-In `mcp/llm_wiki_mcp.py`, add:
-
-```python
-@mcp.tool()
-def query(project_key: str | None = None, question: str = "", raw: bool = False) -> dict:
-    """Ask what is true or known across project-rooted memory."""
-    degraded_reason = _query_degraded_reason(question)
-    return _facade_response(
-        query_wiki(project_key=project_key, question=question, raw=raw),
-        memory_scope="project_wiki",
-        source_tools=["query_wiki"],
-        degraded=degraded_reason is not None,
-        degraded_reason=degraded_reason,
-    )
-
-
-@mcp.tool()
-def how(project_key: str | None = None, question: str = "", raw: bool = False) -> dict:
-    """Ask for operating guidance from project memory and future recipes."""
-    return _facade_response(
-        query_wiki(project_key=project_key, question=question, raw=raw),
-        memory_scope="project_wiki",
-        source_tools=["query_wiki"],
-        degraded=True,
-        degraded_reason="recipe and personal workflow routing are not implemented in this slice",
-    )
-
-
-@mcp.tool()
-def what(project_key: str | None = None, question: str = "", raw: bool = False) -> dict:
-    """Ask for current state or inventory from project memory."""
-    return _facade_response(
-        query_wiki(project_key=project_key, question=question, raw=raw),
-        memory_scope="project_wiki",
-        source_tools=["query_wiki"],
-        degraded=True,
-        degraded_reason="structured state routing is only implemented for latest-session queries in this slice",
-    )
-```
-
-First-slice `query` may delegate to `query_wiki`, but it must expose the stable facade fields. First-slice `how` and fallback `what` must explicitly mark degraded routing until recipe, personal, and broader state routing exist.
-
-Add focused tests for the degraded first-slice facades:
-
-```python
-def test_how_facade_marks_recipe_and_personal_routing_degraded(monkeypatch):
-    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
-    module = _load_module()
-    monkeypatch.setattr(
-        module,
-        "query_wiki",
-        lambda project_key=None, question="", raw=False: {
-            "answer": "Use the project runbook.",
-            "confidence": 0.8,
-            "citations": ["wiki/runbooks/local.md"],
-        },
-    )
-
-    response = module.how(project_key="sample", question="how do we run this")
-
-    assert response["memory_scope"] == "project_wiki"
-    assert response["degraded"] is True
-    assert response["degraded_reason"] == "recipe and personal workflow routing are not implemented in this slice"
-    assert response["source_tools"] == ["query_wiki"]
-
-
-def test_what_fallback_marks_structured_state_routing_degraded(monkeypatch):
-    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
-    module = _load_module()
-    monkeypatch.setattr(
-        module,
-        "query_wiki",
-        lambda project_key=None, question="", raw=False: {
-            "answer": "Known project state.",
-            "confidence": 0.7,
-            "citations": ["index.md"],
-        },
-    )
-
-    response = module.what(project_key="sample", question="what features exist")
-
-    assert response["memory_scope"] == "project_wiki"
-    assert response["degraded"] is True
-    assert response["degraded_reason"] == "structured state routing is only implemented for latest-session queries in this slice"
-    assert response["source_tools"] == ["query_wiki"]
-```
-
-- [ ] **Step 6: Run MCP tests**
-
-Run:
-
-```bash
-.venv/bin/pytest tests/test_mcp_server.py -q
-```
-
-Expected: PASS.
-
-- [ ] **Step 7: Commit**
-
-Run:
-
-```bash
-git add mcp/llm_wiki_mcp.py tests/test_mcp_server.py
-git commit -m "feat: add memory facade mcp tools"
-```
-
-## Task 8: Route `what` Latest-Session Queries To SQLite
+### Task 11: Documentation And ADRs
 
 **Files:**
-- Modify: `mcp/llm_wiki_mcp.py`
-- Modify: `tests/test_mcp_server.py`
 
-- [ ] **Step 1: Write failing test for latest-session answer**
-
-Add a test that prepares a temporary memory database with a latest session and patches the server memory db path if needed. The assertion should prove that `what(project_key="wodnix", question="what did we work on last session")` returns the stored session without calling the weak-model query path.
-
-Expected response fields:
-
-```python
-from agents.memory.store import MemoryStore
-
-
-def test_what_latest_session_uses_memory_without_query_wiki(monkeypatch, tmp_path):
-    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
-    module = _load_module()
-    monkeypatch.setattr(module, "_memory_db_path", lambda: tmp_path / "memory.db")
-    monkeypatch.setattr(
-        module,
-        "query_wiki",
-        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("query_wiki should not be called")),
-    )
-    MemoryStore(tmp_path / "memory.db").upsert_session(
-        session_id="session-1",
-        project_key="wodnix",
-        title="S6 social friends visibility QA",
-        status="open",
-        summary="Prepared local Supabase reset and manual QA sequence.",
-        next_actions=["reset db", "coach web", "coach mobile", "student mobile"],
-        source_event_ids=[],
-    )
-
-    response = module.what(project_key="wodnix", question="what did we work on last session")
-
-    assert response["answer"].startswith("Last session:")
-    assert response["memory_scope"] == "project_session"
-    assert response["confidence"] == 1.0
-    assert response["citations"] == ["memory_sessions:session-1"]
-    assert response["candidate_ids"] == []
-    assert response["degraded"] is False
-    assert response["degraded_reason"] is None
-    assert response["source_tools"] == ["memory_sessions"]
-```
-
-Add a second test for the empty-state behavior:
-
-```python
-def test_what_latest_session_returns_degraded_when_missing(monkeypatch, tmp_path):
-    monkeypatch.setenv("LLM_WIKI_ROOT", str(REPO_ROOT))
-    module = _load_module()
-
-    monkeypatch.setattr(module, "_memory_db_path", lambda: tmp_path / "memory.db")
-    monkeypatch.setattr(
-        module,
-        "query_wiki",
-        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("query_wiki should not be called")),
-    )
-
-    response = module.what(project_key="wodnix", question="what did we work on last session")
-
-    assert response["confidence"] == 0.0
-    assert response["memory_scope"] == "project_session"
-    assert response["citations"] == []
-    assert response["candidate_ids"] == []
-    assert response["degraded"] is True
-    assert response["degraded_reason"] == "no latest session memory exists for this project"
-```
-
-- [ ] **Step 2: Run and verify failure**
-
-Run:
-
-```bash
-.venv/bin/pytest tests/test_mcp_server.py -q
-```
-
-Expected: FAIL because `what` delegates to `query_wiki`.
-
-- [ ] **Step 3: Add deterministic latest-session routing**
-
-Implement a helper in `mcp/llm_wiki_mcp.py`:
-
-```python
-def _memory_db_path() -> Path:
-    return _root() / "state" / "memory.db"
-
-
-def _is_latest_session_question(question: str) -> bool:
-    normalized = question.lower()
-    return "last session" in normalized or "worked on last session" in normalized
-```
-
-If matched, read from `MemoryStore(_memory_db_path()).latest_session(resolved_project_key)`. Return a structured facade response when found; otherwise return a low-confidence response with `memory_scope: "project_session"`, `degraded: true`, and `degraded_reason: "no latest session memory exists for this project"`. Do not fall through to `query_wiki` for latest-session misses.
-
-- [ ] **Step 4: Run MCP tests**
-
-Run:
-
-```bash
-.venv/bin/pytest tests/test_mcp_server.py -q
-```
-
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
-
-Run:
-
-```bash
-git add mcp/llm_wiki_mcp.py tests/test_mcp_server.py
-git commit -m "feat: answer latest-session queries from memory"
-```
-
-## Task 9: Document Automation Boundaries In Capabilities
-
-**Files:**
-- Modify: `mcp/llm_wiki_mcp.py`
-- Modify: `tests/test_mcp_server.py`
-
-- [ ] **Step 1: Add failing capabilities assertion**
-
-Add an assertion that `capabilities_resource()` includes:
-
-```python
-automation = capabilities["automation_policy"]
-assert automation["hooks_call_llms"] is False
-assert automation["hooks_mutate_curated_memory"] is False
-assert automation["curated_memory_modes"] == ["off", "queue", "auto"]
-assert automation["recipe_promotion_default"] == "queue"
-assert automation["preference_promotion_default"] == "queue"
-```
-
-- [ ] **Step 2: Run and verify failure**
-
-Run:
-
-```bash
-.venv/bin/pytest tests/test_mcp_server.py -q
-```
-
-Expected: FAIL because the policy is not exposed.
-
-- [ ] **Step 3: Update capabilities resource**
-
-Add:
-
-```python
-"automation_policy": {
-    "hooks_call_llms": False,
-    "hooks_mutate_curated_memory": False,
-    "curated_memory_modes": ["off", "queue", "auto"],
-    "project_update_default": "auto",
-    "recipe_promotion_default": "queue",
-    "preference_promotion_default": "queue",
-}
-```
-
-- [ ] **Step 4: Run MCP tests**
-
-Run:
-
-```bash
-.venv/bin/pytest tests/test_mcp_server.py -q
-```
-
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
-
-Run:
-
-```bash
-git add mcp/llm_wiki_mcp.py tests/test_mcp_server.py
-git commit -m "docs: expose memory automation policy"
-```
-
-## Task 10: Add Operator Documentation
-
-**Files:**
 - Modify: `README.md`
 - Modify: `AGENTS.md`
-- Test: `tests/test_memory_cli.py`
+- Create/update ADRs
 
-- [ ] **Step 1: Add failing documentation smoke test**
+- [ ] Document that core llm-wiki is Bun/TypeScript-first.
+- [ ] Document that Python/Bash is retired or legacy-only after this slice.
+- [ ] Document the V2 CLI vocabulary and old-command mapping.
+- [ ] Document `/mcp` as detached agent interface.
+- [ ] Document how to run TypeScript tests, typecheck, and operator commands.
 
-Append:
+### Task 12: Final Verification
 
-```python
-def test_memory_operator_docs_exist():
-    readme = open("README.md", encoding="utf-8").read()
-    agents = open("AGENTS.md", encoding="utf-8").read()
-    assert "Project docs capture what code does not cheaply reveal" in readme
-    assert "Hooks must never call LLMs directly" in agents
-```
-
-- [ ] **Step 2: Run and verify failure**
-
-Run:
+- [ ] Run:
 
 ```bash
-.venv/bin/pytest tests/test_memory_cli.py::test_memory_operator_docs_exist -q
+bun test
+bun run typecheck
 ```
 
-Expected: FAIL until docs are added.
-
-- [ ] **Step 3: Update README**
-
-Add a concise V2 memory section near the product overview:
-
-```markdown
-## V2 Memory Direction
-
-Project docs capture what code does not cheaply reveal: product behavior, workflows, decisions, setup gotchas, manual QA flows, and current work state. SQLite-backed memory stores raw events, candidates, and session continuity so agents can start warm without turning every hook into an LLM call.
-```
-
-- [ ] **Step 4: Update AGENTS.md**
-
-Add an operational rule section:
-
-```markdown
-## V2 Memory Automation Boundary
-
-Hooks must never call LLMs directly. Hooks append raw events and enqueue candidates only. Deterministic workers may update indexes and session pointers. Agentic workers require an explicit `off`, `queue`, or `auto` mode plus locks and budgets. Recipe and personal-preference promotion default to queue/manual until proven safe.
-```
-
-- [ ] **Step 5: Run docs smoke test**
-
-Run:
+- [ ] Run operator smoke tests against a known project:
 
 ```bash
-.venv/bin/pytest tests/test_memory_cli.py::test_memory_operator_docs_exist -q
+bun run cli -- project status <known-project>
+bun run cli -- schema check <known-project>
+bun run cli -- schema build <known-project> --dry-run
+bun run cli -- schema candidates <known-project>
+bun run cli -- memory query <known-project> "what is this project?"
 ```
 
-Expected: PASS.
-
-- [ ] **Step 6: Commit**
-
-Run:
+- [ ] Run command-specific acceptance tests for every row in the Task 8 command acceptance matrix.
+- [ ] Run Make alias smoke tests separately:
 
 ```bash
-git add README.md AGENTS.md tests/test_memory_cli.py
-git commit -m "docs: document v2 memory boundaries"
+make status PROJECT=<known-project>
+make ask PROJECT=<known-project> Q="what is this project?"
+make lint PROJECT=<known-project>
 ```
 
-## Task 11: Final Verification
-
-**Files:**
-- All files touched by this plan.
-
-- [ ] **Step 1: Run focused tests**
-
-Run:
-
-```bash
-.venv/bin/pytest tests/test_memory_store.py tests/test_memory_project_resolver.py tests/test_memory_cli.py tests/test_mcp_server.py -q
-```
-
-Expected: PASS.
-
-- [ ] **Step 2: Run broader tests**
-
-Run:
-
-```bash
-.venv/bin/pytest tests/ -q
-```
-
-Expected: PASS except for documented pre-existing sample-fixture failures if `projects/sample/` is absent:
-
-- `test_plan_a_acceptance`
-- `test_plan_b_acceptance`
-- `test_state_migration.py::test_sample_project_registered`
-
-- [ ] **Step 3: Inspect working tree**
-
-Run:
-
-```bash
-rtk git status --short --untracked-files=all
-```
-
-Expected: only intentional changes remain.
-
-- [ ] **Step 4: Run a smoke command**
-
-Run:
-
-```bash
-make memory-init
-```
-
-Expected: command exits 0 and initializes `state/memory.db`.
-
-- [ ] **Step 5: Record follow-up work**
-
-Create follow-up issues or plan files for:
-
-- Codex hook event capture
-- Gemini embedding provider
-- sqlite-vec/Bun indexer
-- recipe candidate collection
-- preference candidate collection
-- behavior-focused project compiler changes
+- [ ] Run compile/update dry or fixture checks for the V2 behavior that still matters.
+- [ ] Confirm an auto-applied `project learn` writes `projects/<key>/runs/<run-id>/applied-changeset.json`.
+- [ ] Confirm `/mcp` remains ignored and detached.
+- [ ] Confirm normal core commands do not require Python or `.venv`.
+- [ ] Confirm every milestone gate has recorded proof.
+- [ ] Confirm every retired V1 behavior has a recorded rationale.
+- [ ] Confirm new authored docs, schema files, TypeScript source, and tests are not hidden by `.gitignore`.
+- [ ] Report the next design/plan cycle for SQLite memory, vector search, and hooks.
+- [ ] Include this explicit close-out note: "When this TypeScript core migration design/plan is fully implemented, confer back with the operator and start designing and planning the next part: SQLite memory, vector search, Codex hooks, and any remaining deferred MCP facade work."
 
 ## Self-Review
 
-Spec coverage:
-
-- Project-rooted memory substrate: Tasks 1-4.
-- Repo ignore rules for new tests and generated SQLite state: Task 0.
-- Deterministic capture and queue modes: Tasks 2, 5, 9.
-- Project-scoped session continuity: Tasks 4, 5, 8.
-- High-level MCP surface: Tasks 7-9.
-- Operator control and no hook-side LLM calls: Tasks 9-10.
-- Vector/embedding and promotion boundaries: explicitly deferred in Scope and Task 11 follow-ups.
-
-Placeholder scan:
-
-- The plan contains no implementation placeholder tokens from the writing-plans checklist.
-- Large future subsystems are explicitly out of scope, not left undefined inside this plan.
-
-Type consistency:
-
-- `mode` values are consistently `off`, `queue`, and `auto`.
-- Candidate statuses are consistently `pending`, `processed`, and `needs-review`.
-- Session statuses are consistently `open` and `closed`.
-- Session APIs consistently use `project_key`, `session_id`, `next_actions`, and `source_event_ids`.
-- Event and candidate APIs consistently include `source`.
+- Complete core TypeScript migration is in scope.
+- SQLite memory is deferred until after the runtime port.
+- `/mcp` remains detached and contract-based.
+- Existing behavior is preserved only where it protects useful knowledge, provenance, operator intent, or detached interface contracts.
