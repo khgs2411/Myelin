@@ -1,0 +1,14 @@
+{
+  "status": "ready_for_review",
+  "summary": "Removed committed Symphony runtime artifacts from the C01 branch while preserving the accepted legacy quarantine product diff.",
+  "verification": [
+    "git diff --name-only origin/master..origin/myelin/c01-quarantine-v1-legacy-TCMo -- .symphony",
+    "git diff --check origin/master..origin/myelin/c01-quarantine-v1-legacy-TCMo",
+    "git diff --name-only origin/master..origin/myelin/c01-quarantine-v1-legacy-TCMo -- mcp projects raw concepts docs schema",
+    "git push origin HEAD:myelin/c01-quarantine-v1-legacy-TCMo"
+  ],
+  "changed_files": [
+    "legacy/",
+    "tsconfig.json"
+  ]
+}
