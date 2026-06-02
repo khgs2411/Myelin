@@ -101,8 +101,8 @@ test("artifact paths are deterministic and reject unsafe run ids", async () => {
   const id = timestampRunId(new Date("2026-06-02T12:34:56.000Z"));
 
   expect(id).toBe("2026-06-02T12-34-56.000Z-run");
-  expect(runDir(root, "demo", id)).toBe(join(root, "artifacts", "demo", "runs", id));
-  expect(await createRunDir(root, "demo", id)).toBe(join(root, "artifacts", "demo", "runs", id));
+  expect(runDir(root, "demo", id)).toBe(join(root, "projects", "demo", "runs", id));
+  expect(await createRunDir(root, "demo", id)).toBe(join(root, "projects", "demo", "runs", id));
   expect(() => runDir(root, "demo", "../bad")).toThrow("Invalid run id");
 });
 

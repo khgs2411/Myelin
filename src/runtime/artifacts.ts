@@ -1,12 +1,8 @@
 import { mkdir } from "node:fs/promises";
-import { resolveInside } from "./fs.ts";
-
-export function artifactsRoot(root: string, projectKey: string): string {
-  return resolveInside(root, "artifacts", projectKey);
-}
+import { projectPath, resolveInside } from "./fs.ts";
 
 export function runsRoot(root: string, projectKey: string): string {
-  return resolveInside(artifactsRoot(root, projectKey), "runs");
+  return projectPath(root, projectKey, "runs");
 }
 
 export function runDir(root: string, projectKey: string, runId: string): string {

@@ -1,9 +1,9 @@
 {
   "reason": "missing_trygga_project_state",
-  "summary": "Implementation and local Bun verification are complete, but the required acceptance smoke `myelin status trygga --json` cannot run because this assigned worktree has no `projects/` directory and therefore no registered `trygga` project state to migrate or inspect.",
+  "summary": "The C05 runtime run-path blocker is fixed and local Bun verification passes, but the required acceptance smoke cannot pass because this assigned worktree has no projects/trygga data and readable recovery searches did not find real Trygga project state to migrate. Recreating synthetic Trygga state would repeat the prior review blocker.",
   "session_id": "wLDHgf4e",
-  "updated_at": "2026-06-02T14:37:22Z",
+  "updated_at": "2026-06-02T14:44:37Z",
   "blocked_kind": "verification_environment",
-  "missing_capabilities": ["trygga project state"],
+  "missing_capabilities": ["real trygga project state"],
   "verification_not_completed": ["bun src/cli.ts status trygga --json"]
 }
