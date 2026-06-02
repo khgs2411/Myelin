@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { createRunDir, runDir, timestampRunId } from "./artifacts.ts";
@@ -71,6 +71,8 @@ test("config loads myelin.config, falls back to legacy name, and honors environm
 
 test("project discovery reads project registry state and resolves cwd ownership", async () => {
   const repo = join(root, "repos", "demo");
+  await mkdir(join(root, "projects"), { recursive: true });
+  await writeFile(join(root, "projects", ".DS_Store"), "finder metadata", "utf8");
   await writeJson(join(root, "projects", "demo", "state", "project.json"), {
     key: "demo",
     name: "Demo",
