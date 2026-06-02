@@ -20,6 +20,8 @@ _Avoid_: generic RAG, codebase docs only
 The instruction and convention layer that tells agents how to maintain Myelin.
 _Avoid_: prompt only, undocumented agent habits
 
+> **Phase-0 caveat (ADR 0049):** the schema vocabulary below is target design. Phase 0 ships a thin, global-only schema (`schema check` / `schema build` only). Project Schema, Schema Override, Schema Candidate and its lifecycle, the `candidates` / `apply` / `--global` CLI surface, and project-local candidate state are deferred past Phase 0.
+
 **Typed Schema Rule**:
 A machine-readable schema rule used for validation and deterministic enforcement.
 _Avoid_: prose-only contract, unenforced convention
