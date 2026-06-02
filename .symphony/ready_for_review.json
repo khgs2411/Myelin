@@ -1,0 +1,14 @@
+{
+  "status": "ready_for_review",
+  "summary": "Rewrote the task branch to remove committed Symphony runtime artifacts while preserving the accepted C01 legacy quarantine product changes.",
+  "verification": [
+    "git diff --name-only master..origin/myelin/c01-quarantine-v1-legacy-TCMo -- .symphony",
+    "git diff --check master..origin/myelin/c01-quarantine-v1-legacy-TCMo",
+    "git diff --name-only master..origin/myelin/c01-quarantine-v1-legacy-TCMo -- mcp projects raw concepts docs schema",
+    "git status --short --branch"
+  ],
+  "changed_files": [
+    "legacy/",
+    "tsconfig.json"
+  ]
+}
