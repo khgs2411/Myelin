@@ -11,13 +11,13 @@
   "project_id": "myelin",
   "source_path": "/symphony/sources/myelin",
   "status": "in_progress",
-  "task_id": "symtask_20260602_NcnLV8Hy",
+  "task_id": "symtask_20260602_TxSFaOGI",
   "tracker": {
     "kind": "trello",
-    "ref": "6a1ec2f3d90c3def45375dc1",
-    "short_ref": "s6dTtLWR",
-    "url": "https://trello.com/c/s6dTtLWR/157-c04-status-walking-skeleton-gate"
+    "ref": "6a1ec2f4c6203494ca104908",
+    "short_ref": "QT9p1e2G",
+    "url": "https://trello.com/c/QT9p1e2G/159-c06-provider-abstraction-llm-client"
   },
-  "work_branch": "myelin/c04-status-walking-skeleton-gate-tLWR",
-  "worktree_path": "/symphony/worktrees/local_macbook/myelin/s6dTtLWR"
+  "work_branch": "myelin/c06-provider-abstraction-llm-client-1e2G",
+  "worktree_path": "/symphony/worktrees/local_macbook/myelin/QT9p1e2G"
 }

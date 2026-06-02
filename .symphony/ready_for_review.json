@@ -1,0 +1,15 @@
+{
+  "status": "ready_for_review",
+  "summary": "Implemented the C06 provider abstraction with Codex and Claude Code runners, profile/model resolution, stub mode, prompt-hash checks, and JSON recovery.",
+  "verification": [
+    "bun test",
+    "bun run typecheck"
+  ],
+  "changed_files": [
+    ".symphony/blocked.json",
+    ".symphony/ready_for_review.json",
+    ".symphony/task.json",
+    "src/runtime/llm-client.test.ts",
+    "src/runtime/llm-client.ts"
+  ]
+}
