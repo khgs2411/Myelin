@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 import { resolveInside } from "./fs.ts";
 import { readJsonIfExists } from "./json.ts";
@@ -35,6 +35,7 @@ export async function discoverProjects(root: string): Promise<Project[]> {
   const projects: Project[] = [];
   for (const entry of entries.sort()) {
     const dir = resolveInside(projectsDir, entry);
+    if (!(await stat(dir)).isDirectory()) continue;
     const config = await readJsonIfExists<ProjectConfig>(resolveInside(dir, "state", "project.json"));
     if (config?.key) {
       projects.push({ key: config.key, dir, config });
