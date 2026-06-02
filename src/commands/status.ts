@@ -3,6 +3,7 @@ import { fail, ok } from "./registry.ts";
 import { readdir, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { repoRoot } from "../runtime/fs.ts";
+import { projectLayout } from "../runtime/layout.ts";
 import { discoverProjects, findProject, projectForRepoPath, type Project } from "../runtime/projects.ts";
 import { readProjectStateIfExists } from "../runtime/state.ts";
 
@@ -107,7 +108,7 @@ async function buildStatusSummary(root: string, project: Project): Promise<Statu
       updated_at: freshness.updated_at ?? null,
     },
     latest_run: {
-      dir: updateState.latest_run_dir ?? null,
+      dir: updateState.latest_run_dir ?? (await latestRunDir(root, project)),
       last_completed_stage: stage,
       last_completed_at: stage ? (updateState.stages?.[stage]?.last_completed_at ?? null) : null,
     },
@@ -135,6 +136,29 @@ async function latestSession(projectDir: string): Promise<SessionPointer | null>
   );
 
   return candidates.sort((a, b) => b.updated_at.localeCompare(a.updated_at) || b.path.localeCompare(a.path))[0] ?? null;
+}
+
+async function latestRunDir(root: string, project: Project): Promise<string | null> {
+  const runsDir = projectLayout(root, project.key).runs;
+  let entries: string[];
+  try {
+    entries = await readdir(runsDir);
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return null;
+    throw error;
+  }
+
+  const candidates = await Promise.all(
+    entries.map(async (entry) => {
+      const path = join(runsDir, entry);
+      const info = await stat(path);
+      return info.isDirectory() ? { path: `projects/${project.key}/runs/${entry}`, mtime: info.mtime.toISOString() } : null;
+    }),
+  );
+
+  return candidates
+    .filter((candidate): candidate is { path: string; mtime: string } => candidate !== null)
+    .sort((a, b) => b.mtime.localeCompare(a.mtime) || b.path.localeCompare(a.path))[0]?.path ?? null;
 }
 
 function toFacadeResponse(summary: StatusSummary): FacadeResponse {

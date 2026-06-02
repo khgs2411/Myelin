@@ -127,6 +127,16 @@ artifacts/<key>/runs/
 
 The stable products are intended for day-to-day use. The timestamped artifacts are kept for auditability, debugging, and provenance.
 
+## V2 Layout Migration
+
+Project memory is moving to `projects/<key>/{sources,wiki,schema,state,log,runs}/`. Run the reusable adapter per project:
+
+```bash
+bun src/cli.ts project migrate-layout <project-key>
+```
+
+The adapter also copies global pipeline instruction assets from `legacy/agents/update/*/{instructions.md,config.json}` into `stages/<stage-id>/`, which is the V2 read path for pipeline stage data.
+
 ## Status
 
 Myelin is early-stage infrastructure. It is designed for local-first use, explicit provenance, and operator-controlled updates. The public repository is open source under the Apache License 2.0.
