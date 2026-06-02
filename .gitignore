@@ -10,13 +10,6 @@ __pycache__/
 /mcp/
 projects
 !projects/sample/
-docs/*
-docs/superpowers/
-!docs/superpowers/dry-run-notes/
-docs/superpowers/dry-run-notes/artifacts/
-!docs/ARTIFACTS_AND_STATUS.md
-!docs/INGEST_PROPOSAL_FORMAT.md
-!docs/inbox-item-schema.md
 uv.lock
 tests/*
 !tests/conftest.py

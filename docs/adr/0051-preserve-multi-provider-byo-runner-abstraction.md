@@ -1,0 +1,5 @@
+# Preserve the multi-provider BYO-subscription runner abstraction
+
+Myelin drives whichever vendor CLI the operator is authenticated with, in headless mode ("bring your own subscription"). Phase 0 reimplements this provider abstraction in TypeScript, preserving the two backends that are actually wired today — Codex (`codex exec --sandbox read-only`) and Claude Code (`claude -p --output-format json`) — with a configurable default (`DEFAULT_PROVIDER` plus a `MODEL` override) and per-workload model profiles (pipeline vs query, including Codex reasoning-effort tiers).
+
+The abstraction is provider-pluggable so additional backends can be added later. Gemini is not wired: it was assumed present but the current runner supports only Codex and Claude, and `MODEL=gemini` silently falls through to Codex today. Gemini as a runner is deferred. The same provider-interface shape will later cover embedding providers for the vector slice. Codex's read-only sandbox and JSON-on-stdout contract is preserved to avoid the historic "wrote the artifact to disk and narrated" failure mode.
