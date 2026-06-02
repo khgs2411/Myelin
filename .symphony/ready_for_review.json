@@ -1,0 +1,12 @@
+{
+  "status": "ready_for_review",
+  "summary": "Removed the tracked Symphony ready marker from the C01 branch diff while preserving the accepted legacy quarantine product changes.",
+  "verification": [
+    "git diff --name-only origin/master..origin/myelin/c01-quarantine-v1-legacy-TCMo -- .symphony",
+    "git diff --check origin/master..origin/myelin/c01-quarantine-v1-legacy-TCMo",
+    "git diff --name-only origin/master..origin/myelin/c01-quarantine-v1-legacy-TCMo -- mcp projects raw concepts docs schema"
+  ],
+  "changed_files": [
+    ".symphony/ready_for_review.json"
+  ]
+}
