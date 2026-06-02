@@ -11,13 +11,13 @@
   "project_id": "myelin",
   "source_path": "/symphony/sources/myelin",
   "status": "in_progress",
-  "task_id": "symtask_20260602_NcnLV8Hy",
+  "task_id": "symtask_20260602_sb0svH1d",
   "tracker": {
     "kind": "trello",
-    "ref": "6a1ec2f3d90c3def45375dc1",
-    "short_ref": "s6dTtLWR",
-    "url": "https://trello.com/c/s6dTtLWR/157-c04-status-walking-skeleton-gate"
+    "ref": "6a1ec2f4b780f7a968f25b70",
+    "short_ref": "wLDHgf4e",
+    "url": "https://trello.com/c/wLDHgf4e/158-c05-v2-layout-migration-trygga"
   },
-  "work_branch": "myelin/c04-status-walking-skeleton-gate-tLWR",
-  "worktree_path": "/symphony/worktrees/local_macbook/myelin/s6dTtLWR"
+  "work_branch": "myelin/c05-v2-layout-migration-trygga-gf4e",
+  "worktree_path": "/symphony/worktrees/local_macbook/myelin/wLDHgf4e"
 }
