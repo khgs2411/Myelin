@@ -4,6 +4,7 @@
 .DS_Store
 .uv-cache
 .pytest_cache
+node_modules/
 __pycache__/
 *.pyc
 
