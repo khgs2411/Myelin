@@ -1,4 +1,4 @@
-import { cp, mkdir, readdir, rename, stat } from "node:fs/promises";
+import { mkdir, readdir, rename, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { projectPath, resolveInside } from "./fs.ts";
 import { readJsonIfExists, writeJson } from "./json.ts";
@@ -55,45 +55,6 @@ export async function migrateProjectLayout(root: string, key: string): Promise<M
   actions.push(...(await moveIfPresent(join(paths.root, "inbox"), join(paths.sources, "inbox"))));
   actions.push(...(await moveDirectoryChildrenIfPresent(resolveInside(root, "artifacts", key, "runs"), paths.runs)));
   actions.push(...(await updateLatestRunPointer(root, key)));
-
-  return actions;
-}
-
-export async function migrateStageInstructions(root: string): Promise<MigrationAction[]> {
-  const sourceRoot = resolveInside(root, "legacy", "agents", "update");
-  const destinationRoot = resolveInside(root, "stages");
-  const actions: MigrationAction[] = [];
-
-  let entries: string[];
-  try {
-    entries = await readdir(sourceRoot);
-  } catch (error) {
-    if (isNotFound(error)) return actions;
-    throw error;
-  }
-
-  for (const entry of entries.sort()) {
-    const sourceDir = join(sourceRoot, entry);
-    if (!(await isDirectory(sourceDir))) continue;
-
-    for (const fileName of ["config.json", "instructions.md"]) {
-      const from = join(sourceDir, fileName);
-      const to = join(destinationRoot, entry, fileName);
-      if (!(await exists(from))) continue;
-      if (await exists(to)) {
-        actions.push({ action: "kept", path: `stages/${entry}/${fileName}` });
-        continue;
-      }
-
-      await mkdir(join(destinationRoot, entry), { recursive: true });
-      await cp(from, to, { errorOnExist: true, force: false });
-      actions.push({
-        action: "copied",
-        from: `legacy/agents/update/${entry}/${fileName}`,
-        to: `stages/${entry}/${fileName}`,
-      });
-    }
-  }
 
   return actions;
 }

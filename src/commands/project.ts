@@ -1,7 +1,7 @@
 import type { Cli } from "./registry.ts";
 import { fail, ok } from "./registry.ts";
 import { repoRoot } from "../runtime/fs.ts";
-import { migrateProjectLayout, migrateStageInstructions } from "../runtime/layout.ts";
+import { migrateProjectLayout } from "../runtime/layout.ts";
 import { stableJson } from "../runtime/json.ts";
 import { runProjectPipeline, type PipelineKind } from "../pipeline/runner.ts";
 
@@ -16,12 +16,10 @@ export function registerProjectCommands(cli: Cli): void {
     const root = repoRoot().root;
     try {
       const projectActions = await migrateProjectLayout(root, projectKey);
-      const stageActions = await migrateStageInstructions(root);
       return ok(
         [
           `Migrated project layout for ${projectKey}.`,
           `Project actions: ${projectActions.length}`,
-          `Stage actions: ${stageActions.length}`,
         ].join("\n"),
       );
     } catch (error) {
