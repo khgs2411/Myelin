@@ -55,8 +55,7 @@ The old command names are V1 concepts. Keep them out of new docs and scripts unl
 - `projects/`: curated project memory, state, logs, sources, runs, and wiki pages.
 - `raw/`: unclassified global intake.
 - `concepts/`: cross-project knowledge.
-- `stages/`: V2 pipeline instruction assets when migrated from legacy references.
-- `legacy/`: quarantined V1 Python/Bash reference material until C12 removes it.
+- `stages/`: V2 pipeline instruction assets.
 - `mcp/`: detached MCP interface boundary; it is not part of the root package graph.
 
 ## Runtime And Verification
