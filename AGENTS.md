@@ -77,7 +77,6 @@ Important runtime variables:
 - `raw/`: global unclassified intake.
 - `concepts/`: cross-project knowledge.
 - `stages/`: V2 pipeline stage instruction assets.
-- `legacy/`: quarantined V1 Python/Bash reference material until C12 removes it.
 - `mcp/`: detached MCP interface boundary.
 
 Do not make `/mcp` part of the root package graph. Core query behavior lives in `src/query/`; detached MCP consumers use the CLI/JSON contract from `myelin memory query --json`.

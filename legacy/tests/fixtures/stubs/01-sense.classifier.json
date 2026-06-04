@@ -1,9 +1,0 @@
-{
-  "stage": "01-sense.classifier",
-  "response": {
-    "classifications": [
-      {"path": "projects/sample/inbox/note.md", "source_kind_hint": "session-note", "confidence": "medium", "classification_reasoning": "file extension .md in inbox; no strong signal"}
-    ]
-  },
-  "tokens_consumed": {"input_chars": 200, "output_chars": 30, "is_estimate": true}
-}
