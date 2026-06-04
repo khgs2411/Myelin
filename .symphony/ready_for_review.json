@@ -1,0 +1,15 @@
+{
+  "status": "ready_for_review",
+  "summary": "Implemented inbox item schema/filename validation, low-confidence gap emission, auto-update lockfile semantics, detached project ingest spawning, and project log paths.",
+  "verification": [
+    "bun test src/inbox/inbox.test.ts",
+    "bun run typecheck",
+    "bun test"
+  ],
+  "changed_files": [
+    "src/inbox/items.ts",
+    "src/inbox/auto-update.ts",
+    "src/inbox/inbox.test.ts",
+    ".symphony/ready_for_review.json"
+  ]
+}
