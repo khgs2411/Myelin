@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createId, timestampForFilename } from "../runtime/ids.ts";
 import { writeFile, rename } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { ensureParentDir, projectPath } from "../runtime/fs.ts";
@@ -90,13 +90,8 @@ export function inboxItemPath(root: string, projectKey: string, id: string): str
   return join(inboxDir(root, projectKey), `${id}.json`);
 }
 
-export function createInboxItemId(now: Date = new Date()): string {
-  return `${timestampForFilename(now)}_${randomBytes(3).toString("hex")}`;
-}
-
-export function timestampForFilename(now: Date): string {
-  return now.toISOString().replace(/:/g, "-").replace(".000Z", "Z");
-}
+export { timestampForFilename };
+export const createInboxItemId = createId;
 
 export function validateInboxFilename(filename: string): string {
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}(?:\.\d{3})?Z_[0-9a-f]{6}\.json$/.test(filename)) {
