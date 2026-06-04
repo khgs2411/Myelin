@@ -1,149 +1,93 @@
 # Myelin
 
-Myelin is a local-first knowledge compiler for software repositories.
+Myelin is a local-first project memory system for software repositories.
 
-It turns source code, documentation, and session notes into a maintained project wiki with provenance, freshness tracking, validation reports, and query surfaces. The goal is simple: future development sessions should start from durable project memory instead of repeatedly rediscovering the same codebase.
-
-## Why Myelin Exists
-
-AI coding agents and human maintainers both lose time when project context lives only in chat history, scattered notes, or broad source scans. That context gets stale, repeated, and hard to trust.
-
-Myelin treats the source repository as the authority, then compiles a smaller knowledge layer around it:
-
-- concise wiki pages for architecture, systems, modules, integrations, and runbooks
-- machine-readable state for routing, provenance, freshness, and validation
-- inbox workflows for new findings, gap notes, and corrections
-- stable outputs that can be queried by agents or inspected by humans
-
-The result is a repo-aware second brain that stays tied to implementation truth.
-
-## How It Works
-
-Myelin separates project knowledge into four layers:
-
-- `repo/`: the implementation truth
-- `raw/`: incoming source material and preserved originals
-- `wiki/`: synthesized, human-readable understanding
-- `state/`: machine-readable metadata, routing, provenance, and freshness
-
-The compiler reads the repository, ranks important domains, proposes wiki updates, applies changes, validates the result, and advances freshness only after the validation gate passes.
-
-Incremental updates use inbox items. When a query exposes stale or missing knowledge, that gap can be written into the project inbox and drained later through the lighter update pipeline.
+It keeps durable project knowledge close to the repo: curated wiki pages, source provenance, freshness state, inbox items, and queryable status. The V2 runtime is Bun/TypeScript-first, with the core CLI exposed as `myelin`.
 
 ## Quick Start
 
-Initialize a project wiki:
+Install dependencies:
 
 ```bash
-make init PROJECT=my_project NAME="My Project" PATH=/path/to/project
+bun install
 ```
 
-Run a full compile:
+Run the CLI directly:
 
 ```bash
-make compile PROJECT=my_project AUTO=1
+bun src/cli.ts status <project-key>
+bun src/cli.ts schema check <project-key>
+bun src/cli.ts schema build <project-key>
+bun src/cli.ts memory query <project-key> "What should I know?"
+bun src/cli.ts project learn <project-key> --dry-run
+bun src/cli.ts project ingest <project-key>
 ```
 
-Drain queued inbox gaps:
+The root `Makefile` is only a thin convenience layer over the same CLI:
 
 ```bash
-make update PROJECT=my_project AUTO=1
+make status PROJECT=<project-key>
+make schema-check PROJECT=<project-key>
+make schema-build PROJECT=<project-key>
+make query PROJECT=<project-key> QUESTION="What should I know?"
+make learn PROJECT=<project-key>
+make ingest PROJECT=<project-key>
 ```
 
-Resume a gated run after approval:
+## Command Vocabulary
 
-```bash
-make compile-continue PROJECT=my_project
-make update-continue PROJECT=my_project
-```
+Myelin V2 uses product-language commands instead of the V1 pipeline names:
 
-Re-run validation against the latest run:
+| V1/operator habit | V2 command |
+| --- | --- |
+| `make compile PROJECT=<key>` | `myelin project learn <key>` / `make learn PROJECT=<key>` |
+| `make update PROJECT=<key>` | `myelin project ingest <key>` / `make ingest PROJECT=<key>` |
+| `ask` / query helpers | `myelin memory query <key> "<question>"` / `make query ...` |
+| `make init PROJECT=<key>` | `myelin project onboard <key>` / `make onboard PROJECT=<key>` |
+| validate schema context | `myelin schema check <key>` / `myelin schema build <key>` |
 
-```bash
-make lint PROJECT=my_project
-```
-
-Measure wiki quality against acceptance questions:
-
-```bash
-make measure PROJECT=my_project
-```
-
-Inspect project status or prune old artifacts:
-
-```bash
-make status PROJECT=my_project
-make prune PROJECT=my_project
-```
-
-## Expected Workflow
-
-1. Register a repository with `make init`.
-2. Build the first maintained wiki with `make compile`.
-3. Use the generated `projects/<key>/index.md` as the starting point for future sessions.
-4. Add gap notes or corrections to `projects/<key>/inbox/`.
-5. Run `make update` to fold queued knowledge into canonical pages.
-6. Review `projects/<key>/state/latest/` for validation, ranking, and measurement outputs.
+The old command names are V1 concepts. Keep them out of new docs and scripts unless a legacy escape hatch is explicitly being discussed.
 
 ## Repository Layout
 
-- `AGENTS.md`: execution contract for agents working in this repository
-- `SYSTEM_DESIGN.md`: architecture rationale and product model
-- `V1_SPEC.md`: filesystem and pipeline contract
-- `agents/update/`: compile and update pipeline stages
-- `agents/query/`: query routing and synthesis logic
-- `projects/`: one maintained wiki space per registered project
-- `raw/`: unclassified intake
-- `concepts/`: cross-project knowledge
-- `schemas/`: source classification and structured contracts
-- `scripts/`: operational runners
-- `templates/`: scaffold templates for project pages and state
-- `tests/`: pytest suite
+- `src/`: Bun/TypeScript core runtime, CLI commands, query, schema, inbox, and pipeline orchestration.
+- `schema/`: global authored schema inputs for generated project schema context.
+- `projects/`: curated project memory, state, logs, sources, runs, and wiki pages.
+- `raw/`: unclassified global intake.
+- `concepts/`: cross-project knowledge.
+- `stages/`: V2 pipeline instruction assets when migrated from legacy references.
+- `legacy/`: quarantined V1 Python/Bash reference material until C12 removes it.
+- `mcp/`: detached MCP interface boundary; it is not part of the root package graph.
 
-## Query Contract
+## Runtime And Verification
 
-Core owns query behavior in `src/query/`. `myelin memory query <key> "<question>" --json` emits the facade response contract consumed by detached interfaces: `answer`, `confidence`, `memory_scope`, `citations`, `candidate_ids`, `degraded`, `degraded_reason`, and `source_tools`.
-
-The detached MCP surface consumes that CLI/JSON contract later instead of duplicating query routing or importing core source.
-
-## Stable Outputs
-
-Each project publishes stable read-side products under:
-
-```text
-projects/<key>/state/latest/
-```
-
-Timestamped pipeline artifacts live under:
-
-```text
-artifacts/<key>/runs/
-```
-
-The stable products are intended for day-to-day use. The timestamped artifacts are kept for auditability, debugging, and provenance.
-
-## V2 Layout Migration
-
-Project memory is moving to `projects/<key>/{sources,wiki,schema,state,log,runs}/`. Run the reusable adapter per project:
+Use Bun for normal development:
 
 ```bash
-bun src/cli.ts project migrate-layout <project-key>
+bun test
+bun run typecheck
+make test
+make typecheck
 ```
 
-The adapter also copies global pipeline instruction assets from `legacy/agents/update/*/{instructions.md,config.json}` into `stages/<stage-id>/`, which is the V2 read path for pipeline stage data.
+Model-backed workflows use the operator's authenticated vendor CLIs through the provider abstraction. Configure defaults in `myelin.config`; environment variables can still override local config for a run.
+
+## Query And MCP Boundary
+
+Core owns query behavior in `src/query/`. Detached interfaces should consume:
+
+```bash
+myelin memory query <project-key> "<question>" --json
+```
+
+The JSON response includes `answer`, `confidence`, `memory_scope`, `citations`, `candidate_ids`, `degraded`, `degraded_reason`, and `source_tools`.
+
+The `/mcp` directory remains detached. Do not import root `src/` from `/mcp`, and do not import `/mcp` source from the core runtime.
+
+## Compatibility Contracts
+
+`LLM_WIKI_*` environment variables and the `mcp__llm-wiki__*` MCP tool namespace intentionally keep their existing names for compatibility. Per ADR 0050, these are external/env contracts, not current product naming. The product, CLI, docs, and root config file use **Myelin** and `myelin.config`.
 
 ## Status
 
-Myelin is early-stage infrastructure. It is designed for local-first use, explicit provenance, and operator-controlled updates. The public repository is open source under the Apache License 2.0.
-
-The project favors conservative maintenance over speculative automation: source stays authoritative, durable pages are preferred over chat-only memory, and validation gates freshness advancement.
-
-## Contributing
-
-Contributions are welcome through issues and pull requests. Please read:
-
-- [CONTRIBUTING.md](CONTRIBUTING.md)
-- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-- [SECURITY.md](SECURITY.md)
-
-The `master` branch is protected. Changes should be proposed through pull requests.
+Myelin is early-stage infrastructure. It favors explicit provenance, local-first operation, human-reviewable project memory, and conservative write workflows over speculative automation.
