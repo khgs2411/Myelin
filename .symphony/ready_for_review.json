@@ -1,0 +1,17 @@
+{
+  "status": "ready_for_review",
+  "summary": "Implemented provisional TypeScript project learn/ingest orchestration over migrated stage instruction data, with schema freshness for learn, deterministic apply/validate records, no auto-reconcile, and fixture-backed trygga dry-run coverage.",
+  "verification": [
+    "bun install",
+    "bun run typecheck",
+    "bun test src/pipeline/runner.test.ts",
+    "bun test",
+    "Attempted real trygga smoke; this worktree has no projects/ directory, so real project data is unavailable here."
+  ],
+  "changed_files": [
+    "src/commands/project.ts",
+    "src/pipeline/runner.ts",
+    "src/pipeline/runner.test.ts",
+    ".symphony/ready_for_review.json"
+  ]
+}
