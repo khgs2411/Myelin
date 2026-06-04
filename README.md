@@ -100,16 +100,11 @@ make prune PROJECT=my_project
 - `templates/`: scaffold templates for project pages and state
 - `tests/`: pytest suite
 
-## MCP Package Surface
+## Query Contract
 
-The `mcp/` directory is the separately maintained TypeScript/npm package surface for the MCP server. The published runtime is `topsyde-llm-wiki-mcp` and should run through `bunx`.
+Core owns query behavior in `src/query/`. `myelin memory query <key> "<question>" --json` emits the facade response contract consumed by detached interfaces: `answer`, `confidence`, `memory_scope`, `citations`, `candidate_ids`, `degraded`, `degraded_reason`, and `source_tools`.
 
-Query behavior can still span both layers:
-
-- application query engine: `agents/query/`
-- MCP adapter package: `mcp/src/index.ts`
-
-When a change affects MCP responses, review the root application diff and the `mcp/` package diff deliberately.
+The detached MCP surface consumes that CLI/JSON contract later instead of duplicating query routing or importing core source.
 
 ## Stable Outputs
 

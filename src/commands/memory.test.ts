@@ -1,0 +1,132 @@
+import { afterEach, beforeEach, expect, test } from "bun:test";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { createCli } from "./registry.ts";
+import { registerMemoryCommands } from "./memory.ts";
+import { writeJson } from "../runtime/json.ts";
+import type { SchemaContext } from "../schema/types.ts";
+
+let root: string;
+let previousCwd: string;
+
+beforeEach(async () => {
+  previousCwd = process.cwd();
+  root = await mkdtemp(join(tmpdir(), "myelin-query-"));
+  process.chdir(root);
+  await seedProject();
+});
+
+afterEach(async () => {
+  process.chdir(previousCwd);
+  await rm(root, { recursive: true, force: true });
+});
+
+test("memory query routes through schema taxonomy and emits the facade JSON contract", async () => {
+  await writeJson(join(root, "projects", "demo", "state", "schema-context.json"), schemaContext());
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+
+  const result = await cli.run(["memory", "query", "demo", "What decision explains retention?", "--json", "--debug"]);
+  const response = JSON.parse(result.message);
+
+  expect(result.exitCode).toBe(0);
+  expect(response.degraded).toBe(false);
+  expect(response.memory_scope).toBe("project_wiki");
+  expect(response.citations[0]).toBe("projects/demo/wiki/decisions/retention.md");
+  expect(response.source_tools).toContain("schema-context");
+  expect(response.route.matched_taxonomy).toContain("decision");
+});
+
+test("memory query fails closed when schema context is missing", async () => {
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+
+  const result = await cli.run(["memory", "query", "demo", "retention", "--json"]);
+  const response = JSON.parse(result.message);
+
+  expect(result.exitCode).toBe(0);
+  expect(response.degraded).toBe(true);
+  expect(response.confidence).toBe(0);
+  expect(response.memory_scope).toBe("none");
+  expect(response.degraded_reason).toContain("schema build");
+  expect(response.degraded_reason).toContain("schema check");
+});
+
+test("memory query fails closed when schema context is invalid", async () => {
+  await writeJson(join(root, "projects", "demo", "state", "schema-context.json"), { schema_version: "bad" });
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+
+  const result = await cli.run(["memory", "query", "demo", "retention", "--json"]);
+  const response = JSON.parse(result.message);
+
+  expect(result.exitCode).toBe(0);
+  expect(response.degraded).toBe(true);
+  expect(response.degraded_reason).toContain("invalid schema-context.json");
+});
+
+async function seedProject(): Promise<void> {
+  await writeJson(join(root, "projects", "demo", "state", "project.json"), {
+    key: "demo",
+    name: "Demo",
+  });
+  await writeJson(join(root, "projects", "demo", "state", "pages.json"), {
+    pages: [
+      {
+        path: "index.md",
+        type: "index",
+        linked_topics: ["overview"],
+        linked_sources: [],
+        freshness_status: "fresh",
+        summary: "Project overview.",
+        entrypoint_rank: 1,
+      },
+      {
+        path: "wiki/decisions/retention.md",
+        type: "decisions",
+        linked_topics: ["decision", "retention"],
+        linked_sources: ["src/retention.ts"],
+        freshness_status: "fresh",
+        summary: "Retention decision and provenance.",
+      },
+    ],
+  });
+  await mkdir(join(root, "projects", "demo", "wiki", "decisions"), { recursive: true });
+  await writeFile(join(root, "projects", "demo", "index.md"), "# Demo\n\nProject overview.\n", "utf8");
+  await writeFile(
+    join(root, "projects", "demo", "wiki", "decisions", "retention.md"),
+    "# Retention\n\nRetention is kept in project memory because agents need durable context.\n",
+    "utf8",
+  );
+}
+
+function schemaContext(): SchemaContext {
+  return {
+    schema_version: "0",
+    built_at: "2026-06-04T00:00:00.000Z",
+    inputs: {
+      "schema/global.md": "a".repeat(64),
+    },
+    source_classification: {
+      required_fields: ["source_kind"],
+      source_kind: ["spec"],
+      ownership: ["project:<project-key>"],
+      action: ["update-existing-pages"],
+    },
+    memory_scopes: {
+      scopes: ["project_wiki", "project_state", "none"],
+      phase_0_active: ["project_wiki", "project_state", "none"],
+      phase_0_deferred: ["practice"],
+    },
+    page_taxonomy: {
+      categories: ["decision", "runbook", "architecture"],
+    },
+    provenance: {
+      required: ["file_path_line"],
+    },
+    cli_vocabulary: {
+      commands: ["memory query", "schema build", "schema check"],
+    },
+  };
+}

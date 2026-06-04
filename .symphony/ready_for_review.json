@@ -1,0 +1,16 @@
+{
+  "status": "ready_for_review",
+  "summary": "Implemented schema-aware core memory query with deterministic routing, fail-closed schema-context behavior, CLI JSON facade output, tests, and query contract documentation.",
+  "verification": [
+    "bun test",
+    "bun run typecheck",
+    "bun src/cli.ts memory query demo \"retention\" --json"
+  ],
+  "changed_files": [
+    "README.md",
+    "src/commands/memory.ts",
+    "src/commands/memory.test.ts",
+    "src/query/engine.ts",
+    "src/query/planner.ts"
+  ]
+}
