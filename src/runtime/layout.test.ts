@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { migrateProjectLayout, migrateStageInstructions, projectLayout } from "./layout.ts";
+import { migrateProjectLayout, projectLayout } from "./layout.ts";
 import { readJson } from "./json.ts";
 import { writeJson } from "./json.ts";
 
@@ -46,19 +46,4 @@ test("project layout migration preserves project memory under V2 directories", a
   expect((await readJson<{ latest_run_dir: string }>(join(paths.state, "update-state.json"))).latest_run_dir).toBe(
     "projects/trygga/runs/2026-06-02T12-00-00.000Z-run",
   );
-});
-
-test("stage instruction migration copies global pipeline data into stages", async () => {
-  await writeJson(join(root, "legacy", "agents", "update", "01-sense", "config.json"), {
-    stage: "sense",
-  });
-  await writeFile(join(root, "legacy", "agents", "update", "01-sense", "instructions.md"), "Return JSON\n", "utf8");
-
-  const actions = await migrateStageInstructions(root);
-
-  expect(actions.filter((action) => action.action === "copied").length).toBe(2);
-  expect(await readFile(join(root, "stages", "01-sense", "instructions.md"), "utf8")).toBe("Return JSON\n");
-  expect(await readJson<{ stage: string }>(join(root, "stages", "01-sense", "config.json"))).toEqual({
-    stage: "sense",
-  });
 });

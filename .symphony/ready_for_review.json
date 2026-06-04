@@ -1,0 +1,15 @@
+{
+  "status": "ready_for_review",
+  "summary": "Removed the obsolete legacy stage-instruction migration path while keeping project layout migration active.",
+  "verification": [
+    "grep -rn \"legacy/\" src/",
+    "bun src/cli.ts project migrate-layout symphony-migrate-layout-check",
+    "bun test",
+    "bun run typecheck"
+  ],
+  "changed_files": [
+    "src/runtime/layout.ts",
+    "src/commands/project.ts",
+    "src/runtime/layout.test.ts"
+  ]
+}
