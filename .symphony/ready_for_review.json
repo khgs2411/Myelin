@@ -1,0 +1,18 @@
+{
+  "status": "ready_for_review",
+  "summary": "Implemented thin global-only schema check/build with Zod validation, deterministic schema-context compilation, dry-run preview, and read-only check behavior.",
+  "verification": [
+    "bun run typecheck",
+    "bun test",
+    "Real-project smoke not run: this assigned worktree has no projects/ directory; bootstrap behavior is covered by temporary Bun test fixtures."
+  ],
+  "changed_files": [
+    "bun.lock",
+    "package.json",
+    "src/commands/schema.ts",
+    "src/commands/schema.test.ts",
+    "src/schema/compiler.ts",
+    "src/schema/types.ts",
+    "src/schema/validators.ts"
+  ]
+}
