@@ -1,0 +1,20 @@
+{
+  "status": "ready_for_review",
+  "summary": "Renamed root config to myelin.config, switched config loading to the Myelin filename, replaced the root Makefile with thin Myelin CLI aliases, and updated README/AGENTS for Bun/TypeScript, V2 command vocabulary, old-command mapping, detached MCP, and compatibility contracts.",
+  "verification": [
+    "bun install",
+    "bun run typecheck",
+    "bun test",
+    "make typecheck",
+    "make status (expected CLI failure because this worktree has no registered projects)"
+  ],
+  "changed_files": [
+    "AGENTS.md",
+    "Makefile",
+    "README.md",
+    "llm-wiki.config",
+    "myelin.config",
+    "src/runtime/config.ts",
+    "src/runtime/runtime.test.ts"
+  ]
+}

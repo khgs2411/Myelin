@@ -43,7 +43,7 @@ test("missing JSON can be handled explicitly without hiding invalid JSON", async
   await expect(readJsonIfExists(invalid)).rejects.toThrow("Invalid JSON");
 });
 
-test("config loads myelin.config, falls back to legacy name, and honors environment precedence", async () => {
+test("config loads myelin.config and honors environment precedence", async () => {
   await writeFile(
     join(root, "myelin.config"),
     [

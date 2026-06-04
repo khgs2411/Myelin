@@ -67,8 +67,7 @@ export function selectModelProfile(
 function configPath(root: string): string | null {
   const myelin = resolveInside(root, "myelin.config");
   if (existsSync(myelin)) return myelin;
-  const legacy = resolveInside(root, "llm-wiki.config");
-  return existsSync(legacy) ? legacy : null;
+  return null;
 }
 
 function profile(workload: Workload, provider: Provider, values: Record<string, string>): ModelProfile {
