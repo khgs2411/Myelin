@@ -1,0 +1,12 @@
+{
+  "status": "ready_for_review",
+  "summary": "Removed the dead legacy/** exclude entry from tsconfig.json while preserving mcp/** and node_modules/**.",
+  "verification": [
+    "bun run typecheck",
+    "bun test",
+    "grep -n 'legacy' tsconfig.json || true"
+  ],
+  "changed_files": [
+    "tsconfig.json"
+  ]
+}
