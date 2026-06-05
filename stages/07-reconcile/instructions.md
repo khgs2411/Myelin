@@ -67,7 +67,7 @@ You inherit every rule enforced by validate. `max_loop_iterations` is 1, so a re
 
 ### Required page structure (validator contract)
 
-Every unit's `content` string must conform to the structural validator in `agents/update/06-validate/structural.py`:
+Every unit's `content` string must conform to the structural validator enforced by the validate stage:
 
 - Do NOT open the page with a heading line. The first non-empty line must be a single-sentence prose summary.
 - The page MUST contain a `## Repo pointers` section with concrete `` `path:line-line` `` citations.

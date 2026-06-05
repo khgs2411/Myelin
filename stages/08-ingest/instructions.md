@@ -58,7 +58,7 @@ Return this JSON shape:
   "summary": "short summary",
   "ranking_snapshot_path": null,
   "max_new_pages": 50,
-  "max_new_pages_config_source": "agents/update/08-ingest/config.json:stage_specific.max_items_per_run",
+  "max_new_pages_config_source": "stages/08-ingest/config.json:stage_specific.max_items_per_run",
   "new_pages_count": 0,
   "deferred_domains": [],
   "units": [

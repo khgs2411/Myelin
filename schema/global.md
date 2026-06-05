@@ -21,4 +21,4 @@ Durable wiki/state writes must carry traceable provenance: concrete `file_path:l
 
 Operator verbs: `project onboard|learn|ingest`, `memory query`, `status`, `schema check|build`, `session close`. `schema candidates|apply` are deferred (ADR 0049). Old `compile`/`update`/`ask` names are not the product vocabulary.
 
-> Migrated from `schemas/source-classification.md`. The old root `schemas/` path is retired only once the validators cover this content (per the design's Existing Schema Transition); until then `schemas/` remains as legacy reference.
+> Source-classification guidance originated in the former root `schemas/source-classification.md` (now removed). It is captured here and as typed rules in `schema/rules/source-classification.json`.

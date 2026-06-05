@@ -59,7 +59,7 @@ Return ONLY this JSON object:
   "summary": "one-paragraph plain-text summary",
   "ranking_snapshot_path": "projects/<project-key>/state/latest/ranking-snapshot.json",
   "max_new_pages": 25,
-  "max_new_pages_config_source": "agents/update/03-propose/config.json:stage_specific.max_new_pages",
+  "max_new_pages_config_source": "stages/03-propose/config.json:stage_specific.max_new_pages",
   "new_pages_count": 3,
   "deferred_domains": [
     {"rank": 21, "domain": "logging", "reason": "below cutoff"}
@@ -114,7 +114,7 @@ Return ONLY this JSON object:
 
 ### Required page structure (validator contract)
 
-Every unit's `content` string must conform to the structural validator in `agents/update/06-validate/structural.py`. Failing this guarantees validate will fail and reconcile will be invoked.
+Every unit's `content` string must conform to the structural validator enforced by the validate stage. Failing this guarantees validate will fail and reconcile will be invoked.
 
 - Do NOT open the page with a heading line. The first non-empty line must be a single-sentence prose summary that answers "what is this." Do not emit a leading `# Title` H1; the page's title is carried by its filename and by `index.md`.
 - The page MUST contain a `## Repo pointers` section listing the concrete `path:line-range` citations that ground the page. Use the format `` - `path/to/file.ext:LINE_START-LINE_END` - short label ``.
