@@ -19,3 +19,4 @@ state/memory.db-shm
 
 # ADL run-evidence (Architect-Developer Loop) — ephemeral, never committed
 .adl/
+.agents/
