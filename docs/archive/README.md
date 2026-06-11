@@ -8,11 +8,14 @@ They are retained because they record *why* the product is shaped the way it is,
 
 ## Where current truth lives
 
-- **Vision (canonical):** `docs/superpowers/specs/2026-06-01-v2-project-rooted-agent-memory-design.md` and `V2_SPEC.md` (raw source).
+- **Documentation map:** `docs/README.md`.
+- **Vision (canonical):** `MYELIN.md`.
 - **Glossary:** `CONTEXT.md`.
+- **Current implementation alignment:** `docs/IMPLEMENTATION_ALIGNMENT.md`.
+- **Built and planned inventory:** `docs/DONE.md` and `docs/TODO.md`.
 - **Decisions:** `docs/adr/` (append-only).
-- **Phase-0 execution record:** `docs/superpowers/plans/2026-06-02-v2-phase-0-clean-typescript-core.md`.
-- **Latest slice (SQLite session memory):** the two `docs/superpowers/{specs,plans}/2026-06-04-sqlite-memory-foundation-*` files.
+
+The archived `V2_SPEC.md`, V2 specs, and phase plans are historical source material. They explain how the current shape emerged, but they are not the current reading path.
 
 ## What was archived (2026-06-05) and why
 

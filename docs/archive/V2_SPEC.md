@@ -1,3 +1,7 @@
+> Archived raw brainstorming source.
+>
+> This file preserves the original project-rooted memory discussion. It is useful for recovering intent, but it is not the canonical product design. Use `../../MYELIN.md` for current product truth and `../README.md` for the current documentation map.
+
 ```
 • You’re not lost. You just found the actual hierarchy.
 

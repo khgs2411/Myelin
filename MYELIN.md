@@ -4,7 +4,15 @@
 
 This is the single canonical document for what Myelin is and why it is shaped this way. It is a product design, not a progress tracker — it describes the system as designed, independent of how much is implemented at any given moment. When this document and any other doc disagree, this document wins — except for `docs/adr/*` decision records, which it summarizes but never overrides.
 
-**Sources this consolidates:** `docs/V2_SPEC.md` (raw vision), `CONTEXT.md` (product language, repo root), and `docs/adr/*` (decisions). Older designs — including superseded V2 predecessors — are in `docs/archive/`.
+Related reading:
+
+- `CONTEXT.md` is the product-language glossary and records resolved naming/shape ambiguities.
+- `docs/README.md` is the documentation map and canonical reading path.
+- `docs/archive/V2_SPEC.md` is the raw brainstorming source for the project-rooted memory model.
+- `docs/IMPLEMENTATION_ALIGNMENT.md` maps the current codebase to this design and flags what to keep, reframe, or avoid extending blindly.
+- `docs/adr/*` contains append-only decision records; this document summarizes them but does not override them.
+
+Older designs — including superseded V2 predecessors — are in `docs/archive/`.
 
 ---
 

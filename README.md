@@ -58,6 +58,19 @@ The old command names are V1 concepts. Keep them out of new docs and scripts unl
 - `stages/`: V2 pipeline instruction assets.
 - `mcp/`: detached MCP interface boundary; it is not part of the root package graph.
 
+## Documentation
+
+Start with `docs/README.md` for the canonical reading path.
+
+The active docs are intentionally small:
+
+- `MYELIN.md` — canonical product design.
+- `CONTEXT.md` — glossary and resolved terminology.
+- `docs/IMPLEMENTATION_ALIGNMENT.md` — current implementation mapped to the product shape.
+- `docs/DONE.md` and `docs/TODO.md` — built inventory and known gaps.
+
+Historical brainstorming, superseded specs, and implementation plans live under `docs/archive/`.
+
 ## Runtime And Verification
 
 Use Bun for normal development:
