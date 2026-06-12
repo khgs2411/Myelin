@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { normalizeCodexHookPayload } from "./codex.ts";
 
@@ -39,4 +39,14 @@ test("unknown or malformed payload becomes invalid raw evidence when cwd is pres
   expect(event?.status).toBe("invalid");
   expect(event?.event_kind).toBeNull();
   expect(event?.raw_payload_json).toContain("Unexpected");
+});
+
+test("redacted live fixtures normalize to capture events", async () => {
+  const files = (await readdir(fixtures)).filter((file) => file.startsWith("live-") && file.endsWith(".json"));
+
+  expect(files.length).toBeGreaterThan(0);
+  for (const file of files) {
+    const payload = JSON.parse(await readFile(join(fixtures, file), "utf8"));
+    expect(normalizeCodexHookPayload(payload)).not.toBeNull();
+  }
 });
