@@ -1,9 +1,10 @@
 PROJECT ?=
 QUESTION ?=
+REPO ?=
 
 MYELIN := bun src/cli.ts
 
-.PHONY: status query learn ingest onboard schema-check schema-build session-close test typecheck
+.PHONY: status query learn ingest bootstrap schema-check schema-build session-close test typecheck
 
 status:
 	$(MYELIN) status $(PROJECT)
@@ -17,8 +18,8 @@ learn:
 ingest:
 	$(MYELIN) project ingest $(PROJECT)
 
-onboard:
-	$(MYELIN) project onboard $(PROJECT)
+bootstrap:
+	$(MYELIN) bootstrap $(PROJECT) --repo $(REPO)
 
 schema-check:
 	$(MYELIN) schema check $(PROJECT)

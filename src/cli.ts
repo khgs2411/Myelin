@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { createCli } from "./commands/registry.ts";
+import { registerBootstrapCommand } from "./commands/bootstrap.ts";
 import { registerMemoryCommands } from "./commands/memory.ts";
 import { registerProjectCommands } from "./commands/project.ts";
 import { registerSchemaCommands } from "./commands/schema.ts";
@@ -10,6 +11,7 @@ import { registerStatusCommand } from "./commands/status.ts";
 const cli = createCli("myelin");
 
 registerStatusCommand(cli);
+registerBootstrapCommand(cli);
 registerMemoryCommands(cli);
 registerProjectCommands(cli);
 registerSessionCommands(cli);
