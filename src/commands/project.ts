@@ -8,7 +8,6 @@ import { runProjectPipeline, type PipelineKind } from "../pipeline/runner.ts";
 export function registerProjectCommands(cli: Cli): void {
   cli.command(["project", "learn"], async (args) => runPipelineCommand("learn", args));
   cli.command(["project", "ingest"], async (args) => runPipelineCommand("ingest", args));
-  cli.command(["project", "onboard"], () => ok("project onboard is registered but not implemented in this slice."));
   cli.command(["project", "migrate-layout"], async (args) => {
     const projectKey = args[0];
     if (!projectKey || args.length > 1) return fail("Usage: myelin project migrate-layout <project-key>");
