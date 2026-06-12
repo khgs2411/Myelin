@@ -40,7 +40,7 @@ test("records valid provider-neutral experience events", () => {
     status: "valid",
   });
 
-  expect(row.id).toBe("evt_1");
+  expect(row?.id).toBe("evt_1");
   expect(listExperienceEvents(db, "class-kit").map((event) => event.event_kind)).toEqual(["user.prompt"]);
 });
 
@@ -55,9 +55,9 @@ test("records invalid rows with minimum required fields", () => {
     status: "invalid",
   });
 
-  expect(row.status).toBe("invalid");
-  expect(row.hook_event_name).toBeNull();
-  expect(row.cwd).toBeNull();
+  expect(row?.status).toBe("invalid");
+  expect(row?.hook_event_name).toBeNull();
+  expect(row?.cwd).toBeNull();
 });
 
 test("deduplicates provider identity when available and keeps uncertain duplicates", () => {
@@ -104,6 +104,64 @@ test("tombstones delete raw rows only with terminal output references", () => {
   });
 
   expect(listExperienceEvents(db, "class-kit")).toEqual([]);
+});
+
+test("tombstoned provider identities prevent replayed raw rows", () => {
+  const input = {
+    project_key: "class-kit",
+    occurred_at: "2026-06-12T10:00:00.000Z",
+    hook_event_name: "UserPromptSubmit",
+    event_kind: "user.prompt",
+    cwd: "/repo",
+    provider: "codex",
+    provider_session_id: "sess_1",
+    turn_id: "turn_1",
+    raw_text: "same",
+    raw_payload_json: "{}",
+    source: "codex-hook",
+    status: "valid" as const,
+  };
+
+  recordExperienceEvent(db, { ...input, id: "evt_1" });
+  tombstoneExperienceEvent(db, {
+    id: "tomb_1",
+    original_event_id: "evt_1",
+    project_key: "class-kit",
+    processed_at: "2026-06-12T10:05:00.000Z",
+    terminal_decision: "memory.candidate",
+    output_references: ["projects/class-kit/state/candidates.json"],
+  });
+
+  const replay = recordExperienceEvent(db, { ...input, id: "evt_2" });
+
+  expect(replay).toBeNull();
+  expect(listExperienceEvents(db, "class-kit")).toEqual([]);
+});
+
+test("tombstones keep uncertain duplicates when no dedupe identity exists", () => {
+  const input = {
+    project_key: "class-kit",
+    occurred_at: "2026-06-12T10:00:00.000Z",
+    provider: "codex",
+    raw_payload_json: "{}",
+    source: "codex-hook",
+    status: "valid" as const,
+  };
+
+  recordExperienceEvent(db, { ...input, id: "evt_1" });
+  tombstoneExperienceEvent(db, {
+    id: "tomb_1",
+    original_event_id: "evt_1",
+    project_key: "class-kit",
+    processed_at: "2026-06-12T10:05:00.000Z",
+    terminal_decision: "rejected.no-action",
+    output_references: ["projects/class-kit/state/rejections.json"],
+  });
+
+  const uncertainReplay = recordExperienceEvent(db, { ...input, id: "evt_2" });
+
+  expect(uncertainReplay?.id).toBe("evt_2");
+  expect(listExperienceEvents(db, "class-kit").map((event) => event.id)).toEqual(["evt_2"]);
 });
 
 test("hook errors fall back to jsonl when sqlite is unavailable", async () => {

@@ -51,8 +51,17 @@ export function recordExperienceEvent(
   db: Database,
   input: ExperienceEventInput,
   insertedAt = new Date(),
-): ExperienceEventRow {
+): ExperienceEventRow | null {
   const dedupeKey = providerDedupeKey(input);
+  const tombstone = db
+    .query(
+      `SELECT 1 FROM experience_event_tombstones
+       WHERE original_event_id = ? OR (dedupe_key IS NOT NULL AND dedupe_key = ?)
+       LIMIT 1`,
+    )
+    .get(input.id, dedupeKey);
+  if (tombstone) return null;
+
   const row: ExperienceEventRow = {
     ...input,
     hook_event_name: input.hook_event_name ?? null,

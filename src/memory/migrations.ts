@@ -76,6 +76,7 @@ const MIGRATIONS: Migration[] = [
       );
       CREATE INDEX experience_event_tombstones_project_time ON experience_event_tombstones(project_key, processed_at);
       CREATE UNIQUE INDEX experience_event_tombstones_original_event ON experience_event_tombstones(original_event_id);
+      CREATE UNIQUE INDEX experience_event_tombstones_dedupe_key ON experience_event_tombstones(dedupe_key) WHERE dedupe_key IS NOT NULL;
     `,
   },
 ];
