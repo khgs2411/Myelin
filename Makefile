@@ -34,3 +34,5 @@ test:
 
 typecheck:
 	bun run typecheck
+
+include .symphony-reviewer/reviewer.mk

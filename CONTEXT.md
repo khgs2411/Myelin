@@ -78,6 +78,10 @@ _Avoid_: Personal Brain, user prefs
 Raw captured agent activity used as evidence, not truth.
 _Avoid_: Truth store, canonical memory
 
+**Experience Log Tombstone**:
+A small terminal record that proves a raw Experience Log row was processed without retaining the raw prompt or response text.
+_Avoid_: processed raw row, permanent transcript
+
 **External Work Tracker**:
 A project-management system used outside LLM Wiki that may appear as documented source evidence but is not a core product concept.
 _Avoid_: Trello card, Jira issue, Linear issue, ClickUp task as product terms
@@ -113,6 +117,26 @@ _Avoid_: Sidecar runtime, one-off wrapper
 **Provider Abstraction**:
 The bring-your-own-subscription runner layer that drives the operator's authenticated vendor CLI (Codex, Claude Code) in headless mode, with a configurable default and per-workload model profiles.
 _Avoid_: single-provider lock-in, hardcoded model vendor
+
+**Capture Provider**:
+An agent environment integration, such as Codex hooks, that can emit raw session activity into Myelin.
+_Avoid_: Codex as the product boundary, memory provider
+
+**Capture Adapter**:
+The provider-specific implementation that installs, normalizes, and routes capture events into Myelin's provider-neutral Experience Log.
+_Avoid_: hardcoded hook script, core Codex logic
+
+**Install Command**:
+The machine-level setup command that configures selected Capture Providers for Myelin.
+_Avoid_: per-repo onboarding, bootstrap
+
+**Bootstrap Command**:
+The per-repository command that creates a project memory shell and opts that repo into Myelin capture.
+_Avoid_: init, onboard, global install
+
+**Project Memory Shell**:
+The minimum project-owned layout and metadata needed before curated Project Memory exists.
+_Avoid_: generated project summary, invented wiki
 
 **Core Runtime Migration**:
 The complete migration of core Myelin behavior from Python/Bash to Bun/TypeScript.
@@ -178,6 +202,7 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - **Personal Memory** is promoted from repeated user corrections, project behavior, or explicit user guidance.
 - **Experience Log** can provide evidence for **Project Memory**, **Session Memory**, **Practice Memory**, and **Personal Memory**.
 - Early **Experience Log** entries are explicit high-signal records for continuity or later curation, not routine tool-call logging.
+- An **Experience Log Tombstone** replaces a processed raw **Experience Log** row only after ingestion creates a durable output reference or explicit terminal decision.
 - An **External Work Tracker** can provide source evidence for memory, but Myelin does not model tracker-specific concepts as product primitives.
 - **Auto Mode** can mark **Experience Log** entries or candidates for later processing, but memory commands do not start new agentic workers unless a bounded worker is explicitly part of that slice.
 - An **Answer Correction** in SQLite does not repair curated **Project Memory**; agents must still use `flag_stale_answer` or `enrich_gap` when the wiki should be updated.
@@ -188,6 +213,10 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - The **Query Facade** answers explanatory questions; the **How Facade** recommends actions or procedures.
 - The **Runtime Foundation** should support Project Memory, Session Memory, Practice Memory, Personal Memory, and the agent-facing MCP tools without creating separate product runtimes.
 - The **Provider Abstraction** lets any wired backend (Codex, Claude Code today) operate Myelin under the user's own subscription; it is provider-pluggable, and a third backend such as Gemini can be added later (not wired today).
+- A **Capture Provider** is not the same as the **Provider Abstraction**: capture observes agent activity, while the provider abstraction runs Myelin workloads.
+- A **Capture Adapter** belongs behind the capture facade so provider-native events become provider-neutral **Experience Log** rows.
+- The **Install Command** configures machine-level **Capture Provider** integrations; the **Bootstrap Command** opts a specific repo into saved capture.
+- A **Bootstrap Command** creates a **Project Memory Shell**, not curated **Project Memory**.
 - The **Core Runtime Migration** replaces Python/Bash entrypoints for normal core operation with Bun/TypeScript implementations.
 - The **Runtime Layout Migration** can change directories and data structures when the new layout has a clear purpose and migration path.
 - The **V2 Breakage Budget** prioritizes building the powerful brain over preserving weak V1 behavior.

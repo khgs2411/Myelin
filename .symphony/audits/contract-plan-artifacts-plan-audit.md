@@ -1,1 +1,0 @@
-Verdict: Ready for Development
