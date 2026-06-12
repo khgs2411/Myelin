@@ -28,7 +28,7 @@ type LoadedSchema = {
 
 const CONTEXT_FILE = "schema-context.json";
 const REQUIRED_CONTEXT_COMMANDS = [
-  "project onboard",
+  "bootstrap",
   "project learn",
   "project ingest",
   "memory query",
