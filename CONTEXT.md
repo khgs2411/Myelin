@@ -200,7 +200,7 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - **Session Memory** belongs to exactly one **Project Memory** scope by default.
 - **Practice Memory** is promoted from repeated or explicitly selected project evidence.
 - **Personal Memory** is promoted from repeated user corrections, project behavior, or explicit user guidance.
-- **Experience Log** can provide evidence for **Project Memory**, **Session Memory**, **Practice Memory**, and **Personal Memory**.
+- **Experience Log** feeds **Session Memory** first as raw evidence; **Project Memory**, **Practice Memory**, and **Personal Memory** work is derived from session-level interpretation.
 - Early **Experience Log** entries are explicit high-signal records for continuity or later curation, not routine tool-call logging.
 - An **Experience Log Tombstone** replaces a processed raw **Experience Log** row only after ingestion creates a durable output reference or explicit terminal decision.
 - An **External Work Tracker** can provide source evidence for memory, but Myelin does not model tracker-specific concepts as product primitives.
