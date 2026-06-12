@@ -25,12 +25,16 @@ test("maps UserPromptSubmit prompt text", async () => {
   expect(event?.raw_text).toContain("Supabase");
 });
 
-test("maps Stop only when assistant message is non-empty", async () => {
+test("maps Stop with assistant text and preserves empty Stop as invalid evidence", async () => {
   const withMessage = JSON.parse(await readFile(join(fixtures, "stop-with-message.json"), "utf8"));
   const empty = JSON.parse(await readFile(join(fixtures, "stop-empty.json"), "utf8"));
 
   expect(normalizeCodexHookPayload(withMessage)?.event_kind).toBe("assistant.response");
-  expect(normalizeCodexHookPayload(empty)).toBeNull();
+  const emptyEvent = normalizeCodexHookPayload(empty);
+  expect(emptyEvent?.hook_event_name).toBe("Stop");
+  expect(emptyEvent?.event_kind).toBeNull();
+  expect(emptyEvent?.status).toBe("invalid");
+  expect(emptyEvent?.raw_payload_json).toContain("Stop");
 });
 
 test("unknown or malformed payload becomes invalid raw evidence when cwd is present", () => {

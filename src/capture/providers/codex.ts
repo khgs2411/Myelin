@@ -37,7 +37,7 @@ export function normalizeCodexHookPayload(payload: unknown, occurredAt = new Dat
     if (typeof value.last_assistant_message === "string" && value.last_assistant_message.trim().length > 0) {
       return { ...base, event_kind: "assistant.response", raw_text: value.last_assistant_message, status: "valid" };
     }
-    return null;
+    return { ...base, event_kind: null, raw_text: null, status: "invalid" };
   }
 
   return {

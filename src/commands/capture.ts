@@ -8,10 +8,11 @@ export function registerCaptureCommands(cli: Cli): void {
   cli.command(["capture", "codex-hook"], async () => {
     try {
       const payload = JSON.parse(await Bun.stdin.text());
-      return await captureCodexPayload(process.env.MYELIN_ROOT ?? repoRoot().root, payload);
-    } catch (error) {
-      return ok(`capture failed open: ${error instanceof Error ? error.message : String(error)}`);
+      await captureCodexPayload(process.env.MYELIN_ROOT ?? repoRoot().root, payload);
+    } catch {
+      // Codex hooks must fail open; capture should never interrupt an agent session.
     }
+    return ok("");
   });
 }
 

@@ -41,7 +41,7 @@ test("captureCodexPayload stores mapped events", async () => {
   }
 });
 
-test("captureCodexPayload treats empty Stop as no-op success", async () => {
+test("captureCodexPayload stores empty Stop as invalid raw evidence", async () => {
   const result = await captureCodexPayload(root, {
     hook_event_name: "Stop",
     session_id: "sess_1",
@@ -51,7 +51,18 @@ test("captureCodexPayload treats empty Stop as no-op success", async () => {
   });
 
   expect(result.exitCode).toBe(0);
-  expect(result.message).toContain("ignored");
+  expect(result.message).toBe("capture stored");
+
+  const db = openMemoryDbAt(join(root, "state", "memory.db"));
+  try {
+    const [event] = listExperienceEvents(db, "class-kit");
+    expect(event.hook_event_name).toBe("Stop");
+    expect(event.event_kind).toBeNull();
+    expect(event.status).toBe("invalid");
+    expect(event.raw_payload_json).toContain("Stop");
+  } finally {
+    db.close();
+  }
 });
 
 test("captureCodexPayload uses explicit Myelin root even when caller cwd is another repo", async () => {

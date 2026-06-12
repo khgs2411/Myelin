@@ -7,6 +7,7 @@ const MANIFEST = "install-manifest.json";
 
 type HookEntry = {
   command?: string;
+  hooks?: unknown;
   [key: string]: unknown;
 };
 
@@ -54,7 +55,7 @@ export async function applyCodexInstall(options: ProviderInstallOptions): Promis
 
   for (const event of EVENTS) {
     const existing = Array.isArray(hooks.hooks[event]) ? hooks.hooks[event] : [];
-    hooks.hooks[event] = [...existing.filter((entry) => !isMyelinEntry(entry)), { command }];
+    hooks.hooks[event] = [...removeMyelinEntries(existing), hookGroup(command)];
   }
 
   await writeFile(plan.hooks_path, `${JSON.stringify(hooks, null, 2)}\n`, "utf8");
@@ -77,7 +78,7 @@ export async function uninstallCodex(options: ProviderInstallOptions): Promise<P
       for (const event of Object.keys(hooks.hooks)) {
         const entries = hooks.hooks[event];
         if (Array.isArray(entries)) {
-          hooks.hooks[event] = entries.filter((entry) => !isMyelinEntry(entry));
+          hooks.hooks[event] = removeMyelinEntries(entries);
         }
       }
     }
@@ -95,7 +96,28 @@ async function readHooks(path: string): Promise<HooksJson> {
   return JSON.parse(await readFile(path, "utf8")) as HooksJson;
 }
 
-function isMyelinEntry(entry: unknown): boolean {
+function hookGroup(command: string): HookEntry {
+  return { hooks: [{ type: "command", command }] };
+}
+
+function removeMyelinEntries(entries: unknown[]): unknown[] {
+  return entries.map(removeMyelinEntry).filter((entry) => entry !== null);
+}
+
+function removeMyelinEntry(entry: unknown): unknown | null {
+  if (isMyelinCommand(entry)) return null;
+  if (!entry || typeof entry !== "object") return entry;
+
+  const group = entry as HookEntry;
+  if (!Array.isArray(group.hooks)) return entry;
+
+  const filteredHooks = group.hooks.filter((handler) => !isMyelinCommand(handler));
+  if (filteredHooks.length === group.hooks.length) return entry;
+  if (filteredHooks.length === 0) return null;
+  return { ...group, hooks: filteredHooks };
+}
+
+function isMyelinCommand(entry: unknown): boolean {
   if (!entry || typeof entry !== "object" || !("command" in entry)) return false;
   const command = (entry as HookEntry).command;
   return typeof command === "string" && command.includes(".myelin/shim/codex-hook");

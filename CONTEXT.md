@@ -98,6 +98,10 @@ _Avoid_: Project Memory repair, gap-note replacement
 A proposed update or observation targeted at one memory scope for later curation.
 _Avoid_: Untyped note, generic todo
 
+**Layer Handoff Instruction**:
+A durable downstream candidate/instruction/prompt/input record created by one memory-layer agent for a later memory-layer agent, with structured fields and prompt text.
+_Avoid_: Hint, casual note, trusted memory
+
 **Status Facade**:
 The MCP tool for structured current state, inventory, and latest-session lookup.
 _Avoid_: What facade, state query
@@ -201,12 +205,16 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - **Practice Memory** is promoted from repeated or explicitly selected project evidence.
 - **Personal Memory** is promoted from repeated user corrections, project behavior, or explicit user guidance.
 - **Experience Log** feeds **Session Memory** first as raw evidence; **Project Memory**, **Practice Memory**, and **Personal Memory** work is derived from session-level interpretation.
+- Memory types and storage layers are separate axes: **Experience Log**, **Session Memory**, and candidate/handoff state live in root SQLite; **Project Memory** lives in project wiki/state/sources; **Practice Memory** and **Personal Memory** canonical homes are deferred until promotion designs.
+- Trusted **Session Memory** is stored in root SQLite in a dedicated `session_memories` table; embeddings are retrieval support, not the canonical memory record.
+- A future **Session Memory Query Facade** should hide the SQLite/vector implementation from MCP callers and agents.
 - Early **Experience Log** entries are explicit high-signal records for continuity or later curation, not routine tool-call logging.
 - An **Experience Log Tombstone** replaces a processed raw **Experience Log** row only after ingestion creates a durable output reference or explicit terminal decision.
 - An **External Work Tracker** can provide source evidence for memory, but Myelin does not model tracker-specific concepts as product primitives.
 - **Auto Mode** can mark **Experience Log** entries or candidates for later processing, but memory commands do not start new agentic workers unless a bounded worker is explicitly part of that slice.
 - An **Answer Correction** in SQLite does not repair curated **Project Memory**; agents must still use `flag_stale_answer` or `enrich_gap` when the wiki should be updated.
 - A **Memory Candidate** targets exactly one of **Project Memory**, **Session Memory**, **Practice Memory**, or **Personal Memory**.
+- A **Layer Handoff Instruction** tells a future memory-layer agent what to read, query, fetch, compare, or verify; it includes structured fields plus prompt text and is not trusted higher-layer memory by itself.
 - The **Status Facade** reads state-oriented memory such as latest **Session Memory** and should not be used for general knowledge answers.
 - The **Status Facade** returns structured state first, with a short prose answer only as a convenience.
 - MCP facades require an explicit project key unless the server environment provides `LLM_WIKI_PROJECT`.
