@@ -2,6 +2,7 @@
 
 import { createCli } from "./commands/registry.ts";
 import { registerBootstrapCommand } from "./commands/bootstrap.ts";
+import { registerInstallCommands } from "./commands/install.ts";
 import { registerMemoryCommands } from "./commands/memory.ts";
 import { registerProjectCommands } from "./commands/project.ts";
 import { registerSchemaCommands } from "./commands/schema.ts";
@@ -12,6 +13,7 @@ const cli = createCli("myelin");
 
 registerStatusCommand(cli);
 registerBootstrapCommand(cli);
+registerInstallCommands(cli);
 registerMemoryCommands(cli);
 registerProjectCommands(cli);
 registerSessionCommands(cli);
