@@ -16,6 +16,7 @@ projects/*/obsidian/
 state/memory.db
 state/memory.db-wal
 state/memory.db-shm
+state/hook-errors.jsonl
 
 # ADL run-evidence (Architect-Developer Loop) — ephemeral, never committed
 .adl/
