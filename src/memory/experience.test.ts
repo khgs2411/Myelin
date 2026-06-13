@@ -4,6 +4,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openMemoryDbAt, type MemoryDb } from "./db.ts";
 import {
+  claimExperienceEvents,
+  finalizeClaimedExperienceEvents,
+  finalizeRemainingClaimedExperienceEvents,
   listExperienceEvents,
   recordExperienceEvent,
   recordHookError,
@@ -104,6 +107,171 @@ test("tombstones delete raw rows only with terminal output references", () => {
   });
 
   expect(listExperienceEvents(db, "class-kit")).toEqual([]);
+});
+
+test("claiming experience events moves rows into claimed tombstones", () => {
+  recordExperienceEvent(db, {
+    id: "evt_1",
+    project_key: "class-kit",
+    occurred_at: "2026-06-12T10:00:00.000Z",
+    provider: "codex",
+    provider_session_id: "sess_1",
+    turn_id: "turn_1",
+    hook_event_name: "UserPromptSubmit",
+    raw_text: "remember this",
+    raw_payload_json: "{}",
+    source: "codex-hook",
+    status: "valid",
+  });
+
+  const claimed = claimExperienceEvents(db, {
+    ingest_job_id: "job_1",
+    project_key: "class-kit",
+    limit: 10,
+    claimed_at: "2026-06-12T10:01:00.000Z",
+    tombstone_id_for: (event) => `tomb_${event.id}`,
+  });
+
+  expect(claimed.map((row) => row.original_event_id)).toEqual(["evt_1"]);
+  expect(listExperienceEvents(db, "class-kit")).toEqual([]);
+  const tombstones = db.query("SELECT state, ingest_job_id FROM experience_event_tombstones").all() as Array<{
+    state: string;
+    ingest_job_id: string;
+  }>;
+  expect(tombstones).toEqual([{ state: "claimed", ingest_job_id: "job_1" }]);
+});
+
+test("claiming experience events rolls back when tombstone insert fails", () => {
+  const input = {
+    project_key: "class-kit",
+    occurred_at: "2026-06-12T10:00:00.000Z",
+    provider: "codex",
+    raw_payload_json: "{}",
+    source: "codex-hook",
+    status: "valid" as const,
+  };
+  recordExperienceEvent(db, { ...input, id: "evt_1" });
+  recordExperienceEvent(db, { ...input, id: "evt_2", occurred_at: "2026-06-12T10:01:00.000Z" });
+
+  expect(() =>
+    claimExperienceEvents(db, {
+      ingest_job_id: "job_1",
+      project_key: "class-kit",
+      limit: 2,
+      claimed_at: "2026-06-12T10:02:00.000Z",
+      tombstone_id_for: () => "duplicate_tombstone",
+    }),
+  ).toThrow();
+
+  expect(listExperienceEvents(db, "class-kit").map((event) => event.id)).toEqual(["evt_1", "evt_2"]);
+  expect(db.query("SELECT COUNT(*) AS count FROM experience_event_tombstones").get()).toEqual({ count: 0 });
+});
+
+test("finalizing claimed tombstones records output references and keeps replay dedupe", () => {
+  const input = {
+    project_key: "class-kit",
+    occurred_at: "2026-06-12T10:00:00.000Z",
+    hook_event_name: "UserPromptSubmit",
+    event_kind: "user.prompt",
+    cwd: "/repo",
+    provider: "codex",
+    provider_session_id: "sess_1",
+    turn_id: "turn_1",
+    raw_payload_json: "{}",
+    source: "codex-hook",
+    status: "valid" as const,
+  };
+  recordExperienceEvent(db, { ...input, id: "evt_1" });
+  claimExperienceEvents(db, {
+    ingest_job_id: "job_1",
+    project_key: "class-kit",
+    limit: 1,
+    claimed_at: "2026-06-12T10:01:00.000Z",
+    tombstone_id_for: () => "tomb_1",
+  });
+
+  finalizeClaimedExperienceEvents(db, {
+    ingest_job_id: "job_1",
+    tombstone_ids: ["tomb_1"],
+    finalized_at: "2026-06-12T10:02:00.000Z",
+    state: "output",
+    terminal_decision: "session_memory",
+    output_references: ["session_memories/mem_1"],
+  });
+
+  const replay = recordExperienceEvent(db, { ...input, id: "evt_2" });
+  expect(replay).toBeNull();
+  const tombstone = db
+    .query("SELECT state, terminal_decision, output_references_json FROM experience_event_tombstones WHERE id = ?")
+    .get("tomb_1") as {
+    state: string;
+    terminal_decision: string;
+    output_references_json: string;
+  };
+  expect(tombstone).toEqual({
+    state: "output",
+    terminal_decision: "session_memory",
+    output_references_json: JSON.stringify(["session_memories/mem_1"]),
+  });
+});
+
+test("job-level finalization marks remaining claimed tombstones", () => {
+  recordExperienceEvent(db, {
+    id: "evt_1",
+    project_key: "class-kit",
+    occurred_at: "2026-06-12T10:00:00.000Z",
+    provider: "codex",
+    raw_payload_json: "{}",
+    source: "codex-hook",
+    status: "valid",
+  });
+  claimExperienceEvents(db, {
+    ingest_job_id: "job_1",
+    project_key: "class-kit",
+    limit: 1,
+    claimed_at: "2026-06-12T10:01:00.000Z",
+    tombstone_id_for: () => "tomb_1",
+  });
+
+  const changed = finalizeRemainingClaimedExperienceEvents(db, {
+    ingest_job_id: "job_1",
+    finalized_at: "2026-06-12T10:02:00.000Z",
+    state: "failed",
+    terminal_decision: "provider_failed",
+  });
+
+  expect(changed).toBe(1);
+  expect(db.query("SELECT state, output_references_json FROM experience_event_tombstones").get()).toEqual({
+    state: "failed",
+    output_references_json: "[]",
+  });
+});
+
+test("legacy terminal tombstone targets the requested event id, not the oldest project event", () => {
+  const base = {
+    project_key: "class-kit",
+    provider: "codex",
+    raw_payload_json: "{}",
+    source: "codex-hook",
+    status: "valid" as const,
+  };
+  recordExperienceEvent(db, { ...base, id: "evt_old", occurred_at: "2026-06-12T09:00:00.000Z" });
+  recordExperienceEvent(db, { ...base, id: "evt_target", occurred_at: "2026-06-12T10:00:00.000Z" });
+
+  tombstoneExperienceEvent(db, {
+    id: "tomb_target",
+    original_event_id: "evt_target",
+    project_key: "class-kit",
+    processed_at: "2026-06-12T10:05:00.000Z",
+    terminal_decision: "session_memory",
+    output_references: ["session_memories/mem_1"],
+  });
+
+  expect(listExperienceEvents(db, "class-kit").map((event) => event.id)).toEqual(["evt_old"]);
+  const tombstone = db
+    .query("SELECT original_event_id, state FROM experience_event_tombstones WHERE id = ?")
+    .get("tomb_target") as { original_event_id: string; state: string };
+  expect(tombstone).toEqual({ original_event_id: "evt_target", state: "output" });
 });
 
 test("tombstoned provider identities prevent replayed raw rows", () => {

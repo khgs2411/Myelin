@@ -1,6 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import type { TombstoneState } from "./ingest-types.ts";
 
 export type ExperienceStatus = "valid" | "invalid";
 
@@ -34,6 +35,37 @@ export type ExperienceEventRow = Required<
   raw_text: string | null;
   dedupe_key: string | null;
   inserted_at: string;
+};
+
+export type ClaimedExperienceTombstone = {
+  id: string;
+  original_event_id: string;
+  project_key: string;
+  ingest_job_id: string;
+  provider: string | null;
+  provider_session_id: string | null;
+  claimed_at: string;
+  state: TombstoneState;
+  source_metadata_json: string;
+  retained_evidence_json: string;
+};
+
+export type ClaimExperienceEventsInput = {
+  ingest_job_id: string;
+  project_key: string;
+  provider_session_id?: string | null;
+  limit: number;
+  claimed_at: string;
+  tombstone_id_for: (event: ExperienceEventRow) => string;
+};
+
+export type FinalizeClaimedExperienceEventsInput = {
+  ingest_job_id: string;
+  tombstone_ids: string[];
+  finalized_at: string;
+  state: Exclude<TombstoneState, "claimed">;
+  terminal_decision: string;
+  output_references: string[];
 };
 
 export type HookErrorInput = {
@@ -109,6 +141,89 @@ export function listExperienceEvents(db: Database, projectKey: string): Experien
     .all(projectKey) as ExperienceEventRow[];
 }
 
+export function claimExperienceEvents(db: Database, input: ClaimExperienceEventsInput): ClaimedExperienceTombstone[] {
+  if (!Number.isInteger(input.limit) || input.limit <= 0) {
+    throw new Error("Claim limit must be a positive integer");
+  }
+
+  const claim = db.transaction(() => {
+    const rows = db
+      .query("SELECT * FROM experience_events WHERE project_key = ? ORDER BY occurred_at, id LIMIT ?")
+      .all(input.project_key, input.limit) as ExperienceEventRow[];
+    const claimed: ClaimedExperienceTombstone[] = [];
+
+    for (const row of rows) {
+      const tombstone = buildClaimedTombstone(row, {
+        id: input.tombstone_id_for(row),
+        ingest_job_id: input.ingest_job_id,
+        provider_session_id: input.provider_session_id,
+        claimed_at: input.claimed_at,
+      });
+      insertClaimedTombstone(db, tombstone, row.dedupe_key);
+      db.query("DELETE FROM experience_events WHERE id = ? AND project_key = ?").run(row.id, row.project_key);
+      claimed.push(tombstone);
+    }
+
+    return claimed;
+  });
+
+  return claim();
+}
+
+export function finalizeClaimedExperienceEventsInOpenTransaction(
+  db: Database,
+  input: FinalizeClaimedExperienceEventsInput,
+): void {
+  if (input.tombstone_ids.length === 0) return;
+  if (input.state === "output" && input.output_references.length === 0) {
+    throw new Error("Output tombstones require at least one output reference");
+  }
+
+  for (const id of input.tombstone_ids) {
+    const result = db
+      .query(
+        `UPDATE experience_event_tombstones
+         SET finalized_at = ?, state = ?, terminal_decision = ?, output_references_json = ?
+         WHERE id = ? AND ingest_job_id = ? AND state = 'claimed'`,
+      )
+      .run(
+        input.finalized_at,
+        input.state,
+        input.terminal_decision,
+        JSON.stringify(input.output_references),
+        id,
+        input.ingest_job_id,
+      );
+    if (result.changes !== 1) throw new Error(`Unable to finalize claimed tombstone: ${id}`);
+  }
+}
+
+export function finalizeClaimedExperienceEvents(db: Database, input: FinalizeClaimedExperienceEventsInput): void {
+  const finalize = db.transaction(() => {
+    finalizeClaimedExperienceEventsInOpenTransaction(db, input);
+  });
+  finalize();
+}
+
+export function finalizeRemainingClaimedExperienceEvents(
+  db: Database,
+  input: {
+    ingest_job_id: string;
+    finalized_at: string;
+    state: "no_output" | "failed" | "unfinished";
+    terminal_decision: string;
+  },
+): number {
+  const result = db
+    .query(
+      `UPDATE experience_event_tombstones
+       SET finalized_at = ?, state = ?, terminal_decision = ?, output_references_json = ?
+       WHERE ingest_job_id = ? AND state = 'claimed'`,
+    )
+    .run(input.finalized_at, input.state, input.terminal_decision, JSON.stringify([]), input.ingest_job_id);
+  return result.changes;
+}
+
 export function recordHookError(db: Database | null, fallbackPath: string, input: HookErrorInput): void {
   if (db) {
     db.query(
@@ -143,36 +258,106 @@ export function tombstoneExperienceEvent(
     output_references: string[];
   },
 ): void {
-  const existing = db.query("SELECT dedupe_key FROM experience_events WHERE id = ?").get(input.original_event_id) as
-    | { dedupe_key: string | null }
-    | null;
-  if (!existing) throw new Error(`Unknown experience event: ${input.original_event_id}`);
   if (input.output_references.length === 0) throw new Error("Tombstone requires at least one output reference");
 
   const apply = db.transaction(() => {
-    db.query(
-      `INSERT INTO experience_event_tombstones
-        (id, original_event_id, dedupe_key, project_key, ingest_job_id, provider, provider_session_id,
-         claimed_at, finalized_at, state, terminal_decision, source_metadata_json, retained_evidence_json,
-         output_references_json)
-       VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, 'output', ?, ?, ?, ?)`,
-    ).run(
-      input.id,
-      input.original_event_id,
-      existing.dedupe_key,
-      input.project_key,
-      null,
-      null,
-      input.processed_at,
-      input.processed_at,
-      input.terminal_decision,
-      JSON.stringify({ original_event_id: input.original_event_id }),
-      JSON.stringify({}),
-      JSON.stringify(input.output_references),
-    );
-    db.query("DELETE FROM experience_events WHERE id = ?").run(input.original_event_id);
+    claimSingleExperienceEvent(db, {
+      id: input.id,
+      original_event_id: input.original_event_id,
+      project_key: input.project_key,
+      ingest_job_id: "legacy-terminal",
+      claimed_at: input.processed_at,
+    });
+    finalizeClaimedExperienceEventsInOpenTransaction(db, {
+      ingest_job_id: "legacy-terminal",
+      tombstone_ids: [input.id],
+      finalized_at: input.processed_at,
+      state: "output",
+      terminal_decision: input.terminal_decision,
+      output_references: input.output_references,
+    });
   });
   apply();
+}
+
+function claimSingleExperienceEvent(
+  db: Database,
+  input: {
+    id: string;
+    original_event_id: string;
+    project_key: string;
+    ingest_job_id: string;
+    provider_session_id?: string | null;
+    claimed_at: string;
+  },
+): ClaimedExperienceTombstone {
+  const row = db
+    .query("SELECT * FROM experience_events WHERE id = ? AND project_key = ?")
+    .get(input.original_event_id, input.project_key) as ExperienceEventRow | null;
+  if (!row) throw new Error(`Unknown experience event: ${input.original_event_id}`);
+
+  const tombstone = buildClaimedTombstone(row, input);
+  insertClaimedTombstone(db, tombstone, row.dedupe_key);
+  db.query("DELETE FROM experience_events WHERE id = ? AND project_key = ?").run(row.id, row.project_key);
+  return tombstone;
+}
+
+function buildClaimedTombstone(
+  row: ExperienceEventRow,
+  input: {
+    id: string;
+    ingest_job_id: string;
+    provider_session_id?: string | null;
+    claimed_at: string;
+  },
+): ClaimedExperienceTombstone {
+  return {
+    id: input.id,
+    original_event_id: row.id,
+    project_key: row.project_key,
+    ingest_job_id: input.ingest_job_id,
+    provider: row.provider,
+    provider_session_id: input.provider_session_id ?? row.provider_session_id,
+    claimed_at: input.claimed_at,
+    state: "claimed",
+    source_metadata_json: JSON.stringify({
+      occurred_at: row.occurred_at,
+      hook_event_name: row.hook_event_name,
+      event_kind: row.event_kind,
+      cwd: row.cwd,
+      provider: row.provider,
+      provider_session_id: row.provider_session_id,
+      turn_id: row.turn_id,
+      source: row.source,
+      status: row.status,
+    }),
+    retained_evidence_json: JSON.stringify({
+      raw_text: row.raw_text,
+      raw_payload_json: row.raw_payload_json,
+    }),
+  };
+}
+
+function insertClaimedTombstone(db: Database, tombstone: ClaimedExperienceTombstone, dedupeKey: string | null): void {
+  db.query(
+    `INSERT INTO experience_event_tombstones
+      (id, original_event_id, dedupe_key, project_key, ingest_job_id, provider, provider_session_id,
+       claimed_at, finalized_at, state, terminal_decision, source_metadata_json, retained_evidence_json,
+       output_references_json)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 'claimed', NULL, ?, ?, ?)`,
+  ).run(
+    tombstone.id,
+    tombstone.original_event_id,
+    dedupeKey,
+    tombstone.project_key,
+    tombstone.ingest_job_id,
+    tombstone.provider,
+    tombstone.provider_session_id,
+    tombstone.claimed_at,
+    tombstone.source_metadata_json,
+    tombstone.retained_evidence_json,
+    JSON.stringify([]),
+  );
 }
 
 function providerDedupeKey(input: ExperienceEventInput): string | null {
