@@ -313,6 +313,64 @@ test("worker marks claimed tombstones failed when provider invocation fails", as
   expect(getIngestJob(db, "job_1")?.status).toBe("failed");
 });
 
+test("worker rejects invalid provider output before durable memory writes", async () => {
+  recordExperienceEvent(db, {
+    id: "evt_1",
+    project_key: "class-kit",
+    occurred_at: "2026-06-13T09:59:00.000Z",
+    provider: "codex",
+    raw_payload_json: "{}",
+    source: "codex-hook",
+    status: "valid",
+  });
+  db.close();
+
+  await expect(
+    runIngestWorker({
+      root,
+      projectKey: "class-kit",
+      jobId: "job_1",
+      targetRepo: "/target/repo",
+      provider: "codex",
+      batchSize: 1,
+      now: fixedNow(),
+      runner: async (): Promise<RunProcessResult> => ({
+        exitCode: 0,
+        stdout: JSON.stringify({
+          session_memories: [
+            {
+              id: "mem_1",
+              source_event_refs: ["tomb_job_1_evt_1"],
+              summary: "Captured useful continuity.",
+              payload: {},
+              confidence: "high",
+              risk: "low",
+            },
+          ],
+        }),
+        stderr: "",
+      }),
+    }),
+  ).rejects.toThrow("IngestWorkerOutput contract violation: session_memories[0].memory_kind must be one of");
+
+  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  expect(db.query("SELECT COUNT(*) AS count FROM session_memories").get()).toEqual({ count: 0 });
+  expect(db.query("SELECT COUNT(*) AS count FROM memory_candidates").get()).toEqual({ count: 0 });
+  expect(db.query("SELECT COUNT(*) AS count FROM project_handoff_instructions").get()).toEqual({ count: 0 });
+  expect(db.query("SELECT COUNT(*) AS count FROM practice_handoff_instructions").get()).toEqual({ count: 0 });
+  expect(db.query("SELECT COUNT(*) AS count FROM personal_handoff_instructions").get()).toEqual({ count: 0 });
+  expect(db.query("SELECT state, terminal_decision FROM experience_event_tombstones WHERE id = ?").get("tomb_job_1_evt_1")).toEqual({
+    state: "failed",
+    terminal_decision: "provider_failed",
+  });
+
+  const job = getIngestJob(db, "job_1");
+  expect(job?.status).toBe("failed");
+  expect(job?.error_json).toContain("IngestWorkerOutput contract violation");
+  expect(job?.error_json).toContain("memory_kind");
+  expect(job?.error_json).not.toContain("NOT NULL constraint failed");
+});
+
 function seedClaimedTombstone(
   db: MemoryDb,
   input: { id: string; ingest_job_id: string; project_key: string },
