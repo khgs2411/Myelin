@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 
-type Migration = { version: number; sql: string };
+type Migration = { version: number; sql?: string; apply?: (db: Database) => void };
 
 const MIGRATIONS: Migration[] = [
   {
@@ -204,6 +204,10 @@ const MIGRATIONS: Migration[] = [
       CREATE INDEX personal_handoff_instructions_project_status ON personal_handoff_instructions(project_key, status, created_at);
     `,
   },
+  {
+    version: 4,
+    apply: migrateExperienceEventTombstonesToClaimFinalizeSchema,
+  },
 ];
 
 export function runMigrations(db: Database, now: Date = new Date()): void {
@@ -214,7 +218,8 @@ export function runMigrations(db: Database, now: Date = new Date()): void {
   for (const migration of MIGRATIONS) {
     if (migration.version <= current) continue;
     const apply = db.transaction(() => {
-      db.exec(migration.sql);
+      if (migration.sql) db.exec(migration.sql);
+      if (migration.apply) migration.apply(db);
       db.query("INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)").run(
         migration.version,
         now.toISOString(),
@@ -222,4 +227,82 @@ export function runMigrations(db: Database, now: Date = new Date()): void {
     });
     apply(); // throws on failure → transaction rolls back, version stays unrecorded → re-open resumes
   }
+}
+
+type TableColumn = { name: string };
+
+type LegacyExperienceEventTombstone = {
+  id: string;
+  original_event_id: string;
+  dedupe_key: string | null;
+  project_key: string;
+  processed_at: string;
+  terminal_decision: string | null;
+  output_references_json: string | null;
+};
+
+function migrateExperienceEventTombstonesToClaimFinalizeSchema(db: Database): void {
+  const columns = db.query("PRAGMA table_info(experience_event_tombstones)").all() as TableColumn[];
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (columnNames.has("ingest_job_id")) return;
+  if (!columnNames.has("processed_at")) return;
+
+  const legacyRows = db.query("SELECT * FROM experience_event_tombstones ORDER BY processed_at, id").all() as
+    LegacyExperienceEventTombstone[];
+
+  db.exec(`
+    CREATE TABLE experience_event_tombstones_new (
+      id                    TEXT PRIMARY KEY,
+      original_event_id      TEXT NOT NULL,
+      dedupe_key             TEXT,
+      project_key            TEXT NOT NULL,
+      ingest_job_id          TEXT,
+      provider               TEXT,
+      provider_session_id    TEXT,
+      claimed_at             TEXT NOT NULL,
+      finalized_at           TEXT,
+      state                  TEXT NOT NULL CHECK (state IN ('claimed', 'output', 'no_output', 'failed', 'unfinished')),
+      terminal_decision      TEXT,
+      source_metadata_json   TEXT NOT NULL,
+      retained_evidence_json TEXT NOT NULL,
+      output_references_json TEXT NOT NULL
+    );
+  `);
+
+  const insert = db.query(
+    `INSERT INTO experience_event_tombstones_new
+      (id, original_event_id, dedupe_key, project_key, ingest_job_id, provider, provider_session_id,
+       claimed_at, finalized_at, state, terminal_decision, source_metadata_json, retained_evidence_json,
+       output_references_json)
+     VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, ?, 'output', ?, ?, ?, ?)`,
+  );
+
+  for (const row of legacyRows) {
+    insert.run(
+      row.id,
+      row.original_event_id,
+      row.dedupe_key,
+      row.project_key,
+      "legacy-terminal",
+      row.processed_at,
+      row.processed_at,
+      row.terminal_decision,
+      JSON.stringify({
+        original_event_id: row.original_event_id,
+        project_key: row.project_key,
+        migrated_from: "terminal_tombstone",
+      }),
+      JSON.stringify({}),
+      row.output_references_json ?? JSON.stringify([]),
+    );
+  }
+
+  db.exec(`
+    DROP TABLE experience_event_tombstones;
+    ALTER TABLE experience_event_tombstones_new RENAME TO experience_event_tombstones;
+    CREATE INDEX experience_event_tombstones_project_time ON experience_event_tombstones(project_key, claimed_at);
+    CREATE UNIQUE INDEX experience_event_tombstones_original_event ON experience_event_tombstones(original_event_id);
+    CREATE UNIQUE INDEX experience_event_tombstones_dedupe_key ON experience_event_tombstones(dedupe_key) WHERE dedupe_key IS NOT NULL;
+  `);
 }
