@@ -19,7 +19,7 @@ test("opening creates the session schema and records the migration", () => {
   expect(names).toContain("experience_event_tombstones");
   expect(names).toContain("schema_migrations");
   const applied = db.query("SELECT version FROM schema_migrations").all() as { version: number }[];
-  expect(applied.map((r) => r.version)).toEqual([1, 2]);
+  expect(applied.map((r) => r.version)).toEqual([1, 2, 3]);
   db.close();
 });
 
@@ -28,8 +28,46 @@ test("migrations are idempotent across re-opens", () => {
   openMemoryDbAt(path).close();
   const db = openMemoryDbAt(path);
   const count = db.query("SELECT count(*) AS n FROM schema_migrations").get() as { n: number };
-  expect(count.n).toBe(2);
+  expect(count.n).toBe(3);
   db.close();
+});
+
+test("opening creates ingest, session memory, candidate, handoff, and tombstone schema", () => {
+  const db = openMemoryDbAt(":memory:");
+  try {
+    const tables = db.query("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all() as Array<{
+      name: string;
+    }>;
+    const tableNames = tables.map((row) => row.name);
+    expect(tableNames).toContain("ingest_jobs");
+    expect(tableNames).toContain("session_memories");
+    expect(tableNames).toContain("memory_candidates");
+    expect(tableNames).toContain("project_handoff_instructions");
+    expect(tableNames).toContain("practice_handoff_instructions");
+    expect(tableNames).toContain("personal_handoff_instructions");
+
+    const tombstoneColumns = db.query("PRAGMA table_info(experience_event_tombstones)").all() as Array<{
+      name: string;
+    }>;
+    expect(tombstoneColumns.map((column) => column.name)).toEqual([
+      "id",
+      "original_event_id",
+      "dedupe_key",
+      "project_key",
+      "ingest_job_id",
+      "provider",
+      "provider_session_id",
+      "claimed_at",
+      "finalized_at",
+      "state",
+      "terminal_decision",
+      "source_metadata_json",
+      "retained_evidence_json",
+      "output_references_json",
+    ]);
+  } finally {
+    db.close();
+  }
 });
 
 test("foreign keys are enforced on the connection", () => {
