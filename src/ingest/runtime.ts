@@ -5,6 +5,7 @@ import type { IngestJobRow } from "../memory/ingest-types.ts";
 import type { RunProcessResult } from "../runtime/process.ts";
 import { runProcess } from "../runtime/process.ts";
 import { findProject } from "../runtime/projects.ts";
+import { finalizeRemainingClaimedExperienceEvents } from "../memory/experience.ts";
 import { updateIngestJobStatus } from "./jobs.ts";
 
 export type RuntimeProcessRunner = (command: string[], options?: { cwd?: string }) => Promise<RunProcessResult>;
@@ -80,6 +81,13 @@ export function refreshDetachedIngestJobStatus(input: {
   const followup = parseFollowupState(input.job.followup_state_json);
   const pid = typeof followup?.pid === "number" ? followup.pid : null;
   if (pid === null || (input.isAlive ?? isProcessAlive)(pid)) return input.job;
+
+  finalizeRemainingClaimedExperienceEvents(input.db, {
+    ingest_job_id: input.job.id,
+    finalized_at: input.now,
+    state: "failed",
+    terminal_decision: "detached_worker_exited",
+  });
 
   return updateIngestJobStatus(input.db, {
     id: input.job.id,

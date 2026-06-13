@@ -7,6 +7,7 @@ import { registerIngestCommands } from "./ingest.ts";
 import { getIngestJob } from "../ingest/jobs.ts";
 import type { DetachedSpawner } from "../ingest/runtime.ts";
 import { openMemoryDb } from "../memory/db.ts";
+import { claimExperienceEvents, recordExperienceEvent } from "../memory/experience.ts";
 import { writeJson } from "../runtime/json.ts";
 
 let root: string;
@@ -124,6 +125,73 @@ test("ingest status marks detached running job failed when stored pid is dead", 
     code: "detached_worker_exited",
     pid: 2468,
   });
+});
+
+test("ingest status finalizes claimed tombstones when detached running job pid is dead", async () => {
+  const cli = createCli("myelin");
+  registerIngestCommands(cli, {
+    now: () => new Date("2026-06-13T10:00:00.000Z"),
+    runner: async () => ({ exitCode: 0, stdout: "master\n", stderr: "" }),
+    spawn: () => ({ pid: 2469, unref: () => {} }),
+  });
+  const started = await cli.run(["ingest", "demo", "--limit", "1", "--json"]);
+  const jobId = JSON.parse(started.message).job.id;
+  const db = openMemoryDb(root);
+  try {
+    recordExperienceEvent(db, {
+      id: "evt_1",
+      project_key: "demo",
+      occurred_at: "2026-06-13T10:01:00.000Z",
+      provider: "codex",
+      raw_payload_json: "{}",
+      source: "codex-hook",
+      status: "valid",
+    });
+    claimExperienceEvents(db, {
+      ingest_job_id: jobId,
+      project_key: "demo",
+      limit: 1,
+      claimed_at: "2026-06-13T10:01:30.000Z",
+      tombstone_id_for: () => "tomb_1",
+    });
+  } finally {
+    db.close();
+  }
+
+  const statusCli = createCli("myelin");
+  registerIngestCommands(statusCli, {
+    now: () => new Date("2026-06-13T10:05:00.000Z"),
+    isProcessAlive: () => false,
+  });
+  const status = await statusCli.run(["ingest", "status", jobId, "--json"]);
+  const response = JSON.parse(status.message);
+
+  expect(status.exitCode).toBe(0);
+  expect(response.job.status).toBe("failed");
+  expect(JSON.parse(response.job.error_json)).toMatchObject({ code: "detached_worker_exited" });
+
+  const readDb = openMemoryDb(root);
+  try {
+    expect(
+      readDb
+        .query("SELECT COUNT(*) AS count FROM experience_event_tombstones WHERE ingest_job_id = ? AND state = 'claimed'")
+        .get(jobId),
+    ).toEqual({ count: 0 });
+    expect(
+      readDb
+        .query(
+          "SELECT state, terminal_decision, finalized_at, output_references_json FROM experience_event_tombstones WHERE ingest_job_id = ?",
+        )
+        .get(jobId),
+    ).toEqual({
+      state: "failed",
+      terminal_decision: "detached_worker_exited",
+      finalized_at: "2026-06-13T10:05:00.000Z",
+      output_references_json: "[]",
+    });
+  } finally {
+    readDb.close();
+  }
 });
 
 test("ingest worker dispatches stored job input to the worker runtime", async () => {

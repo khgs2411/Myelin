@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openMemoryDbAt, type MemoryDb } from "../memory/db.ts";
+import { claimExperienceEvents, recordExperienceEvent } from "../memory/experience.ts";
 import { writeJson } from "../runtime/json.ts";
 import { createIngestJob, getIngestJob } from "./jobs.ts";
 import {
@@ -237,6 +238,64 @@ test("refresh marks running detached job failed when stored pid is dead", async 
     code: "detached_worker_exited",
     pid: 4567,
     log_path: ingestJobLogPath(root, "class-kit", "job_5"),
+  });
+});
+
+test("refresh finalizes remaining claimed tombstones when detached worker pid is dead", async () => {
+  createIngestJob(db, {
+    id: "job_6",
+    project_key: "class-kit",
+    provider: "codex",
+    input: {},
+    now: "2026-06-13T10:00:00.000Z",
+  });
+  updateJobToRunning("job_6", {
+    pid: 4568,
+    log_path: ingestJobLogPath(root, "class-kit", "job_6"),
+    target_repo: "/repo",
+    branch: "master",
+  });
+  recordExperienceEvent(db, {
+    id: "evt_1",
+    project_key: "class-kit",
+    occurred_at: "2026-06-13T10:01:00.000Z",
+    provider: "codex",
+    raw_payload_json: "{}",
+    source: "codex-hook",
+    status: "valid",
+  });
+  claimExperienceEvents(db, {
+    ingest_job_id: "job_6",
+    project_key: "class-kit",
+    limit: 1,
+    claimed_at: "2026-06-13T10:01:30.000Z",
+    tombstone_id_for: () => "tomb_1",
+  });
+
+  const job = getIngestJob(db, "job_6");
+  if (!job) throw new Error("missing test job");
+  const refreshed = refreshDetachedIngestJobStatus({
+    db,
+    job,
+    now: "2026-06-13T10:02:00.000Z",
+    isAlive: () => false,
+  });
+
+  expect(refreshed.status).toBe("failed");
+  expect(
+    db
+      .query("SELECT COUNT(*) AS count FROM experience_event_tombstones WHERE ingest_job_id = ? AND state = 'claimed'")
+      .get("job_6"),
+  ).toEqual({ count: 0 });
+  expect(
+    db
+      .query("SELECT state, terminal_decision, finalized_at, output_references_json FROM experience_event_tombstones")
+      .get(),
+  ).toEqual({
+    state: "failed",
+    terminal_decision: "detached_worker_exited",
+    finalized_at: "2026-06-13T10:02:00.000Z",
+    output_references_json: "[]",
   });
 });
 
