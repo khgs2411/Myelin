@@ -69,8 +69,8 @@ export function updateIngestJobStatus(db: Database, input: UpdateIngestJobStatus
     input.finished_at === undefined ? existing.finished_at : input.finished_at,
     input.output_counts === undefined ? existing.output_counts_json : JSON.stringify(input.output_counts),
     input.terminal_summary === undefined ? existing.terminal_summary : input.terminal_summary,
-    input.error === undefined ? existing.error_json : JSON.stringify(input.error),
-    input.followup_state === undefined ? existing.followup_state_json : JSON.stringify(input.followup_state),
+    input.error === undefined ? existing.error_json : jsonOrNull(input.error),
+    input.followup_state === undefined ? existing.followup_state_json : jsonOrNull(input.followup_state),
     input.updated_at,
     input.id,
   );
@@ -82,4 +82,8 @@ function requireIngestJob(db: Database, id: string): IngestJobRow {
   const job = getIngestJob(db, id);
   if (!job) throw new Error(`Unknown ingest job: ${id}`);
   return job;
+}
+
+function jsonOrNull(value: Record<string, unknown> | null): string | null {
+  return value === null ? null : JSON.stringify(value);
 }

@@ -80,6 +80,36 @@ test("records completed and failed terminal job states", () => {
   expect(JSON.parse(failed.error_json ?? "{}")).toEqual({ code: "provider_failed" });
 });
 
+test("successful terminal updates can clear stale error state", () => {
+  createIngestJob(db, {
+    id: "job_3",
+    project_key: "class-kit",
+    provider: "codex",
+    input: {},
+    now: "2026-06-13T10:00:00.000Z",
+  });
+
+  updateIngestJobStatus(db, {
+    id: "job_3",
+    status: "failed",
+    finished_at: "2026-06-13T10:05:00.000Z",
+    updated_at: "2026-06-13T10:05:00.000Z",
+    error: { code: "detached_worker_exited" },
+  });
+
+  const completed = updateIngestJobStatus(db, {
+    id: "job_3",
+    status: "completed",
+    finished_at: "2026-06-13T10:06:00.000Z",
+    updated_at: "2026-06-13T10:06:00.000Z",
+    output_counts: { claimed: 1 },
+    error: null,
+  });
+
+  expect(completed.status).toBe("completed");
+  expect(completed.error_json).toBeNull();
+});
+
 test("throws when updating an unknown ingest job", () => {
   expect(() =>
     updateIngestJobStatus(db, {

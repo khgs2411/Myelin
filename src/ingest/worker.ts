@@ -124,7 +124,7 @@ export function parseIngestWorkerOutput(value: JsonObject): IngestWorkerOutput {
     output.no_output_tombstone_ids = validateStringArray(value.no_output_tombstone_ids, "no_output_tombstone_ids");
   }
   if (value.terminal_summary !== undefined) {
-    output.terminal_summary = validateString(value.terminal_summary, "terminal_summary");
+    output.terminal_summary = validateOptionalNonEmptyString(value.terminal_summary, "terminal_summary");
   }
   return output;
 }
@@ -150,7 +150,12 @@ export function buildIngestPrompt(input: {
     "Allowed memory candidate scope values: session, project, practice, personal.",
     "Allowed handoff target_scope values: project, practice, personal.",
     "Allowed provider-created status values for candidates and handoffs: pending, needs_review.",
+    "Every memory candidate must include: id, source_event_refs, scope, status, candidate_type, summary, evidence, proposed_payload, confidence, risk, reason.",
+    "Use candidate_type as a stable dotted classifier, for example session.continuity, project.decision, practice.workflow, or personal.preference.",
+    "Every handoff instruction must include: id, target_scope, status, objective, prompt_text, source_session_memory_ids, source_event_refs, suggested_actions, reason, confidence, risk.",
     "Example session memory: {\"id\":\"mem_<short-id>\",\"source_event_refs\":[\"tomb_<claimed-id>\"],\"memory_kind\":\"continuity\",\"summary\":\"Useful continuity.\",\"payload\":{},\"confidence\":\"high\",\"risk\":\"low\"}.",
+    "Example memory candidate: {\"id\":\"cand_<short-id>\",\"source_event_refs\":[\"tomb_<claimed-id>\"],\"scope\":\"session\",\"status\":\"needs_review\",\"candidate_type\":\"session.continuity\",\"summary\":\"Possible useful continuity.\",\"evidence\":{},\"proposed_payload\":{},\"confidence\":\"medium\",\"risk\":\"medium\",\"reason\":\"Needs review before trust\"}.",
+    "Example handoff instruction: {\"id\":\"handoff_<short-id>\",\"target_scope\":\"project\",\"status\":\"pending\",\"objective\":\"Verify a durable project fact\",\"prompt_text\":\"Review the cited tombstones and update project memory if valid.\",\"source_session_memory_ids\":[],\"source_event_refs\":[\"tomb_<claimed-id>\"],\"suggested_actions\":[\"review evidence\"],\"reason\":\"May belong in project memory\",\"confidence\":\"medium\",\"risk\":\"medium\"}.",
     "",
     "Claimed Experience Log tombstones:",
     JSON.stringify(input.claimed, null, 2),
@@ -175,6 +180,12 @@ function validateString(value: unknown, path: string): string {
 function validateOptionalStringOrNull(value: unknown, path: string): string | null | undefined {
   if (value === undefined || value === null) return value;
   if (typeof value === "string") return value;
+  throw new Error(`IngestWorkerOutput contract violation: ${path} must be a string or null`);
+}
+
+function validateOptionalNonEmptyString(value: unknown, path: string): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "string") return value.trim() === "" ? undefined : value;
   throw new Error(`IngestWorkerOutput contract violation: ${path} must be a string or null`);
 }
 
@@ -405,6 +416,7 @@ export async function runIngestWorker(input: {
         handoff_instructions: handoffs,
       },
       terminal_summary: terminalSummary,
+      error: null,
     });
   } catch (error) {
     finalizeRemainingClaimedExperienceEvents(db, {

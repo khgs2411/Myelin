@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createIngestJob, getIngestJob } from "./jobs.ts";
-import { applyIngestWorkerOutput, runIngestWorker } from "./worker.ts";
+import { applyIngestWorkerOutput, parseIngestWorkerOutput, runIngestWorker } from "./worker.ts";
 import { openMemoryDbAt, type MemoryDb } from "../memory/db.ts";
 import { listExperienceEvents, recordExperienceEvent } from "../memory/experience.ts";
 import type { RunProcessResult } from "../runtime/process.ts";
@@ -225,6 +225,11 @@ test("output application rejects tombstones marked both output and no_output", (
   ).toThrow("Tombstone tomb_1 cannot be both output and no_output");
 });
 
+test("parser treats empty terminal summary as absent", () => {
+  expect(parseIngestWorkerOutput({ terminal_summary: "" })).toEqual({ terminal_summary: undefined });
+  expect(parseIngestWorkerOutput({ terminal_summary: null })).toEqual({ terminal_summary: undefined });
+});
+
 test("worker claims batches from target repo cwd and completes when queue is empty", async () => {
   recordExperienceEvent(db, {
     id: "evt_1",
@@ -274,6 +279,8 @@ test("worker claims batches from target repo cwd and completes when queue is emp
   expect(calls).toHaveLength(1);
   expect(calls[0].cwd).toBe("/target/repo");
   expect(calls[0].stdin).toContain("Every session memory, memory candidate, and handoff instruction must include source_event_refs");
+  expect(calls[0].stdin).toContain("Every memory candidate must include: id, source_event_refs, scope, status, candidate_type");
+  expect(calls[0].stdin).toContain("\"candidate_type\":\"session.continuity\"");
   expect(listExperienceEvents(db, "class-kit")).toEqual([]);
   expect(db.query("SELECT id FROM session_memories WHERE id = ?").get("mem_1")).toEqual({ id: "mem_1" });
   expect(getIngestJob(db, "job_1")?.status).toBe("completed");

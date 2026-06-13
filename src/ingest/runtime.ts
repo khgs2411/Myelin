@@ -6,7 +6,7 @@ import type { RunProcessResult } from "../runtime/process.ts";
 import { runProcess } from "../runtime/process.ts";
 import { findProject } from "../runtime/projects.ts";
 import { finalizeRemainingClaimedExperienceEvents } from "../memory/experience.ts";
-import { updateIngestJobStatus } from "./jobs.ts";
+import { getIngestJob, updateIngestJobStatus } from "./jobs.ts";
 
 export type RuntimeProcessRunner = (command: string[], options?: { cwd?: string }) => Promise<RunProcessResult>;
 export type ProcessLivenessChecker = (pid: number) => boolean;
@@ -23,6 +23,7 @@ export type DetachedSpawner = (options: {
   stderr: ReturnType<typeof Bun.file>;
   stdin: "ignore";
   env: Record<string, string | undefined>;
+  detached: true;
 }) => {
   pid?: number;
   unref: () => void;
@@ -121,6 +122,7 @@ export async function spawnDetachedIngestWorker(input: {
     stdout: Bun.file(input.logPath),
     stderr: Bun.file(input.logPath),
     stdin: "ignore",
+    detached: true,
     env: {
       ...(input.env ?? process.env),
       MYELIN_ROOT: input.root,
@@ -191,18 +193,21 @@ export async function launchDetachedIngestWorker(input: {
     throw error;
   }
 
-  updateIngestJobStatus(input.db, {
-    id: input.jobId,
-    status: "running",
-    updated_at: input.now,
-    started_at: input.now,
-    followup_state: {
-      pid: spawned.pid,
-      log_path: spawned.logPath,
-      target_repo: targetRepo,
-      branch: "master",
-    },
-  });
+  const latest = getIngestJob(input.db, input.jobId);
+  if (latest?.status === "starting" || latest?.status === "running") {
+    updateIngestJobStatus(input.db, {
+      id: input.jobId,
+      status: "running",
+      updated_at: input.now,
+      started_at: input.now,
+      followup_state: {
+        pid: spawned.pid,
+        log_path: spawned.logPath,
+        target_repo: targetRepo,
+        branch: "master",
+      },
+    });
+  }
 
   return { status: "running", pid: spawned.pid, logPath: spawned.logPath };
 }

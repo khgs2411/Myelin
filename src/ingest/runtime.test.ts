@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { openMemoryDbAt, type MemoryDb } from "../memory/db.ts";
 import { claimExperienceEvents, recordExperienceEvent } from "../memory/experience.ts";
 import { writeJson } from "../runtime/json.ts";
-import { createIngestJob, getIngestJob } from "./jobs.ts";
+import { createIngestJob, getIngestJob, updateIngestJobStatus } from "./jobs.ts";
 import {
   assertMasterBranch,
   ingestJobLogPath,
@@ -81,6 +81,7 @@ test("detached spawn runs worker from target repo and returns pid plus log path"
     cmd: ["bun", join(root, "src", "cli.ts"), "ingest", "worker", "job_1"],
     cwd: "/target/repo",
     stdin: "ignore",
+    detached: true,
     env: {
       PATH: "/bin",
       MYELIN_ROOT: root,
@@ -165,6 +166,45 @@ test("launch records detached pid and log path in followup state without provide
     target_repo: repo,
     branch: "master",
   });
+});
+
+test("launch does not overwrite a terminal state from a fast detached worker", async () => {
+  const repo = join(root, "repos", "class-kit");
+  await mkdir(repo, { recursive: true });
+  await writeJson(join(root, "projects", "class-kit", "state", "project.json"), {
+    key: "class-kit",
+    repo_paths: [repo],
+  });
+  createIngestJob(db, {
+    id: "job_fast",
+    project_key: "class-kit",
+    provider: "codex",
+    input: {},
+    now: "2026-06-13T10:00:00.000Z",
+  });
+
+  await launchDetachedIngestWorker({
+    db,
+    root,
+    projectKey: "class-kit",
+    jobId: "job_fast",
+    now: "2026-06-13T10:01:00.000Z",
+    runner: async () => ({ exitCode: 0, stdout: "master\n", stderr: "" }),
+    spawn: () => {
+      updateIngestJobStatus(db, {
+        id: "job_fast",
+        status: "completed",
+        updated_at: "2026-06-13T10:01:01.000Z",
+        finished_at: "2026-06-13T10:01:01.000Z",
+        output_counts: { claimed: 0 },
+      });
+      return { pid: 9877, unref: () => {} };
+    },
+  });
+
+  const job = getIngestJob(db, "job_fast");
+  expect(job?.status).toBe("completed");
+  expect(job?.finished_at).toBe("2026-06-13T10:01:01.000Z");
 });
 
 test("launch fails job and writes configured log when detached spawn throws", async () => {
