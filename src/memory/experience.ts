@@ -152,15 +152,22 @@ export function tombstoneExperienceEvent(
   const apply = db.transaction(() => {
     db.query(
       `INSERT INTO experience_event_tombstones
-        (id, original_event_id, dedupe_key, project_key, processed_at, terminal_decision, output_references_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        (id, original_event_id, dedupe_key, project_key, ingest_job_id, provider, provider_session_id,
+         claimed_at, finalized_at, state, terminal_decision, source_metadata_json, retained_evidence_json,
+         output_references_json)
+       VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, 'output', ?, ?, ?, ?)`,
     ).run(
       input.id,
       input.original_event_id,
       existing.dedupe_key,
       input.project_key,
+      null,
+      null,
+      input.processed_at,
       input.processed_at,
       input.terminal_decision,
+      JSON.stringify({ original_event_id: input.original_event_id }),
+      JSON.stringify({}),
       JSON.stringify(input.output_references),
     );
     db.query("DELETE FROM experience_events WHERE id = ?").run(input.original_event_id);
