@@ -1,10 +1,10 @@
 # Agentic Ingest And Memory Candidate Queue Design
 
-Status: Working draft. Not approved for implementation planning yet.
+Status: Externally audited and ready for implementation roadmap planning.
 
 ## Goal
 
-Design the first processing path after raw hook capture: `myelin ingest <project-key>` starts a bounded agentic workflow that reads uningested `experience_events`, turns useful raw evidence into Session Memory-layer output, tombstones processed raw rows, and may enqueue downstream layer work without treating raw captured text as trusted truth.
+Design the first processing path after raw hook capture: `myelin ingest <project-key>` starts a bounded, detached agentic workflow in the target repository, gives the ingest agent tools to pull and process `experience_events`, records tombstones as audit trail, and lets the agent decide what Session Memory or downstream layer inputs to create without treating raw captured text as trusted truth.
 
 The slice exists to answer one product question: after Codex hooks create raw Experience Log evidence, how does Myelin grow Session Memory first and then derive higher memory-layer work safely?
 
@@ -21,7 +21,7 @@ Relevant current substrate:
 - `projectForRepoPath` in `src/runtime/projects.ts` resolves a local cwd to a bootstrapped project.
 - Existing session storage exists in SQLite through `sessions` and `session_events`, but the current session event kinds are manual-session oriented: `note`, `decision`, `finding`, `followup`.
 - Existing `memory query` is an answer surface, not a memory-maintenance surface.
-- Existing `project ingest` and `project learn` are pipeline commands. This design now treats top-level `myelin ingest <project-key>` as the likely public orchestration surface for an agentic evidence-to-memory pipeline, while still keeping internal stages bounded and reviewable.
+- Existing `project ingest` and `project learn` are pipeline commands. `project ingest <key>` remains the queued source/inbox processing command. This design adds top-level `myelin ingest <project-key>` as the public orchestration surface for the detached agentic Experience Log to Session Memory pipeline, while still keeping internal stages bounded and reviewable.
 
 Current repository/data layout evidence:
 
@@ -49,7 +49,7 @@ Referenced retrieval docs:
 
 ## Product Boundary
 
-This slice creates the first agentic layer above raw evidence. The ingest agent reads raw Experience Log rows plus existing Myelin memory surfaces, decides whether anything new exists for Session Memory, and writes reviewable output that can later feed Project, Practice, and Personal Memory.
+This slice creates the first agentic layer above raw evidence. The ingest agent runs from the target repository context, pulls raw Experience Log rows plus existing Myelin memory surfaces through tools, decides what Session Memory is worth creating, and writes output that can later feed Project, Practice, and Personal Memory.
 
 It does not:
 
@@ -64,7 +64,8 @@ It does not:
 It may:
 
 - invoke a bounded ingest agent
-- classify raw rows into one candidate scope
+- let the ingest agent pull Experience Log rows in batches until the queue is empty
+- let the ingest agent decide what Session Memory, Memory Candidates, and Layer Handoff Instructions to create
 - create candidate records
 - enqueue downstream project/practice/personal layer work when the session-level interpretation finds useful signal
 - mark rows no-op/rejected when they are not useful
@@ -73,25 +74,34 @@ It may:
 
 ## User-Facing Behavior
 
-The initial operator flow should be explicit:
+The initial operator flow should be explicit and non-blocking:
 
 1. Capture has already written raw Experience Log rows for a bootstrapped repo.
 2. The operator runs `myelin ingest <project-key>`.
-3. Myelin selects uningested Experience Log rows for the project.
-4. Myelin invokes the ingest agent with tools/scripts for reading raw rows, existing memory, wiki pages, and candidate state.
-5. The ingest agent decides whether each row or group is pointless, already represented, or useful Session Memory input.
-6. Myelin records candidate/no-op outputs and tombstones processed raw rows.
-7. When useful, the ingest agent can enqueue downstream layer candidates for Project, Practice, or Personal curation based on the session-level interpretation.
+3. Myelin starts a background/headless provider session for the ingest run and returns a durable handle immediately.
+4. Myelin launches the provider session with cwd set to the target repo path, on `master` for this version.
+5. The ingest agent receives a strong prompt plus tools for pulling Experience Log rows, querying/writing Myelin memory, and creating downstream handoff inputs.
+6. The ingest agent pulls Experience Log rows in batches until the queue is empty.
+7. Myelin automates the queue-drain bookkeeping around pulled rows and records tombstones as the audit trail.
+8. The ingest agent decides what Session Memory, session candidates, and Project/Practice/Personal handoff inputs to create.
+9. The operator can later inspect status or follow up using the returned job/session handle.
 
-Provisional command shape:
+First command shape:
 
 ```text
-myelin ingest <project-key> [--limit N] [--dry-run] [--json]
+myelin ingest <project-key> [--limit N] [--json]
+myelin ingest status <ingest-job-id> [--json]
 myelin memory candidates <project-key> [--status pending|needs-review|processed|rejected] [--scope session|project|practice|personal] [--json]
 myelin memory candidate show <candidate-id> [--json]
 ```
 
-The command names are provisional. The current direction is that `myelin ingest` is the public command that starts the fixed agentic ingest pipeline. Narrower internal modules own Experience Log row access, candidate creation, tombstoning, and downstream queue writes, but they are not separate product commands.
+These command names are fixed for this design slice. `myelin ingest` is the public command that starts the fixed agentic ingest pipeline as a detached/background provider session. `myelin ingest status <ingest-job-id>` is the first status surface. Narrower internal modules own Experience Log row access, Session Memory writes, candidate creation, tombstoning, and downstream queue writes, but they are not separate product commands.
+
+`--limit N` limits the maximum number of Experience Log rows the ingest job may claim from `experience_events`. It does not limit batches, Session Memory outputs, Memory Candidates, or handoff records. If omitted, the ingest agent pulls bounded batches until the active queue for that project is empty.
+
+Candidate status storage uses underscore enum values such as `needs_review`. Human CLI filters may accept the hyphenated alias `needs-review` and normalize it before querying; JSON output should return the stored enum value.
+
+`--dry-run` is not required for the first version. The stronger product requirement is that an explicit `myelin ingest <project-key>` invocation starts useful work without tying up the terminal. Preview behavior can be reconsidered later if operators need it, but it should not define the primary workflow.
 
 ## Architecture / Data Homes
 
@@ -109,6 +119,17 @@ Current data-home mapping:
 
 This preserves the implemented bootstrap layout and the existing ADR direction: SQLite is the serving/event/session substrate, Project Memory remains curated markdown, and Practice/Personal homes should be introduced only when their promotion workflows have real examples.
 
+## Architecture Layers
+
+Myelin should keep storage, product logic, query behavior, and external interfaces distinct:
+
+- DB layer: SQLite tables and indexes for Experience Log, Session Memory, Memory Candidates, and Project/Practice/Personal handoff instruction queues.
+- Functions / logic / processor layer: Myelin-owned functions that create, validate, route, list, process, and tombstone memory records. This layer owns table selection and lifecycle behavior.
+- Query layer: future retrieval behavior over Session Memory and other layers, including SQLite VEC and embedding-backed lookup.
+- MCP / CLI / API layer: external interfaces that call Myelin functions. These interfaces should not expose physical table names or require callers to know storage details.
+
+This design slice primarily defines the DB layer and the functions/logic/processor layer for Experience Log to Session Memory ingest and downstream handoff creation. Query-layer semantic retrieval and MCP/CLI/API command design are compatibility constraints and later implementation slices, except where this slice needs stable internal function contracts.
+
 ## Technical Design
 
 ### Agentic Ingest Boundary
@@ -117,15 +138,48 @@ Ingest is the public orchestration command. The Experience Log drain is an inter
 
 The ingest workflow should:
 
-- select unprocessed `experience_events` for one project
-- provide those rows to a bounded ingest agent, or provide tools for the agent to fetch them
+- launch a bounded ingest agent in the target repo cwd, on `master` for this version
+- provide tools for the agent to pull Experience Log rows in batches
 - let the agent inspect existing memory surfaces before deciding whether evidence is new
-- classify each processed unit into a terminal path
+- let the agent decide which memory outputs or handoff instructions are appropriate
 - write candidate, downstream queue, or no-op decisions
 - write `experience_event_tombstones`
-- delete processed raw rows through the existing tombstone helper
+- drain pulled raw rows by moving them into tombstones, then finalize those tombstones when the ingest job completes
 
-The ingest workflow is intentionally agentic. The hard boundary is that agentic work happens after capture, never inside hooks, and must be bounded by project, batch, tool surface, output schema, and terminal records.
+The ingest workflow is intentionally agentic. The hard boundary is that agentic work happens after capture, never inside hooks, and must be bounded by project, repo cwd, branch, batch, tool surface, output schema, and terminal records.
+
+### Agent Runtime Context
+
+The ingest agent should run as a headless provider session from the repository whose Experience Log rows are being processed. If Myelin is ingesting `class-kit`, the agent's cwd is the ClassKit repo, not the Myelin repo. For this version, Myelin should force or require the target repo to be on `master` before launching the ingest agent.
+
+The agent should not receive a pre-chewed transcript as the primary interface. Preferred access is through Myelin tools, eventually the Myelin MCP layer, that let it:
+
+- pull Experience Log rows in bounded batches
+- query existing Session Memory and other available Myelin memory
+- create Session Memory
+- create Session Memory candidates when the agent decides review is needed
+- create Project, Practice, and Personal Layer Handoff Instructions
+- inspect the current ingest job state
+
+Providing rows directly in a temporary file or prompt payload is acceptable as an implementation bridge, but the target design is tool-first so the agent can keep querying Myelin as other workers create new memory.
+
+Myelin optimizes the agent's context and capabilities; it should not hard-code the shape, count, or granularity of Session Memory records created from a batch. The agent decides whether a pulled batch produces no memory, one memory, several memory items, Session Memory candidates, or downstream Layer Handoff Instructions.
+
+If the target repo is not currently on `master`, Myelin should not launch the provider session. For this slice, the command should create or update an `ingest_jobs` record with `failed` status and structured branch-mismatch error metadata so the operator can inspect the failed attempt through the normal status path. It should not pull Experience Log rows or create tombstones in that case.
+
+### Pull-To-Tombstone Lifecycle
+
+Pulling Experience Log rows is the queue-claim operation. When an ingest agent pulls a batch, Myelin should atomically move those rows out of `experience_events` and into `experience_event_tombstones` with enough source metadata, ingest job id, provider session id, and bounded retained evidence to audit what was pulled.
+
+The tombstone is finalized when the ingest job finishes. Finalization should add the simple terminal data Myelin needs: whether the pulled evidence produced output references, produced no output, or remained unfinished because the job failed. The ingest agent does not need to manually maintain tombstones for every row; Myelin owns that bookkeeping.
+
+This lifecycle should stay intentionally small. Tombstones are an audit trail and queue-drain mechanism, not a prominent workflow surface or a general recovery system.
+
+### Parallelism Boundary
+
+The first implementation should run one detached ingest agent by default. Myelin should not build a scheduler, worker pool, cancellation manager, or multi-agent orchestration in this slice.
+
+The pull API should still be partition-safe. Pulling a bounded batch should atomically claim those rows for a specific ingest job/agent and move them into tombstones, so a later multi-agent version can split large Experience Log queues across workers without duplicate pulls. Agents should be told if they are part of a parallel run when that later mode exists, and they should use Myelin tools to observe memory created by other workers in real time.
 
 ### Candidate Queue
 
@@ -141,7 +195,7 @@ Each candidate has one lifecycle status. Provisional statuses:
 - `pending`: created and waiting for review or later processing
 - `needs_review`: created but too ambiguous or risky for automatic next steps
 - `processed`: consumed by a later workflow
-- `rejected`: explicitly rejected or terminal no-op
+- `rejected`: explicitly rejected from the queue by a human or later workflow
 
 The queue should preserve enough provenance for a future agent to inspect the candidate without needing the raw row:
 
@@ -201,11 +255,19 @@ The ingest agent is the Session Memory layer agent. It reads the lowest-level ca
 - create a Session Memory candidate when the summary is ambiguous or risky
 - create downstream layer handoff instructions for future Project, Practice, or Personal processing
 
-Session Memory is the lowest actual memory layer. Project, Practice, and Personal work is derived from session-level interpretation rather than directly trusting raw capture. This is a layer handoff graph, not a free-form recursive loop. In the first version, one ingest run performs one hop only: Experience Log to one primary Session Memory output plus optional downstream layer handoff instructions. Each handoff instruction must be a durable candidate/instruction/prompt/input for a later layer agent. It should tell that agent what to read, query, fetch, compare, or verify, and why the Session Memory agent believes the higher layer may need work.
+Session Memory is the lowest actual memory layer. Project, Practice, and Personal work is derived from session-level interpretation rather than directly trusting raw capture. This is a layer handoff graph, not a free-form recursive loop. In the first version, one ingest run performs one hop only: Experience Log to whatever Session Memory outputs the ingest agent judges useful, plus optional downstream layer handoff instructions. Each handoff instruction must be a durable candidate/instruction/prompt/input for a later layer agent. It should tell that agent what to read, query, fetch, compare, or verify, and why the Session Memory agent believes the higher layer may need work.
 
 Layer handoff instructions are not small hints. They are not trusted Project, Practice, or Personal Memory. They are structured inputs for future layer agents, with source references and enough prompt context for the downstream agent to continue from the session-level interpretation without reprocessing the full raw Experience Log.
 
 Each Layer Handoff Instruction stores both structured machine-readable fields and agent-ready prompt text. The structured fields support validation, dedupe, querying, review, and traceability. The prompt text gives the downstream layer agent a clean starting input without requiring every future agent to reconstruct the prompt from raw fields.
+
+The Session Memory agent is the first-contact agent for raw Experience Log ingestion. It may use Myelin tools, MCP calls, and existing memory retrieval to discover related prior Session Memory before writing a handoff instruction. For example, if a ClassKit session implements Supabase OAuth and Myelin retrieval shows two prior Supabase OAuth implementations, the Session Memory agent can create:
+
+- a Project layer handoff input to verify and record that ClassKit uses Supabase OAuth
+- a Practice layer handoff input to investigate the repeated Supabase OAuth implementation pattern
+- a Personal layer handoff input to evaluate whether repeated Supabase Auth choices indicate a user preference
+
+Those handoff instructions are agent-generated inputs for future layer agents. They can include the first-contact agent's generated prompt, objective, suggested reads/queries/fetches, and bounded evidence excerpts, but they should not duplicate the full raw Experience Log transcript.
 
 The structured payload should include:
 
@@ -218,6 +280,20 @@ The structured payload should include:
 - confidence/risk
 - status
 - prompt text for the downstream layer agent
+
+### Retention Boundary For Derived Inputs
+
+Memory Candidates and Layer Handoff Instructions should use extended bounded evidence retention. They may store:
+
+- generated summaries
+- bounded excerpts from captured text
+- structured source metadata
+- source Session Memory ids
+- source Experience Log event ids or tombstone ids
+- suggested Myelin queries, repo reads, or external fetches for the downstream agent
+- generated prompt text from the Session Memory agent
+
+They must not store complete raw Experience Log transcripts by default. Once an Experience Log row is processed, the raw row can be deleted through the tombstone helper after the durable output references have been written.
 
 ### Session Memory Trust Boundary
 
@@ -234,11 +310,66 @@ Provisional first candidate payloads:
 - `practice`: possible cross-project reusable approach, only when the evidence explicitly suggests a reusable pattern
 - `personal`: possible user preference, only when the evidence is explicit user guidance or repeated correction evidence
 
-The first implementation should produce low-risk Session Memory output first and queue risky Session Memory candidates. Project, Practice, and Personal handoff instruction creation should be conservative and may require explicit session-level interpretation, repeated evidence, or a later downstream layer agent before activation.
+The first implementation should let the ingest agent create low-risk Session Memory output and queue risky Session Memory candidates when the agent decides review is needed. Project, Practice, and Personal handoff instruction creation should be conservative and may require explicit session-level interpretation, repeated evidence, or a later downstream layer agent before activation.
 
 ## Data / State
 
-Provisional SQLite table:
+Provisional SQLite table for detached ingest lifecycle:
+
+```text
+ingest_jobs
+  id TEXT PRIMARY KEY
+  project_key TEXT NOT NULL
+  status TEXT NOT NULL CHECK (...)
+  provider TEXT NOT NULL
+  provider_session_id TEXT
+  requested_by TEXT
+  input_json TEXT NOT NULL
+  output_counts_json TEXT NOT NULL
+  terminal_summary TEXT
+  error_json TEXT
+  followup_state_json TEXT
+  started_at TEXT
+  finished_at TEXT
+  created_at TEXT NOT NULL
+  updated_at TEXT NOT NULL
+```
+
+`ingest_jobs` is Myelin's durable record for a detached/background ingest run. It is not a full local queue runner in this slice. It records enough lifecycle state for status checks, audit, retry decisions, and operator follow-up while allowing the provider's headless session id to remain an implementation detail attached to the Myelin job.
+
+Initial statuses should be small and lifecycle-oriented, such as:
+
+- `starting`: Myelin created the job and is launching the provider session.
+- `running`: the headless provider session is active.
+- `needs_followup`: the provider session needs operator input or could not safely continue.
+- `completed`: the run finished and wrote terminal output records.
+- `failed`: the run failed before successful completion; unprocessed raw rows remain retryable unless tombstones prove otherwise.
+
+The first version should not implement a full scheduler, retry daemon, cancellation system, or concurrency manager. The schema should leave room to grow into that later without changing the public meaning of `myelin ingest <project-key>`.
+
+Provisional SQLite table for trusted agent-written Session Memory:
+
+```text
+session_memories
+  id TEXT PRIMARY KEY
+  project_key TEXT NOT NULL
+  provider TEXT
+  provider_session_id TEXT
+  ingest_job_id TEXT
+  source_event_refs_json TEXT NOT NULL
+  memory_kind TEXT NOT NULL CHECK (...)
+  title TEXT
+  summary TEXT NOT NULL
+  payload_json TEXT NOT NULL
+  confidence TEXT NOT NULL
+  risk TEXT NOT NULL
+  created_at TEXT NOT NULL
+  updated_at TEXT NOT NULL
+```
+
+`session_memories` stores trusted, low-risk continuity written by the ingest agent. It is distinct from the existing manual `sessions` / `session_events` tables. Status/current-briefing integration may read from both later, but this slice should not force the two models into one table.
+
+Provisional SQLite table for proposed memory outputs:
 
 ```text
 memory_candidates
@@ -259,29 +390,96 @@ memory_candidates
   processed_at TEXT
 ```
 
+`memory_candidates` stores proposed memory outputs that require later review or processing. It should not store downstream agent work instructions.
+
+Provisional SQLite tables for downstream layer-agent inputs:
+
+```text
+project_handoff_instructions
+  id TEXT PRIMARY KEY
+  project_key TEXT NOT NULL
+  status TEXT NOT NULL CHECK (...)
+  objective TEXT NOT NULL
+  prompt_text TEXT NOT NULL
+  source_session_memory_ids_json TEXT NOT NULL
+  source_event_refs_json TEXT NOT NULL
+  suggested_actions_json TEXT NOT NULL
+  reason TEXT NOT NULL
+  confidence TEXT NOT NULL
+  risk TEXT NOT NULL
+  created_at TEXT NOT NULL
+  updated_at TEXT NOT NULL
+  processed_at TEXT
+```
+
+```text
+practice_handoff_instructions
+  id TEXT PRIMARY KEY
+  project_key TEXT NOT NULL
+  status TEXT NOT NULL CHECK (...)
+  objective TEXT NOT NULL
+  prompt_text TEXT NOT NULL
+  source_session_memory_ids_json TEXT NOT NULL
+  source_event_refs_json TEXT NOT NULL
+  suggested_actions_json TEXT NOT NULL
+  reason TEXT NOT NULL
+  confidence TEXT NOT NULL
+  risk TEXT NOT NULL
+  created_at TEXT NOT NULL
+  updated_at TEXT NOT NULL
+  processed_at TEXT
+```
+
+```text
+personal_handoff_instructions
+  id TEXT PRIMARY KEY
+  project_key TEXT NOT NULL
+  status TEXT NOT NULL CHECK (...)
+  objective TEXT NOT NULL
+  prompt_text TEXT NOT NULL
+  source_session_memory_ids_json TEXT NOT NULL
+  source_event_refs_json TEXT NOT NULL
+  suggested_actions_json TEXT NOT NULL
+  reason TEXT NOT NULL
+  confidence TEXT NOT NULL
+  risk TEXT NOT NULL
+  created_at TEXT NOT NULL
+  updated_at TEXT NOT NULL
+  processed_at TEXT
+```
+
+These tables store inputs for later Project, Practice, or Personal layer agents. A handoff instruction is not a proposed memory update and is not trusted higher-layer memory.
+
+Layer agents and MCP/query surfaces should not care which physical table backs a handoff. They should use layer-specific functions/facades, such as enqueueing a Project, Practice, or Personal handoff input and listing pending inputs for that layer. Shared lifecycle behavior should live in reusable code, not be duplicated per table. Cross-layer reporting, if needed, should be implemented through a facade or union-style read, not by exposing table details to callers.
+
+The external MCP/API shape can remain a single scoped interface later, such as one tool that accepts `scope` (`session`, `project`, `practice`, or `personal`) plus input text/metadata. Internally, that interface should dispatch into Myelin functions. For handoff instructions, the functions/processor layer should expose layer-specific functions backed by shared helpers so domain intent remains clear while lifecycle code stays reusable.
+
 Possible supporting indexes:
 
+- `(project_key, status, created_at)` on `ingest_jobs`
+- `(provider, provider_session_id)` on `ingest_jobs` when the provider returns a session id
 - `(project_key, status, created_at)`
 - `(project_key, scope, status, created_at)`
+- `(project_key, status, created_at)` on each layer handoff table
 - unique source-event guard if one event can create only one candidate in this slice
 
-Open design questions:
+Deferred design boundaries:
 
-- whether candidate evidence should preserve raw excerpts or only tombstone/source references
-- whether one raw event may create multiple candidates
-- whether no-op decisions live only as tombstones or also as rejected candidates
 - exact SQLite VEC table/index shape, Gemini embedding model, backfill behavior, and query facade behavior are deferred to the MCP/query retrieval slice
 - canonical Practice and Personal Memory homes are deferred until their promotion designs
+- full local queue runner behavior, retries, cancellation, and concurrency limits are deferred until detached ingest proves it needs them
 
 ## Trigger Modes
 
-This slice may revise the roadmap's trigger-mode vocabulary because `myelin ingest` is now explicitly agentic.
+This slice revises the roadmap's trigger-mode vocabulary because `myelin ingest` is now explicitly agentic and detached.
 
 Provisional interpretation:
 
 - hooks remain non-agentic raw capture
-- `myelin ingest <project-key>` is an explicit operator action that can invoke bounded agents
-- automatic/background ingest remains out of scope unless separately designed
+- `myelin ingest <project-key>` is an explicit operator action that starts a bounded background/headless provider session
+- detached ingest is not `Auto Mode`; it is explicit operator-triggered background work
+- always-on automatic ingest remains out of scope unless separately designed
+- the command should return a durable job/session handle for later status checks or follow-up
 
 ## Integrations
 
@@ -290,8 +488,8 @@ The design touches these existing product surfaces:
 - Experience Log SQLite tables and tombstone helper.
 - Project discovery by key.
 - CLI command registry.
-- Existing ingest vocabulary, because this slice likely moves the public surface from `project ingest <key>` toward top-level `myelin ingest <key>` while preserving compatibility choices as a planning concern.
-- Existing Session Memory tables, if we decide to connect candidates to open/closed sessions now.
+- Existing ingest vocabulary, because top-level `myelin ingest <key>` now coexists with `project ingest <key>` rather than replacing queued source/inbox processing.
+- Existing manual `sessions` / `session_events`, because later status/current-briefing integration may read both manual session events and trusted `session_memories`.
 - Future Project Memory curator, Practice Memory, Personal Memory, and facades.
 
 ## Permissions / Security
@@ -305,7 +503,7 @@ Security constraints:
 - avoid storing unnecessary full raw prompt/response text in candidates if tombstone/source references are enough
 - never mutate curated memory from hook-drain flow in this slice
 - no model calls in hooks
-- no unbounded worker launch from ingest
+- no unbounded worker launch from ingest; background ingest still needs project, batch, provider-session, and output limits
 - every agentic handoff writes a durable output or terminal decision
 
 ## Error Handling
@@ -318,20 +516,22 @@ Expected behavior:
 - If tombstone write fails, leave the raw row untouched or roll back the candidate/downstream write in the same transaction.
 - If a row is malformed but project-keyed, create an invalid/no-op decision or candidate according to the resolved policy.
 - If a candidate already exists for an event, do not duplicate it; return an idempotent result.
-- If an agent cannot classify a row, create `needs_review` or no-op based on the resolved policy.
-- `--dry-run` must not write candidates or tombstones.
+- If an agent cannot classify a row, create `needs_review` when review could recover signal, or a tombstone-only no-op when the row is low-signal and safely terminal.
+- If a background provider session fails after pulling rows, Myelin should finalize or mark the pulled tombstones as unfinished/failed rather than pretending they were deliberate no-output rows.
+- If the operator asks for status after a detached run, Myelin should report the durable ingest job state rather than requiring the operator to inspect provider logs directly.
 
 ## Testing Strategy
 
 Implementation planning should include:
 
-- migration tests for candidate queue tables and indexes
+- SQLite schema tests for candidate, Session Memory, and handoff queue tables and indexes
 - ingest tests that convert synthetic Experience Log rows into candidates
 - bounded agent fixture/stub tests for ingest-agent outputs
 - idempotency tests for repeated ingest runs
 - transaction tests proving raw rows are not lost on partial failure
-- dry-run tests proving no writes
-- tombstone tests proving raw rows are deleted only after candidate/no-op output exists
+- background ingest job tests proving the command returns a handle before the provider session finishes
+- status/follow-up tests proving Myelin can report detached ingest state from durable records
+- tombstone tests proving pulled rows move out of the active queue atomically and are finalized when the ingest job completes
 - CLI list/show tests for candidates
 - privacy tests or fixture checks proving tracked files do not include raw private payloads
 
@@ -340,6 +540,7 @@ Implementation planning should include:
 Likely future chunks:
 
 - candidate queue schema and helpers
+- detached ingest job/session tracking and status reporting
 - top-level ingest orchestration plus Experience Log access stage and idempotent tombstoning
 - bounded ingest agent contract and tool surface
 - one-hop layer handoff contract

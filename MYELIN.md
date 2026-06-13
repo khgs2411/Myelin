@@ -45,7 +45,7 @@ Five memory types, one root. Each has a canonical storage home and a derivation 
 | Memory type | What it holds | Canonical store |
 | --- | --- | --- |
 | **Project Memory** | Curated per-project knowledge: behavior, features, decisions, runbooks, setup, current state, provenance | markdown wiki + state JSON |
-| **Session Memory** | Project-scoped continuity: recent work, decisions, findings, next actions, blockers, "do not redo this" notes, task/branch/external-tracker context | SQLite (`sessions`, `session_events`) |
+| **Session Memory** | Project-scoped continuity: recent work, decisions, findings, next actions, blockers, "do not redo this" notes, task/branch/external-tracker context | SQLite (`session_memories` for trusted agent-written continuity; `sessions` / `session_events` remain the existing manual session surface) |
 | **Practice Memory** | Canonical cross-project "how we do X", derived from project evidence, improved as better examples appear | markdown (canonical) |
 | **Personal Memory** | Durable guidance about Liad's working preferences and agent-behavior expectations | markdown (canonical) |
 | **Experience Log** | Raw captured agent activity, used as evidence, not truth | SQLite (event log) |
@@ -112,10 +112,12 @@ Codex stages must run `--sandbox read-only` and return JSON on stdout (never wri
 
 ## 8. The Pipeline
 
-Two operator verbs refresh Project Memory from evidence (ADR 0017):
+Two existing operator verbs refresh Project Memory from evidence (ADR 0017):
 
 - **`project learn <key>`** (was `compile`) — broad Project Memory refresh. Stages: `sense → impact → propose → apply → validate`. Routine updates auto-apply with provenance; destructive deletes, decision-record supersession, low-confidence synthesis, conflicting sources, and broad rewrites are forced to review/dry-run (ADR 0019, 0020).
 - **`project ingest <key>`** (was `update`) — process queued source/inbox items. Stages: `ingest → apply → validate`.
+
+The top-level **`ingest <key>`** command is a separate agentic evidence-processing path introduced by ADR 0056. It starts a detached provider-backed ingest job that turns Experience Log rows into Session Memory and downstream layer handoff inputs. It must not be treated as a synonym for the older source/inbox `project ingest` pipeline.
 
 Stage instructions live as data under `stages/<stage-id>/` and run through a stage runner; deterministic apply / structural-validate / commit are code, not model calls. The fuller pipeline also defines `acceptance`, `reconcile`, `self-correct`, and `measure` stages (ADR 0053).
 
@@ -160,7 +162,7 @@ Manual event recording is intentionally **high-signal only** — it does not log
 
 - `session.note`, `session.stop`, `memory.candidate`, `answer.correction`.
 
-A `memory.candidate` event carries a `candidate_type` that routes it to exactly one memory scope (Project / Session / Practice / Personal); labels outside the allowed set are not valid. Memory-candidate / queue records move through statuses `pending → processed → needs-review` (distinct from the *schema*-candidate states in §6). An `answer.correction` is SQLite-only continuity evidence and does **not** repair curated Project Memory — agents use `flag_stale_answer` / `enrich_gap` for that.
+A `memory.candidate` event carries a `candidate_type` that routes it to exactly one memory scope (Project / Session / Practice / Personal); labels outside the allowed set are not valid. Memory-candidate / queue records use stored statuses such as `pending`, `processed`, `needs_review`, and `rejected` (distinct from the *schema*-candidate states in §6). Human CLI filters may accept hyphenated aliases such as `needs-review`, but JSON/state should use the stored enum value. An `answer.correction` is SQLite-only continuity evidence and does **not** repair curated Project Memory — agents use `flag_stale_answer` / `enrich_gap` for that.
 
 ## 10. Agent-Facing Interface (MCP)
 
@@ -178,7 +180,7 @@ Core owns query logic once; the detached MCP consumes it via the `myelin memory 
 
 ## 11. Retrieval
 
-- **Structured recall** — SQLite queries over sessions and events back `status` and continuity reads deterministically.
+- **Structured recall** — SQLite queries over `session_memories` and existing manual session state back `status` and continuity reads deterministically.
 - **Vector recall** — `sqlite-vec` + embeddings (a Gemini *embedding* provider is the likely first wiring) for semantic search over wiki pages, session summaries, and practices. The Indexer agent (§9.3) maintains the vector rows: chunk → hash → skip unchanged → embed changed → write; quota/network failure degrades to **pending chunks**. Vector search is a retrieval layer *over* curated truth, not a replacement for it — Myelin is not generic RAG.
 
 ## 12. Data Layout

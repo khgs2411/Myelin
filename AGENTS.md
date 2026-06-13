@@ -42,13 +42,16 @@ The Makefile is a thin alias layer. New automation should call `myelin` vocabula
 | Old V1 concept | Myelin V2 command |
 | --- | --- |
 | `compile` | `project learn <key>` |
-| `update` | `project ingest <key>` |
+| `update` source/inbox processing | `project ingest <key>` |
+| agentic Experience Log to Session Memory processing | `ingest <key>` |
 | `ask` | `memory query <key> "<question>"` |
 | `init` | `project onboard <key>` |
 | validation-only schema work | `schema check <key>` |
 | generated schema-context rebuild | `schema build <key>` |
 
 Do not reintroduce V1-concept Make targets as primary product vocabulary. If a temporary legacy escape hatch is needed, name it explicitly as legacy.
+
+`project ingest <key>` and top-level `ingest <key>` are intentionally different. `project ingest` drains queued source/inbox material through the project-memory pipeline. `ingest` starts a detached provider-backed Experience Log to Session Memory job and returns a durable handle.
 
 ## Environment And Config
 

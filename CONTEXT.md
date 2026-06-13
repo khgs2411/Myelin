@@ -64,6 +64,7 @@ _Avoid_: hand-edited compiled prompts, hidden runtime prompt
 
 **Session Memory**:
 Project-scoped continuity about recent work, next actions, blockers, and verification state.
+Trusted agent-written Session Memory from Experience Log ingest lives in `session_memories`; `sessions` / `session_events` remain the existing manual session surface until a later status/current-briefing integration.
 _Avoid_: Session Brain, chat history
 
 **Practice Memory**:
@@ -79,7 +80,7 @@ Raw captured agent activity used as evidence, not truth.
 _Avoid_: Truth store, canonical memory
 
 **Experience Log Tombstone**:
-A small terminal record that proves a raw Experience Log row was processed without retaining the raw prompt or response text.
+A small audit record that replaces a pulled raw Experience Log row and is finalized when ingest determines the row's output or no-output state.
 _Avoid_: processed raw row, permanent transcript
 
 **External Work Tracker**:
@@ -175,8 +176,12 @@ The conditions that force `project learn` out of auto-apply and into review or d
 _Avoid_: review everything, auto-apply everything
 
 **Ingest Command**:
-The V2 command for processing queued source material or inbox items.
-_Avoid_: update
+The top-level `ingest <project-key>` command that starts bounded detached agentic evidence processing for a project, beginning with Experience Log to Session Memory.
+_Avoid_: update, foreground-only drain, `project ingest`, source-specific operator command
+
+**Detached Ingest Job**:
+A background/headless provider-backed ingest run started by the Ingest Command, with a durable handle for status checks and follow-up.
+_Avoid_: always-on auto mode, untracked provider run
 
 **Core Runtime Module**:
 The root `src/runtime/*` TypeScript module set for shared core repo behavior.
@@ -209,12 +214,14 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - Trusted **Session Memory** is stored in root SQLite in a dedicated `session_memories` table; embeddings are retrieval support, not the canonical memory record.
 - A future **Session Memory Query Facade** should hide the SQLite/vector implementation from MCP callers and agents.
 - Early **Experience Log** entries are explicit high-signal records for continuity or later curation, not routine tool-call logging.
-- An **Experience Log Tombstone** replaces a processed raw **Experience Log** row only after ingestion creates a durable output reference or explicit terminal decision.
+- An **Experience Log Tombstone** replaces a pulled raw **Experience Log** row during ingest, then receives final output or no-output metadata when the ingest job completes.
 - An **External Work Tracker** can provide source evidence for memory, but Myelin does not model tracker-specific concepts as product primitives.
-- **Auto Mode** can mark **Experience Log** entries or candidates for later processing, but memory commands do not start new agentic workers unless a bounded worker is explicitly part of that slice.
+- **Auto Mode** can mark **Experience Log** entries or candidates for later processing, but it is distinct from an explicit **Detached Ingest Job** started by the **Ingest Command**.
+- A **Detached Ingest Job** runs its provider session from the target repository cwd, on `master` for the first implementation.
 - An **Answer Correction** in SQLite does not repair curated **Project Memory**; agents must still use `flag_stale_answer` or `enrich_gap` when the wiki should be updated.
 - A **Memory Candidate** targets exactly one of **Project Memory**, **Session Memory**, **Practice Memory**, or **Personal Memory**.
-- A **Layer Handoff Instruction** tells a future memory-layer agent what to read, query, fetch, compare, or verify; it includes structured fields plus prompt text and is not trusted higher-layer memory by itself.
+- A **Memory Candidate** is a proposed memory output, while a **Layer Handoff Instruction** is downstream agent input; they use separate queues.
+- A **Layer Handoff Instruction** tells a future memory-layer agent what to read, query, fetch, compare, or verify; it includes structured fields plus prompt text, uses separate Project/Practice/Personal queues behind function/facade access, and is not trusted higher-layer memory by itself.
 - The **Status Facade** reads state-oriented memory such as latest **Session Memory** and should not be used for general knowledge answers.
 - The **Status Facade** returns structured state first, with a short prose answer only as a convenience.
 - MCP facades require an explicit project key unless the server environment provides `LLM_WIKI_PROJECT`.
@@ -233,7 +240,7 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - The **Learn Command** is the broad Project Memory refresh verb.
 - **Auto-Apply Learning** is the default for day-to-day usefulness.
 - A **Learning Review Gate** is required for destructive, conflicting, low-confidence, or broad memory changes.
-- The **Ingest Command** is the narrower queued-source processing verb.
+- The **Ingest Command** is the explicit operator-triggered entrypoint for bounded agentic project evidence processing. In the current ingest design, it starts a **Detached Ingest Job** instead of requiring the operator to wait for a foreground agent run.
 - The **Core Runtime Module** is the first implementation shape for core TypeScript runtime helpers.
 - The **MCP Interface Boundary** keeps `/mcp` detached from core product logic; it communicates through stable repo files, commands, and JSON contracts.
 
@@ -281,7 +288,7 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - **Schema Context** regenerates when schema inputs change and is freshness-checked during `project learn`; unchanged inputs should not cause rewrites.
 - Old command names carry old product assumptions. Resolved: introduce a V2 CLI vocabulary and keep Make only as convenience aliases where useful.
 - V2 CLI is operator-facing; default output is human-readable, with `--json` for machine-readable output. Detached MCP remains the agent API.
-- `compile` and `update` are V1 mechanics. Resolved: use `project learn <key>` for broad Project Memory refresh and `project ingest <key>` for queued source processing.
+- `compile` and `update` are V1 mechanics. Resolved: use `project learn <key>` for broad Project Memory refresh, `project ingest <key>` for queued source/inbox processing, and top-level `ingest <key>` for detached Experience Log to Session Memory processing.
 - The **Learn Command** may read the live repo directly, but durable Project Memory writes require traceable evidence and provenance.
 - `project learn` should apply routine curated Project Memory updates by default. Review/proposal modes are opt-out controls for risky or manual workflows, not the daily default.
 - `project learn` must leave auto-apply for destructive deletes, decision-record supersession, low-confidence synthesis, conflicting sources, broad multi-area rewrites, or explicit `--review` / `--dry-run`.
