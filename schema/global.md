@@ -19,6 +19,6 @@ Durable wiki/state writes must carry traceable provenance: concrete `file_path:l
 
 ## CLI vocabulary (guidance)
 
-Operator verbs: `bootstrap`, `project learn|ingest`, `memory query`, `status`, `schema check|build`, `session close`. `schema candidates|apply` are deferred (ADR 0049). Old `compile`/`update`/`ask` names are not the product vocabulary.
+Operator verbs: `bootstrap`, `project learn|ingest`, top-level `ingest` / `ingest status`, `memory query`, `status`, `schema check|build`, `session close`. `project ingest <key>` processes queued source/inbox material through the project-memory pipeline. Top-level `ingest <key>` starts a detached provider-backed Experience Log to Session Memory job and returns a durable handle. `schema candidates|apply` are deferred (ADR 0049). Old `compile`/`update`/`ask` names are not the product vocabulary.
 
 > Source-classification guidance originated in the former root `schemas/source-classification.md` (now removed). It is captured here and as typed rules in `schema/rules/source-classification.json`.

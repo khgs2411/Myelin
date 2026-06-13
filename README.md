@@ -21,6 +21,8 @@ bun src/cli.ts schema build <project-key>
 bun src/cli.ts memory query <project-key> "What should I know?"
 bun src/cli.ts project learn <project-key> --dry-run
 bun src/cli.ts project ingest <project-key>
+bun src/cli.ts ingest <project-key>
+bun src/cli.ts ingest status <ingest-job-id>
 ```
 
 The root `Makefile` is only a thin convenience layer over the same CLI:
@@ -42,11 +44,14 @@ Myelin V2 uses product-language commands instead of the V1 pipeline names:
 | --- | --- |
 | `make compile PROJECT=<key>` | `myelin project learn <key>` / `make learn PROJECT=<key>` |
 | `make update PROJECT=<key>` | `myelin project ingest <key>` / `make ingest PROJECT=<key>` |
+| Experience Log to Session Memory ingest | `myelin ingest <key>` / `myelin ingest status <ingest-job-id>` |
 | `ask` / query helpers | `myelin memory query <key> "<question>"` / `make query ...` |
 | `make init PROJECT=<key>` | `myelin project onboard <key>` / `make onboard PROJECT=<key>` |
 | validate schema context | `myelin schema check <key>` / `myelin schema build <key>` |
 
 The old command names are V1 concepts. Keep them out of new docs and scripts unless a legacy escape hatch is explicitly being discussed.
+
+`project ingest <key>` processes queued source/inbox material through the project-memory pipeline. Top-level `ingest <key>` starts a detached provider-backed Experience Log to Session Memory job and returns a durable handle.
 
 ## Repository Layout
 
