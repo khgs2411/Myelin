@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openMemoryDbAt, type MemoryDb } from "../memory/db.ts";
@@ -9,6 +9,7 @@ import {
   assertMasterBranch,
   ingestJobLogPath,
   launchDetachedIngestWorker,
+  refreshDetachedIngestJobStatus,
   resolveIngestTargetRepo,
   spawnDetachedIngestWorker,
   type DetachedSpawner,
@@ -164,3 +165,88 @@ test("launch records detached pid and log path in followup state without provide
     branch: "master",
   });
 });
+
+test("launch fails job and writes configured log when detached spawn throws", async () => {
+  const repo = join(root, "repos", "class-kit");
+  await mkdir(repo, { recursive: true });
+  await writeJson(join(root, "projects", "class-kit", "state", "project.json"), {
+    key: "class-kit",
+    repo_paths: [repo],
+  });
+  createIngestJob(db, {
+    id: "job_4",
+    project_key: "class-kit",
+    provider: "codex",
+    input: {},
+    now: "2026-06-13T10:00:00.000Z",
+  });
+
+  await expect(
+    launchDetachedIngestWorker({
+      db,
+      root,
+      projectKey: "class-kit",
+      jobId: "job_4",
+      now: "2026-06-13T10:01:00.000Z",
+      runner: async () => ({ exitCode: 0, stdout: "master\n", stderr: "" }),
+      spawn: () => {
+        throw new Error("spawn failed");
+      },
+    }),
+  ).rejects.toThrow("spawn failed");
+
+  const job = getIngestJob(db, "job_4");
+  const logPath = ingestJobLogPath(root, "class-kit", "job_4");
+  expect(job?.status).toBe("failed");
+  expect(JSON.parse(job?.error_json ?? "{}")).toMatchObject({
+    code: "detached_worker_launch_failed",
+    message: "spawn failed",
+    log_path: logPath,
+  });
+  await expect(readFile(logPath, "utf8")).resolves.toContain("Failed to launch detached ingest worker: spawn failed");
+});
+
+test("refresh marks running detached job failed when stored pid is dead", async () => {
+  createIngestJob(db, {
+    id: "job_5",
+    project_key: "class-kit",
+    provider: "codex",
+    input: {},
+    now: "2026-06-13T10:00:00.000Z",
+  });
+  updateJobToRunning("job_5", {
+    pid: 4567,
+    log_path: ingestJobLogPath(root, "class-kit", "job_5"),
+    target_repo: "/repo",
+    branch: "master",
+  });
+
+  const job = getIngestJob(db, "job_5");
+  if (!job) throw new Error("missing test job");
+  const refreshed = refreshDetachedIngestJobStatus({
+    db,
+    job,
+    now: "2026-06-13T10:02:00.000Z",
+    isAlive: () => false,
+  });
+
+  expect(refreshed.status).toBe("failed");
+  expect(refreshed.finished_at).toBe("2026-06-13T10:02:00.000Z");
+  expect(JSON.parse(refreshed.followup_state_json ?? "{}")).toMatchObject({ pid: 4567 });
+  expect(JSON.parse(refreshed.error_json ?? "{}")).toMatchObject({
+    code: "detached_worker_exited",
+    pid: 4567,
+    log_path: ingestJobLogPath(root, "class-kit", "job_5"),
+  });
+});
+
+function updateJobToRunning(jobId: string, followupState: Record<string, unknown>): void {
+  db.query(
+    `UPDATE ingest_jobs
+     SET status = 'running',
+         started_at = '2026-06-13T10:01:00.000Z',
+         updated_at = '2026-06-13T10:01:00.000Z',
+         followup_state_json = ?
+     WHERE id = ?`,
+  ).run(JSON.stringify(followupState), jobId);
+}

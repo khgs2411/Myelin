@@ -1,12 +1,14 @@
 import type { Database } from "bun:sqlite";
-import { mkdir } from "node:fs/promises";
+import { appendFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import type { IngestJobRow } from "../memory/ingest-types.ts";
 import type { RunProcessResult } from "../runtime/process.ts";
 import { runProcess } from "../runtime/process.ts";
 import { findProject } from "../runtime/projects.ts";
 import { updateIngestJobStatus } from "./jobs.ts";
 
 export type RuntimeProcessRunner = (command: string[], options?: { cwd?: string }) => Promise<RunProcessResult>;
+export type ProcessLivenessChecker = (pid: number) => boolean;
 
 export type DetachedIngestSpawnResult = {
   pid: number | null;
@@ -51,6 +53,46 @@ export async function assertMasterBranch(
 
 export function ingestJobLogPath(root: string, projectKey: string, jobId: string): string {
   return join(root, "projects", projectKey, "logs", `ingest-${jobId}.log`);
+}
+
+export function isProcessAlive(pid: number): boolean {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (
+      error instanceof Error &&
+      "code" in error &&
+      (error as NodeJS.ErrnoException).code === "EPERM"
+    );
+  }
+}
+
+export function refreshDetachedIngestJobStatus(input: {
+  db: Database;
+  job: IngestJobRow;
+  now: string;
+  isAlive?: ProcessLivenessChecker;
+}): IngestJobRow {
+  if (input.job.status !== "running") return input.job;
+
+  const followup = parseFollowupState(input.job.followup_state_json);
+  const pid = typeof followup?.pid === "number" ? followup.pid : null;
+  if (pid === null || (input.isAlive ?? isProcessAlive)(pid)) return input.job;
+
+  return updateIngestJobStatus(input.db, {
+    id: input.job.id,
+    status: "failed",
+    updated_at: input.now,
+    finished_at: input.now,
+    error: {
+      code: "detached_worker_exited",
+      message: "Detached ingest worker PID is no longer running before the job reached a terminal status.",
+      pid,
+      log_path: followup?.log_path,
+    },
+  });
 }
 
 export async function spawnDetachedIngestWorker(input: {
@@ -112,15 +154,34 @@ export async function launchDetachedIngestWorker(input: {
   }
 
   const logPath = ingestJobLogPath(input.root, input.projectKey, input.jobId);
-  const spawned = await spawnDetachedIngestWorker({
-    root: input.root,
-    projectKey: input.projectKey,
-    jobId: input.jobId,
-    targetRepo,
-    logPath,
-    env: input.env,
-    spawn: input.spawn,
+  let spawned: DetachedIngestSpawnResult;
+  try {
+    spawned = await spawnDetachedIngestWorker({
+      root: input.root,
+      projectKey: input.projectKey,
+      jobId: input.jobId,
+      targetRepo,
+      logPath,
+      env: input.env,
+      spawn: input.spawn,
   });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await appendLaunchFailure(logPath, message);
+    updateIngestJobStatus(input.db, {
+      id: input.jobId,
+      status: "failed",
+      updated_at: input.now,
+      finished_at: input.now,
+      error: {
+        code: "detached_worker_launch_failed",
+        message,
+        log_path: logPath,
+        target_repo: targetRepo,
+      },
+    });
+    throw error;
+  }
 
   updateIngestJobStatus(input.db, {
     id: input.jobId,
@@ -136,4 +197,22 @@ export async function launchDetachedIngestWorker(input: {
   });
 
   return { status: "running", pid: spawned.pid, logPath: spawned.logPath };
+}
+
+function parseFollowupState(value: string | null): Record<string, unknown> | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function appendLaunchFailure(logPath: string, message: string): Promise<void> {
+  try {
+    await appendFile(logPath, `Failed to launch detached ingest worker: ${message}\n`);
+  } catch {
+    // error_json is the fallback operator signal when the log path cannot be written.
+  }
 }
