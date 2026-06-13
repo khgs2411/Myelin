@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createCli } from "./registry.ts";
 import { registerMemoryCommands } from "./memory.ts";
+import { createMemoryCandidate } from "../memory/candidates.ts";
+import { openMemoryDb } from "../memory/db.ts";
 import { writeJson } from "../runtime/json.ts";
 import type { SchemaContext } from "../schema/types.ts";
 
@@ -64,6 +66,73 @@ test("memory query fails closed when schema context is invalid", async () => {
   expect(result.exitCode).toBe(0);
   expect(response.degraded).toBe(true);
   expect(response.degraded_reason).toContain("invalid schema-context.json");
+});
+
+test("memory candidates lists reviewable candidates with normalized status filters", async () => {
+  const db = openMemoryDb(root);
+  try {
+    createMemoryCandidate(db, {
+      id: "cand_1",
+      project_key: "demo",
+      scope: "session",
+      status: "needs_review",
+      candidate_type: "session.continuity",
+      summary: "Possible session continuity.",
+      source_event_refs: ["tomb_1"],
+      evidence: { tombstones: ["tomb_1"] },
+      proposed_payload: { summary: "Possible session continuity." },
+      confidence: "medium",
+      risk: "medium",
+      reason: "Needs review",
+      now: "2026-06-13T10:00:00.000Z",
+    });
+  } finally {
+    db.close();
+  }
+
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+
+  const result = await cli.run(["memory", "candidates", "demo", "--status", "needs-review", "--scope", "session", "--json"]);
+  const response = JSON.parse(result.message);
+
+  expect(result.exitCode).toBe(0);
+  expect(response.candidates).toHaveLength(1);
+  expect(response.candidates[0].id).toBe("cand_1");
+  expect(response.candidates[0].status).toBe("needs_review");
+});
+
+test("memory candidate show returns a single candidate", async () => {
+  const db = openMemoryDb(root);
+  try {
+    createMemoryCandidate(db, {
+      id: "cand_2",
+      project_key: "demo",
+      scope: "project",
+      status: "pending",
+      candidate_type: "project.fact",
+      summary: "Possible project fact.",
+      source_event_refs: ["tomb_2"],
+      evidence: { tombstones: ["tomb_2"] },
+      proposed_payload: { summary: "Possible project fact." },
+      confidence: "high",
+      risk: "low",
+      reason: "Reviewable fact",
+      now: "2026-06-13T10:00:00.000Z",
+    });
+  } finally {
+    db.close();
+  }
+
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+
+  const result = await cli.run(["memory", "candidate", "show", "cand_2", "--json"]);
+  const response = JSON.parse(result.message);
+
+  expect(result.exitCode).toBe(0);
+  expect(response.candidate.id).toBe("cand_2");
+  expect(response.candidate.scope).toBe("project");
 });
 
 async function seedProject(): Promise<void> {
