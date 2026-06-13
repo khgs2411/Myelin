@@ -3,8 +3,10 @@ import { fail, ok } from "./registry.ts";
 import { createIngestJob, getIngestJob } from "../ingest/jobs.ts";
 import {
   launchDetachedIngestWorker,
+  refreshDetachedIngestJobStatus,
   resolveIngestTargetRepo,
   type DetachedSpawner,
+  type ProcessLivenessChecker,
   type RuntimeProcessRunner,
 } from "../ingest/runtime.ts";
 import { runIngestWorker } from "../ingest/worker.ts";
@@ -18,11 +20,12 @@ export type IngestCommandDeps = {
   now?: () => Date;
   runner?: RuntimeProcessRunner;
   spawn?: DetachedSpawner;
+  isProcessAlive?: ProcessLivenessChecker;
   runWorker?: typeof runIngestWorker;
 };
 
 export function registerIngestCommands(cli: Cli, deps: IngestCommandDeps = {}): void {
-  cli.command(["ingest", "status"], (args) => status(args));
+  cli.command(["ingest", "status"], (args) => status(args, deps));
   cli.command(["ingest", "worker"], (args) => worker(args, deps));
   cli.command(["ingest"], (args) => start(args, deps));
 }
@@ -68,7 +71,7 @@ async function start(args: string[], deps: IngestCommandDeps) {
   }
 }
 
-function status(args: string[]) {
+function status(args: string[], deps: IngestCommandDeps) {
   const parsed = parseStatusArgs(args);
   if (parsed.error) return fail(parsed.error);
 
@@ -76,9 +79,15 @@ function status(args: string[]) {
   try {
     const job = getIngestJob(db, parsed.jobId);
     if (!job) return fail(`Unknown ingest job: ${parsed.jobId}`);
+    const current = refreshDetachedIngestJobStatus({
+      db,
+      job,
+      now: (deps.now ?? (() => new Date()))().toISOString(),
+      isAlive: deps.isProcessAlive,
+    });
     return parsed.json
-      ? ok(JSON.stringify({ job }, null, 2))
-      : ok(`Ingest job ${job.id} [${job.status}] project=${job.project_key} provider=${job.provider}`);
+      ? ok(JSON.stringify({ job: current }, null, 2))
+      : ok(`Ingest job ${current.id} [${current.status}] project=${current.project_key} provider=${current.provider}`);
   } finally {
     db.close();
   }

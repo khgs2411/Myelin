@@ -98,6 +98,34 @@ test("ingest status reads stored job status", async () => {
   expect(response.job.status).toBe("failed");
 });
 
+test("ingest status marks detached running job failed when stored pid is dead", async () => {
+  const cli = createCli("myelin");
+  registerIngestCommands(cli, {
+    now: () => new Date("2026-06-13T10:00:00.000Z"),
+    runner: async () => ({ exitCode: 0, stdout: "master\n", stderr: "" }),
+    spawn: () => ({ pid: 2468, unref: () => {} }),
+  });
+  const started = await cli.run(["ingest", "demo", "--json"]);
+  const jobId = JSON.parse(started.message).job.id;
+
+  const statusCli = createCli("myelin");
+  registerIngestCommands(statusCli, {
+    now: () => new Date("2026-06-13T10:05:00.000Z"),
+    isProcessAlive: () => false,
+  });
+  const status = await statusCli.run(["ingest", "status", jobId, "--json"]);
+  const response = JSON.parse(status.message);
+
+  expect(status.exitCode).toBe(0);
+  expect(response.job.id).toBe(jobId);
+  expect(response.job.status).toBe("failed");
+  expect(JSON.parse(response.job.followup_state_json)).toMatchObject({ pid: 2468 });
+  expect(JSON.parse(response.job.error_json)).toMatchObject({
+    code: "detached_worker_exited",
+    pid: 2468,
+  });
+});
+
 test("ingest worker dispatches stored job input to the worker runtime", async () => {
   const cli = createCli("myelin");
   registerIngestCommands(cli, {
