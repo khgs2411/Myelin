@@ -19,7 +19,7 @@
   "page_taxonomy": { "categories": ["..."] },
   "provenance": { "required": ["file_path_line | commit_pointer | source_snippet | inference_label"] },
   "cli_vocabulary": {
-    "commands": ["bootstrap", "project learn", "project ingest", "memory query", "status", "schema check", "schema build", "session close"]
+    "commands": ["bootstrap", "project learn", "project ingest", "ingest", "ingest status", "memory query", "status", "schema check", "schema build", "session close"]
   }
 }
 ```

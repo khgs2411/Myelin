@@ -31,6 +31,8 @@ const REQUIRED_CONTEXT_COMMANDS = [
   "bootstrap",
   "project learn",
   "project ingest",
+  "ingest",
+  "ingest status",
   "memory query",
   "status",
   "schema check",
