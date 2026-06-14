@@ -62,16 +62,19 @@ What exists:
 - Runtime helpers for paths, JSON, project discovery, state, run artifacts, ids, and subprocesses.
 - Provider abstraction for Codex and Claude Code using the operator's authenticated CLI.
 - Stub-response support for deterministic tests.
+- Vendored SQLite runtime selection for vector extensions on Apple Silicon macOS, with explicit override and host SQLite fallback.
 
 Code evidence:
 
 - `src/cli.ts`
 - `src/commands/registry.ts`
 - `src/runtime/*`
+- `src/memory/sqlite-runtime.ts`
+- `vendor/sqlite/README.md`
 
 Alignment:
 
-This layer matches V2 well. It is the stable foundation created by the Python/Bash to Bun/TypeScript migration.
+This layer matches V2 well. It is the stable foundation created by the Python/Bash to Bun/TypeScript migration. For Session Memory vector indexing, Myelin owns the SQLite runtime boundary where it has a vendored runtime; a platform is host-independent only after `vendor/sqlite/<platform>-<arch>/` exists for it.
 
 Verdict:
 

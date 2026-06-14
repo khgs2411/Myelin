@@ -28,7 +28,8 @@ External implementation references:
 
 Verified constraints from those references:
 
-- `sqlite-vec` can be loaded into Bun's SQLite connection through the `sqlite-vec` package, but macOS may need a custom SQLite library for extension support.
+- `sqlite-vec` can be loaded into Bun's SQLite connection through the `sqlite-vec` package, but macOS needs a SQLite build that supports loadable extensions.
+- Myelin owns this runtime boundary through a vendored SQLite runtime where available, with explicit operator overrides and host Homebrew SQLite only as fallback. See `docs/adr/0057-vendor-sqlite-runtime-for-vector-extensions.md`.
 - `sqlite-vec` stores/query vectors through `vec0` virtual tables and supports metadata, auxiliary columns, and partition keys.
 - `sqlite-vec` is pre-v1, so Myelin should isolate it behind an internal adapter.
 - Gemini embedding model name, output dimension, and task/query formatting must be part of the stored embedding contract so incompatible vectors are not mixed silently.
@@ -128,6 +129,8 @@ The adapter owns:
 - availability checks and clear degraded states
 
 Metadata tables must be created even when sqlite-vec cannot be loaded. sqlite-vec load/install failure blocks vector-table creation and vector indexing only; it does not block Session Memory writes, pending embedding metadata, or non-vector migration.
+
+Runtime loading must prefer Myelin's vendored SQLite runtime before host fallbacks so Apple Silicon macOS does not require a separate SQLite installation. Platform support is explicit: a platform is host-independent only after it has a vendored runtime under `vendor/sqlite/<platform>-<arch>/`.
 
 ### Query Facade
 
