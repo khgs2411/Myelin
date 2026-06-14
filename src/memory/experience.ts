@@ -55,6 +55,7 @@ export type ClaimExperienceEventsInput = {
   project_key: string;
   provider_session_id?: string | null;
   limit: number;
+  max_prompt_chars?: number;
   claimed_at: string;
   tombstone_id_for: (event: ExperienceEventRow) => string;
 };
@@ -141,6 +142,13 @@ export function listExperienceEvents(db: Database, projectKey: string): Experien
     .all(projectKey) as ExperienceEventRow[];
 }
 
+export function countExperienceEvents(db: Database, projectKey: string): number {
+  const row = db
+    .query("SELECT count(*) AS count FROM experience_events WHERE project_key = ?")
+    .get(projectKey) as { count: number };
+  return row.count;
+}
+
 export function claimExperienceEvents(db: Database, input: ClaimExperienceEventsInput): ClaimedExperienceTombstone[] {
   if (!Number.isInteger(input.limit) || input.limit <= 0) {
     throw new Error("Claim limit must be a positive integer");
@@ -151,6 +159,7 @@ export function claimExperienceEvents(db: Database, input: ClaimExperienceEvents
       .query("SELECT * FROM experience_events WHERE project_key = ? ORDER BY occurred_at, id LIMIT ?")
       .all(input.project_key, input.limit) as ExperienceEventRow[];
     const claimed: ClaimedExperienceTombstone[] = [];
+    let claimedPromptChars = 0;
 
     for (const row of rows) {
       const tombstone = buildClaimedTombstone(row, {
@@ -159,9 +168,18 @@ export function claimExperienceEvents(db: Database, input: ClaimExperienceEvents
         provider_session_id: input.provider_session_id,
         claimed_at: input.claimed_at,
       });
+      const tombstonePromptChars = JSON.stringify(tombstone, null, 2).length;
+      if (
+        input.max_prompt_chars !== undefined &&
+        claimed.length > 0 &&
+        claimedPromptChars + tombstonePromptChars > input.max_prompt_chars
+      ) {
+        break;
+      }
       insertClaimedTombstone(db, tombstone, row.dedupe_key);
       db.query("DELETE FROM experience_events WHERE id = ? AND project_key = ?").run(row.id, row.project_key);
       claimed.push(tombstone);
+      claimedPromptChars += tombstonePromptChars;
     }
 
     return claimed;

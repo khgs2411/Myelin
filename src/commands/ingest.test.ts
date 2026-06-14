@@ -29,7 +29,8 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-test("top-level ingest starts a detached worker and reports durable job information", async () => {
+test("top-level ingest starts one detached worker per configured batch", async () => {
+  await seedExperienceEvents(5);
   const spawned: unknown[] = [];
   const spawn: DetachedSpawner = (options) => {
     spawned.push(options);
@@ -42,19 +43,29 @@ test("top-level ingest starts a detached worker and reports durable job informat
     spawn,
   });
 
-  const result = await cli.run(["ingest", "demo", "--limit", "3", "--json"]);
+  const result = await cli.run(["ingest", "demo", "--batch-size", "2", "--json"]);
   const response = JSON.parse(result.message);
 
   expect(result.exitCode).toBe(0);
+  expect(response.batch_size).toBe(2);
+  expect(response.batch_count).toBe(3);
+  expect(response.jobs).toHaveLength(3);
   expect(response.job.id).toStartWith("ingest_");
   expect(response.job.status).toBe("running");
-  expect(JSON.parse(response.job.input_json)).toMatchObject({ limit: 3, target_repo: join(root, "repos", "demo") });
+  expect(response.jobs.map((job: { input_json: string }) => JSON.parse(job.input_json).limit)).toEqual([2, 2, 1]);
+  expect(JSON.parse(response.job.input_json)).toMatchObject({
+    limit: 2,
+    batch_size: 2,
+    batch_index: 1,
+    batch_count: 3,
+    target_repo: join(root, "repos", "demo"),
+  });
   expect(JSON.parse(response.job.followup_state_json)).toMatchObject({
     pid: 2468,
     target_repo: join(root, "repos", "demo"),
     branch: "master",
   });
-  expect(spawned).toHaveLength(1);
+  expect(spawned).toHaveLength(3);
 });
 
 test("top-level ingest records a failed job on branch mismatch before spawn", async () => {
@@ -100,6 +111,7 @@ test("ingest status reads stored job status", async () => {
 });
 
 test("ingest status marks detached running job failed when stored pid is dead", async () => {
+  await seedExperienceEvents(1);
   const cli = createCli("myelin");
   registerIngestCommands(cli, {
     now: () => new Date("2026-06-13T10:00:00.000Z"),
@@ -128,6 +140,7 @@ test("ingest status marks detached running job failed when stored pid is dead", 
 });
 
 test("ingest status finalizes claimed tombstones when detached running job pid is dead", async () => {
+  await seedExperienceEvents(1);
   const cli = createCli("myelin");
   registerIngestCommands(cli, {
     now: () => new Date("2026-06-13T10:00:00.000Z"),
@@ -241,4 +254,23 @@ async function seedProject(): Promise<void> {
     name: "Demo",
     repo_paths: [repo],
   });
+}
+
+async function seedExperienceEvents(count: number): Promise<void> {
+  const db = openMemoryDb(root);
+  try {
+    for (let index = 0; index < count; index += 1) {
+      recordExperienceEvent(db, {
+        id: `evt_${index + 1}`,
+        project_key: "demo",
+        occurred_at: `2026-06-13T10:${String(index).padStart(2, "0")}:00.000Z`,
+        provider: "codex",
+        raw_payload_json: "{}",
+        source: "codex-hook",
+        status: "valid",
+      });
+    }
+  } finally {
+    db.close();
+  }
 }

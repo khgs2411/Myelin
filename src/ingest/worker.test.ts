@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createIngestJob, getIngestJob } from "./jobs.ts";
-import { applyIngestWorkerOutput, parseIngestWorkerOutput, runIngestWorker } from "./worker.ts";
+import { applyIngestWorkerOutput, buildIngestPrompt, parseIngestWorkerOutput, runIngestWorker } from "./worker.ts";
 import { openMemoryDbAt, type MemoryDb } from "../memory/db.ts";
 import { listExperienceEvents, recordExperienceEvent } from "../memory/experience.ts";
 import type { RunProcessResult } from "../runtime/process.ts";
@@ -139,35 +139,111 @@ test("handoff output stores source refs and finalizes the referenced tombstone",
   });
 });
 
-test("output application rolls back candidate writes when finalization fails", () => {
-  expect(() =>
-    applyIngestWorkerOutput(db, {
-      projectKey: "class-kit",
-      jobId: "job_1",
-      provider: "codex",
-      providerSessionId: null,
-      finalizedAt: "2026-06-13T10:00:00.000Z",
-      output: {
-        memory_candidates: [
-          {
-            id: "cand_1",
-            source_event_refs: ["missing_tombstone"],
-            scope: "session",
-            status: "needs_review",
-            candidate_type: "session.continuity",
-            summary: "Should roll back.",
-            evidence: {},
-            proposed_payload: {},
-            confidence: "low",
-            risk: "medium",
-            reason: "Missing tombstone",
-          },
-        ],
-      },
-    }),
-  ).toThrow("Unable to finalize claimed tombstone: missing_tombstone");
+test("output application ignores unclaimable tombstone refs and preserves valid refs", () => {
+  seedClaimedTombstone(db, { id: "tomb_1", ingest_job_id: "job_1", project_key: "class-kit" });
 
-  expect(db.query("SELECT COUNT(*) AS count FROM memory_candidates").get()).toEqual({ count: 0 });
+  const counts = applyIngestWorkerOutput(db, {
+    projectKey: "class-kit",
+    jobId: "job_1",
+    provider: "codex",
+    providerSessionId: null,
+    finalizedAt: "2026-06-13T10:00:00.000Z",
+    output: {
+      memory_candidates: [
+        {
+          id: "cand_1",
+          source_event_refs: ["missing_tombstone", "tomb_1"],
+          scope: "session",
+          status: "needs_review",
+          candidate_type: "session.continuity",
+          summary: "Keep the valid source ref.",
+          evidence: {},
+          proposed_payload: {},
+          confidence: "low",
+          risk: "medium",
+          reason: "Missing tombstone was ignored",
+        },
+        {
+          id: "cand_2",
+          source_event_refs: ["missing_tombstone"],
+          scope: "session",
+          status: "needs_review",
+          candidate_type: "session.continuity",
+          summary: "No valid source refs.",
+          evidence: {},
+          proposed_payload: {},
+          confidence: "low",
+          risk: "medium",
+          reason: "Should not be written",
+        },
+      ],
+    },
+  });
+
+  expect(counts.memory_candidates).toBe(1);
+  expect(db.query("SELECT id, source_event_refs_json FROM memory_candidates").all()).toEqual([
+    { id: "cand_1", source_event_refs_json: JSON.stringify(["tomb_1"]) },
+  ]);
+  expect(db.query("SELECT state, output_references_json FROM experience_event_tombstones WHERE id = ?").get("tomb_1")).toEqual({
+    state: "output",
+    output_references_json: JSON.stringify(["memory_candidates/cand_1"]),
+  });
+});
+
+test("output application scopes provider ids when they collide with existing memory rows", () => {
+  seedClaimedTombstone(db, { id: "tomb_1", ingest_job_id: "job_1", project_key: "class-kit" });
+  seedClaimedTombstone(db, { id: "tomb_2", ingest_job_id: "job_1", project_key: "class-kit" });
+
+  applyIngestWorkerOutput(db, {
+    projectKey: "class-kit",
+    jobId: "job_1",
+    provider: "codex",
+    providerSessionId: null,
+    finalizedAt: "2026-06-13T10:00:00.000Z",
+    output: {
+      session_memories: [
+        {
+          id: "mem_1",
+          source_event_refs: ["tomb_1"],
+          memory_kind: "continuity",
+          summary: "First memory.",
+          payload: {},
+          confidence: "high",
+          risk: "low",
+        },
+      ],
+    },
+  });
+
+  const counts = applyIngestWorkerOutput(db, {
+    projectKey: "class-kit",
+    jobId: "job_1",
+    provider: "codex",
+    providerSessionId: null,
+    finalizedAt: "2026-06-13T10:00:00.000Z",
+    output: {
+      session_memories: [
+        {
+          id: "mem_1",
+          source_event_refs: ["tomb_2"],
+          memory_kind: "continuity",
+          summary: "Second memory with reused provider id.",
+          payload: {},
+          confidence: "high",
+          risk: "low",
+        },
+      ],
+    },
+  });
+
+  expect(counts.session_memories).toBe(1);
+  expect(db.query("SELECT id FROM session_memories ORDER BY id").all()).toEqual([
+    { id: "job_1_mem_1" },
+    { id: "mem_1" },
+  ]);
+  expect(db.query("SELECT output_references_json FROM experience_event_tombstones WHERE id = ?").get("tomb_2")).toEqual({
+    output_references_json: JSON.stringify(["session_memories/job_1_mem_1"]),
+  });
 });
 
 test("output application rolls back session memory when provider omits source refs", () => {
@@ -197,37 +273,76 @@ test("output application rolls back session memory when provider omits source re
   expect(db.query("SELECT COUNT(*) AS count FROM session_memories").get()).toEqual({ count: 0 });
 });
 
-test("output application rejects tombstones marked both output and no_output", () => {
+test("output application lets output win when tombstones are also marked no_output", () => {
   seedClaimedTombstone(db, { id: "tomb_1", ingest_job_id: "job_1", project_key: "class-kit" });
 
-  expect(() =>
-    applyIngestWorkerOutput(db, {
-      projectKey: "class-kit",
-      jobId: "job_1",
-      provider: "codex",
-      providerSessionId: null,
-      finalizedAt: "2026-06-13T10:00:00.000Z",
-      output: {
-        session_memories: [
-          {
-            id: "mem_1",
-            source_event_refs: ["tomb_1"],
-            memory_kind: "continuity",
-            summary: "Output exists.",
-            payload: {},
-            confidence: "high",
-            risk: "low",
-          },
-        ],
-        no_output_tombstone_ids: ["tomb_1"],
-      },
-    }),
-  ).toThrow("Tombstone tomb_1 cannot be both output and no_output");
+  const counts = applyIngestWorkerOutput(db, {
+    projectKey: "class-kit",
+    jobId: "job_1",
+    provider: "codex",
+    providerSessionId: null,
+    finalizedAt: "2026-06-13T10:00:00.000Z",
+    output: {
+      session_memories: [
+        {
+          id: "mem_1",
+          source_event_refs: ["tomb_1"],
+          memory_kind: "continuity",
+          summary: "Output exists.",
+          payload: {},
+          confidence: "high",
+          risk: "low",
+        },
+      ],
+      no_output_tombstone_ids: ["tomb_1"],
+    },
+  });
+
+  expect(counts.session_memories).toBe(1);
+  expect(db.query("SELECT state, output_references_json FROM experience_event_tombstones WHERE id = ?").get("tomb_1")).toEqual({
+    state: "output",
+    output_references_json: JSON.stringify(["session_memories/mem_1"]),
+  });
 });
 
 test("parser treats empty terminal summary as absent", () => {
   expect(parseIngestWorkerOutput({ terminal_summary: "" })).toEqual({ terminal_summary: undefined });
   expect(parseIngestWorkerOutput({ terminal_summary: null })).toEqual({ terminal_summary: undefined });
+  expect(parseIngestWorkerOutput({ terminal_summary: {} })).toEqual({ terminal_summary: undefined });
+});
+
+test("parser normalizes non-empty string arrays to singleton arrays", () => {
+  const output = parseIngestWorkerOutput({
+    no_output_tombstone_ids: "tomb_1",
+  });
+
+  expect(output.no_output_tombstone_ids).toEqual(["tomb_1"]);
+});
+
+test("prompt caps oversized retained evidence without mutating the tombstone", () => {
+  const retainedEvidence = JSON.stringify({ raw_payload_json: "x".repeat(80_000) });
+  const prompt = buildIngestPrompt({
+    projectKey: "class-kit",
+    jobId: "job_1",
+    claimed: [
+      {
+        id: "tomb_1",
+        original_event_id: "evt_1",
+        project_key: "class-kit",
+        ingest_job_id: "job_1",
+        provider: "codex",
+        provider_session_id: null,
+        claimed_at: "2026-06-13T10:00:00.000Z",
+        state: "claimed",
+        source_metadata_json: "{}",
+        retained_evidence_json: retainedEvidence,
+      },
+    ],
+  });
+
+  expect(prompt.length).toBeLessThan(40_000);
+  expect(prompt).toContain("truncated for ingest prompt");
+  expect(retainedEvidence.length).toBeGreaterThan(80_000);
 });
 
 test("worker claims batches from target repo cwd and completes when queue is empty", async () => {
@@ -318,6 +433,46 @@ test("worker marks claimed tombstones failed when provider invocation fails", as
     terminal_decision: "provider_failed",
   });
   expect(getIngestJob(db, "job_1")?.status).toBe("failed");
+});
+
+test("worker compacts large provider failure messages before storing job errors", async () => {
+  recordExperienceEvent(db, {
+    id: "evt_1",
+    project_key: "class-kit",
+    occurred_at: "2026-06-13T09:59:00.000Z",
+    provider: "codex",
+    raw_payload_json: "{}",
+    source: "codex-hook",
+    status: "valid",
+  });
+  db.close();
+
+  const stderr = [
+    "codex transcript header",
+    "user",
+    "x".repeat(8_000),
+    "ERROR: You've hit your usage limit for GPT-5.3-Codex-Spark.",
+  ].join("\n");
+
+  await expect(
+    runIngestWorker({
+      root,
+      projectKey: "class-kit",
+      jobId: "job_1",
+      targetRepo: "/target/repo",
+      provider: "codex",
+      batchSize: 1,
+      now: fixedNow(),
+      runner: async (): Promise<RunProcessResult> => ({ exitCode: 1, stdout: "", stderr }),
+    }),
+  ).rejects.toThrow("codex exited 1");
+
+  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  const job = getIngestJob(db, "job_1");
+  const error = JSON.parse(job?.error_json ?? "{}") as { message: string };
+  expect(error.message.length).toBeLessThan(4_100);
+  expect(error.message).toContain("usage limit");
+  expect(error.message).not.toContain("x".repeat(500));
 });
 
 test("worker rejects invalid provider output before durable memory writes", async () => {

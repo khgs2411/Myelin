@@ -72,6 +72,7 @@ test("config loads myelin.config and honors environment precedence", async () =>
 test("config exposes default embedding contract", async () => {
   const config = await loadConfig(root, {});
 
+  expect(config.ingest).toEqual({ batchSize: 100 });
   expect(config.embedding).toEqual({
     provider: "gemini",
     geminiModel: "gemini-embedding-2",
@@ -85,6 +86,14 @@ test("config exposes default embedding contract", async () => {
     purpose: "retrieval_document",
     formatVersion: 1,
   });
+});
+
+test("ingest config honors file values and rejects oversized batches", async () => {
+  await writeFile(join(root, "myelin.config"), "INGEST_BATCH_SIZE=200\n", "utf8");
+  await expect(loadConfig(root, {})).resolves.toMatchObject({ ingest: { batchSize: 200 } });
+
+  await expect(loadConfig(root, { INGEST_BATCH_SIZE: "501" })).rejects.toThrow("Invalid ingest batch size");
+  await expect(loadConfig(root, { INGEST_BATCH_SIZE: "0" })).rejects.toThrow("Invalid ingest batch size");
 });
 
 test("embedding config honors file values and environment precedence", async () => {

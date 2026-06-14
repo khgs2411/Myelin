@@ -55,6 +55,8 @@ The old command names are V1 concepts. Keep them out of new docs and scripts unl
 
 `project ingest <key>` processes queued source/inbox material through the project-memory pipeline. Top-level `ingest <key>` starts a detached provider-backed Experience Log to Session Memory job and returns a durable handle.
 
+Top-level `ingest <key>` batches queued Experience Log rows by `INGEST_BATCH_SIZE` and launches one detached target-repo agent per batch. The default batch size is `100`; the maximum accepted batch size is `500`.
+
 Session Memory vector retrieval is currently an internal facade. MCP exposure, Current Briefing consumption, broader `memory query` changes, and non-Session Memory vectorization are deferred follow-up work.
 
 ## Repository Layout

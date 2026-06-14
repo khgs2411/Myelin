@@ -21,6 +21,10 @@ import {
 import { createSessionMemory } from "../memory/session-memories.ts";
 import { updateIngestJobStatus } from "./jobs.ts";
 
+const DEFAULT_INGEST_PROMPT_CHAR_LIMIT = 180_000;
+const MAX_PROMPT_RETAINED_EVIDENCE_CHARS = 24_000;
+const TRUNCATED_EVIDENCE_SUFFIX = "\n...[truncated for ingest prompt; full evidence is preserved in the tombstone audit row]";
+
 export type IngestWorkerOutput = {
   session_memories?: Array<{
     id: string;
@@ -133,11 +137,16 @@ export function buildIngestPrompt(input: {
   projectKey: string;
   jobId: string;
   claimed: ClaimedExperienceTombstone[];
+  batchIndex?: number;
+  batchCount?: number;
 }): string {
   return [
     "You are the Myelin Session Memory ingest agent.",
     `Project key: ${input.projectKey}`,
     `Ingest job id: ${input.jobId}`,
+    input.batchIndex && input.batchCount
+      ? `Parallel batch: ${input.batchIndex} of ${input.batchCount}. Other ingest agents may be running for this project.`
+      : null,
     "",
     "You are running from the target repository cwd. Use repo context when deciding what memory matters.",
     "Create only low-risk trusted Session Memory directly.",
@@ -158,8 +167,16 @@ export function buildIngestPrompt(input: {
     "Example handoff instruction: {\"id\":\"handoff_<short-id>\",\"target_scope\":\"project\",\"status\":\"pending\",\"objective\":\"Verify a durable project fact\",\"prompt_text\":\"Review the cited tombstones and update project memory if valid.\",\"source_session_memory_ids\":[],\"source_event_refs\":[\"tomb_<claimed-id>\"],\"suggested_actions\":[\"review evidence\"],\"reason\":\"May belong in project memory\",\"confidence\":\"medium\",\"risk\":\"medium\"}.",
     "",
     "Claimed Experience Log tombstones:",
-    JSON.stringify(input.claimed, null, 2),
-  ].join("\n");
+    JSON.stringify(input.claimed.map(tombstoneForPrompt), null, 2),
+  ].filter((line) => line !== null).join("\n");
+}
+
+function tombstoneForPrompt(tombstone: ClaimedExperienceTombstone): ClaimedExperienceTombstone {
+  if (tombstone.retained_evidence_json.length <= MAX_PROMPT_RETAINED_EVIDENCE_CHARS) return tombstone;
+  return {
+    ...tombstone,
+    retained_evidence_json: `${tombstone.retained_evidence_json.slice(0, MAX_PROMPT_RETAINED_EVIDENCE_CHARS)}${TRUNCATED_EVIDENCE_SUFFIX}`,
+  };
 }
 
 function validateArray(value: unknown, path: string): unknown[] {
@@ -183,13 +200,14 @@ function validateOptionalStringOrNull(value: unknown, path: string): string | nu
   throw new Error(`IngestWorkerOutput contract violation: ${path} must be a string or null`);
 }
 
-function validateOptionalNonEmptyString(value: unknown, path: string): string | undefined {
+function validateOptionalNonEmptyString(value: unknown, _path: string): string | undefined {
   if (value === undefined || value === null) return undefined;
   if (typeof value === "string") return value.trim() === "" ? undefined : value;
-  throw new Error(`IngestWorkerOutput contract violation: ${path} must be a string or null`);
+  return undefined;
 }
 
 function validateStringArray(value: unknown, path: string): string[] {
+  if (typeof value === "string" && value.trim() !== "") return [value];
   const items = validateArray(value, path);
   for (let index = 0; index < items.length; index += 1) {
     validateString(items[index], `${path}[${index}]`);
@@ -226,24 +244,39 @@ export function applyIngestWorkerOutput(
     let memoryCandidates = 0;
     let handoffs = 0;
     const outputRefsByTombstone = new Map<string, string[]>();
+    const sessionMemoryIds = new Map<string, string>();
+    const claimableTombstoneIds = new Set(
+      (
+        db.query("SELECT id FROM experience_event_tombstones WHERE ingest_job_id = ? AND state = 'claimed'").all(input.jobId) as
+          Array<{ id: string }>
+      ).map((row) => row.id),
+    );
 
-    const addOutputRefs = (tombstoneIds: string[], outputRef: string) => {
+    const claimableRefs = (tombstoneIds: string[]) => tombstoneIds.filter((id) => claimableTombstoneIds.has(id));
+
+    const addOutputRefs = (tombstoneIds: string[], outputRef: string): string[] => {
       if (tombstoneIds.length === 0) throw new Error(`Output ${outputRef} must reference at least one tombstone`);
-      for (const tombstoneId of tombstoneIds) {
+      const validTombstoneIds = claimableRefs(tombstoneIds);
+      if (validTombstoneIds.length === 0) return [];
+      for (const tombstoneId of validTombstoneIds) {
         const refs = outputRefsByTombstone.get(tombstoneId) ?? [];
         refs.push(outputRef);
         outputRefsByTombstone.set(tombstoneId, refs);
       }
+      return validTombstoneIds;
     };
 
     for (const memory of input.output.session_memories ?? []) {
+      const memoryId = uniqueOutputId(db, "session_memories", memory.id, input.jobId);
+      const sourceEventRefs = addOutputRefs(memory.source_event_refs, `session_memories/${memoryId}`);
+      if (sourceEventRefs.length === 0) continue;
       createSessionMemory(db, {
-        id: memory.id,
+        id: memoryId,
         project_key: input.projectKey,
         provider: input.provider,
         provider_session_id: input.providerSessionId,
         ingest_job_id: input.jobId,
-        source_event_refs: memory.source_event_refs,
+        source_event_refs: sourceEventRefs,
         memory_kind: memory.memory_kind,
         title: memory.title ?? null,
         summary: memory.summary,
@@ -252,20 +285,23 @@ export function applyIngestWorkerOutput(
         risk: memory.risk,
         now: input.finalizedAt,
       });
-      addOutputRefs(memory.source_event_refs, `session_memories/${memory.id}`);
+      sessionMemoryIds.set(memory.id, memoryId);
       sessionMemories += 1;
     }
 
     for (const candidate of input.output.memory_candidates ?? []) {
+      const candidateId = uniqueOutputId(db, "memory_candidates", candidate.id, input.jobId);
+      const sourceEventRefs = addOutputRefs(candidate.source_event_refs, `memory_candidates/${candidateId}`);
+      if (sourceEventRefs.length === 0) continue;
       createMemoryCandidate(db, {
-        id: candidate.id,
+        id: candidateId,
         project_key: input.projectKey,
         scope: candidate.scope,
         status: candidate.status,
         candidate_type: candidate.candidate_type,
         title: candidate.title ?? null,
         summary: candidate.summary,
-        source_event_refs: candidate.source_event_refs,
+        source_event_refs: sourceEventRefs,
         evidence: candidate.evidence,
         proposed_payload: candidate.proposed_payload,
         confidence: candidate.confidence,
@@ -273,27 +309,32 @@ export function applyIngestWorkerOutput(
         reason: candidate.reason,
         now: input.finalizedAt,
       });
-      addOutputRefs(candidate.source_event_refs, `memory_candidates/${candidate.id}`);
       memoryCandidates += 1;
     }
 
     for (const handoff of input.output.handoff_instructions ?? []) {
+      const table = `${handoff.target_scope}_handoff_instructions`;
+      const handoffId = uniqueOutputId(db, table, handoff.id, input.jobId);
+      const sourceEventRefs = addOutputRefs(
+        handoff.source_event_refs,
+        `${table}/${handoffId}`,
+      );
+      if (sourceEventRefs.length === 0) continue;
       createHandoffInstruction(db, {
-        id: handoff.id,
+        id: handoffId,
         target_scope: handoff.target_scope,
         project_key: input.projectKey,
         status: handoff.status,
         objective: handoff.objective,
         prompt_text: handoff.prompt_text,
-        source_session_memory_ids: handoff.source_session_memory_ids,
-        source_event_refs: handoff.source_event_refs,
+        source_session_memory_ids: handoff.source_session_memory_ids.map((id) => sessionMemoryIds.get(id) ?? id),
+        source_event_refs: sourceEventRefs,
         suggested_actions: handoff.suggested_actions,
         reason: handoff.reason,
         confidence: handoff.confidence,
         risk: handoff.risk,
         now: input.finalizedAt,
       });
-      addOutputRefs(handoff.source_event_refs, `${handoff.target_scope}_handoff_instructions/${handoff.id}`);
       handoffs += 1;
     }
 
@@ -308,9 +349,9 @@ export function applyIngestWorkerOutput(
       });
     }
 
-    for (const tombstoneId of input.output.no_output_tombstone_ids ?? []) {
+    for (const tombstoneId of claimableRefs(input.output.no_output_tombstone_ids ?? [])) {
       if (outputRefsByTombstone.has(tombstoneId)) {
-        throw new Error(`Tombstone ${tombstoneId} cannot be both output and no_output`);
+        continue;
       }
       finalizeClaimedExperienceEventsInOpenTransaction(db, {
         ingest_job_id: input.jobId,
@@ -328,6 +369,18 @@ export function applyIngestWorkerOutput(
   return apply();
 }
 
+function uniqueOutputId(db: Database, table: string, desiredId: string, jobId: string): string {
+  if (!db.query(`SELECT 1 FROM ${table} WHERE id = ? LIMIT 1`).get(desiredId)) return desiredId;
+  const base = `${jobId}_${desiredId}`;
+  let candidate = base;
+  let suffix = 2;
+  while (db.query(`SELECT 1 FROM ${table} WHERE id = ? LIMIT 1`).get(candidate)) {
+    candidate = `${base}_${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
+}
+
 export async function runIngestWorker(input: {
   root: string;
   projectKey: string;
@@ -337,6 +390,9 @@ export async function runIngestWorker(input: {
   providerSessionId?: string | null;
   limit?: number;
   batchSize?: number;
+  batchIndex?: number;
+  batchCount?: number;
+  maxPromptChars?: number;
   now?: () => Date;
   runner?: ProcessRunner;
 }): Promise<void> {
@@ -368,6 +424,7 @@ export async function runIngestWorker(input: {
         project_key: input.projectKey,
         provider_session_id: input.providerSessionId ?? null,
         limit: remaining,
+        max_prompt_chars: input.maxPromptChars ?? DEFAULT_INGEST_PROMPT_CHAR_LIMIT,
         claimed_at: claimedAt,
         tombstone_id_for: (event) => `tomb_${input.jobId}_${event.id}`,
       });
@@ -378,7 +435,13 @@ export async function runIngestWorker(input: {
         root: input.root,
         workload: "pipeline",
         provider: input.provider,
-        prompt: buildIngestPrompt({ projectKey: input.projectKey, jobId: input.jobId, claimed }),
+        prompt: buildIngestPrompt({
+          projectKey: input.projectKey,
+          jobId: input.jobId,
+          claimed,
+          batchIndex: input.batchIndex,
+          batchCount: input.batchCount,
+        }),
         cwd: input.targetRepo,
         runner: input.runner,
       });
@@ -430,10 +493,22 @@ export async function runIngestWorker(input: {
       status: "failed",
       finished_at: now().toISOString(),
       updated_at: now().toISOString(),
-      error: { message: error instanceof Error ? error.message : String(error) },
+      error: { message: compactIngestWorkerError(error) },
     });
     throw error;
   } finally {
     db.close();
   }
+}
+
+function compactIngestWorkerError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.length <= 4_000) return message;
+
+  const importantLines = message
+    .split(/\r?\n/)
+    .filter((line) => /\b(error|failed|exited|limit|quota|denied|unauthorized|forbidden)\b/i.test(line.trim()))
+    .slice(-12);
+  const compact = importantLines.length > 0 ? importantLines.join("\n") : message.slice(-2_000);
+  return `${compact.slice(0, 4_000)}\n...[truncated provider error]`;
 }

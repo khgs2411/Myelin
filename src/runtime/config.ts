@@ -20,6 +20,10 @@ export type EmbeddingConfig = {
   stubResponsesDir?: string;
 };
 
+export type IngestConfig = {
+  batchSize: number;
+};
+
 export type ActiveEmbeddingContract = {
   provider: EmbeddingProvider;
   model: string;
@@ -32,6 +36,7 @@ export type MyelinConfig = {
   defaultProvider: Provider;
   profiles: Record<Workload, Partial<Record<Provider, ModelProfile>>>;
   embedding: EmbeddingConfig;
+  ingest: IngestConfig;
   values: Record<string, string>;
 };
 
@@ -39,6 +44,8 @@ export const EMBEDDING_FORMAT_VERSION = 1;
 export const DEFAULT_EMBEDDING_PROVIDER: EmbeddingProvider = "gemini";
 export const DEFAULT_GEMINI_EMBEDDING_MODEL = "gemini-embedding-2";
 export const DEFAULT_EMBEDDING_DIMENSIONS = 1536;
+export const DEFAULT_INGEST_BATCH_SIZE = 100;
+export const MAX_INGEST_BATCH_SIZE = 500;
 export const DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT: ActiveEmbeddingContract = {
   provider: DEFAULT_EMBEDDING_PROVIDER,
   model: DEFAULT_GEMINI_EMBEDDING_MODEL,
@@ -64,6 +71,9 @@ const DEFAULT_CONFIG: MyelinConfig = {
     geminiModel: DEFAULT_GEMINI_EMBEDDING_MODEL,
     dimensions: DEFAULT_EMBEDDING_DIMENSIONS,
   },
+  ingest: {
+    batchSize: DEFAULT_INGEST_BATCH_SIZE,
+  },
   values: {},
 };
 
@@ -88,6 +98,7 @@ export async function loadConfig(root: string, env: NodeJS.ProcessEnv = process.
       },
     },
     embedding: embeddingConfig(merged),
+    ingest: ingestConfig(merged),
     values: merged,
   };
 }
@@ -145,6 +156,12 @@ function embeddingConfig(values: Record<string, string>): EmbeddingConfig {
   };
 }
 
+function ingestConfig(values: Record<string, string>): IngestConfig {
+  return {
+    batchSize: parseIngestBatchSize(values.INGEST_BATCH_SIZE ?? String(DEFAULT_INGEST_BATCH_SIZE)),
+  };
+}
+
 function parseDotenv(text: string): Record<string, string> {
   const values: Record<string, string> = {};
   for (const rawLine of text.split(/\r?\n/)) {
@@ -178,5 +195,13 @@ function parseEmbeddingProvider(value: string): EmbeddingProvider {
 function parseEmbeddingDimensions(value: string): number {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed <= 0) throw new Error(`Invalid embedding dimensions: ${value}`);
+  return parsed;
+}
+
+function parseIngestBatchSize(value: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > MAX_INGEST_BATCH_SIZE) {
+    throw new Error(`Invalid ingest batch size: ${value}. Expected an integer between 1 and ${MAX_INGEST_BATCH_SIZE}`);
+  }
   return parsed;
 }

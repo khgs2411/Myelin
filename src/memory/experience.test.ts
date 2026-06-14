@@ -306,6 +306,34 @@ test("tombstoned provider identities prevent replayed raw rows", () => {
   expect(listExperienceEvents(db, "class-kit")).toEqual([]);
 });
 
+test("claiming experience events respects prompt character budget", () => {
+  for (let index = 0; index < 3; index += 1) {
+    recordExperienceEvent(db, {
+      id: `evt_budget_${index}`,
+      project_key: "class-kit",
+      occurred_at: `2026-06-12T10:0${index}:00.000Z`,
+      provider: "codex",
+      raw_text: "x".repeat(100),
+      raw_payload_json: JSON.stringify({ payload: "y".repeat(100) }),
+      source: "codex-hook",
+      status: "valid",
+    });
+  }
+
+  const claimed = claimExperienceEvents(db, {
+    ingest_job_id: "job_budget",
+    project_key: "class-kit",
+    limit: 3,
+    max_prompt_chars: 900,
+    claimed_at: "2026-06-12T10:05:00.000Z",
+    tombstone_id_for: (event) => `tomb_${event.id}`,
+  });
+
+  expect(claimed.length).toBeGreaterThan(0);
+  expect(claimed.length).toBeLessThan(3);
+  expect(listExperienceEvents(db, "class-kit")).toHaveLength(3 - claimed.length);
+});
+
 test("tombstones keep uncertain duplicates when no dedupe identity exists", () => {
   const input = {
     project_key: "class-kit",
