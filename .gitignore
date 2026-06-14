@@ -22,3 +22,4 @@ state/hook-errors.jsonl
 .adl/
 .agents/
 .symphony/
+.env

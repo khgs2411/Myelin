@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { createRunDir, runDir, timestampRunId } from "./artifacts.ts";
-import { loadConfig, selectModelProfile } from "./config.ts";
+import { loadConfig, selectActiveEmbeddingContract, selectModelProfile } from "./config.ts";
 import { resolveInside } from "./fs.ts";
 import { readJsonIfExists, stableJson, writeJson } from "./json.ts";
 import { discoverProjects, findProject, projectForRepoPath } from "./projects.ts";
@@ -67,6 +67,82 @@ test("config loads myelin.config and honors environment precedence", async () =>
     model: "file-pipeline",
     reasoningEffort: "medium",
   });
+});
+
+test("config exposes default embedding contract", async () => {
+  const config = await loadConfig(root, {});
+
+  expect(config.embedding).toEqual({
+    provider: "gemini",
+    geminiModel: "gemini-embedding-2",
+    dimensions: 1536,
+    stubResponsesDir: undefined,
+  });
+  expect(selectActiveEmbeddingContract(config, "retrieval_document")).toEqual({
+    provider: "gemini",
+    model: "gemini-embedding-2",
+    dimensions: 1536,
+    purpose: "retrieval_document",
+    formatVersion: 1,
+  });
+});
+
+test("embedding config honors file values and environment precedence", async () => {
+  await writeFile(
+    join(root, "myelin.config"),
+    [
+      "EMBEDDING_PROVIDER=gemini",
+      "EMBEDDING_GEMINI_MODEL=file-model",
+      "EMBEDDING_DIMENSIONS=768",
+      "EMBEDDING_STUB_RESPONSES_DIR=file-stubs",
+    ].join("\n"),
+    "utf8",
+  );
+
+  const config = await loadConfig(root, {
+    EMBEDDING_GEMINI_MODEL: "env-model",
+    EMBEDDING_DIMENSIONS: "1536",
+  });
+
+  expect(config.embedding).toEqual({
+    provider: "gemini",
+    geminiModel: "env-model",
+    dimensions: 1536,
+    stubResponsesDir: "file-stubs",
+  });
+});
+
+test("config loads local dotenv secrets between myelin config and environment", async () => {
+  await writeFile(
+    join(root, "myelin.config"),
+    ["GOOGLE_API_KEY=file-key", "EMBEDDING_GEMINI_MODEL=file-model"].join("\n"),
+    "utf8",
+  );
+  await writeFile(
+    join(root, ".env"),
+    ["GOOGLE_API_KEY=dotenv-key", "EMBEDDING_GEMINI_MODEL=dotenv-model"].join("\n"),
+    "utf8",
+  );
+
+  const dotenvConfig = await loadConfig(root, {});
+  expect(dotenvConfig.values.GOOGLE_API_KEY).toBe("dotenv-key");
+  expect(dotenvConfig.embedding.geminiModel).toBe("dotenv-model");
+
+  const envConfig = await loadConfig(root, {
+    GOOGLE_API_KEY: "env-key",
+    EMBEDDING_GEMINI_MODEL: "env-model",
+  });
+  expect(envConfig.values.GOOGLE_API_KEY).toBe("env-key");
+  expect(envConfig.embedding.geminiModel).toBe("env-model");
+});
+
+test("embedding config rejects unsupported providers and invalid dimensions", async () => {
+  await expect(loadConfig(root, { EMBEDDING_PROVIDER: "openai" })).rejects.toThrow(
+    "Unsupported embedding provider: openai",
+  );
+  await expect(loadConfig(root, { EMBEDDING_DIMENSIONS: "zero" })).rejects.toThrow(
+    "Invalid embedding dimensions: zero",
+  );
 });
 
 test("project discovery reads project registry state and resolves cwd ownership", async () => {

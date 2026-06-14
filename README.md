@@ -19,6 +19,7 @@ bun src/cli.ts status <project-key>
 bun src/cli.ts schema check <project-key>
 bun src/cli.ts schema build <project-key>
 bun src/cli.ts memory query <project-key> "What should I know?"
+bun src/cli.ts memory index session <project-key>
 bun src/cli.ts project learn <project-key> --dry-run
 bun src/cli.ts project ingest <project-key>
 bun src/cli.ts ingest <project-key>
@@ -45,6 +46,7 @@ Myelin V2 uses product-language commands instead of the V1 pipeline names:
 | `make compile PROJECT=<key>` | `myelin project learn <key>` / `make learn PROJECT=<key>` |
 | `make update PROJECT=<key>` | `myelin project ingest <key>` / `make ingest PROJECT=<key>` |
 | Experience Log to Session Memory ingest | `myelin ingest <key>` / `myelin ingest status <ingest-job-id>` |
+| Session Memory embedding index/backfill | `myelin memory index session <key> [--limit N] [--retry-failed] [--json]` |
 | `ask` / query helpers | `myelin memory query <key> "<question>"` / `make query ...` |
 | `make init PROJECT=<key>` | `myelin project onboard <key>` / `make onboard PROJECT=<key>` |
 | validate schema context | `myelin schema check <key>` / `myelin schema build <key>` |
@@ -52,6 +54,8 @@ Myelin V2 uses product-language commands instead of the V1 pipeline names:
 The old command names are V1 concepts. Keep them out of new docs and scripts unless a legacy escape hatch is explicitly being discussed.
 
 `project ingest <key>` processes queued source/inbox material through the project-memory pipeline. Top-level `ingest <key>` starts a detached provider-backed Experience Log to Session Memory job and returns a durable handle.
+
+Session Memory vector retrieval is currently an internal facade. MCP exposure, Current Briefing consumption, broader `memory query` changes, and non-Session Memory vectorization are deferred follow-up work.
 
 ## Repository Layout
 
@@ -88,6 +92,8 @@ make typecheck
 ```
 
 Model-backed workflows use the operator's authenticated vendor CLIs through the provider abstraction. Configure defaults in `myelin.config`; environment variables can still override local config for a run.
+
+Embedding-backed Session Memory indexing reads `GOOGLE_API_KEY` from `.env` or the process environment. `GEMINI_API_KEY` is accepted as a compatibility alias.
 
 ## Query And MCP Boundary
 

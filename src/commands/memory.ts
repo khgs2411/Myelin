@@ -2,13 +2,17 @@ import type { Cli, CommandResult } from "./registry.ts";
 import { fail, ok } from "./registry.ts";
 import { getMemoryCandidate, listMemoryCandidates, normalizeCandidateStatus } from "../memory/candidates.ts";
 import { openMemoryDb, type MemoryDb } from "../memory/db.ts";
+import { createGeminiEmbeddingProvider, createStubEmbeddingProvider } from "../memory/embedding-provider.ts";
 import type { MemoryCandidateStatus, MemoryScope } from "../memory/ingest-types.ts";
+import { indexSessionMemories } from "../memory/session-memory-indexer.ts";
 import { repoRoot } from "../runtime/fs.ts";
+import { loadConfig, selectActiveEmbeddingContract } from "../runtime/config.ts";
 import { queryMemory } from "../query/engine.ts";
 
 export function registerMemoryCommands(cli: Cli): void {
   cli.command(["memory", "candidates"], (args) => withMemoryDb((db) => candidates(db, args)));
   cli.command(["memory", "candidate", "show"], (args) => withMemoryDb((db) => candidateShow(db, args)));
+  cli.command(["memory", "index", "session"], (args) => indexSession(args));
   cli.command(["memory", "query"], async (args) => {
     const parsed = parseArgs(args);
     if (parsed.error) return fail(parsed.error);
@@ -23,6 +27,35 @@ export function registerMemoryCommands(cli: Cli): void {
     if (response.degraded) return fail(response.answer);
     return ok(response.answer);
   });
+}
+
+async function indexSession(args: string[]): Promise<CommandResult> {
+  const parsed = parseIndexSessionArgs(args);
+  if (parsed.error) return fail(parsed.error);
+
+  const root = repoRoot().root;
+  const config = await loadConfig(root);
+  const contract = selectActiveEmbeddingContract(config, "retrieval_document");
+  const provider = config.embedding.stubResponsesDir
+    ? createStubEmbeddingProvider(config.embedding.stubResponsesDir)
+    : createGeminiEmbeddingProvider({ apiKey: config.values.GOOGLE_API_KEY ?? config.values.GEMINI_API_KEY });
+  const db = openMemoryDb(root);
+  try {
+    const response = await indexSessionMemories(db, {
+      project_key: parsed.projectKey,
+      contract,
+      provider,
+      limit: parsed.limit,
+      retry_failed: parsed.retryFailed,
+    });
+    if (parsed.json) return ok(JSON.stringify(response, null, 2));
+    const message =
+      `Session memory index for ${parsed.projectKey}: ` +
+      `${response.indexed} indexed, ${response.failed} failed, ${response.pending_remaining} pending.`;
+    return response.degraded ? fail(`${message}\n${response.degraded_reason ?? "Indexing degraded."}`) : ok(message);
+  } finally {
+    db.close();
+  }
 }
 
 function withMemoryDb(fn: (db: MemoryDb) => CommandResult): CommandResult {
@@ -119,6 +152,50 @@ function parseCandidateShowArgs(args: string[]): { id: string; json: boolean; er
 
   if (!id) return { id, json, error: "Usage: myelin memory candidate show <candidate-id> [--json]" };
   return { id, json };
+}
+
+function parseIndexSessionArgs(args: string[]): {
+  projectKey: string;
+  limit: number;
+  retryFailed: boolean;
+  json: boolean;
+  error?: string;
+} {
+  let projectKey = "";
+  let limit = 100;
+  let retryFailed = false;
+  let json = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--json") json = true;
+    else if (arg === "--retry-failed") retryFailed = true;
+    else if (arg === "--limit") {
+      const value = args[++index];
+      const parsed = Number(value);
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        return { projectKey, limit, retryFailed, json, error: "--limit must be a positive integer" };
+      }
+      limit = parsed;
+    } else if (arg.startsWith("-")) {
+      return { projectKey, limit, retryFailed, json, error: `Unknown memory index session option: ${arg}` };
+    } else if (!projectKey) {
+      projectKey = arg;
+    } else {
+      return { projectKey, limit, retryFailed, json, error: `Unexpected memory index session argument: ${arg}` };
+    }
+  }
+
+  if (!projectKey) {
+    return {
+      projectKey,
+      limit,
+      retryFailed,
+      json,
+      error: "Usage: myelin memory index session <project-key> [--limit N] [--retry-failed] [--json]",
+    };
+  }
+  return { projectKey, limit, retryFailed, json };
 }
 
 function parseArgs(args: string[]): {

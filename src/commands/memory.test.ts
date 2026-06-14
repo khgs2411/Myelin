@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { createCli } from "./registry.ts";
 import { registerMemoryCommands } from "./memory.ts";
 import { createMemoryCandidate } from "../memory/candidates.ts";
+import { createSessionMemory } from "../memory/session-memories.ts";
 import { openMemoryDb } from "../memory/db.ts";
 import { writeJson } from "../runtime/json.ts";
 import type { SchemaContext } from "../schema/types.ts";
@@ -133,6 +134,40 @@ test("memory candidate show returns a single candidate", async () => {
   expect(result.exitCode).toBe(0);
   expect(response.candidate.id).toBe("cand_2");
   expect(response.candidate.scope).toBe("project");
+});
+
+test("memory index session reports degraded indexing as JSON without throwing", async () => {
+  await mkdir(join(root, "embedding-stubs"), { recursive: true });
+  await writeFile(join(root, "myelin.config"), `EMBEDDING_STUB_RESPONSES_DIR=${join(root, "embedding-stubs")}\n`, "utf8");
+  const db = openMemoryDb(root);
+  try {
+    createSessionMemory(db, {
+      id: "mem_index_1",
+      project_key: "demo",
+      source_event_refs: ["tomb_1"],
+      memory_kind: "continuity",
+      summary: "Index this session memory.",
+      payload: {},
+      confidence: "high",
+      risk: "low",
+      now: "2026-06-13T10:00:00.000Z",
+    });
+  } finally {
+    db.close();
+  }
+
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+
+  const result = await cli.run(["memory", "index", "session", "demo", "--limit", "1", "--json"]);
+  const response = JSON.parse(result.message);
+
+  expect(result.exitCode).toBe(0);
+  expect(response.project_key).toBe("demo");
+  expect(response.selected).toBe(1);
+  expect(response.indexed + response.failed).toBe(1);
+  expect(response.degraded).toBe(true);
+  expect(response.failures).toHaveLength(1);
 });
 
 async function seedProject(): Promise<void> {

@@ -30,6 +30,9 @@ make learn PROJECT=<key>
 # Drain queued inbox/source items, formerly "update"
 make ingest PROJECT=<key>
 
+# Index pending Session Memory embeddings
+bun src/cli.ts memory index session <key>
+
 # Tests and typecheck
 bun test
 bun run typecheck
@@ -44,6 +47,7 @@ The Makefile is a thin alias layer. New automation should call `myelin` vocabula
 | `compile` | `project learn <key>` |
 | `update` source/inbox processing | `project ingest <key>` |
 | agentic Experience Log to Session Memory processing | `ingest <key>` |
+| Session Memory embedding backfill/indexing | `memory index session <key>` |
 | `ask` | `memory query <key> "<question>"` |
 | `init` | `project onboard <key>` |
 | validation-only schema work | `schema check <key>` |
@@ -66,11 +70,16 @@ Important runtime variables:
 | `MODEL_REASONING_EFFORT=<tier>` | Codex reasoning override. |
 | `PIPELINE_CODEX_MODEL`, `QUERY_CODEX_MODEL` | Workload model profiles. |
 | `PIPELINE_CLAUDE_MODEL`, `QUERY_CLAUDE_MODEL` | Workload model profiles. |
+| `EMBEDDING_PROVIDER`, `EMBEDDING_GEMINI_MODEL`, `EMBEDDING_DIMENSIONS` | Session Memory embedding provider/model/dimension profile. |
+| `EMBEDDING_STUB_RESPONSES_DIR` | Use canned embedding responses for deterministic embedding/index tests. |
+| `GOOGLE_API_KEY`, `GEMINI_API_KEY` | Gemini embedding credential; `GOOGLE_API_KEY` is preferred, `GEMINI_API_KEY` is accepted as an alias. |
 | `LLM_STUB_RESPONSES_DIR=<path>` | Use canned LLM responses for deterministic tests. |
 | `UPDATE_PROJECTS_ROOT`, `UPDATE_ARTIFACTS_ROOT`, `UPDATE_STAGES_ROOT` | Test/runtime root overrides. |
 | `CODEX_BIN`, `CLAUDE_BIN` | Override vendor CLI binary paths. |
 
 `LLM_WIKI_*` variables and the `mcp__llm-wiki__*` MCP tool namespace are compatibility/env contracts kept unchanged under ADR 0050. They are not Myelin product naming.
+
+`myelin.config` is loaded first, `.env` is loaded second for local secrets, and process environment variables override both.
 
 ## Repo Layout
 
@@ -88,6 +97,8 @@ Do not make `/mcp` part of the root package graph. Core query behavior lives in 
 
 - Codex-backed stages must run with `--sandbox read-only`.
 - LLM-stage prompts must require JSON on stdout; do not ask the model to write artifacts directly.
+- Session Memory vector indexing is explicit operator work: use `myelin memory index session <key> [--limit N] [--retry-failed] [--json]`.
+- Session Memory vector retrieval is an internal facade in this slice; MCP exposure, Current Briefing integration, broader `memory query`, and non-Session Memory vectorization are deferred.
 - Query must fail closed when schema context is missing or invalid; it should suggest `schema build` or `schema check`.
 - `project learn` verifies schema freshness before learning work.
 - Inbox lockfiles can strand on hard kills; lockfiles live at `projects/<key>/state/.update.lock`.

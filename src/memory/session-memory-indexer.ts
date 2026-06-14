@@ -1,0 +1,214 @@
+import { createHash } from "node:crypto";
+import type { Database } from "bun:sqlite";
+import type { ActiveEmbeddingContract } from "../runtime/config.ts";
+import type { EmbeddingProviderClient } from "./embedding-provider.ts";
+import type { SessionMemoryRow } from "./ingest-types.ts";
+import {
+  ensureSessionMemoryVectorStorage,
+  listPendingSessionMemoryEmbeddings,
+  markSessionMemoryEmbeddingFailed,
+  markSessionMemoryEmbeddingIndexed,
+  type SessionMemoryEmbeddingRow,
+} from "./session-memory-embeddings.ts";
+import { normalizeSessionMemoryForEmbedding } from "./session-memory-text.ts";
+import {
+  createSqliteVecAdapter,
+  upsertSessionMemoryVector,
+  type SessionMemoryVectorInput,
+  type SqliteVecAdapter,
+} from "./sqlite-vec.ts";
+
+export type SessionMemoryIndexFailure = {
+  embedding_id: string;
+  session_memory_id: string;
+  reason: string;
+};
+
+export type SessionMemoryIndexResult = {
+  project_key: string;
+  selected: number;
+  indexed: number;
+  failed: number;
+  pending_remaining: number;
+  degraded: boolean;
+  degraded_reason?: string;
+  failures: SessionMemoryIndexFailure[];
+};
+
+export type SessionMemoryVectorStore = {
+  ensure: (
+    db: Database,
+    input: { contract: ActiveEmbeddingContract },
+  ) => { available: boolean; reason?: string };
+  upsert: (db: Database, input: SessionMemoryVectorInput) => void;
+};
+
+export async function indexSessionMemories(
+  db: Database,
+  input: {
+    project_key: string;
+    contract: ActiveEmbeddingContract;
+    provider: EmbeddingProviderClient;
+    limit: number;
+    retry_failed?: boolean;
+    now?: () => string;
+    vector_store?: SessionMemoryVectorStore;
+  },
+): Promise<SessionMemoryIndexResult> {
+  const now = input.now ?? (() => new Date().toISOString());
+  const vectorStore = input.vector_store ?? defaultVectorStore(createSqliteVecAdapter());
+  const rows = listPendingSessionMemoryEmbeddings(db, {
+    project_key: input.project_key,
+    contract: input.contract,
+    limit: input.limit,
+    include_failed: input.retry_failed,
+  });
+  const failures: SessionMemoryIndexFailure[] = [];
+
+  if (rows.length === 0) {
+    return {
+      project_key: input.project_key,
+      selected: 0,
+      indexed: 0,
+      failed: 0,
+      pending_remaining: pendingRemaining(db, input.project_key, input.contract),
+      degraded: false,
+      failures,
+    };
+  }
+
+  const availability = vectorStore.ensure(db, { contract: input.contract });
+  if (!availability.available) {
+    const reason = `sqlite-vec unavailable: ${availability.reason ?? "unknown reason"}`;
+    for (const row of rows) {
+      markFailed(db, row, reason, now(), failures);
+    }
+    return {
+      project_key: input.project_key,
+      selected: rows.length,
+      indexed: 0,
+      failed: rows.length,
+      pending_remaining: pendingRemaining(db, input.project_key, input.contract),
+      degraded: true,
+      degraded_reason: reason,
+      failures,
+    };
+  }
+
+  let indexed = 0;
+  for (const row of rows) {
+    try {
+      const memory = getSessionMemory(db, row.session_memory_id);
+      const normalizedText = normalizeSessionMemoryForEmbedding(memory);
+      const embedding = await input.provider.embed({
+        contract: input.contract,
+        title: memory.title,
+        text: normalizedText,
+      });
+      if (embedding.dimensions !== input.contract.dimensions) {
+        throw new Error(
+          `Embedding dimensions mismatch: expected ${input.contract.dimensions}, got ${embedding.dimensions}`,
+        );
+      }
+
+      const indexedAt = now();
+      db.transaction(() => {
+        vectorStore.upsert(db, {
+          memory_id: memory.id,
+          project_key: memory.project_key,
+          embedding_model: input.contract.model,
+          embedding_dimensions: input.contract.dimensions,
+          embedding_purpose: input.contract.purpose,
+          format_version: input.contract.formatVersion,
+          embedding: embedding.embedding,
+        });
+        markSessionMemoryEmbeddingIndexed(db, {
+          id: row.id,
+          normalized_text_hash: sha256(normalizedText),
+          now: indexedAt,
+        });
+      })();
+      indexed += 1;
+    } catch (error) {
+      markFailed(db, row, error instanceof Error ? error.message : String(error), now(), failures);
+    }
+  }
+
+  return {
+    project_key: input.project_key,
+    selected: rows.length,
+    indexed,
+    failed: failures.length,
+    pending_remaining: pendingRemaining(db, input.project_key, input.contract),
+    degraded: failures.length > 0,
+    degraded_reason: failures.length > 0 ? "one or more session memories failed to index" : undefined,
+    failures,
+  };
+}
+
+export function defaultVectorStore(adapter: SqliteVecAdapter = createSqliteVecAdapter()): SessionMemoryVectorStore {
+  return {
+    ensure(db, input) {
+      return ensureSessionMemoryVectorStorage(db, {
+        contract: input.contract,
+        adapter,
+      });
+    },
+    upsert(db, input) {
+      upsertSessionMemoryVector(db, input);
+    },
+  };
+}
+
+function getSessionMemory(db: Database, id: string): SessionMemoryRow {
+  const row = db.query("SELECT * FROM session_memories WHERE id = ?").get(id) as SessionMemoryRow | null;
+  if (!row) throw new Error(`Session memory not found: ${id}`);
+  return row;
+}
+
+function pendingRemaining(db: Database, projectKey: string, contract: ActiveEmbeddingContract): number {
+  const row = db
+    .query(
+      `SELECT count(*) AS n
+       FROM session_memory_embeddings
+       WHERE project_key = ?
+         AND embedding_provider = ?
+         AND embedding_model = ?
+         AND embedding_dimensions = ?
+         AND embedding_purpose = ?
+         AND format_version = ?
+         AND status = 'pending'`,
+    )
+    .get(
+      projectKey,
+      contract.provider,
+      contract.model,
+      contract.dimensions,
+      contract.purpose,
+      contract.formatVersion,
+    ) as { n: number };
+  return row.n;
+}
+
+function markFailed(
+  db: Database,
+  row: SessionMemoryEmbeddingRow,
+  reason: string,
+  now: string,
+  failures: SessionMemoryIndexFailure[],
+): void {
+  markSessionMemoryEmbeddingFailed(db, {
+    id: row.id,
+    failure_reason: reason,
+    now,
+  });
+  failures.push({
+    embedding_id: row.id,
+    session_memory_id: row.session_memory_id,
+    reason,
+  });
+}
+
+function sha256(text: string): string {
+  return createHash("sha256").update(text).digest("hex");
+}

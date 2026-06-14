@@ -1,6 +1,8 @@
 import type { Database } from "bun:sqlite";
+import { DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT } from "../runtime/config.ts";
+import { sessionMemoryEmbeddingId } from "./session-memory-embeddings.ts";
 
-type Migration = { version: number; sql?: string; apply?: (db: Database) => void };
+type Migration = { version: number; sql?: string; apply?: (db: Database, now: Date) => void };
 
 const MIGRATIONS: Migration[] = [
   {
@@ -208,6 +210,10 @@ const MIGRATIONS: Migration[] = [
     version: 4,
     apply: migrateExperienceEventTombstonesToClaimFinalizeSchema,
   },
+  {
+    version: 5,
+    apply: migrateSessionMemoryEmbeddings,
+  },
 ];
 
 export function runMigrations(db: Database, now: Date = new Date()): void {
@@ -216,10 +222,10 @@ export function runMigrations(db: Database, now: Date = new Date()): void {
   const current = row?.v ?? 0;
 
   for (const migration of MIGRATIONS) {
-    if (migration.version <= current) continue;
+      if (migration.version <= current) continue;
     const apply = db.transaction(() => {
       if (migration.sql) db.exec(migration.sql);
-      if (migration.apply) migration.apply(db);
+      if (migration.apply) migration.apply(db, now);
       db.query("INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)").run(
         migration.version,
         now.toISOString(),
@@ -305,4 +311,74 @@ function migrateExperienceEventTombstonesToClaimFinalizeSchema(db: Database): vo
     CREATE UNIQUE INDEX experience_event_tombstones_original_event ON experience_event_tombstones(original_event_id);
     CREATE UNIQUE INDEX experience_event_tombstones_dedupe_key ON experience_event_tombstones(dedupe_key) WHERE dedupe_key IS NOT NULL;
   `);
+}
+
+function migrateSessionMemoryEmbeddings(db: Database, now: Date): void {
+  db.exec(`
+    CREATE TABLE session_memory_embeddings (
+      id                    TEXT PRIMARY KEY,
+      session_memory_id     TEXT NOT NULL REFERENCES session_memories(id),
+      project_key           TEXT NOT NULL,
+      embedding_provider    TEXT NOT NULL,
+      embedding_model       TEXT NOT NULL,
+      embedding_dimensions  INTEGER NOT NULL,
+      embedding_purpose     TEXT NOT NULL CHECK (embedding_purpose IN ('retrieval_document', 'retrieval_query')),
+      format_version        INTEGER NOT NULL,
+      normalized_text_hash  TEXT,
+      status                TEXT NOT NULL CHECK (status IN ('pending', 'indexed', 'failed')),
+      failure_reason        TEXT,
+      retry_count           INTEGER NOT NULL DEFAULT 0,
+      created_at            TEXT NOT NULL,
+      updated_at            TEXT NOT NULL,
+      indexed_at            TEXT,
+      UNIQUE (
+        session_memory_id,
+        embedding_provider,
+        embedding_model,
+        embedding_dimensions,
+        embedding_purpose,
+        format_version
+      )
+    );
+    CREATE INDEX session_memory_embeddings_project_status
+      ON session_memory_embeddings(project_key, status, updated_at);
+    CREATE INDEX session_memory_embeddings_memory
+      ON session_memory_embeddings(session_memory_id);
+  `);
+
+  const tables = db
+    .query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'session_memories'")
+    .all() as Array<{ name: string }>;
+  if (tables.length === 0) return;
+
+  const contract = DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT;
+  const timestamp = now.toISOString();
+  const rows = db.query("SELECT id, project_key FROM session_memories ORDER BY created_at, id").all() as Array<{
+    id: string;
+    project_key: string;
+  }>;
+  const insert = db.query(
+    `INSERT OR IGNORE INTO session_memory_embeddings
+      (id, session_memory_id, project_key, embedding_provider, embedding_model, embedding_dimensions,
+       embedding_purpose, format_version, status, retry_count, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', 0, ?, ?)`,
+  );
+
+  for (const row of rows) {
+    insert.run(
+      sessionMemoryEmbeddingId({
+        session_memory_id: row.id,
+        contract,
+      }),
+      row.id,
+      row.project_key,
+      contract.provider,
+      contract.model,
+      contract.dimensions,
+      contract.purpose,
+      contract.formatVersion,
+      timestamp,
+      timestamp,
+    );
+  }
 }
