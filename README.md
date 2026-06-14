@@ -95,6 +95,8 @@ Model-backed workflows use the operator's authenticated vendor CLIs through the 
 
 Embedding-backed Session Memory indexing reads `GOOGLE_API_KEY` from `.env` or the process environment. `GEMINI_API_KEY` is accepted as a compatibility alias.
 
+On macOS, SQLite extension loading requires a non-Apple SQLite build. Myelin prefers its vendored SQLite runtime, falls back to Homebrew SQLite at `/opt/homebrew/opt/sqlite/lib/libsqlite3.dylib` or `/usr/local/opt/sqlite/lib/libsqlite3.dylib`, and accepts `MYELIN_SQLITE_DYLIB_PATH` or `SQLITE_DYLIB_PATH` overrides.
+
 ## Query And MCP Boundary
 
 Core owns query behavior in `src/query/`. Detached interfaces should consume:

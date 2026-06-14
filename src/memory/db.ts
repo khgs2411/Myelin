@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { resolveInside } from "../runtime/fs.ts";
 import { runMigrations } from "./migrations.ts";
+import { configureBunSQLite } from "./sqlite-runtime.ts";
 
 export type MemoryDb = Database;
 
@@ -12,11 +13,13 @@ export function memoryDbPath(root: string): string {
 
 /** Open the repo-root memory DB (creates state/ if missing). Caller closes. */
 export function openMemoryDb(root: string): MemoryDb {
+  configureBunSQLite(root);
   return openMemoryDbAt(memoryDbPath(root));
 }
 
 /** Open at an explicit path (":memory:" or a file) — used by tests. Caller closes. */
 export function openMemoryDbAt(path: string): MemoryDb {
+  configureBunSQLite();
   if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
   const db = new Database(path);
   db.exec("PRAGMA journal_mode = WAL;");
