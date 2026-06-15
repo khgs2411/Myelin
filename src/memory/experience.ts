@@ -56,6 +56,7 @@ export type ClaimExperienceEventsInput = {
   provider_session_id?: string | null;
   limit: number;
   max_prompt_chars?: number;
+  prompt_chars_for_tombstone?: (tombstone: ClaimedExperienceTombstone) => number;
   claimed_at: string;
   tombstone_id_for: (event: ExperienceEventRow) => string;
 };
@@ -168,7 +169,7 @@ export function claimExperienceEvents(db: Database, input: ClaimExperienceEvents
         provider_session_id: input.provider_session_id,
         claimed_at: input.claimed_at,
       });
-      const tombstonePromptChars = JSON.stringify(tombstone, null, 2).length;
+      const tombstonePromptChars = input.prompt_chars_for_tombstone?.(tombstone) ?? JSON.stringify(tombstone, null, 2).length;
       if (
         input.max_prompt_chars !== undefined &&
         claimed.length > 0 &&

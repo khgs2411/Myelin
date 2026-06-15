@@ -88,6 +88,23 @@ test("codex dispatch uses read-only sandbox, profile model, and reasoning effort
   expect(captured.options?.stdin).toBe("runtime prompt");
 });
 
+test("codex dispatch can request structured output with a JSON schema", async () => {
+  await writeFile(join(root, "myelin.config"), "DEFAULT_PROVIDER=codex\nPIPELINE_CODEX_MODEL=gpt-pipeline", "utf8");
+  const captured: Captured = {};
+  const result = await invokeLlm({
+    root,
+    workload: "pipeline",
+    prompt: "runtime prompt",
+    outputSchema: "/tmp/schema.json",
+    env: {},
+    runner: captureRunner(captured, '{"ok": true}'),
+  });
+
+  expect(result.response).toEqual({ ok: true });
+  expect(captured.command).toContain("--output-schema");
+  expect(captured.command).toContain("/tmp/schema.json");
+});
+
 test("claude dispatch uses default provider profile and parses result wrappers", async () => {
   await writeFile(
     join(root, "myelin.config"),

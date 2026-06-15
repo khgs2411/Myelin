@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { openMemoryDbAt } from "../memory/db.ts";
 import { listExperienceEvents } from "../memory/experience.ts";
 import { bootstrapProject } from "../runtime/bootstrap.ts";
-import { captureCodexPayload } from "./capture.ts";
+import { captureCodexPayload, isCaptureDisabled } from "./capture.ts";
 
 let root: string;
 let repo: string;
@@ -39,6 +39,12 @@ test("captureCodexPayload stores mapped events", async () => {
   } finally {
     db.close();
   }
+});
+
+test("capture disabled flag is explicit for Myelin-owned provider sessions", () => {
+  expect(isCaptureDisabled({ MYELIN_CAPTURE_DISABLED: "1" })).toBe(true);
+  expect(isCaptureDisabled({ MYELIN_CAPTURE_DISABLED: "true" })).toBe(false);
+  expect(isCaptureDisabled({})).toBe(false);
 });
 
 test("captureCodexPayload stores empty Stop as invalid raw evidence", async () => {

@@ -80,7 +80,7 @@ Raw captured agent activity used as evidence, not truth.
 _Avoid_: Truth store, canonical memory
 
 **Experience Log Tombstone**:
-A small audit record that replaces a pulled raw Experience Log row and is finalized when ingest determines the row's output or no-output state.
+A small audit record that can begin as an in-progress lease stub for a raw Experience Log row, then becomes the terminal archive when ingest determines the row's output or no-output state.
 _Avoid_: processed raw row, permanent transcript
 
 **External Work Tracker**:
@@ -214,7 +214,7 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - Trusted **Session Memory** is stored in root SQLite in a dedicated `session_memories` table; embeddings are retrieval support, not the canonical memory record.
 - A future **Session Memory Query Facade** should hide the SQLite/vector implementation from MCP callers and agents.
 - Early **Experience Log** entries are explicit high-signal records for continuity or later curation, not routine tool-call logging.
-- An **Experience Log Tombstone** replaces a pulled raw **Experience Log** row during ingest, then receives final output or no-output metadata when the ingest job completes.
+- An **Experience Log Tombstone** can reserve a raw **Experience Log** row as an in-progress lease while the raw row remains present, then receives final output or no-output metadata when ingest completes and archives the row.
 - An **External Work Tracker** can provide source evidence for memory, but Myelin does not model tracker-specific concepts as product primitives.
 - **Auto Mode** can mark **Experience Log** entries or candidates for later processing, but it is distinct from an explicit **Detached Ingest Job** started by the **Ingest Command**.
 - A **Detached Ingest Job** runs its provider session from the target repository cwd, on `master` for the first implementation.

@@ -6,6 +6,7 @@ import { loadConfig, type ModelProfile, type Provider, type Workload } from "./c
 import { type RunProcessOptions, type RunProcessResult, runProcess } from "./process.ts";
 
 export const PROMPT_SIZE_LIMIT = 200_000;
+export const DEFAULT_LLM_TIMEOUT_MS = 10 * 60 * 1000;
 
 export type JsonObject = Record<string, unknown>;
 
@@ -25,6 +26,7 @@ export type InvokeLlmOptions = {
   workload: Workload;
   stageId?: string;
   prompt: string;
+  outputSchema?: string;
   provider?: Provider;
   modelOverride?: string;
   env?: NodeJS.ProcessEnv;
@@ -52,10 +54,11 @@ export async function invokeLlm(options: InvokeLlmOptions): Promise<LlmResult> {
   }
 
   const runner = options.runner ?? runProcess;
+  const timeoutMs = llmTimeoutMs(env);
   const output =
     resolved.provider === "claude"
-      ? await invokeClaude(resolved, options.prompt, runner, options.cwd, env)
-      : await invokeCodex(resolved, options.prompt, runner, options.cwd, env);
+      ? await invokeClaude(resolved, options.prompt, runner, options.cwd, env, timeoutMs)
+      : await invokeCodex(resolved, options.prompt, runner, options.cwd, env, options.outputSchema, timeoutMs);
 
   return {
     response: output.response,
@@ -145,13 +148,16 @@ async function invokeCodex(
   runner: ProcessRunner,
   cwd: string | undefined,
   env: NodeJS.ProcessEnv,
+  outputSchema: string | undefined,
+  timeoutMs: number,
 ): Promise<{ response: JsonObject; outputChars: number }> {
   const command = [env.CODEX_BIN ?? "codex", "exec", "--skip-git-repo-check", "--sandbox", "read-only"];
+  if (outputSchema) command.push("--output-schema", outputSchema);
   if (resolved.model) command.push("--model", resolved.model);
   if (resolved.reasoningEffort) command.push("-c", `model_reasoning_effort="${resolved.reasoningEffort}"`);
   command.push("-");
 
-  const result = await runner(command, { cwd, stdin: prompt, env });
+  const result = await runner(command, { cwd, stdin: prompt, env, timeoutMs });
   if (result.exitCode !== 0) throw new Error(`codex exited ${result.exitCode}: ${result.stderr.trim()}`);
   return { response: parseCodexResponse(result.stdout), outputChars: result.stdout.length };
 }
@@ -162,14 +168,23 @@ async function invokeClaude(
   runner: ProcessRunner,
   cwd: string | undefined,
   env: NodeJS.ProcessEnv,
+  timeoutMs: number,
 ): Promise<{ response: JsonObject; outputChars: number }> {
   const command = [env.CLAUDE_BIN ?? "claude", "-p", "--output-format", "json"];
   if (resolved.model) command.push("--model", resolved.model);
   command.push(prompt);
 
-  const result = await runner(command, { cwd, env });
+  const result = await runner(command, { cwd, env, timeoutMs });
   if (result.exitCode !== 0) throw new Error(`claude exited ${result.exitCode}: ${result.stderr.trim()}`);
   return { response: parseClaudeResponse(result.stdout), outputChars: result.stdout.length };
+}
+
+function llmTimeoutMs(env: NodeJS.ProcessEnv): number {
+  const value = env.LLM_TIMEOUT_MS;
+  if (value === undefined || value === "") return DEFAULT_LLM_TIMEOUT_MS;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_LLM_TIMEOUT_MS;
+  return parsed;
 }
 
 async function readStub(stubDir: string, stubKey: string, prompt: string): Promise<LlmResult> {

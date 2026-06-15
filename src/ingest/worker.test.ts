@@ -357,7 +357,7 @@ test("worker claims batches from target repo cwd and completes when queue is emp
   });
   db.close();
 
-  const calls: Array<{ cwd?: string; stdin?: string }> = [];
+  const calls: Array<{ command: string[]; cwd?: string; stdin?: string }> = [];
   await runIngestWorker({
     root,
     projectKey: "class-kit",
@@ -367,8 +367,8 @@ test("worker claims batches from target repo cwd and completes when queue is emp
     providerSessionId: "sess_1",
     batchSize: 1,
     now: fixedNow(),
-    runner: async (_command, options): Promise<RunProcessResult> => {
-      calls.push({ cwd: options?.cwd, stdin: options?.stdin });
+    runner: async (command, options): Promise<RunProcessResult> => {
+      calls.push({ command, cwd: options?.cwd, stdin: options?.stdin });
       return {
         exitCode: 0,
         stdout: JSON.stringify({
@@ -392,6 +392,8 @@ test("worker claims batches from target repo cwd and completes when queue is emp
 
   db = openMemoryDbAt(join(root, "state", "memory.db"));
   expect(calls).toHaveLength(1);
+  expect(calls[0].command).toContain("--output-schema");
+  expect(calls[0].command).toContain(join(root, "src", "ingest", "worker-output.schema.json"));
   expect(calls[0].cwd).toBe("/target/repo");
   expect(calls[0].stdin).toContain("Every session memory, memory candidate, and handoff instruction must include source_event_refs");
   expect(calls[0].stdin).toContain("Every memory candidate must include: id, source_event_refs, scope, status, candidate_type");

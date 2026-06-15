@@ -66,6 +66,11 @@ test("top-level ingest starts one detached worker per configured batch", async (
     branch: "master",
   });
   expect(spawned).toHaveLength(3);
+  expect(spawned.map((item) => (item as { env: Record<string, string | undefined> }).env.MYELIN_INGEST_START_DELAY_MS)).toEqual([
+    "750",
+    "1500",
+    "2250",
+  ]);
 });
 
 test("top-level ingest records a failed job on branch mismatch before spawn", async () => {

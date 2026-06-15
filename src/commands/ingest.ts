@@ -105,6 +105,10 @@ async function start(args: string[], deps: IngestCommandDeps) {
         projectKey: parsed.projectKey,
         jobId: job.id,
         now,
+        env: {
+          ...process.env,
+          MYELIN_INGEST_START_DELAY_MS: String((index + 1) * 750),
+        },
         runner: deps.runner,
         spawn: deps.spawn,
       });
@@ -160,6 +164,8 @@ async function worker(args: string[], deps: IngestCommandDeps) {
   const jobId = args[0];
   if (!jobId || args.length > 1) return fail("Usage: myelin ingest worker <ingest-job-id>");
 
+  await sleep(Number(process.env.MYELIN_INGEST_START_DELAY_MS ?? 0));
+
   const root = process.env.MYELIN_ROOT ?? repoRoot().root;
   const db = openMemoryDb(root);
   try {
@@ -192,6 +198,11 @@ async function worker(args: string[], deps: IngestCommandDeps) {
   } finally {
     db.close();
   }
+}
+
+async function sleep(ms: number): Promise<void> {
+  if (!Number.isFinite(ms) || ms <= 0) return;
+  await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function parseStartArgs(args: string[]): {

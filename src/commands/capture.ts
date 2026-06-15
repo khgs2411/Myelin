@@ -7,6 +7,7 @@ import { ok } from "./registry.ts";
 export function registerCaptureCommands(cli: Cli): void {
   cli.command(["capture", "codex-hook"], async () => {
     try {
+      if (isCaptureDisabled()) return ok("");
       const payload = JSON.parse(await Bun.stdin.text());
       await captureCodexPayload(process.env.MYELIN_ROOT ?? repoRoot().root, payload);
     } catch {
@@ -14,6 +15,10 @@ export function registerCaptureCommands(cli: Cli): void {
     }
     return ok("");
   });
+}
+
+export function isCaptureDisabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.MYELIN_CAPTURE_DISABLED === "1";
 }
 
 export async function captureCodexPayload(root: string, payload: unknown): Promise<CommandResult> {

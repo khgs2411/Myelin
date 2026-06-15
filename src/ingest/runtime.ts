@@ -128,6 +128,7 @@ export async function spawnDetachedIngestWorker(input: {
       MYELIN_ROOT: input.root,
       MYELIN_INGEST_JOB_ID: input.jobId,
       MYELIN_INGEST_PROJECT: input.projectKey,
+      MYELIN_CAPTURE_DISABLED: "1",
     },
   });
   proc.unref();

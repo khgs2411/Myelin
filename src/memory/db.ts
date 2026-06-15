@@ -21,10 +21,41 @@ export function openMemoryDb(root: string): MemoryDb {
 export function openMemoryDbAt(path: string): MemoryDb {
   configureBunSQLite();
   if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
+  if (path === ":memory:") return createConfiguredMemoryDb(path);
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 25; attempt += 1) {
+    try {
+      return createConfiguredMemoryDb(path);
+    } catch (error) {
+      if (!isDatabaseLockedError(error)) throw error;
+      lastError = error;
+      sleepSync(Math.min(1000, 50 * (attempt + 1)));
+    }
+  }
+
+  throw lastError;
+}
+
+function createConfiguredMemoryDb(path: string): MemoryDb {
   const db = new Database(path);
-  db.exec("PRAGMA busy_timeout = 10000;");
-  db.exec("PRAGMA journal_mode = WAL;");
-  db.exec("PRAGMA foreign_keys = ON;");
-  runMigrations(db);
-  return db;
+  try {
+    db.exec("PRAGMA busy_timeout = 10000;");
+    db.exec("PRAGMA journal_mode = WAL;");
+    db.exec("PRAGMA foreign_keys = ON;");
+    runMigrations(db);
+    return db;
+  } catch (error) {
+    db.close();
+    throw error;
+  }
+}
+
+function isDatabaseLockedError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /database is locked/i.test(message);
+}
+
+function sleepSync(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }

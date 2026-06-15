@@ -200,3 +200,10 @@ test("subprocess helper captures stdout, stderr, exit code, and checked failure"
   expect((await runProcessChecked(["bun", "-e", "console.log('checked')"])).trim()).toBe("checked");
   await expect(runProcessChecked(["bun", "-e", "process.exit(7)"])).rejects.toThrow("Command failed (7)");
 });
+
+test("subprocess helper times out long-running commands", async () => {
+  const result = await runProcess(["bun", "-e", "setTimeout(() => {}, 1000)"], { timeoutMs: 25 });
+
+  expect(result.exitCode).toBe(124);
+  expect(result.stderr).toContain("Process timed out after 25ms");
+});

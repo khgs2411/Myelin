@@ -2,6 +2,7 @@ export type RunProcessOptions = {
   cwd?: string;
   env?: Record<string, string | undefined>;
   stdin?: string;
+  timeoutMs?: number;
 };
 
 export type RunProcessResult = {
@@ -20,6 +21,14 @@ export async function runProcess(command: string[], options: RunProcessOptions =
     stdout: "pipe",
     stderr: "pipe",
   });
+  let timedOut = false;
+  const timeout =
+    options.timeoutMs !== undefined && Number.isFinite(options.timeoutMs) && options.timeoutMs > 0
+      ? setTimeout(() => {
+          timedOut = true;
+          proc.kill();
+        }, options.timeoutMs)
+      : null;
 
   if (options.stdin !== undefined) {
     const stdin = proc.stdin;
@@ -33,8 +42,11 @@ export async function runProcess(command: string[], options: RunProcessOptions =
     new Response(proc.stderr).text(),
     proc.exited,
   ]);
+  if (timeout) clearTimeout(timeout);
 
-  return { exitCode, stdout, stderr };
+  if (!timedOut) return { exitCode, stdout, stderr };
+  const timeoutMessage = `Process timed out after ${options.timeoutMs}ms`;
+  return { exitCode: 124, stdout, stderr: stderr ? `${stderr.trimEnd()}\n${timeoutMessage}` : timeoutMessage };
 }
 
 export async function runProcessChecked(command: string[], options: RunProcessOptions = {}): Promise<string> {

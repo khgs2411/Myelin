@@ -1,4 +1,5 @@
 import type { Database } from "bun:sqlite";
+import { join } from "node:path";
 import type { JsonObject, ProcessRunner } from "../runtime/llm-client.ts";
 import { invokeLlm } from "../runtime/llm-client.ts";
 import type { ClaimedExperienceTombstone } from "../memory/experience.ts";
@@ -22,7 +23,7 @@ import { createSessionMemory } from "../memory/session-memories.ts";
 import { updateIngestJobStatus } from "./jobs.ts";
 
 const DEFAULT_INGEST_PROMPT_CHAR_LIMIT = 180_000;
-const MAX_PROMPT_RETAINED_EVIDENCE_CHARS = 24_000;
+const MAX_PROMPT_RETAINED_EVIDENCE_CHARS = 6_000;
 const TRUNCATED_EVIDENCE_SUFFIX = "\n...[truncated for ingest prompt; full evidence is preserved in the tombstone audit row]";
 
 export type IngestWorkerOutput = {
@@ -425,6 +426,7 @@ export async function runIngestWorker(input: {
         provider_session_id: input.providerSessionId ?? null,
         limit: remaining,
         max_prompt_chars: input.maxPromptChars ?? DEFAULT_INGEST_PROMPT_CHAR_LIMIT,
+        prompt_chars_for_tombstone: (tombstone) => JSON.stringify(tombstoneForPrompt(tombstone), null, 2).length,
         claimed_at: claimedAt,
         tombstone_id_for: (event) => `tomb_${input.jobId}_${event.id}`,
       });
@@ -435,6 +437,7 @@ export async function runIngestWorker(input: {
         root: input.root,
         workload: "pipeline",
         provider: input.provider,
+        outputSchema: join(input.root, "src", "ingest", "worker-output.schema.json"),
         prompt: buildIngestPrompt({
           projectKey: input.projectKey,
           jobId: input.jobId,

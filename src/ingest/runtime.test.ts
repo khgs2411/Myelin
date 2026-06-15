@@ -87,6 +87,7 @@ test("detached spawn runs worker from target repo and returns pid plus log path"
       MYELIN_ROOT: root,
       MYELIN_INGEST_JOB_ID: "job_1",
       MYELIN_INGEST_PROJECT: "class-kit",
+      MYELIN_CAPTURE_DISABLED: "1",
     },
   });
 });
