@@ -99,7 +99,7 @@ Initial config keys:
 - `EMBEDDING_PROVIDER=gemini`
 - `EMBEDDING_GEMINI_MODEL=gemini-embedding-2`
 - `EMBEDDING_DIMENSIONS=1536`
-- `EMBEDDING_BATCH_SIZE=500`
+- `EMBEDDING_BATCH_SIZE=50` by default; max 500
 - `EMBEDDING_STUB_RESPONSES_DIR=<path>` for deterministic embedding-provider tests when a CLI/runtime stub path is needed
 
 Credentials should come from `GEMINI_API_KEY`. Missing credentials degrade indexing/query embedding and do not block Session Memory writes or pending metadata creation.

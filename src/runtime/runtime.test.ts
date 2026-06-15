@@ -83,7 +83,7 @@ test("config exposes default embedding contract", async () => {
     provider: "gemini",
     geminiModel: "gemini-embedding-2",
     dimensions: 1536,
-    batchSize: 500,
+    batchSize: 50,
     stubResponsesDir: undefined,
   });
   expect(selectActiveEmbeddingContract(config, "retrieval_document")).toEqual({

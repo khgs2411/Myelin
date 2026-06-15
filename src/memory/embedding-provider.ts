@@ -38,7 +38,7 @@ export function createGeminiEmbeddingProvider(input: { apiKey?: string; fetch?: 
           outputDimensionality: request.contract.dimensions,
         }),
       });
-      if (!response.ok) throw new Error(`Gemini embedding request failed: HTTP ${response.status}`);
+      if (!response.ok) throw new Error(await geminiHttpError("Gemini embedding request failed", response));
       const body = await response.json();
       const values = parseGeminiEmbeddingValues(body);
       assertDimensions("Gemini", request.contract.dimensions, values.length);
@@ -65,7 +65,7 @@ export function createGeminiEmbeddingProvider(input: { apiKey?: string; fetch?: 
           })),
         }),
       });
-      if (!response.ok) throw new Error(`Gemini embedding batch request failed: HTTP ${response.status}`);
+      if (!response.ok) throw new Error(await geminiHttpError("Gemini embedding batch request failed", response));
       const body = await response.json();
       const embeddings = parseGeminiBatchEmbeddingValues(body);
       if (embeddings.length !== requests.length) {
@@ -130,6 +130,12 @@ function parseGeminiBatchEmbeddingValues(body: unknown): number[][] {
     }
     return embedding.values.map((value) => Number(value));
   });
+}
+
+async function geminiHttpError(label: string, response: Response): Promise<string> {
+  const text = await response.text();
+  const detail = text.trim().replace(/\s+/g, " ").slice(0, 500);
+  return detail ? `${label}: HTTP ${response.status}: ${detail}` : `${label}: HTTP ${response.status}`;
 }
 
 function assertDimensions(label: "Gemini" | "Stub", expected: number, actual: number): void {
