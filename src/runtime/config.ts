@@ -17,6 +17,7 @@ export type EmbeddingConfig = {
   provider: EmbeddingProvider;
   geminiModel: string;
   dimensions: number;
+  batchSize: number;
   stubResponsesDir?: string;
 };
 
@@ -49,6 +50,8 @@ export const EMBEDDING_FORMAT_VERSION = 1;
 export const DEFAULT_EMBEDDING_PROVIDER: EmbeddingProvider = "gemini";
 export const DEFAULT_GEMINI_EMBEDDING_MODEL = "gemini-embedding-2";
 export const DEFAULT_EMBEDDING_DIMENSIONS = 1536;
+export const DEFAULT_EMBEDDING_BATCH_SIZE = 500;
+export const MAX_EMBEDDING_BATCH_SIZE = 500;
 export const DEFAULT_INGEST_BATCH_SIZE = 100;
 export const MAX_INGEST_BATCH_SIZE = 500;
 export const DEFAULT_INGEST_WORKER_CONCURRENCY = 1;
@@ -84,6 +87,7 @@ const DEFAULT_CONFIG: MyelinConfig = {
     provider: DEFAULT_EMBEDDING_PROVIDER,
     geminiModel: DEFAULT_GEMINI_EMBEDDING_MODEL,
     dimensions: DEFAULT_EMBEDDING_DIMENSIONS,
+    batchSize: DEFAULT_EMBEDDING_BATCH_SIZE,
   },
   ingest: {
     batchSize: DEFAULT_INGEST_BATCH_SIZE,
@@ -178,6 +182,7 @@ function embeddingConfig(values: Record<string, string>): EmbeddingConfig {
     provider: parseEmbeddingProvider(values.EMBEDDING_PROVIDER ?? DEFAULT_EMBEDDING_PROVIDER),
     geminiModel: values.EMBEDDING_GEMINI_MODEL ?? DEFAULT_GEMINI_EMBEDDING_MODEL,
     dimensions: parseEmbeddingDimensions(values.EMBEDDING_DIMENSIONS ?? String(DEFAULT_EMBEDDING_DIMENSIONS)),
+    batchSize: parseEmbeddingBatchSize(values.EMBEDDING_BATCH_SIZE ?? String(DEFAULT_EMBEDDING_BATCH_SIZE)),
     stubResponsesDir: values.EMBEDDING_STUB_RESPONSES_DIR,
   };
 }
@@ -256,6 +261,14 @@ function parseEmbeddingProvider(value: string): EmbeddingProvider {
 function parseEmbeddingDimensions(value: string): number {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed <= 0) throw new Error(`Invalid embedding dimensions: ${value}`);
+  return parsed;
+}
+
+function parseEmbeddingBatchSize(value: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > MAX_EMBEDDING_BATCH_SIZE) {
+    throw new Error(`Invalid embedding batch size: ${value}. Expected an integer between 1 and ${MAX_EMBEDDING_BATCH_SIZE}`);
+  }
   return parsed;
 }
 

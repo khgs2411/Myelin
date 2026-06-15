@@ -66,6 +66,65 @@ test("gemini provider formats query embedding requests", async () => {
   });
 });
 
+test("gemini provider formats batch embedding requests and preserves result order", async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  const provider = createGeminiEmbeddingProvider({
+    apiKey: "key",
+    fetch: async (url, init) => {
+      calls.push({ url, init });
+      return Response.json({
+        embeddings: [
+          { values: [0.1, 0.2, 0.3] },
+          { values: [0.4, 0.5, 0.6] },
+        ],
+      });
+    },
+  });
+
+  await expect(
+    provider.embedBatch?.([
+      documentRequest,
+      { ...documentRequest, title: "Next", text: "second normalized" },
+    ]),
+  ).resolves.toEqual([
+    { embedding: [0.1, 0.2, 0.3], model: "gemini-embedding-2", dimensions: 3 },
+    { embedding: [0.4, 0.5, 0.6], model: "gemini-embedding-2", dimensions: 3 },
+  ]);
+  expect(calls[0].url).toBe(
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:batchEmbedContents?key=key",
+  );
+  expect(JSON.parse(String(calls[0].init?.body))).toEqual({
+    requests: [
+      {
+        model: "models/gemini-embedding-2",
+        content: { parts: [{ text: "title: Review | text: normalized" }] },
+        outputDimensionality: 3,
+      },
+      {
+        model: "models/gemini-embedding-2",
+        content: { parts: [{ text: "title: Next | text: second normalized" }] },
+        outputDimensionality: 3,
+      },
+    ],
+  });
+});
+
+test("gemini batch provider validates response count and dimensions", async () => {
+  await expect(
+    createGeminiEmbeddingProvider({
+      apiKey: "key",
+      fetch: async () => Response.json({ embeddings: [{ values: [0.1, 0.2, 0.3] }] }),
+    }).embedBatch?.([documentRequest, { ...documentRequest, text: "second" }]),
+  ).rejects.toThrow("Gemini embedding batch response count mismatch");
+
+  await expect(
+    createGeminiEmbeddingProvider({
+      apiKey: "key",
+      fetch: async () => Response.json({ embeddings: [{ values: [0.1] }] }),
+    }).embedBatch?.([documentRequest]),
+  ).rejects.toThrow("Gemini embedding dimensions mismatch: expected 3, got 1");
+});
+
 test("gemini provider requires an api key and validates dimensions", async () => {
   await expect(createGeminiEmbeddingProvider({}).embed(documentRequest)).rejects.toThrow(
     "Gemini API key is required for embedding requests",

@@ -6,7 +6,7 @@ import { createGeminiEmbeddingProvider, createStubEmbeddingProvider } from "../m
 import type { MemoryCandidateStatus, MemoryScope } from "../memory/ingest-types.ts";
 import { indexSessionMemories } from "../memory/session-memory-indexer.ts";
 import { repoRoot } from "../runtime/fs.ts";
-import { loadConfig, selectActiveEmbeddingContract } from "../runtime/config.ts";
+import { DEFAULT_EMBEDDING_BATCH_SIZE, loadConfig, MAX_EMBEDDING_BATCH_SIZE, selectActiveEmbeddingContract } from "../runtime/config.ts";
 import { queryMemory } from "../query/engine.ts";
 
 export function registerMemoryCommands(cli: Cli): void {
@@ -46,6 +46,7 @@ async function indexSession(args: string[]): Promise<CommandResult> {
       contract,
       provider,
       limit: parsed.limit,
+      batch_size: parsed.batchSize ?? config.embedding.batchSize,
       retry_failed: parsed.retryFailed,
     });
     if (parsed.json) return ok(JSON.stringify(response, null, 2));
@@ -157,12 +158,14 @@ function parseCandidateShowArgs(args: string[]): { id: string; json: boolean; er
 function parseIndexSessionArgs(args: string[]): {
   projectKey: string;
   limit: number;
+  batchSize?: number;
   retryFailed: boolean;
   json: boolean;
   error?: string;
 } {
   let projectKey = "";
-  let limit = 100;
+  let limit = DEFAULT_EMBEDDING_BATCH_SIZE;
+  let batchSize: number | undefined;
   let retryFailed = false;
   let json = false;
 
@@ -174,15 +177,29 @@ function parseIndexSessionArgs(args: string[]): {
       const value = args[++index];
       const parsed = Number(value);
       if (!Number.isInteger(parsed) || parsed <= 0) {
-        return { projectKey, limit, retryFailed, json, error: "--limit must be a positive integer" };
+        return { projectKey, limit, batchSize, retryFailed, json, error: "--limit must be a positive integer" };
       }
       limit = parsed;
+    } else if (arg === "--batch-size") {
+      const value = args[++index];
+      const parsed = Number(value);
+      if (!Number.isInteger(parsed) || parsed <= 0 || parsed > MAX_EMBEDDING_BATCH_SIZE) {
+        return {
+          projectKey,
+          limit,
+          batchSize,
+          retryFailed,
+          json,
+          error: `--batch-size must be an integer between 1 and ${MAX_EMBEDDING_BATCH_SIZE}`,
+        };
+      }
+      batchSize = parsed;
     } else if (arg.startsWith("-")) {
-      return { projectKey, limit, retryFailed, json, error: `Unknown memory index session option: ${arg}` };
+      return { projectKey, limit, batchSize, retryFailed, json, error: `Unknown memory index session option: ${arg}` };
     } else if (!projectKey) {
       projectKey = arg;
     } else {
-      return { projectKey, limit, retryFailed, json, error: `Unexpected memory index session argument: ${arg}` };
+      return { projectKey, limit, batchSize, retryFailed, json, error: `Unexpected memory index session argument: ${arg}` };
     }
   }
 
@@ -190,12 +207,13 @@ function parseIndexSessionArgs(args: string[]): {
     return {
       projectKey,
       limit,
+      batchSize,
       retryFailed,
       json,
-      error: "Usage: myelin memory index session <project-key> [--limit N] [--retry-failed] [--json]",
+      error: "Usage: myelin memory index session <project-key> [--limit N] [--batch-size N] [--retry-failed] [--json]",
     };
   }
-  return { projectKey, limit, retryFailed, json };
+  return { projectKey, limit, batchSize, retryFailed, json };
 }
 
 function parseArgs(args: string[]): {

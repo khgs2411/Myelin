@@ -77,6 +77,131 @@ test("indexes pending session memories with normalized text and vector upsert", 
   expect(row.indexed_at).toBe("2026-06-13T10:05:00.000Z");
 });
 
+test("indexes session memories in provider batches mapped by row order", async () => {
+  const contract = { ...DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT, model: "test-embedding", dimensions: 3 };
+  for (let index = 1; index <= 4; index += 1) {
+    createSessionMemory(db, {
+      id: `batch_mem_${index}`,
+      project_key: "class-kit",
+      source_event_refs: [`batch_tomb_${index}`],
+      memory_kind: "continuity",
+      title: `Batch ${index}`,
+      summary: `Batch summary ${index}.`,
+      payload: { index },
+      confidence: "high",
+      risk: "low",
+      now: `2026-06-13T10:00:0${index}.000Z`,
+      embedding_contract: contract,
+    });
+  }
+
+  const batches: string[][] = [];
+  const upserts: Array<{ memory_id: string; embedding: number[] }> = [];
+  const provider: EmbeddingProviderClient = {
+    async embed() {
+      throw new Error("single embed should not be called for two-row chunks");
+    },
+    async embedBatch(requests) {
+      batches.push(requests.map((request) => request.title ?? ""));
+      return requests.map((request, index) => ({
+        embedding: [index, index + 0.1, index + 0.2],
+        model: request.contract.model,
+        dimensions: request.contract.dimensions,
+      }));
+    },
+  };
+
+  const result = await indexSessionMemories(db, {
+    project_key: "class-kit",
+    contract,
+    provider,
+    limit: 10,
+    batch_size: 2,
+    now: () => "2026-06-13T10:05:00.000Z",
+    vector_store: {
+      ensure: () => ({ available: true }),
+      upsert: (_db, input) => {
+        upserts.push({ memory_id: input.memory_id, embedding: input.embedding });
+      },
+    },
+  });
+
+  expect(result).toMatchObject({
+    selected: 4,
+    indexed: 4,
+    failed: 0,
+    batch_size: 2,
+  });
+  expect(batches).toEqual([
+    ["Batch 1", "Batch 2"],
+    ["Batch 3", "Batch 4"],
+  ]);
+  expect(upserts.map((input) => input.memory_id)).toEqual(["batch_mem_1", "batch_mem_2", "batch_mem_3", "batch_mem_4"]);
+});
+
+test("marks a failed provider batch retryable without deleting pending rows", async () => {
+  const contract = { ...DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT, model: "test-embedding", dimensions: 3 };
+  for (let index = 1; index <= 2; index += 1) {
+    createSessionMemory(db, {
+      id: `failed_batch_mem_${index}`,
+      project_key: "class-kit",
+      source_event_refs: [`failed_batch_tomb_${index}`],
+      memory_kind: "continuity",
+      summary: `Failed batch summary ${index}.`,
+      payload: {},
+      confidence: "high",
+      risk: "low",
+      now: `2026-06-13T10:00:0${index}.000Z`,
+      embedding_contract: contract,
+    });
+  }
+
+  const result = await indexSessionMemories(db, {
+    project_key: "class-kit",
+    contract,
+    provider: {
+      async embed() {
+        throw new Error("single embed should not be called for two-row chunks");
+      },
+      async embedBatch() {
+        throw new Error("provider batch unavailable");
+      },
+    },
+    limit: 10,
+    batch_size: 2,
+    now: () => "2026-06-13T10:05:00.000Z",
+    vector_store: {
+      ensure: () => ({ available: true }),
+      upsert: () => {
+        throw new Error("upsert should not be called");
+      },
+    },
+  });
+
+  expect(result).toMatchObject({
+    selected: 2,
+    indexed: 0,
+    failed: 2,
+    degraded: true,
+  });
+  expect(result.failures.map((failure) => failure.reason)).toEqual([
+    "provider batch unavailable",
+    "provider batch unavailable",
+  ]);
+  const rows = db
+    .query(
+      `SELECT status, retry_count, failure_reason
+       FROM session_memory_embeddings
+       WHERE embedding_model = ?
+       ORDER BY session_memory_id`,
+    )
+    .all(contract.model) as Array<{ status: string; retry_count: number; failure_reason: string | null }>;
+  expect(rows).toEqual([
+    { status: "failed", retry_count: 1, failure_reason: "provider batch unavailable" },
+    { status: "failed", retry_count: 1, failure_reason: "provider batch unavailable" },
+  ]);
+});
+
 test("marks selected rows failed when sqlite-vec is unavailable", async () => {
   const result = await indexSessionMemories(db, {
     project_key: "class-kit",

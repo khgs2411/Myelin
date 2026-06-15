@@ -83,6 +83,7 @@ test("config exposes default embedding contract", async () => {
     provider: "gemini",
     geminiModel: "gemini-embedding-2",
     dimensions: 1536,
+    batchSize: 500,
     stubResponsesDir: undefined,
   });
   expect(selectActiveEmbeddingContract(config, "retrieval_document")).toEqual({
@@ -146,6 +147,7 @@ test("embedding config honors file values and environment precedence", async () 
       "EMBEDDING_PROVIDER=gemini",
       "EMBEDDING_GEMINI_MODEL=file-model",
       "EMBEDDING_DIMENSIONS=768",
+      "EMBEDDING_BATCH_SIZE=250",
       "EMBEDDING_STUB_RESPONSES_DIR=file-stubs",
     ].join("\n"),
     "utf8",
@@ -160,6 +162,7 @@ test("embedding config honors file values and environment precedence", async () 
     provider: "gemini",
     geminiModel: "env-model",
     dimensions: 1536,
+    batchSize: 250,
     stubResponsesDir: "file-stubs",
   });
 });
@@ -195,6 +198,7 @@ test("embedding config rejects unsupported providers and invalid dimensions", as
   await expect(loadConfig(root, { EMBEDDING_DIMENSIONS: "zero" })).rejects.toThrow(
     "Invalid embedding dimensions: zero",
   );
+  await expect(loadConfig(root, { EMBEDDING_BATCH_SIZE: "501" })).rejects.toThrow("Invalid embedding batch size");
 });
 
 test("project discovery reads project registry state and resolves cwd ownership", async () => {

@@ -97,6 +97,7 @@ Implement embedding-backed internal retrieval for trusted Session Memory by addi
   - `EMBEDDING_PROVIDER=gemini`
   - `EMBEDDING_GEMINI_MODEL=gemini-embedding-2`
   - `EMBEDDING_DIMENSIONS=1536`
+  - `EMBEDDING_BATCH_SIZE=500`
   - `EMBEDDING_STUB_RESPONSES_DIR=<path>`
   - `GEMINI_API_KEY`
   - Environment values override `myelin.config`, matching existing config precedence.

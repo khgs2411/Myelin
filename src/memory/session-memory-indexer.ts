@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Database } from "bun:sqlite";
 import type { ActiveEmbeddingContract } from "../runtime/config.ts";
-import type { EmbeddingProviderClient } from "./embedding-provider.ts";
+import type { EmbeddingProviderClient, EmbeddingResult } from "./embedding-provider.ts";
 import type { SessionMemoryRow } from "./ingest-types.ts";
 import {
   ensureSessionMemoryVectorStorage,
@@ -31,6 +31,7 @@ export type SessionMemoryIndexResult = {
   failed: number;
   pending_remaining: number;
   degraded: boolean;
+  batch_size: number;
   degraded_reason?: string;
   failures: SessionMemoryIndexFailure[];
 };
@@ -50,12 +51,15 @@ export async function indexSessionMemories(
     contract: ActiveEmbeddingContract;
     provider: EmbeddingProviderClient;
     limit: number;
+    batch_size?: number;
     retry_failed?: boolean;
     now?: () => string;
     vector_store?: SessionMemoryVectorStore;
   },
 ): Promise<SessionMemoryIndexResult> {
   const now = input.now ?? (() => new Date().toISOString());
+  const batchSize = input.batch_size ?? input.limit;
+  if (!Number.isInteger(batchSize) || batchSize <= 0) throw new Error(`Invalid embedding batch size: ${batchSize}`);
   const vectorStore = input.vector_store ?? defaultVectorStore(createSqliteVecAdapter());
   const rows = listPendingSessionMemoryEmbeddings(db, {
     project_key: input.project_key,
@@ -73,6 +77,7 @@ export async function indexSessionMemories(
       failed: 0,
       pending_remaining: pendingRemaining(db, input.project_key, input.contract),
       degraded: false,
+      batch_size: batchSize,
       failures,
     };
   }
@@ -90,47 +95,87 @@ export async function indexSessionMemories(
       failed: rows.length,
       pending_remaining: pendingRemaining(db, input.project_key, input.contract),
       degraded: true,
+      batch_size: batchSize,
       degraded_reason: reason,
       failures,
     };
   }
 
   let indexed = 0;
+  const entries: PreparedEmbeddingEntry[] = [];
   for (const row of rows) {
     try {
       const memory = getSessionMemory(db, row.session_memory_id);
       const normalizedText = normalizeSessionMemoryForEmbedding(memory);
-      const embedding = await input.provider.embed({
-        contract: input.contract,
-        title: memory.title,
-        text: normalizedText,
-      });
-      if (embedding.dimensions !== input.contract.dimensions) {
-        throw new Error(
-          `Embedding dimensions mismatch: expected ${input.contract.dimensions}, got ${embedding.dimensions}`,
-        );
-      }
-
-      const indexedAt = now();
-      db.transaction(() => {
-        vectorStore.upsert(db, {
-          memory_id: memory.id,
-          project_key: memory.project_key,
-          embedding_model: input.contract.model,
-          embedding_dimensions: input.contract.dimensions,
-          embedding_purpose: input.contract.purpose,
-          format_version: input.contract.formatVersion,
-          embedding: embedding.embedding,
-        });
-        markSessionMemoryEmbeddingIndexed(db, {
-          id: row.id,
-          normalized_text_hash: sha256(normalizedText),
-          now: indexedAt,
-        });
-      })();
-      indexed += 1;
+      entries.push({ row, memory, normalizedText });
     } catch (error) {
       markFailed(db, row, error instanceof Error ? error.message : String(error), now(), failures);
+    }
+  }
+
+  for (const chunk of chunks(entries, batchSize)) {
+    let embeddings: EmbeddingResult[];
+    try {
+      embeddings =
+        input.provider.embedBatch && chunk.length > 1
+          ? await input.provider.embedBatch(
+              chunk.map((entry) => ({
+                contract: input.contract,
+                title: entry.memory.title,
+                text: entry.normalizedText,
+              })),
+            )
+          : await Promise.all(
+              chunk.map((entry) =>
+                input.provider.embed({
+                  contract: input.contract,
+                  title: entry.memory.title,
+                  text: entry.normalizedText,
+                }),
+              ),
+            );
+      if (embeddings.length !== chunk.length) {
+        throw new Error(`Embedding batch result count mismatch: expected ${chunk.length}, got ${embeddings.length}`);
+      }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      for (const entry of chunk) {
+        markFailed(db, entry.row, reason, now(), failures);
+      }
+      continue;
+    }
+
+    for (let index = 0; index < chunk.length; index += 1) {
+      const entry = chunk[index];
+      const embedding = embeddings[index];
+      try {
+        if (embedding.dimensions !== input.contract.dimensions) {
+          throw new Error(
+            `Embedding dimensions mismatch: expected ${input.contract.dimensions}, got ${embedding.dimensions}`,
+          );
+        }
+
+        const indexedAt = now();
+        db.transaction(() => {
+          vectorStore.upsert(db, {
+            memory_id: entry.memory.id,
+            project_key: entry.memory.project_key,
+            embedding_model: input.contract.model,
+            embedding_dimensions: input.contract.dimensions,
+            embedding_purpose: input.contract.purpose,
+            format_version: input.contract.formatVersion,
+            embedding: embedding.embedding,
+          });
+          markSessionMemoryEmbeddingIndexed(db, {
+            id: entry.row.id,
+            normalized_text_hash: sha256(entry.normalizedText),
+            now: indexedAt,
+          });
+        })();
+        indexed += 1;
+      } catch (error) {
+        markFailed(db, entry.row, error instanceof Error ? error.message : String(error), now(), failures);
+      }
     }
   }
 
@@ -141,6 +186,7 @@ export async function indexSessionMemories(
     failed: failures.length,
     pending_remaining: pendingRemaining(db, input.project_key, input.contract),
     degraded: failures.length > 0,
+    batch_size: batchSize,
     degraded_reason: failures.length > 0 ? "one or more session memories failed to index" : undefined,
     failures,
   };
@@ -188,6 +234,20 @@ function pendingRemaining(db: Database, projectKey: string, contract: ActiveEmbe
       contract.formatVersion,
     ) as { n: number };
   return row.n;
+}
+
+type PreparedEmbeddingEntry = {
+  row: SessionMemoryEmbeddingRow;
+  memory: SessionMemoryRow;
+  normalizedText: string;
+};
+
+function chunks<T>(values: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let index = 0; index < values.length; index += size) {
+    result.push(values.slice(index, index + size));
+  }
+  return result;
 }
 
 function markFailed(

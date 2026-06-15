@@ -159,12 +159,13 @@ test("memory index session reports degraded indexing as JSON without throwing", 
   const cli = createCli("myelin");
   registerMemoryCommands(cli);
 
-  const result = await cli.run(["memory", "index", "session", "demo", "--limit", "1", "--json"]);
+  const result = await cli.run(["memory", "index", "session", "demo", "--limit", "1", "--batch-size", "3", "--json"]);
   const response = JSON.parse(result.message);
 
   expect(result.exitCode).toBe(0);
   expect(response.project_key).toBe("demo");
   expect(response.selected).toBe(1);
+  expect(response.batch_size).toBe(3);
   expect(response.indexed + response.failed).toBe(1);
   expect(response.degraded).toBe(true);
   expect(response.failures).toHaveLength(1);

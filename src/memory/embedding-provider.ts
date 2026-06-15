@@ -17,6 +17,7 @@ export type EmbeddingResult = {
 
 export type EmbeddingProviderClient = {
   embed: (request: EmbeddingRequest) => Promise<EmbeddingResult>;
+  embedBatch?: (requests: EmbeddingRequest[]) => Promise<EmbeddingResult[]>;
 };
 
 type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
@@ -43,11 +44,47 @@ export function createGeminiEmbeddingProvider(input: { apiKey?: string; fetch?: 
       assertDimensions("Gemini", request.contract.dimensions, values.length);
       return { embedding: values, model: request.contract.model, dimensions: values.length };
     },
+    async embedBatch(requests) {
+      if (requests.length === 0) return [];
+      if (!input.apiKey) throw new Error("Gemini API key is required for embedding requests");
+      assertCompatibleBatch(requests);
+      const fetcher = input.fetch ?? fetch;
+      const contract = requests[0].contract;
+      const modelName = `models/${contract.model}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+        contract.model,
+      )}:batchEmbedContents?key=${encodeURIComponent(input.apiKey)}`;
+      const response = await fetcher(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          requests: requests.map((request) => ({
+            model: modelName,
+            content: { parts: [{ text: formatGeminiEmbeddingText(request) }] },
+            outputDimensionality: request.contract.dimensions,
+          })),
+        }),
+      });
+      if (!response.ok) throw new Error(`Gemini embedding batch request failed: HTTP ${response.status}`);
+      const body = await response.json();
+      const embeddings = parseGeminiBatchEmbeddingValues(body);
+      if (embeddings.length !== requests.length) {
+        throw new Error(`Gemini embedding batch response count mismatch: expected ${requests.length}, got ${embeddings.length}`);
+      }
+      return embeddings.map((values, index) => {
+        assertDimensions("Gemini", requests[index].contract.dimensions, values.length);
+        return {
+          embedding: values,
+          model: requests[index].contract.model,
+          dimensions: values.length,
+        };
+      });
+    },
   };
 }
 
 export function createStubEmbeddingProvider(dir: string): EmbeddingProviderClient {
-  return {
+  const provider: EmbeddingProviderClient = {
     async embed(request) {
       const path = join(dir, stubEmbeddingFilename(request));
       const body = JSON.parse(await readFile(path, "utf8")) as unknown;
@@ -60,7 +97,11 @@ export function createStubEmbeddingProvider(dir: string): EmbeddingProviderClien
         dimensions: typeof body.dimensions === "number" ? body.dimensions : embedding.length,
       };
     },
+    async embedBatch(requests) {
+      return Promise.all(requests.map((request) => provider.embed(request)));
+    },
   };
+  return provider;
 }
 
 export function stubEmbeddingFilename(request: EmbeddingRequest): string {
@@ -79,8 +120,36 @@ function parseGeminiEmbeddingValues(body: unknown): number[] {
   return body.embedding.values.map((value) => Number(value));
 }
 
+function parseGeminiBatchEmbeddingValues(body: unknown): number[][] {
+  if (!isRecord(body) || !Array.isArray(body.embeddings)) {
+    throw new Error("Gemini embedding batch response missing embeddings");
+  }
+  return body.embeddings.map((embedding) => {
+    if (!isRecord(embedding) || !Array.isArray(embedding.values)) {
+      throw new Error("Gemini embedding batch response missing embedding values");
+    }
+    return embedding.values.map((value) => Number(value));
+  });
+}
+
 function assertDimensions(label: "Gemini" | "Stub", expected: number, actual: number): void {
   if (expected !== actual) throw new Error(`${label} embedding dimensions mismatch: expected ${expected}, got ${actual}`);
+}
+
+function assertCompatibleBatch(requests: EmbeddingRequest[]): void {
+  const first = requests[0].contract;
+  for (const request of requests) {
+    const contract = request.contract;
+    if (
+      contract.provider !== first.provider ||
+      contract.model !== first.model ||
+      contract.dimensions !== first.dimensions ||
+      contract.purpose !== first.purpose ||
+      contract.formatVersion !== first.formatVersion
+    ) {
+      throw new Error("Embedding batch requests must use the same embedding contract");
+    }
+  }
 }
 
 function sha256(text: string): string {

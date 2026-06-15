@@ -71,7 +71,7 @@ Important runtime variables:
 | `PIPELINE_CODEX_MODEL`, `QUERY_CODEX_MODEL` | Workload model profiles. |
 | `PIPELINE_CLAUDE_MODEL`, `QUERY_CLAUDE_MODEL` | Workload model profiles. |
 | `INGEST_BATCH_SIZE` | Experience Log rows assigned to each detached ingest agent; max 500, default 100. |
-| `EMBEDDING_PROVIDER`, `EMBEDDING_GEMINI_MODEL`, `EMBEDDING_DIMENSIONS` | Session Memory embedding provider/model/dimension profile. |
+| `EMBEDDING_PROVIDER`, `EMBEDDING_GEMINI_MODEL`, `EMBEDDING_DIMENSIONS`, `EMBEDDING_BATCH_SIZE` | Session Memory embedding provider/model/dimension/batch profile. |
 | `EMBEDDING_STUB_RESPONSES_DIR` | Use canned embedding responses for deterministic embedding/index tests. |
 | `GOOGLE_API_KEY`, `GEMINI_API_KEY` | Gemini embedding credential; `GOOGLE_API_KEY` is preferred, `GEMINI_API_KEY` is accepted as an alias. |
 | `MYELIN_SQLITE_DYLIB_PATH`, `SQLITE_DYLIB_PATH` | Optional SQLite dynamic library path override for extension loading; Myelin uses its vendored runtime when available. |
@@ -101,7 +101,7 @@ Do not make `/mcp` part of the root package graph. Core query behavior lives in 
 - LLM-stage prompts must require JSON on stdout; do not ask the model to write artifacts directly.
 - Top-level `myelin ingest <key>` counts queued Experience Log rows and launches detached target-repo agents according to the ingest runtime profile. Workers create tombstone-backed lease stubs without deleting raw rows before provider output is accepted; terminal commit finalizes tombstones and archives source rows.
 - On macOS, sqlite-vec requires a SQLite build that supports loadable extensions. Myelin prefers its vendored SQLite runtime, falls back to Homebrew SQLite, and can be overridden with `MYELIN_SQLITE_DYLIB_PATH`.
-- Session Memory vector indexing is explicit operator work: use `myelin memory index session <key> [--limit N] [--retry-failed] [--json]`.
+- Session Memory vector indexing is explicit operator work: use `myelin memory index session <key> [--limit N] [--batch-size N] [--retry-failed] [--json]`.
 - Session Memory vector retrieval is an internal facade in this slice; MCP exposure, Current Briefing integration, broader `memory query`, and non-Session Memory vectorization are deferred.
 - Query must fail closed when schema context is missing or invalid; it should suggest `schema build` or `schema check`.
 - `project learn` verifies schema freshness before learning work.
