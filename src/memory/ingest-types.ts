@@ -1,6 +1,14 @@
 export const INGEST_JOB_STATUSES = ["starting", "running", "needs_followup", "completed", "failed"] as const;
 export type IngestJobStatus = (typeof INGEST_JOB_STATUSES)[number];
 
+export const INGEST_COMPLETION_LAYERS = {
+  EXPERIENCE_LOG_DRAIN_PENDING: 10,
+  EXPERIENCE_LOG_DRAIN_COMPLETE: 20,
+  SESSION_MEMORY_WRITE_COMPLETE: 30,
+  SESSION_MEMORY_RETRIEVAL_PENDING: 40,
+} as const;
+export type IngestCompletionLayer = (typeof INGEST_COMPLETION_LAYERS)[keyof typeof INGEST_COMPLETION_LAYERS];
+
 export const MEMORY_SCOPES = ["session", "project", "practice", "personal"] as const;
 export type MemoryScope = (typeof MEMORY_SCOPES)[number];
 

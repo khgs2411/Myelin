@@ -29,6 +29,7 @@ export type InvokeLlmOptions = {
   outputSchema?: string;
   provider?: Provider;
   modelOverride?: string;
+  timeoutMs?: number;
   env?: NodeJS.ProcessEnv;
   cwd?: string;
   runner?: ProcessRunner;
@@ -54,7 +55,7 @@ export async function invokeLlm(options: InvokeLlmOptions): Promise<LlmResult> {
   }
 
   const runner = options.runner ?? runProcess;
-  const timeoutMs = llmTimeoutMs(env);
+  const timeoutMs = options.timeoutMs ?? llmTimeoutMs(env);
   const output =
     resolved.provider === "claude"
       ? await invokeClaude(resolved, options.prompt, runner, options.cwd, env, timeoutMs)

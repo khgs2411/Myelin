@@ -10,7 +10,7 @@ The next product slice should turn each durable `session_memories` row into sear
 
 ## Current Context
 
-The Experience Log to Session Memory ingest slice is implemented around a detached `myelin ingest <project-key>` worker. The worker claims raw `experience_events`, moves them to tombstones, lets a headless provider decide trusted outputs, and writes accepted low-risk outputs through `createSessionMemory` in `src/memory/session-memories.ts`.
+The Experience Log to Session Memory ingest slice is implemented around a detached `myelin ingest <project-key>` worker. The worker creates tombstone-backed lease stubs for raw `experience_events`, keeps raw rows present until accepted terminal processing, lets a headless provider decide trusted outputs, and writes accepted low-risk outputs through `createSessionMemory` in `src/memory/session-memories.ts`.
 
 Current storage:
 

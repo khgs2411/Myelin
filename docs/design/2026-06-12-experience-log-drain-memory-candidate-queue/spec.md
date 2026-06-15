@@ -169,6 +169,8 @@ If the target repo is not currently on `master`, Myelin should not launch the pr
 
 ### Pull-To-Tombstone Lifecycle
 
+Update note: the 2026-06-14 ingest-runtime stabilization design supersedes the original pre-provider claim/delete lifecycle. Current ingest creates tombstone-backed lease stubs while raw Experience Log rows remain in `experience_events`, then populates/finalizes tombstones and deletes raw rows only after accepted terminal processing.
+
 Pulling Experience Log rows is the queue-claim operation. When an ingest agent pulls a batch, Myelin should atomically move those rows out of `experience_events` and into `experience_event_tombstones` with enough source metadata, ingest job id, provider session id, and bounded retained evidence to audit what was pulled.
 
 The tombstone is finalized when the ingest job finishes. Finalization should add the simple terminal data Myelin needs: whether the pulled evidence produced output references, produced no output, or remained unfinished because the job failed. The ingest agent does not need to manually maintain tombstones for every row; Myelin owns that bookkeeping.

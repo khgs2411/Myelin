@@ -2,11 +2,11 @@ import type { Database } from "bun:sqlite";
 import { join } from "node:path";
 import type { JsonObject, ProcessRunner } from "../runtime/llm-client.ts";
 import { invokeLlm } from "../runtime/llm-client.ts";
-import type { ClaimedExperienceTombstone } from "../memory/experience.ts";
+import type { LeasedExperienceEvent } from "../memory/experience.ts";
 import {
-  claimExperienceEvents,
-  finalizeClaimedExperienceEventsInOpenTransaction,
-  finalizeRemainingClaimedExperienceEvents,
+  finalizeLeasedExperienceEventsInOpenTransaction,
+  finalizeRemainingLeasedExperienceEvents,
+  leaseExperienceEvents,
 } from "../memory/experience.ts";
 import { openMemoryDb } from "../memory/db.ts";
 import { createMemoryCandidate } from "../memory/candidates.ts";
@@ -20,9 +20,9 @@ import {
   type SessionMemoryKind,
 } from "../memory/ingest-types.ts";
 import { createSessionMemory } from "../memory/session-memories.ts";
+import { loadConfig } from "../runtime/config.ts";
 import { updateIngestJobStatus } from "./jobs.ts";
 
-const DEFAULT_INGEST_PROMPT_CHAR_LIMIT = 180_000;
 const MAX_PROMPT_RETAINED_EVIDENCE_CHARS = 6_000;
 const TRUNCATED_EVIDENCE_SUFFIX = "\n...[truncated for ingest prompt; full evidence is preserved in the tombstone audit row]";
 
@@ -137,7 +137,7 @@ export function parseIngestWorkerOutput(value: JsonObject): IngestWorkerOutput {
 export function buildIngestPrompt(input: {
   projectKey: string;
   jobId: string;
-  claimed: ClaimedExperienceTombstone[];
+  leased: LeasedExperienceEvent[];
   batchIndex?: number;
   batchCount?: number;
 }): string {
@@ -155,7 +155,7 @@ export function buildIngestPrompt(input: {
     "Create Project/Practice/Personal handoff instructions only as one-hop downstream inputs.",
     "Do not mutate curated wiki pages.",
     "Return JSON only with keys: session_memories, memory_candidates, handoff_instructions, no_output_tombstone_ids, terminal_summary.",
-    "Every session memory, memory candidate, and handoff instruction must include source_event_refs containing claimed tombstone ids.",
+    "Every session memory, memory candidate, and handoff instruction must include source_event_refs containing leased tombstone ids.",
     "Allowed session memory memory_kind values: continuity, decision, blocker, next_action, verification.",
     "Allowed memory candidate scope values: session, project, practice, personal.",
     "Allowed handoff target_scope values: project, practice, personal.",
@@ -167,16 +167,31 @@ export function buildIngestPrompt(input: {
     "Example memory candidate: {\"id\":\"cand_<short-id>\",\"source_event_refs\":[\"tomb_<claimed-id>\"],\"scope\":\"session\",\"status\":\"needs_review\",\"candidate_type\":\"session.continuity\",\"summary\":\"Possible useful continuity.\",\"evidence\":{},\"proposed_payload\":{},\"confidence\":\"medium\",\"risk\":\"medium\",\"reason\":\"Needs review before trust\"}.",
     "Example handoff instruction: {\"id\":\"handoff_<short-id>\",\"target_scope\":\"project\",\"status\":\"pending\",\"objective\":\"Verify a durable project fact\",\"prompt_text\":\"Review the cited tombstones and update project memory if valid.\",\"source_session_memory_ids\":[],\"source_event_refs\":[\"tomb_<claimed-id>\"],\"suggested_actions\":[\"review evidence\"],\"reason\":\"May belong in project memory\",\"confidence\":\"medium\",\"risk\":\"medium\"}.",
     "",
-    "Claimed Experience Log tombstones:",
-    JSON.stringify(input.claimed.map(tombstoneForPrompt), null, 2),
+    "Leased Experience Log rows:",
+    JSON.stringify(input.leased.map(leaseForPrompt), null, 2),
   ].filter((line) => line !== null).join("\n");
 }
 
-function tombstoneForPrompt(tombstone: ClaimedExperienceTombstone): ClaimedExperienceTombstone {
-  if (tombstone.retained_evidence_json.length <= MAX_PROMPT_RETAINED_EVIDENCE_CHARS) return tombstone;
+function leaseForPrompt(lease: LeasedExperienceEvent): JsonObject {
+  const evidence = JSON.stringify(lease.prompt_evidence);
+  const promptEvidence =
+    evidence.length <= MAX_PROMPT_RETAINED_EVIDENCE_CHARS
+      ? lease.prompt_evidence
+      : {
+          raw_text: lease.prompt_evidence.raw_text,
+          raw_payload_json: `${lease.prompt_evidence.raw_payload_json.slice(0, MAX_PROMPT_RETAINED_EVIDENCE_CHARS)}${TRUNCATED_EVIDENCE_SUFFIX}`,
+        };
   return {
-    ...tombstone,
-    retained_evidence_json: `${tombstone.retained_evidence_json.slice(0, MAX_PROMPT_RETAINED_EVIDENCE_CHARS)}${TRUNCATED_EVIDENCE_SUFFIX}`,
+    id: lease.id,
+    original_event_id: lease.original_event_id,
+    project_key: lease.project_key,
+    ingest_job_id: lease.ingest_job_id,
+    provider: lease.provider,
+    provider_session_id: lease.provider_session_id,
+    claimed_at: lease.claimed_at,
+    state: lease.state,
+    source_metadata_json: lease.source_metadata_json,
+    prompt_evidence: promptEvidence,
   };
 }
 
@@ -340,7 +355,7 @@ export function applyIngestWorkerOutput(
     }
 
     for (const [tombstoneId, outputRefs] of outputRefsByTombstone.entries()) {
-      finalizeClaimedExperienceEventsInOpenTransaction(db, {
+      finalizeLeasedExperienceEventsInOpenTransaction(db, {
         ingest_job_id: input.jobId,
         tombstone_ids: [tombstoneId],
         finalized_at: input.finalizedAt,
@@ -354,7 +369,7 @@ export function applyIngestWorkerOutput(
       if (outputRefsByTombstone.has(tombstoneId)) {
         continue;
       }
-      finalizeClaimedExperienceEventsInOpenTransaction(db, {
+      finalizeLeasedExperienceEventsInOpenTransaction(db, {
         ingest_job_id: input.jobId,
         tombstone_ids: [tombstoneId],
         finalized_at: input.finalizedAt,
@@ -398,6 +413,7 @@ export async function runIngestWorker(input: {
   runner?: ProcessRunner;
 }): Promise<void> {
   const db = openMemoryDb(input.root);
+  const config = await loadConfig(input.root);
   const now = input.now ?? (() => new Date());
   let claimedCount = 0;
   let sessionMemories = 0;
@@ -420,28 +436,29 @@ export async function runIngestWorker(input: {
       if (remaining <= 0) break;
 
       const claimedAt = now().toISOString();
-      const claimed = claimExperienceEvents(db, {
+      const leased = leaseExperienceEvents(db, {
         ingest_job_id: input.jobId,
         project_key: input.projectKey,
         provider_session_id: input.providerSessionId ?? null,
         limit: remaining,
-        max_prompt_chars: input.maxPromptChars ?? DEFAULT_INGEST_PROMPT_CHAR_LIMIT,
-        prompt_chars_for_tombstone: (tombstone) => JSON.stringify(tombstoneForPrompt(tombstone), null, 2).length,
+        max_prompt_chars: input.maxPromptChars ?? config.ingest.promptCharLimit,
+        prompt_chars_for_lease: (lease) => JSON.stringify(leaseForPrompt(lease), null, 2).length,
         claimed_at: claimedAt,
         tombstone_id_for: (event) => `tomb_${input.jobId}_${event.id}`,
       });
-      if (claimed.length === 0) break;
-      claimedCount += claimed.length;
+      if (leased.length === 0) break;
+      claimedCount += leased.length;
 
       const response = await invokeLlm({
         root: input.root,
-        workload: "pipeline",
+        workload: "ingest",
         provider: input.provider,
+        timeoutMs: config.ingest.llmTimeoutMs,
         outputSchema: join(input.root, "src", "ingest", "worker-output.schema.json"),
         prompt: buildIngestPrompt({
           projectKey: input.projectKey,
           jobId: input.jobId,
-          claimed,
+          leased,
           batchIndex: input.batchIndex,
           batchCount: input.batchCount,
         }),
@@ -463,7 +480,7 @@ export async function runIngestWorker(input: {
       handoffs += counts.handoff_instructions;
     }
 
-    const finalized = finalizeRemainingClaimedExperienceEvents(db, {
+    const finalized = finalizeRemainingLeasedExperienceEvents(db, {
       ingest_job_id: input.jobId,
       finalized_at: now().toISOString(),
       state: "no_output",
@@ -485,18 +502,12 @@ export async function runIngestWorker(input: {
       error: null,
     });
   } catch (error) {
-    finalizeRemainingClaimedExperienceEvents(db, {
-      ingest_job_id: input.jobId,
-      finalized_at: now().toISOString(),
-      state: "failed",
-      terminal_decision: "provider_failed",
-    });
     updateIngestJobStatus(db, {
       id: input.jobId,
       status: "failed",
       finished_at: now().toISOString(),
       updated_at: now().toISOString(),
-      error: { message: compactIngestWorkerError(error) },
+      error: { message: compactIngestWorkerError(error), retryable: true },
     });
     throw error;
   } finally {

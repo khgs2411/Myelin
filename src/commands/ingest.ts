@@ -1,6 +1,8 @@
 import type { Cli } from "./registry.ts";
 import { fail, ok } from "./registry.ts";
 import { createIngestJob, getIngestJob, updateIngestJobStatus } from "../ingest/jobs.ts";
+import { readIngestProjectStatus } from "../ingest/status.ts";
+import type { IngestJobRow } from "../memory/ingest-types.ts";
 import {
   assertMasterBranch,
   launchDetachedIngestWorker,
@@ -95,6 +97,7 @@ async function start(args: string[], deps: IngestCommandDeps) {
           batch_size: batchSize,
           batch_index: batchIndex,
           batch_count: batchCount,
+          worker_concurrency: config.ingest.workerConcurrency,
         },
         now,
       });
@@ -107,7 +110,7 @@ async function start(args: string[], deps: IngestCommandDeps) {
         now,
         env: {
           ...process.env,
-          MYELIN_INGEST_START_DELAY_MS: String((index + 1) * 750),
+          MYELIN_INGEST_START_DELAY_MS: String((index + 1) * config.ingest.workerStartDelayMs),
         },
         runner: deps.runner,
         spawn: deps.spawn,
@@ -144,7 +147,18 @@ function status(args: string[], deps: IngestCommandDeps) {
 
   const db = openMemoryDb(repoRoot().root);
   try {
-    const job = getIngestJob(db, parsed.jobId);
+    if (parsed.projectKey) {
+      refreshRunningProjectIngestJobs(db, parsed.projectKey, {
+        now: (deps.now ?? (() => new Date()))().toISOString(),
+        isAlive: deps.isProcessAlive,
+      });
+      const projectStatus = readIngestProjectStatus(db, parsed.projectKey);
+      return parsed.json
+        ? ok(JSON.stringify({ status: projectStatus }, null, 2))
+        : ok(`${projectStatus.project_key}: ${projectStatus.completion_label}`);
+    }
+
+    const job = getIngestJob(db, parsed.jobId ?? "");
     if (!job) return fail(`Unknown ingest job: ${parsed.jobId}`);
     const current = refreshDetachedIngestJobStatus({
       db,
@@ -262,17 +276,45 @@ function parseStartArgs(args: string[]): {
   return { projectKey, limit, batchSize, json, provider };
 }
 
-function parseStatusArgs(args: string[]): { jobId: string; json: boolean; error?: string } {
+function parseStatusArgs(args: string[]): { jobId?: string; projectKey?: string; json: boolean; error?: string } {
   let jobId = "";
+  let projectKey = "";
   let json = false;
 
-  for (const arg of args) {
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
     if (arg === "--json") json = true;
-    else if (arg.startsWith("-")) return { jobId, json, error: `Unknown ingest status option: ${arg}` };
+    else if (arg === "--project") projectKey = args[++index] ?? "";
+    else if (arg.startsWith("-")) return { jobId, projectKey, json, error: `Unknown ingest status option: ${arg}` };
     else if (!jobId) jobId = arg;
-    else return { jobId, json, error: `Unexpected ingest status argument: ${arg}` };
+    else return { jobId, projectKey, json, error: `Unexpected ingest status argument: ${arg}` };
   }
 
-  if (!jobId) return { jobId, json, error: "Usage: myelin ingest status <ingest-job-id> [--json]" };
-  return { jobId, json };
+  if (!jobId && !projectKey) {
+    return {
+      jobId,
+      projectKey,
+      json,
+      error: "Usage: myelin ingest status <ingest-job-id> [--json] OR myelin ingest status --project <project-key> [--json]",
+    };
+  }
+  return { jobId: jobId || undefined, projectKey: projectKey || undefined, json };
+}
+
+function refreshRunningProjectIngestJobs(
+  db: ReturnType<typeof openMemoryDb>,
+  projectKey: string,
+  input: { now: string; isAlive?: ProcessLivenessChecker },
+): void {
+  const jobs = db
+    .query("SELECT * FROM ingest_jobs WHERE project_key = ? AND status = 'running' ORDER BY created_at, id")
+    .all(projectKey) as IngestJobRow[];
+  for (const job of jobs) {
+    refreshDetachedIngestJobStatus({
+      db,
+      job,
+      now: input.now,
+      isAlive: input.isAlive,
+    });
+  }
 }

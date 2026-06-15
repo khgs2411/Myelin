@@ -105,6 +105,28 @@ test("codex dispatch can request structured output with a JSON schema", async ()
   expect(captured.command).toContain("/tmp/schema.json");
 });
 
+test("ingest dispatch uses ingest model profile and explicit timeout", async () => {
+  await writeFile(
+    join(root, "myelin.config"),
+    "DEFAULT_PROVIDER=codex\nINGEST_CODEX_MODEL=gpt-ingest\nINGEST_CODEX_REASONING_EFFORT=medium\n",
+    "utf8",
+  );
+  const captured: Captured = {};
+  await invokeLlm({
+    root,
+    workload: "ingest",
+    prompt: "runtime prompt",
+    timeoutMs: 1234,
+    env: {},
+    runner: captureRunner(captured, '{"ok": true}'),
+  });
+
+  expect(captured.command).toContain("--model");
+  expect(captured.command).toContain("gpt-ingest");
+  expect(captured.command).toContain('model_reasoning_effort="medium"');
+  expect(captured.options?.timeoutMs).toBe(1234);
+});
+
 test("claude dispatch uses default provider profile and parses result wrappers", async () => {
   await writeFile(
     join(root, "myelin.config"),

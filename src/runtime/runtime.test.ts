@@ -72,7 +72,13 @@ test("config loads myelin.config and honors environment precedence", async () =>
 test("config exposes default embedding contract", async () => {
   const config = await loadConfig(root, {});
 
-  expect(config.ingest).toEqual({ batchSize: 100 });
+  expect(config.ingest).toMatchObject({
+    batchSize: 100,
+    workerConcurrency: 1,
+    workerStartDelayMs: 750,
+    llmTimeoutMs: 600000,
+    promptCharLimit: 180000,
+  });
   expect(config.embedding).toEqual({
     provider: "gemini",
     geminiModel: "gemini-embedding-2",
@@ -94,6 +100,43 @@ test("ingest config honors file values and rejects oversized batches", async () 
 
   await expect(loadConfig(root, { INGEST_BATCH_SIZE: "501" })).rejects.toThrow("Invalid ingest batch size");
   await expect(loadConfig(root, { INGEST_BATCH_SIZE: "0" })).rejects.toThrow("Invalid ingest batch size");
+});
+
+test("loadConfig parses named ingest runtime profile", async () => {
+  await writeFile(
+    join(root, "myelin.config"),
+    [
+      "DEFAULT_PROVIDER=codex",
+      "INGEST_BATCH_SIZE=25",
+      "INGEST_WORKER_CONCURRENCY=2",
+      "INGEST_WORKER_START_DELAY_MS=500",
+      "INGEST_LLM_TIMEOUT_MS=120000",
+      "INGEST_PROMPT_CHAR_LIMIT=150000",
+      "INGEST_CODEX_MODEL=gpt-ingest",
+      "INGEST_CODEX_REASONING_EFFORT=medium",
+    ].join("\n"),
+    "utf8",
+  );
+
+  await expect(loadConfig(root, {})).resolves.toMatchObject({
+    ingest: {
+      batchSize: 25,
+      workerConcurrency: 2,
+      workerStartDelayMs: 500,
+      llmTimeoutMs: 120000,
+      promptCharLimit: 150000,
+      profiles: {
+        codex: { provider: "codex", model: "gpt-ingest", reasoningEffort: "medium" },
+      },
+    },
+  });
+});
+
+test("loadConfig validates ingest runtime profile bounds", async () => {
+  await expect(loadConfig(root, { INGEST_WORKER_CONCURRENCY: "0" })).rejects.toThrow("Invalid ingest worker concurrency");
+  await expect(loadConfig(root, { INGEST_WORKER_START_DELAY_MS: "-1" })).rejects.toThrow("Invalid ingest worker start delay");
+  await expect(loadConfig(root, { INGEST_LLM_TIMEOUT_MS: "0" })).rejects.toThrow("Invalid ingest LLM timeout");
+  await expect(loadConfig(root, { INGEST_PROMPT_CHAR_LIMIT: "not-a-number" })).rejects.toThrow("Invalid ingest prompt char limit");
 });
 
 test("embedding config honors file values and environment precedence", async () => {

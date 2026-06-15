@@ -320,11 +320,11 @@ test("parser normalizes non-empty string arrays to singleton arrays", () => {
 });
 
 test("prompt caps oversized retained evidence without mutating the tombstone", () => {
-  const retainedEvidence = JSON.stringify({ raw_payload_json: "x".repeat(80_000) });
+  const rawPayload = "x".repeat(80_000);
   const prompt = buildIngestPrompt({
     projectKey: "class-kit",
     jobId: "job_1",
-    claimed: [
+    leased: [
       {
         id: "tomb_1",
         original_event_id: "evt_1",
@@ -335,14 +335,18 @@ test("prompt caps oversized retained evidence without mutating the tombstone", (
         claimed_at: "2026-06-13T10:00:00.000Z",
         state: "claimed",
         source_metadata_json: "{}",
-        retained_evidence_json: retainedEvidence,
+        retained_evidence_json: "{}",
+        prompt_evidence: {
+          raw_text: null,
+          raw_payload_json: rawPayload,
+        },
       },
     ],
   });
 
   expect(prompt.length).toBeLessThan(40_000);
   expect(prompt).toContain("truncated for ingest prompt");
-  expect(retainedEvidence.length).toBeGreaterThan(80_000);
+  expect(rawPayload.length).toBe(80_000);
 });
 
 test("worker claims batches from target repo cwd and completes when queue is empty", async () => {
@@ -404,7 +408,7 @@ test("worker claims batches from target repo cwd and completes when queue is emp
   expect(getIngestJob(db, "job_1")?.terminal_summary).toBe("Created one memory.");
 });
 
-test("worker marks claimed tombstones failed when provider invocation fails", async () => {
+test("worker keeps leased rows retryable when provider invocation fails", async () => {
   recordExperienceEvent(db, {
     id: "evt_1",
     project_key: "class-kit",
@@ -430,11 +434,136 @@ test("worker marks claimed tombstones failed when provider invocation fails", as
   ).rejects.toThrow("codex exited 1: provider down");
 
   db = openMemoryDbAt(join(root, "state", "memory.db"));
-  expect(db.query("SELECT state, terminal_decision FROM experience_event_tombstones WHERE id = ?").get("tomb_job_1_evt_1")).toEqual({
-    state: "failed",
-    terminal_decision: "provider_failed",
+  expect(listExperienceEvents(db, "class-kit").map((row) => row.id)).toEqual(["evt_1"]);
+  expect(db.query("SELECT state, finalized_at, terminal_decision FROM experience_event_tombstones WHERE id = ?").get("tomb_job_1_evt_1")).toEqual({
+    state: "claimed",
+    finalized_at: null,
+    terminal_decision: null,
   });
   expect(getIngestJob(db, "job_1")?.status).toBe("failed");
+});
+
+test("ordinary retry worker recovers a failed lease and commits the same raw row", async () => {
+  recordExperienceEvent(db, {
+    id: "evt_1",
+    project_key: "class-kit",
+    occurred_at: "2026-06-13T09:59:00.000Z",
+    provider: "codex",
+    raw_text: "retry this row",
+    raw_payload_json: "{}",
+    source: "codex-hook",
+    status: "valid",
+  });
+  db.close();
+
+  await expect(
+    runIngestWorker({
+      root,
+      projectKey: "class-kit",
+      jobId: "job_1",
+      targetRepo: "/target/repo",
+      provider: "codex",
+      batchSize: 1,
+      now: fixedNow(),
+      runner: async (): Promise<RunProcessResult> => ({ exitCode: 1, stdout: "", stderr: "provider down" }),
+    }),
+  ).rejects.toThrow("codex exited 1: provider down");
+
+  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  createIngestJob(db, {
+    id: "job_2",
+    project_key: "class-kit",
+    provider: "codex",
+    input: {},
+    now: "2026-06-13T10:01:00.000Z",
+  });
+  db.close();
+
+  const prompts: string[] = [];
+  await runIngestWorker({
+    root,
+    projectKey: "class-kit",
+    jobId: "job_2",
+    targetRepo: "/target/repo",
+    provider: "codex",
+    batchSize: 1,
+    now: fixedNow(),
+    runner: async (_command, options): Promise<RunProcessResult> => {
+      prompts.push(options?.stdin ?? "");
+      return {
+        exitCode: 0,
+        stdout: JSON.stringify({
+          session_memories: [
+            {
+              id: "mem_retry",
+              source_event_refs: ["tomb_job_1_evt_1"],
+              memory_kind: "continuity",
+              summary: "Recovered retry row.",
+              payload: {},
+              confidence: "high",
+              risk: "low",
+            },
+          ],
+        }),
+        stderr: "",
+      };
+    },
+  });
+
+  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  expect(prompts).toHaveLength(1);
+  expect(prompts[0]).toContain("tomb_job_1_evt_1");
+  expect(listExperienceEvents(db, "class-kit")).toEqual([]);
+  expect(db.query("SELECT id FROM session_memories WHERE id = ?").get("mem_retry")).toEqual({ id: "mem_retry" });
+  const tombstone = db
+    .query("SELECT ingest_job_id, state, source_metadata_json, output_references_json FROM experience_event_tombstones WHERE id = ?")
+    .get("tomb_job_1_evt_1") as {
+    ingest_job_id: string;
+    state: string;
+    source_metadata_json: string;
+    output_references_json: string;
+  };
+  expect(tombstone.ingest_job_id).toBe("job_2");
+  expect(tombstone.state).toBe("output");
+  expect(JSON.parse(tombstone.source_metadata_json).attempts).toEqual([
+    { ingest_job_id: "job_1", ended_at: "2026-06-13T10:00:00.000Z", reason: "provider_failed" },
+  ]);
+  expect(JSON.parse(tombstone.output_references_json)).toEqual(["session_memories/mem_retry"]);
+});
+
+test("worker commits provider no-output refs and deletes source rows", async () => {
+  recordExperienceEvent(db, {
+    id: "evt_1",
+    project_key: "class-kit",
+    occurred_at: "2026-06-13T09:59:00.000Z",
+    provider: "codex",
+    raw_payload_json: "{}",
+    source: "codex-hook",
+    status: "valid",
+  });
+  db.close();
+
+  await runIngestWorker({
+    root,
+    projectKey: "class-kit",
+    jobId: "job_1",
+    targetRepo: "/target/repo",
+    provider: "codex",
+    batchSize: 1,
+    now: fixedNow(),
+    runner: async (): Promise<RunProcessResult> => ({
+      exitCode: 0,
+      stdout: JSON.stringify({ no_output_tombstone_ids: ["tomb_job_1_evt_1"], terminal_summary: "No useful memory." }),
+      stderr: "",
+    }),
+  });
+
+  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  expect(listExperienceEvents(db, "class-kit")).toEqual([]);
+  expect(db.query("SELECT state, terminal_decision FROM experience_event_tombstones WHERE id = ?").get("tomb_job_1_evt_1")).toEqual({
+    state: "no_output",
+    terminal_decision: "no_output",
+  });
 });
 
 test("worker compacts large provider failure messages before storing job errors", async () => {
@@ -471,7 +600,8 @@ test("worker compacts large provider failure messages before storing job errors"
 
   db = openMemoryDbAt(join(root, "state", "memory.db"));
   const job = getIngestJob(db, "job_1");
-  const error = JSON.parse(job?.error_json ?? "{}") as { message: string };
+  const error = JSON.parse(job?.error_json ?? "{}") as { message: string; retryable: boolean };
+  expect(error.retryable).toBe(true);
   expect(error.message.length).toBeLessThan(4_100);
   expect(error.message).toContain("usage limit");
   expect(error.message).not.toContain("x".repeat(500));
@@ -523,9 +653,10 @@ test("worker rejects invalid provider output before durable memory writes", asyn
   expect(db.query("SELECT COUNT(*) AS count FROM project_handoff_instructions").get()).toEqual({ count: 0 });
   expect(db.query("SELECT COUNT(*) AS count FROM practice_handoff_instructions").get()).toEqual({ count: 0 });
   expect(db.query("SELECT COUNT(*) AS count FROM personal_handoff_instructions").get()).toEqual({ count: 0 });
+  expect(listExperienceEvents(db, "class-kit").map((row) => row.id)).toEqual(["evt_1"]);
   expect(db.query("SELECT state, terminal_decision FROM experience_event_tombstones WHERE id = ?").get("tomb_job_1_evt_1")).toEqual({
-    state: "failed",
-    terminal_decision: "provider_failed",
+    state: "claimed",
+    terminal_decision: null,
   });
 
   const job = getIngestJob(db, "job_1");
@@ -539,6 +670,16 @@ function seedClaimedTombstone(
   db: MemoryDb,
   input: { id: string; ingest_job_id: string; project_key: string },
 ): void {
+  recordExperienceEvent(db, {
+    id: `evt_${input.id}`,
+    project_key: input.project_key,
+    occurred_at: "2026-06-13T09:59:00.000Z",
+    provider: "codex",
+    provider_session_id: "sess_1",
+    raw_payload_json: "{}",
+    source: "codex-hook",
+    status: "valid",
+  });
   db.query(
     `INSERT INTO experience_event_tombstones
       (id, original_event_id, dedupe_key, project_key, ingest_job_id, provider, provider_session_id,

@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { resolveInside } from "./fs.ts";
 
 export type Provider = "codex" | "claude";
-export type Workload = "pipeline" | "query";
+export type Workload = "pipeline" | "query" | "ingest";
 export type EmbeddingProvider = "gemini";
 export type EmbeddingPurpose = "retrieval_document" | "retrieval_query";
 
@@ -22,6 +22,11 @@ export type EmbeddingConfig = {
 
 export type IngestConfig = {
   batchSize: number;
+  workerConcurrency: number;
+  workerStartDelayMs: number;
+  llmTimeoutMs: number;
+  promptCharLimit: number;
+  profiles: Partial<Record<Provider, ModelProfile>>;
 };
 
 export type ActiveEmbeddingContract = {
@@ -46,6 +51,11 @@ export const DEFAULT_GEMINI_EMBEDDING_MODEL = "gemini-embedding-2";
 export const DEFAULT_EMBEDDING_DIMENSIONS = 1536;
 export const DEFAULT_INGEST_BATCH_SIZE = 100;
 export const MAX_INGEST_BATCH_SIZE = 500;
+export const DEFAULT_INGEST_WORKER_CONCURRENCY = 1;
+export const MAX_INGEST_WORKER_CONCURRENCY = 16;
+export const DEFAULT_INGEST_WORKER_START_DELAY_MS = 750;
+export const DEFAULT_INGEST_LLM_TIMEOUT_MS = 10 * 60 * 1000;
+export const DEFAULT_INGEST_PROMPT_CHAR_LIMIT = 180_000;
 export const DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT: ActiveEmbeddingContract = {
   provider: DEFAULT_EMBEDDING_PROVIDER,
   model: DEFAULT_GEMINI_EMBEDDING_MODEL,
@@ -65,6 +75,10 @@ const DEFAULT_CONFIG: MyelinConfig = {
       codex: { provider: "codex" },
       claude: { provider: "claude" },
     },
+    ingest: {
+      codex: { provider: "codex" },
+      claude: { provider: "claude" },
+    },
   },
   embedding: {
     provider: DEFAULT_EMBEDDING_PROVIDER,
@@ -73,6 +87,14 @@ const DEFAULT_CONFIG: MyelinConfig = {
   },
   ingest: {
     batchSize: DEFAULT_INGEST_BATCH_SIZE,
+    workerConcurrency: DEFAULT_INGEST_WORKER_CONCURRENCY,
+    workerStartDelayMs: DEFAULT_INGEST_WORKER_START_DELAY_MS,
+    llmTimeoutMs: DEFAULT_INGEST_LLM_TIMEOUT_MS,
+    promptCharLimit: DEFAULT_INGEST_PROMPT_CHAR_LIMIT,
+    profiles: {
+      codex: { provider: "codex" },
+      claude: { provider: "claude" },
+    },
   },
   values: {},
 };
@@ -95,6 +117,10 @@ export async function loadConfig(root: string, env: NodeJS.ProcessEnv = process.
       query: {
         codex: profile("query", "codex", merged),
         claude: profile("query", "claude", merged),
+      },
+      ingest: {
+        codex: profile("ingest", "codex", merged),
+        claude: profile("ingest", "claude", merged),
       },
     },
     embedding: embeddingConfig(merged),
@@ -159,7 +185,42 @@ function embeddingConfig(values: Record<string, string>): EmbeddingConfig {
 function ingestConfig(values: Record<string, string>): IngestConfig {
   return {
     batchSize: parseIngestBatchSize(values.INGEST_BATCH_SIZE ?? String(DEFAULT_INGEST_BATCH_SIZE)),
+    workerConcurrency: parsePositiveInteger(
+      values.INGEST_WORKER_CONCURRENCY ?? String(DEFAULT_INGEST_WORKER_CONCURRENCY),
+      "Invalid ingest worker concurrency",
+      MAX_INGEST_WORKER_CONCURRENCY,
+    ),
+    workerStartDelayMs: parseNonNegativeInteger(
+      values.INGEST_WORKER_START_DELAY_MS ?? String(DEFAULT_INGEST_WORKER_START_DELAY_MS),
+      "Invalid ingest worker start delay",
+    ),
+    llmTimeoutMs: parsePositiveInteger(
+      values.INGEST_LLM_TIMEOUT_MS ?? String(DEFAULT_INGEST_LLM_TIMEOUT_MS),
+      "Invalid ingest LLM timeout",
+    ),
+    promptCharLimit: parsePositiveInteger(
+      values.INGEST_PROMPT_CHAR_LIMIT ?? String(DEFAULT_INGEST_PROMPT_CHAR_LIMIT),
+      "Invalid ingest prompt char limit",
+    ),
+    profiles: {
+      codex: profile("ingest", "codex", values),
+      claude: profile("ingest", "claude", values),
+    },
   };
+}
+
+function parsePositiveInteger(value: string, label: string, max?: number): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0 || (max !== undefined && parsed > max)) {
+    throw new Error(`${label}: ${value}`);
+  }
+  return parsed;
+}
+
+function parseNonNegativeInteger(value: string, label: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) throw new Error(`${label}: ${value}`);
+  return parsed;
 }
 
 function parseDotenv(text: string): Record<string, string> {

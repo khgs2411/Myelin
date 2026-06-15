@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openMemoryDbAt, type MemoryDb } from "../memory/db.ts";
-import { claimExperienceEvents, recordExperienceEvent } from "../memory/experience.ts";
+import { leaseExperienceEvents, recordExperienceEvent } from "../memory/experience.ts";
 import { writeJson } from "../runtime/json.ts";
 import { createIngestJob, getIngestJob, updateIngestJobStatus } from "./jobs.ts";
 import {
@@ -282,7 +282,7 @@ test("refresh marks running detached job failed when stored pid is dead", async 
   });
 });
 
-test("refresh finalizes remaining claimed tombstones when detached worker pid is dead", async () => {
+test("refresh preserves retryable lease stubs when detached worker pid is dead", async () => {
   createIngestJob(db, {
     id: "job_6",
     project_key: "class-kit",
@@ -305,7 +305,7 @@ test("refresh finalizes remaining claimed tombstones when detached worker pid is
     source: "codex-hook",
     status: "valid",
   });
-  claimExperienceEvents(db, {
+  leaseExperienceEvents(db, {
     ingest_job_id: "job_6",
     project_key: "class-kit",
     limit: 1,
@@ -327,15 +327,16 @@ test("refresh finalizes remaining claimed tombstones when detached worker pid is
     db
       .query("SELECT COUNT(*) AS count FROM experience_event_tombstones WHERE ingest_job_id = ? AND state = 'claimed'")
       .get("job_6"),
-  ).toEqual({ count: 0 });
+  ).toEqual({ count: 1 });
+  expect(db.query("SELECT id FROM experience_events WHERE id = ?").get("evt_1")).toEqual({ id: "evt_1" });
   expect(
     db
       .query("SELECT state, terminal_decision, finalized_at, output_references_json FROM experience_event_tombstones")
       .get(),
   ).toEqual({
-    state: "failed",
-    terminal_decision: "detached_worker_exited",
-    finalized_at: "2026-06-13T10:02:00.000Z",
+    state: "claimed",
+    terminal_decision: null,
+    finalized_at: null,
     output_references_json: "[]",
   });
 });

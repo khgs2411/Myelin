@@ -188,3 +188,29 @@ Execution must stop on unclear plan steps, failed verification, code/spec confli
 ## User Approval
 
 Roadmap was approved by the user before chunk plan generation. Chunk plan files are written and ready for review or execution selection.
+
+## Implementation Validation
+
+Implementation date: 2026-06-15.
+
+Implemented chunks:
+
+- `01-tombstone-lease-storage-contracts.md`: added tombstone-backed lease stubs, skip-on-conflict selection, stale lease recovery, terminal leased finalization, and active/unleased count helpers while preserving legacy claim/delete compatibility APIs.
+- `02-worker-commit-lifecycle.md`: migrated the ingest worker to prompt from leased source evidence, commit accepted output/no-output through leased finalization, and keep provider failures retryable with raw rows plus claimed lease stubs intact.
+- `03-ingest-runtime-profile.md`: added the named ingest runtime profile for batch size, worker concurrency, start delay, LLM timeout, prompt budget, and ingest model/reasoning profile.
+- `04-ingest-status-readback.md`: added numeric completion layers, project-level count aggregation, and `myelin ingest status --project <key> [--json]`.
+- `05-docs-validation-and-retest.md`: reconciled stale lifecycle wording in prior specs and AGENTS guidance, and added a bounded replay/requeue recovery fixture.
+
+Verification results:
+
+- `rtk bun test`: pass, 183 tests across 35 files.
+- `rtk bun run typecheck`: pass, `tsc --noEmit`.
+- `git diff --check`: pass, no output.
+- `rtk bun src/cli.ts ingest status --project class-kit --json`: pass. Readback reported `completion_layer: 40`, `completion_label: "Session Memory retrieval pending"`, `active_events: 0`, `unleased_events: 0`, `leased_events: 0`, `running_jobs: 0`, `failed_jobs: 29`, `terminal_tombstones: 1081`, `session_memories: 236`, `memory_candidates: 103`, `handoff_instructions: 43`, and `pending_session_memory_embeddings: 234`.
+
+Retest evidence:
+
+- Bounded replay/requeue fixture passed in `src/memory/experience.test.ts`: it seeds a source row, creates a tombstone-backed lease stub, recovers the same stub for a retry job, records attempt history, commits accepted output, deletes the raw row, and preserves retained evidence/output references.
+- Ordinary retry regression passed in `src/ingest/worker.test.ts`: a failed provider run leaves a raw row and claimed stub, then a normal subsequent worker recovers the same tombstone id and commits accepted output.
+- Project status stale-PID regression passed in `src/commands/ingest.test.ts`: `myelin ingest status --project <key> --json` refreshes dead running jobs before aggregating `running_jobs` and `failed_jobs`.
+- Real small ingest retest was skipped because local `class-kit` status showed no safe newly captured active batch at execution time (`active_events: 0`, `unleased_events: 0`, `leased_events: 0`). Session Memory retrieval remains explicitly pending because embeddings/query retrieval are a later layer.

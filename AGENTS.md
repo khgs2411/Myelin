@@ -99,7 +99,7 @@ Do not make `/mcp` part of the root package graph. Core query behavior lives in 
 
 - Codex-backed stages must run with `--sandbox read-only`.
 - LLM-stage prompts must require JSON on stdout; do not ask the model to write artifacts directly.
-- Top-level `myelin ingest <key>` counts queued Experience Log rows and launches one detached target-repo agent per `INGEST_BATCH_SIZE` batch. Workers still claim rows atomically from SQLite.
+- Top-level `myelin ingest <key>` counts queued Experience Log rows and launches detached target-repo agents according to the ingest runtime profile. Workers create tombstone-backed lease stubs without deleting raw rows before provider output is accepted; terminal commit finalizes tombstones and archives source rows.
 - On macOS, sqlite-vec requires a SQLite build that supports loadable extensions. Myelin prefers its vendored SQLite runtime, falls back to Homebrew SQLite, and can be overridden with `MYELIN_SQLITE_DYLIB_PATH`.
 - Session Memory vector indexing is explicit operator work: use `myelin memory index session <key> [--limit N] [--retry-failed] [--json]`.
 - Session Memory vector retrieval is an internal facade in this slice; MCP exposure, Current Briefing integration, broader `memory query`, and non-Session Memory vectorization are deferred.
