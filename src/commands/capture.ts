@@ -1,5 +1,4 @@
-import { handleCaptureEvent } from "../capture/facade.ts";
-import { normalizeCodexHookPayload } from "../capture/providers/codex.ts";
+import { CaptureService } from "../capture/capture-service.ts";
 import { repoRoot } from "../runtime/fs.ts";
 import type { Cli, CommandResult } from "./registry.ts";
 import { ok } from "./registry.ts";
@@ -22,10 +21,6 @@ export function isCaptureDisabled(env: NodeJS.ProcessEnv = process.env): boolean
 }
 
 export async function captureCodexPayload(root: string, payload: unknown): Promise<CommandResult> {
-  const event = normalizeCodexHookPayload(payload);
-  if (!event) return ok("codex hook ignored");
-
-  const result = await handleCaptureEvent(root, event);
-  if (result.status === "failed-open") return ok(`capture failed open: ${result.error_message}`);
-  return ok(`capture ${result.status}`);
+  const result = await new CaptureService(root).captureCodexPayload(payload);
+  return ok(result.message);
 }

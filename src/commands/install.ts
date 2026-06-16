@@ -1,4 +1,4 @@
-import { applyCodexInstall, planCodexInstall, uninstallCodex } from "../install/codex.ts";
+import { InstallService } from "../install/install-service.ts";
 import type { ProviderInstallPlan } from "../install/types.ts";
 import { repoRoot } from "../runtime/fs.ts";
 import type { Cli } from "./registry.ts";
@@ -21,36 +21,26 @@ export function registerInstallCommands(cli: Cli, deps: InstallCommandDeps = {})
   cli.command(["install"], async (args) => {
     const parsed = parseInstallArgs(args);
     if (parsed.error) return fail(parsed.error);
-    if (parsed.provider && parsed.provider !== "codex") return fail("--provider must be codex");
 
-    const detectedProviders = deps.detectedProviders ?? ["codex"];
-    if (parsed.apply && !parsed.provider && detectedProviders.length > 1 && deps.isInteractive === false) {
-      return fail(`Multiple providers detected (${detectedProviders.join(", ")}). Re-run with --provider <name>.`);
+    try {
+      const result = await service(deps).install(parsed);
+      return ok(render("install", result.mode, result.plan));
+    } catch (error) {
+      return fail(error instanceof Error ? error.message : String(error));
     }
-
-    const options = {
-      providerRoot: deps.codexRoot,
-      myelinRoot: deps.myelinRoot ?? repoRoot().root,
-      mode: parsed.apply ? ("apply" as const) : ("preview" as const),
-    };
-    const plan = parsed.apply ? await applyCodexInstall(options) : await planCodexInstall(options);
-
-    return ok(render("install", parsed.apply ? "apply" : "preview", plan));
   });
 
   cli.command(["uninstall"], async (args) => {
     const parsed = parseInstallArgs(args);
     if (parsed.error) return fail(parsed.error);
     if (parsed.apply) return fail("uninstall does not accept --apply");
-    if (parsed.provider && parsed.provider !== "codex") return fail("--provider must be codex");
 
-    const plan = await uninstallCodex({
-      providerRoot: deps.codexRoot,
-      myelinRoot: deps.myelinRoot ?? repoRoot().root,
-      mode: "uninstall",
-    });
-
-    return ok(render("uninstall", "uninstall", plan));
+    try {
+      const result = await service(deps).uninstall(parsed.provider);
+      return ok(render("uninstall", result.mode, result.plan));
+    } catch (error) {
+      return fail(error instanceof Error ? error.message : String(error));
+    }
   });
 }
 
@@ -86,4 +76,13 @@ function render(command: string, mode: string, plan: ProviderInstallPlan): strin
     ...plan.actions.map((action) => `- ${action}`),
     ...plan.warnings.map((warning) => `Warning: ${warning}`),
   ].join("\n");
+}
+
+function service(deps: InstallCommandDeps): InstallService {
+  return new InstallService({
+    myelinRoot: deps.myelinRoot ?? repoRoot().root,
+    codexRoot: deps.codexRoot,
+    isInteractive: deps.isInteractive,
+    detectedProviders: deps.detectedProviders,
+  });
 }

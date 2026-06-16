@@ -9,6 +9,7 @@ import {
   type SessionMemoryVectorMatch,
   type SqliteVecAdapter,
 } from "./sqlite-vec.ts";
+import { getOrCreateQueryEmbedding } from "./query-embedding-cache.ts";
 
 export type SessionMemoryQueryFilters = {
   memory_kind?: SessionMemoryKind[];
@@ -33,6 +34,9 @@ export type SessionMemoryQueryResult = {
   degraded_reason?: string;
   indexed_count: number;
   pending_count: number;
+  query_embedding_cache_hit?: boolean;
+  query_embedding_cache_id?: string;
+  normalized_question?: string;
   matches: SessionMemoryQueryMatch[];
   source_tools: string[];
 };
@@ -63,6 +67,7 @@ export async function querySessionMemory(
     limit: number;
     filters?: SessionMemoryQueryFilters;
     vector_store?: SessionMemoryQueryVectorStore;
+    now?: () => string;
   },
 ): Promise<SessionMemoryQueryResult> {
   const vectorStore = input.vector_store ?? defaultSessionMemoryQueryVectorStore(createSqliteVecAdapter());
@@ -89,9 +94,12 @@ export async function querySessionMemory(
       ...input.document_contract,
       purpose: "retrieval_query",
     };
-    const queryEmbedding = await input.provider.embed({
+    const queryEmbedding = await getOrCreateQueryEmbedding(db, {
+      project_key: input.project_key,
+      question: input.question,
       contract: queryContract,
-      text: input.question,
+      provider: input.provider,
+      now: input.now,
     });
     const matches = vectorStore.search(db, {
       project_key: input.project_key,
@@ -105,8 +113,11 @@ export async function querySessionMemory(
       degraded: false,
       indexed_count: counts.indexed_count,
       pending_count: counts.pending_count,
+      query_embedding_cache_hit: queryEmbedding.cache_hit,
+      query_embedding_cache_id: queryEmbedding.cache_id,
+      normalized_question: queryEmbedding.normalized_question,
       matches: hydrateMatches(db, matches, input.filters).slice(0, input.limit),
-      source_tools: ["session-memory-vector-index"],
+      source_tools: ["query-embedding-cache", "session-memory-vector-index"],
     };
   } catch (error) {
     return degraded(input, counts, error instanceof Error ? error.message : String(error));
@@ -187,7 +198,7 @@ function degraded(
     indexed_count: counts.indexed_count,
     pending_count: counts.pending_count,
     matches: [],
-    source_tools: ["session-memory-vector-index"],
+    source_tools: ["query-embedding-cache", "session-memory-vector-index"],
   };
 }
 

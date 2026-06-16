@@ -2,14 +2,15 @@ import type { Cli } from "./registry.ts";
 import { fail, ok } from "./registry.ts";
 import { repoRoot } from "../runtime/fs.ts";
 import { stableJson } from "../runtime/json.ts";
-import { buildSchemaContext, checkSchema } from "../schema/compiler.ts";
+import { SchemaService } from "../schema/schema-service.ts";
 
 export function registerSchemaCommands(cli: Cli): void {
   cli.command(["schema", "check"], async (args) => {
     const parsed = parseArgs(args, { allowDryRun: false });
     if (parsed.error) return fail(parsed.error);
 
-    const result = await checkSchema(repoRoot().root, parsed.projectKey);
+    const service = new SchemaService(repoRoot().root);
+    const result = await service.check(parsed.projectKey);
     if (!result.ok) return fail(`Schema check failed:\n${result.errors.map((error) => `  - ${error}`).join("\n")}`);
     return ok(`Schema check passed for ${parsed.projectKey}.`);
   });
@@ -19,7 +20,8 @@ export function registerSchemaCommands(cli: Cli): void {
     if (parsed.error) return fail(parsed.error);
 
     try {
-      const result = await buildSchemaContext(repoRoot().root, parsed.projectKey, { dryRun: parsed.dryRun });
+      const service = new SchemaService(repoRoot().root);
+      const result = await service.build({ projectKey: parsed.projectKey, dryRun: parsed.dryRun });
       if (parsed.dryRun) return ok(stableJson(result.context));
       return ok(
         result.wrote

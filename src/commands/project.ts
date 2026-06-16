@@ -1,9 +1,9 @@
 import type { Cli } from "./registry.ts";
 import { fail, ok } from "./registry.ts";
 import { repoRoot } from "../runtime/fs.ts";
-import { migrateProjectLayout } from "../runtime/layout.ts";
 import { stableJson } from "../runtime/json.ts";
-import { runProjectPipeline, type PipelineKind } from "../pipeline/runner.ts";
+import type { PipelineKind } from "../pipeline/runner.ts";
+import { ProjectService } from "../project/project-service.ts";
 
 export function registerProjectCommands(cli: Cli): void {
   cli.command(["project", "learn"], async (args) => runPipelineCommand("learn", args));
@@ -14,11 +14,11 @@ export function registerProjectCommands(cli: Cli): void {
 
     const root = repoRoot().root;
     try {
-      const projectActions = await migrateProjectLayout(root, projectKey);
+      const result = await new ProjectService(root).migrateLayout(projectKey);
       return ok(
         [
           `Migrated project layout for ${projectKey}.`,
-          `Project actions: ${projectActions.length}`,
+          `Project actions: ${result.projectActions.length}`,
         ].join("\n"),
       );
     } catch (error) {
@@ -32,12 +32,7 @@ async function runPipelineCommand(kind: PipelineKind, args: string[]) {
   if (parsed.error) return fail(parsed.error);
 
   try {
-    const result = await runProjectPipeline(repoRoot().root, parsed.projectKey, kind, {
-      dryRun: parsed.dryRun,
-      review: parsed.review,
-      provider: parsed.provider,
-      modelOverride: parsed.modelOverride,
-    });
+    const result = await new ProjectService(repoRoot().root).runPipeline({ ...parsed, kind });
     if (parsed.json) return ok(stableJson(result));
 
     const lines = [

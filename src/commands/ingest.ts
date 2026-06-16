@@ -1,33 +1,14 @@
 import type { Cli } from "./registry.ts";
 import { fail, ok } from "./registry.ts";
-import { createIngestJob, getIngestJob, updateIngestJobStatus } from "../ingest/jobs.ts";
-import { readIngestProjectStatus } from "../ingest/status.ts";
-import type { IngestJobRow } from "../memory/ingest-types.ts";
 import {
-  assertMasterBranch,
-  launchDetachedIngestWorker,
-  refreshDetachedIngestJobStatus,
-  resolveIngestTargetRepo,
-  type DetachedSpawner,
-  type ProcessLivenessChecker,
-  type RuntimeProcessRunner,
-} from "../ingest/runtime.ts";
-import { runIngestWorker } from "../ingest/worker.ts";
-import { openMemoryDb } from "../memory/db.ts";
-import { countExperienceEvents } from "../memory/experience.ts";
-import { loadConfig } from "../runtime/config.ts";
+  IngestService,
+  type IngestProvider,
+  type IngestServiceDeps,
+  type StartIngestResult,
+} from "../ingest/ingest-service.ts";
 import { repoRoot } from "../runtime/fs.ts";
-import { createId } from "../runtime/ids.ts";
 
-type IngestProvider = "codex" | "claude";
-
-export type IngestCommandDeps = {
-  now?: () => Date;
-  runner?: RuntimeProcessRunner;
-  spawn?: DetachedSpawner;
-  isProcessAlive?: ProcessLivenessChecker;
-  runWorker?: typeof runIngestWorker;
-};
+export type IngestCommandDeps = IngestServiceDeps;
 
 export function registerIngestCommands(cli: Cli, deps: IngestCommandDeps = {}): void {
   cli.command(["ingest", "status"], (args) => status(args, deps));
@@ -39,105 +20,16 @@ async function start(args: string[], deps: IngestCommandDeps) {
   const parsed = parseStartArgs(args);
   if (parsed.error) return fail(parsed.error);
 
-  const root = repoRoot().root;
-  const db = openMemoryDb(root);
-  const now = (deps.now ?? (() => new Date()))().toISOString();
-
   try {
-    const config = await loadConfig(root);
-    const batchSize = parsed.batchSize ?? config.ingest.batchSize;
-    const targetRepo = await resolveIngestTargetRepo(root, parsed.projectKey);
-    const branch = await assertMasterBranch(targetRepo, deps.runner);
-
-    if (!branch.ok) {
-      const job = createIngestJob(db, {
-        id: `ingest_${createId()}`,
-        project_key: parsed.projectKey,
-        provider: parsed.provider,
-        input: { limit: parsed.limit, target_repo: targetRepo, batch_size: batchSize },
-        now,
-      });
-      const failed = updateIngestJobStatus(db, {
-        id: job.id,
-        status: "failed",
-        updated_at: now,
-        finished_at: now,
-        error: {
-          code: "target_branch_mismatch",
-          expected_branch: "master",
-          actual_branch: branch.branch,
-          target_repo: targetRepo,
-        },
-      });
-      if (parsed.json) return ok(JSON.stringify({ job: failed, jobs: [failed] }, null, 2));
-      return fail(`Ingest job ${job.id} failed: target repo is on ${branch.branch}, expected master.`);
-    }
-
-    const queuedCount = countExperienceEvents(db, parsed.projectKey);
-    const selectedCount = parsed.limit === undefined ? queuedCount : Math.min(parsed.limit, queuedCount);
-    if (selectedCount === 0) {
-      const response = { project_key: parsed.projectKey, queued_count: queuedCount, batch_size: batchSize, jobs: [] };
-      return parsed.json ? ok(JSON.stringify(response, null, 2)) : ok(`No queued Experience Log rows for ${parsed.projectKey}.`);
-    }
-
-    const batchCount = Math.ceil(selectedCount / batchSize);
-    const jobs = [];
-    const launches = [];
-
-    for (let index = 0; index < batchCount; index += 1) {
-      const batchIndex = index + 1;
-      const batchLimit = Math.min(batchSize, selectedCount - index * batchSize);
-      const job = createIngestJob(db, {
-        id: `ingest_${createId()}`,
-        project_key: parsed.projectKey,
-        provider: parsed.provider,
-        input: {
-          limit: batchLimit,
-          target_repo: targetRepo,
-          batch_size: batchSize,
-          batch_index: batchIndex,
-          batch_count: batchCount,
-          worker_concurrency: config.ingest.workerConcurrency,
-        },
-        now,
-      });
-
-      const launched = await launchDetachedIngestWorker({
-        db,
-        root,
-        projectKey: parsed.projectKey,
-        jobId: job.id,
-        now,
-        env: {
-          ...process.env,
-          MYELIN_INGEST_START_DELAY_MS: String((index + 1) * config.ingest.workerStartDelayMs),
-        },
-        runner: deps.runner,
-        spawn: deps.spawn,
-      });
-      jobs.push(getIngestJob(db, job.id) ?? job);
-      launches.push(launched);
-    }
-
-    const response = {
-      project_key: parsed.projectKey,
-      queued_count: queuedCount,
-      selected_count: selectedCount,
-      batch_size: batchSize,
-      batch_count: batchCount,
-      job: jobs[0],
-      jobs,
-      launches,
-    };
-    if (parsed.json) return ok(JSON.stringify(response, null, 2));
-    return ok(
-      `Started ${jobs.length} ingest job${jobs.length === 1 ? "" : "s"} for ${parsed.projectKey}.` +
-        `\nqueued: ${queuedCount}; selected: ${selectedCount}; batch size: ${batchSize}`,
-    );
+    const result = await new IngestService(repoRoot().root, deps).start({
+      projectKey: parsed.projectKey,
+      limit: parsed.limit,
+      batchSize: parsed.batchSize,
+      provider: parsed.provider,
+    });
+    return renderStart(result, parsed.json);
   } catch (error) {
     return fail(error instanceof Error ? error.message : String(error));
-  } finally {
-    db.close();
   }
 }
 
@@ -145,32 +37,22 @@ function status(args: string[], deps: IngestCommandDeps) {
   const parsed = parseStatusArgs(args);
   if (parsed.error) return fail(parsed.error);
 
-  const db = openMemoryDb(repoRoot().root);
   try {
-    if (parsed.projectKey) {
-      refreshRunningProjectIngestJobs(db, parsed.projectKey, {
-        now: (deps.now ?? (() => new Date()))().toISOString(),
-        isAlive: deps.isProcessAlive,
-      });
-      const projectStatus = readIngestProjectStatus(db, parsed.projectKey);
+    const result = new IngestService(repoRoot().root, deps).status({
+      jobId: parsed.jobId,
+      projectKey: parsed.projectKey,
+    });
+    if (result.kind === "project") {
       return parsed.json
-        ? ok(JSON.stringify({ status: projectStatus }, null, 2))
-        : ok(`${projectStatus.project_key}: ${projectStatus.completion_label}`);
+        ? ok(JSON.stringify({ status: result.status }, null, 2))
+        : ok(`${result.status.project_key}: ${result.status.completion_label}`);
     }
 
-    const job = getIngestJob(db, parsed.jobId ?? "");
-    if (!job) return fail(`Unknown ingest job: ${parsed.jobId}`);
-    const current = refreshDetachedIngestJobStatus({
-      db,
-      job,
-      now: (deps.now ?? (() => new Date()))().toISOString(),
-      isAlive: deps.isProcessAlive,
-    });
     return parsed.json
-      ? ok(JSON.stringify({ job: current }, null, 2))
-      : ok(`Ingest job ${current.id} [${current.status}] project=${current.project_key} provider=${current.provider}`);
-  } finally {
-    db.close();
+      ? ok(JSON.stringify({ job: result.job }, null, 2))
+      : ok(`Ingest job ${result.job.id} [${result.job.status}] project=${result.job.project_key} provider=${result.job.provider}`);
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error));
   }
 }
 
@@ -178,45 +60,34 @@ async function worker(args: string[], deps: IngestCommandDeps) {
   const jobId = args[0];
   if (!jobId || args.length > 1) return fail("Usage: myelin ingest worker <ingest-job-id>");
 
-  await sleep(Number(process.env.MYELIN_INGEST_START_DELAY_MS ?? 0));
-
   const root = process.env.MYELIN_ROOT ?? repoRoot().root;
-  const db = openMemoryDb(root);
   try {
-    const job = getIngestJob(db, jobId);
-    if (!job) return fail(`Unknown ingest job: ${jobId}`);
-    const input = JSON.parse(job.input_json) as {
-      target_repo?: string;
-      limit?: number;
-      batch_size?: number;
-      batch_index?: number;
-      batch_count?: number;
-    };
-    if (!input.target_repo) return fail(`Ingest job ${jobId} missing target_repo`);
-
-    await (deps.runWorker ?? runIngestWorker)({
-      root,
-      projectKey: job.project_key,
-      jobId: job.id,
-      targetRepo: input.target_repo,
-      provider: job.provider === "claude" ? "claude" : "codex",
-      providerSessionId: job.provider_session_id,
-      limit: input.limit,
-      batchSize: input.batch_size,
-      batchIndex: input.batch_index,
-      batchCount: input.batch_count,
-    });
+    await new IngestService(root, deps).runWorker(jobId);
     return ok(`Completed ingest worker ${jobId}.`);
   } catch (error) {
     return fail(error instanceof Error ? error.message : String(error));
-  } finally {
-    db.close();
   }
 }
 
-async function sleep(ms: number): Promise<void> {
-  if (!Number.isFinite(ms) || ms <= 0) return;
-  await new Promise((resolve) => setTimeout(resolve, ms));
+function renderStart(result: StartIngestResult, json: boolean) {
+  if (json) {
+    if (result.kind === "branch_mismatch") return ok(JSON.stringify({ job: result.job, jobs: result.jobs }, null, 2));
+    return ok(JSON.stringify(stripKind(result), null, 2));
+  }
+
+  if (result.kind === "branch_mismatch") {
+    return fail(`Ingest job ${result.job.id} failed: target repo is on ${result.branch}, expected master.`);
+  }
+  if (result.kind === "no_work") return ok(`No queued Experience Log rows for ${result.project_key}.`);
+  return ok(
+    `Started ${result.jobs.length} ingest job${result.jobs.length === 1 ? "" : "s"} for ${result.project_key}.` +
+      `\nqueued: ${result.queued_count}; selected: ${result.selected_count}; batch size: ${result.batch_size}`,
+  );
+}
+
+function stripKind<T extends { kind: string }>(value: T): Omit<T, "kind"> {
+  const { kind: _kind, ...rest } = value;
+  return rest;
 }
 
 function parseStartArgs(args: string[]): {
@@ -299,22 +170,4 @@ function parseStatusArgs(args: string[]): { jobId?: string; projectKey?: string;
     };
   }
   return { jobId: jobId || undefined, projectKey: projectKey || undefined, json };
-}
-
-function refreshRunningProjectIngestJobs(
-  db: ReturnType<typeof openMemoryDb>,
-  projectKey: string,
-  input: { now: string; isAlive?: ProcessLivenessChecker },
-): void {
-  const jobs = db
-    .query("SELECT * FROM ingest_jobs WHERE project_key = ? AND status = 'running' ORDER BY created_at, id")
-    .all(projectKey) as IngestJobRow[];
-  for (const job of jobs) {
-    refreshDetachedIngestJobStatus({
-      db,
-      job,
-      now: input.now,
-      isAlive: input.isAlive,
-    });
-  }
 }

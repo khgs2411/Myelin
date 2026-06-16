@@ -102,8 +102,8 @@ Do not make `/mcp` part of the root package graph. Core query behavior lives in 
 - Top-level `myelin ingest <key>` counts queued Experience Log rows and launches detached target-repo agents according to the ingest runtime profile. Workers create tombstone-backed lease stubs without deleting raw rows before provider output is accepted; terminal commit finalizes tombstones and archives source rows.
 - On macOS, sqlite-vec requires a SQLite build that supports loadable extensions. Myelin prefers its vendored SQLite runtime, falls back to Homebrew SQLite, and can be overridden with `MYELIN_SQLITE_DYLIB_PATH`.
 - Session Memory vector indexing is explicit operator work: use `myelin memory index session <key> [--limit N] [--batch-size N] [--retry-failed] [--json]`.
-- Session Memory vector retrieval is an internal facade in this slice; MCP exposure, Current Briefing integration, broader `memory query`, and non-Session Memory vectorization are deferred.
-- Query must fail closed when schema context is missing or invalid; it should suggest `schema build` or `schema check`.
+- `memory query <key> "<question>"` is the future multi-layer query facade; in the current slice it queries indexed Session Memory vectors only and uses cached query embeddings.
+- Session Memory vector retrieval requires indexed rows from `myelin memory index session <key>` and fails closed when sqlite-vec, credentials, or the vector index are unavailable. MCP exposure, Current Briefing integration, and non-Session Memory vectorization are deferred.
 - `project learn` verifies schema freshness before learning work.
 - Inbox lockfiles can strand on hard kills; lockfiles live at `projects/<key>/state/.update.lock`.
 - Detached update logs live under `projects/<key>/logs/`.

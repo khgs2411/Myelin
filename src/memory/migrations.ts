@@ -214,6 +214,38 @@ const MIGRATIONS: Migration[] = [
     version: 5,
     apply: migrateSessionMemoryEmbeddings,
   },
+  {
+    version: 6,
+    sql: `
+      CREATE TABLE query_embedding_cache (
+        id                    TEXT PRIMARY KEY,
+        project_key           TEXT NOT NULL,
+        original_question     TEXT NOT NULL,
+        normalized_question   TEXT NOT NULL,
+        embedding_provider    TEXT NOT NULL,
+        embedding_model       TEXT NOT NULL,
+        embedding_dimensions  INTEGER NOT NULL,
+        embedding_purpose     TEXT NOT NULL CHECK (embedding_purpose IN ('retrieval_document', 'retrieval_query')),
+        format_version        INTEGER NOT NULL,
+        embedding_json        TEXT NOT NULL,
+        hit_count             INTEGER NOT NULL DEFAULT 0,
+        created_at            TEXT NOT NULL,
+        updated_at            TEXT NOT NULL,
+        last_used_at          TEXT NOT NULL,
+        UNIQUE (
+          project_key,
+          normalized_question,
+          embedding_provider,
+          embedding_model,
+          embedding_dimensions,
+          embedding_purpose,
+          format_version
+        )
+      );
+      CREATE INDEX query_embedding_cache_project_updated
+        ON query_embedding_cache(project_key, updated_at);
+    `,
+  },
 ];
 
 export function runMigrations(db: Database, now: Date = new Date()): void {

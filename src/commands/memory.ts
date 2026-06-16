@@ -1,17 +1,17 @@
 import type { Cli, CommandResult } from "./registry.ts";
 import { fail, ok } from "./registry.ts";
-import { getMemoryCandidate, listMemoryCandidates, normalizeCandidateStatus } from "../memory/candidates.ts";
-import { openMemoryDb, type MemoryDb } from "../memory/db.ts";
-import { createGeminiEmbeddingProvider, createStubEmbeddingProvider } from "../memory/embedding-provider.ts";
+import { openMemoryDb } from "../memory/db.ts";
+import { EmbeddingProviderFactory } from "../memory/embedding-provider-factory.ts";
 import type { MemoryCandidateStatus, MemoryScope } from "../memory/ingest-types.ts";
-import { indexSessionMemories } from "../memory/session-memory-indexer.ts";
+import { MemoryCandidateService } from "../memory/memory-candidate-service.ts";
+import { SessionMemoryIndexService } from "../memory/session-memory-index-service.ts";
 import { repoRoot } from "../runtime/fs.ts";
 import { DEFAULT_EMBEDDING_BATCH_SIZE, loadConfig, MAX_EMBEDDING_BATCH_SIZE, selectActiveEmbeddingContract } from "../runtime/config.ts";
 import { queryMemory } from "../query/engine.ts";
 
 export function registerMemoryCommands(cli: Cli): void {
-  cli.command(["memory", "candidates"], (args) => withMemoryDb((db) => candidates(db, args)));
-  cli.command(["memory", "candidate", "show"], (args) => withMemoryDb((db) => candidateShow(db, args)));
+  cli.command(["memory", "candidates"], (args) => candidates(args));
+  cli.command(["memory", "candidate", "show"], (args) => candidateShow(args));
   cli.command(["memory", "index", "session"], (args) => indexSession(args));
   cli.command(["memory", "query"], async (args) => {
     const parsed = parseArgs(args);
@@ -21,6 +21,7 @@ export function registerMemoryCommands(cli: Cli): void {
       root: repoRoot().root,
       projectKey: parsed.projectKey,
       question: parsed.question,
+      limit: parsed.limit,
       includeRoute: parsed.debug,
     });
     if (parsed.json) return ok(JSON.stringify(response, null, 2));
@@ -36,18 +37,19 @@ async function indexSession(args: string[]): Promise<CommandResult> {
   const root = repoRoot().root;
   const config = await loadConfig(root);
   const contract = selectActiveEmbeddingContract(config, "retrieval_document");
-  const provider = config.embedding.stubResponsesDir
-    ? createStubEmbeddingProvider(config.embedding.stubResponsesDir)
-    : createGeminiEmbeddingProvider({ apiKey: config.values.GOOGLE_API_KEY ?? config.values.GEMINI_API_KEY });
+  const provider = new EmbeddingProviderFactory(config).create();
   const db = openMemoryDb(root);
   try {
-    const response = await indexSessionMemories(db, {
-      project_key: parsed.projectKey,
+    const service = new SessionMemoryIndexService({
+      db,
       contract,
       provider,
+    });
+    const response = await service.indexPending({
+      projectKey: parsed.projectKey,
       limit: parsed.limit,
-      batch_size: parsed.batchSize ?? config.embedding.batchSize,
-      retry_failed: parsed.retryFailed,
+      batchSize: parsed.batchSize ?? config.embedding.batchSize,
+      retryFailed: parsed.retryFailed,
     });
     if (parsed.json) return ok(JSON.stringify(response, null, 2));
     const message =
@@ -59,36 +61,31 @@ async function indexSession(args: string[]): Promise<CommandResult> {
   }
 }
 
-function withMemoryDb(fn: (db: MemoryDb) => CommandResult): CommandResult {
-  const db = openMemoryDb(repoRoot().root);
-  try {
-    return fn(db);
-  } finally {
-    db.close();
-  }
-}
-
-function candidates(db: MemoryDb, args: string[]): CommandResult {
+function candidates(args: string[]): CommandResult {
   const parsed = parseCandidateListArgs(args);
   if (parsed.error) return fail(parsed.error);
 
-  const rows = listMemoryCandidates(db, {
-    project_key: parsed.projectKey,
+  const result = candidateService().list({
+    projectKey: parsed.projectKey,
     status: parsed.status,
     scope: parsed.scope,
   });
-  if (parsed.json) return ok(JSON.stringify({ project_key: parsed.projectKey, candidates: rows }, null, 2));
-  if (rows.length === 0) return ok(`No memory candidates for ${parsed.projectKey}.`);
-  return ok(rows.map((row) => `${row.id} [${row.status}] ${row.scope}: ${row.summary}`).join("\n"));
+  if (parsed.json) return ok(JSON.stringify(result, null, 2));
+  if (result.candidates.length === 0) return ok(`No memory candidates for ${parsed.projectKey}.`);
+  return ok(result.candidates.map((row) => `${row.id} [${row.status}] ${row.scope}: ${row.summary}`).join("\n"));
 }
 
-function candidateShow(db: MemoryDb, args: string[]): CommandResult {
+function candidateShow(args: string[]): CommandResult {
   const parsed = parseCandidateShowArgs(args);
   if (parsed.error) return fail(parsed.error);
 
-  const row = getMemoryCandidate(db, parsed.id);
-  if (!row) return fail(`Unknown memory candidate: ${parsed.id}`);
-  return parsed.json ? ok(JSON.stringify({ candidate: row }, null, 2)) : ok(`${row.id} [${row.status}] ${row.scope}\n${row.summary}`);
+  try {
+    const result = candidateService().show(parsed.id);
+    const row = result.candidate;
+    return parsed.json ? ok(JSON.stringify(result, null, 2)) : ok(`${row.id} [${row.status}] ${row.scope}\n${row.summary}`);
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error));
+  }
 }
 
 function parseCandidateListArgs(args: string[]): {
@@ -108,7 +105,7 @@ function parseCandidateListArgs(args: string[]): {
     if (arg === "--json") json = true;
     else if (arg === "--status") {
       try {
-        status = normalizeCandidateStatus(args[++index] ?? "");
+        status = candidateService().normalizeStatus(args[++index] ?? "");
       } catch (error) {
         return { projectKey, status, scope, json, error: error instanceof Error ? error.message : String(error) };
       }
@@ -219,22 +216,32 @@ function parseIndexSessionArgs(args: string[]): {
 function parseArgs(args: string[]): {
   projectKey: string;
   question: string;
+  limit: number;
   json: boolean;
   debug: boolean;
   error?: string;
 } {
   let projectKey = "";
   let question = "";
+  let limit = 5;
   let json = false;
   let debug = false;
 
-  for (const arg of args) {
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
     if (arg === "--json") {
       json = true;
     } else if (arg === "--debug") {
       debug = true;
+    } else if (arg === "--limit") {
+      const value = args[++index];
+      const parsed = Number(value);
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        return { projectKey, question, limit, json, debug, error: "--limit must be a positive integer" };
+      }
+      limit = parsed;
     } else if (arg.startsWith("-")) {
-      return { projectKey, question, json, debug, error: `Unknown memory query option: ${arg}` };
+      return { projectKey, question, limit, json, debug, error: `Unknown memory query option: ${arg}` };
     } else if (!projectKey) {
       projectKey = arg;
     } else if (!question) {
@@ -245,7 +252,18 @@ function parseArgs(args: string[]): {
   }
 
   if (!projectKey || !question) {
-    return { projectKey, question, json, debug, error: "Usage: myelin memory query <key> <question> [--json] [--debug]" };
+    return {
+      projectKey,
+      question,
+      limit,
+      json,
+      debug,
+      error: "Usage: myelin memory query <key> <question> [--limit N] [--json] [--debug]",
+    };
   }
-  return { projectKey, question, json, debug };
+  return { projectKey, question, limit, json, debug };
+}
+
+function candidateService(): MemoryCandidateService {
+  return new MemoryCandidateService(repoRoot().root);
 }

@@ -1,6 +1,6 @@
 import type { Cli } from "./registry.ts";
 import { fail, ok } from "./registry.ts";
-import { bootstrapProject } from "../runtime/bootstrap.ts";
+import { BootstrapService } from "../bootstrap/bootstrap-service.ts";
 import { repoRoot } from "../runtime/fs.ts";
 
 export function registerBootstrapCommand(cli: Cli): void {
@@ -9,7 +9,8 @@ export function registerBootstrapCommand(cli: Cli): void {
     if (parsed.error) return fail(parsed.error);
 
     try {
-      const result = await bootstrapProject(repoRoot().root, parsed.projectKey, parsed.repoPath);
+      const service = new BootstrapService(repoRoot().root);
+      const result = await service.bootstrap({ projectKey: parsed.projectKey, repoPath: parsed.repoPath });
       return ok(
         [
           `Bootstrapped project ${result.projectKey}.`,
