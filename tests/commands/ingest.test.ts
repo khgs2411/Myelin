@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createCli } from "../../src/commands/registry.ts";
 import { registerIngestCommands } from "../../src/commands/ingest.ts";
-import { getIngestJob } from "../../src/ingest/jobs.ts";
+import { createIngestJob, getIngestJob, updateIngestJobStatus } from "../../src/ingest/jobs.ts";
 import type { DetachedSpawner } from "../../src/ingest/runtime.ts";
 import { openMemoryDb } from "../../src/memory/db.ts";
 import { leaseExperienceEvents, recordExperienceEvent } from "../../src/memory/experience.ts";
@@ -161,6 +161,16 @@ test("ingest status --project reports layered counts", async () => {
   expect(response.status.completion_label).toBe("Experience Log drain pending");
 });
 
+test("ingest status --project fails for unknown project keys", async () => {
+  const cli = createCli("myelin");
+  registerIngestCommands(cli, { now: () => new Date("2026-06-15T10:00:00.000Z") });
+
+  const result = await cli.run(["ingest", "status", "--project", "missing", "--json"]);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.message).toBe("Unknown project: missing");
+});
+
 test("ingest status --project refreshes stale running jobs before counting", async () => {
   await seedExperienceEvents(1);
   const cli = createCli("myelin");
@@ -263,6 +273,110 @@ test("ingest status preserves retryable lease stubs when detached running job pi
   }
 });
 
+test("ingest jobs lists failed jobs for investigation", async () => {
+  await seedFailedJob("job_env", { code: "detached_worker_exited", message: "worker died" });
+  await seedFailedJob("job_provider", { code: "provider_failed", message: "provider failed" });
+  const cli = createCli("myelin");
+  registerIngestCommands(cli);
+
+  const json = await cli.run(["ingest", "jobs", "demo", "--status", "failed", "--json"]);
+  const text = await cli.run(["ingest", "jobs", "demo", "--status", "failed", "--limit", "1"]);
+
+  expect(json.exitCode).toBe(0);
+  expect(JSON.parse(json.message).jobs.map((job: { id: string }) => job.id)).toEqual(["job_provider", "job_env"]);
+  expect(text.exitCode).toBe(0);
+  expect(text.message).toContain("job_provider [failed]");
+  expect(text.message).toContain("error=provider_failed");
+  expect(text.message).not.toContain("job_env");
+});
+
+test("ingest jobs resolve can dry-run and filter failed jobs by error code", async () => {
+  await seedFailedJob("job_env", { code: "detached_worker_exited", message: "worker died" });
+  await seedFailedJob("job_provider", { code: "provider_failed", message: "provider failed" });
+  const cli = createCli("myelin");
+  registerIngestCommands(cli);
+
+  const result = await cli.run([
+    "ingest",
+    "jobs",
+    "resolve",
+    "demo",
+    "--all",
+    "--code",
+    "detached_worker_exited",
+    "--reason",
+    "environment cleanup",
+    "--dry-run",
+    "--json",
+  ]);
+
+  expect(result.exitCode).toBe(0);
+  const response = JSON.parse(result.message);
+  expect(response.dry_run).toBe(true);
+  expect(response.resolved.map((job: { id: string }) => job.id)).toEqual(["job_env"]);
+
+  const db = openMemoryDb(root);
+  try {
+    expect(getIngestJob(db, "job_env")?.status).toBe("failed");
+    expect(getIngestJob(db, "job_provider")?.status).toBe("failed");
+  } finally {
+    db.close();
+  }
+});
+
+test("ingest jobs resolve marks selected failed jobs completed and preserves previous error metadata", async () => {
+  await seedFailedJob("job_env", { code: "detached_worker_exited", message: "worker died" });
+  const cli = createCli("myelin");
+  registerIngestCommands(cli, { now: () => new Date("2026-06-13T11:00:00.000Z") });
+
+  const result = await cli.run([
+    "ingest",
+    "jobs",
+    "resolve",
+    "demo",
+    "--id",
+    "job_env",
+    "--reason",
+    "environment cleanup",
+    "--json",
+  ]);
+
+  expect(result.exitCode).toBe(0);
+  expect(JSON.parse(result.message).resolved.map((job: { id: string; status: string }) => [job.id, job.status])).toEqual([
+    ["job_env", "completed"],
+  ]);
+
+  const db = openMemoryDb(root);
+  try {
+    const job = getIngestJob(db, "job_env");
+    expect(job?.status).toBe("completed");
+    expect(job?.error_json).toBeNull();
+    expect(job?.terminal_summary).toBe("Resolved failed ingest job: environment cleanup");
+    expect(JSON.parse(job?.followup_state_json ?? "{}")).toMatchObject({
+      resolved_failed_job: {
+        resolved_at: "2026-06-13T11:00:00.000Z",
+        reason: "environment cleanup",
+        previous_error: { code: "detached_worker_exited" },
+      },
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test("ingest jobs resolve requires an explicit target and reason", async () => {
+  const cli = createCli("myelin");
+  registerIngestCommands(cli);
+
+  const missingTarget = await cli.run(["ingest", "jobs", "resolve", "demo", "--reason", "cleanup"]);
+  const missingReason = await cli.run(["ingest", "jobs", "resolve", "demo", "--all"]);
+
+  expect(missingTarget.exitCode).toBe(1);
+  expect(missingTarget.message).toContain("Use --id <job-id> or --all");
+  expect(missingReason.exitCode).toBe(1);
+  expect(missingReason.message).toContain("--reason is required");
+});
+
 test("ingest worker dispatches stored job input to the worker runtime", async () => {
   const cli = createCli("myelin");
   registerIngestCommands(cli, {
@@ -330,6 +444,28 @@ async function seedExperienceEvents(count: number): Promise<void> {
         status: "valid",
       });
     }
+  } finally {
+    db.close();
+  }
+}
+
+async function seedFailedJob(id: string, error: Record<string, unknown>): Promise<void> {
+  const db = openMemoryDb(root);
+  try {
+    createIngestJob(db, {
+      id,
+      project_key: "demo",
+      provider: "codex",
+      input: {},
+      now: id === "job_env" ? "2026-06-13T10:00:00.000Z" : "2026-06-13T10:01:00.000Z",
+    });
+    updateIngestJobStatus(db, {
+      id,
+      status: "failed",
+      updated_at: id === "job_env" ? "2026-06-13T10:00:30.000Z" : "2026-06-13T10:01:30.000Z",
+      finished_at: id === "job_env" ? "2026-06-13T10:00:30.000Z" : "2026-06-13T10:01:30.000Z",
+      error,
+    });
   } finally {
     db.close();
   }

@@ -7,15 +7,17 @@ This is the current documentation map for Myelin. Start here when returning to t
 Read these in order:
 
 1. `../README.md` — operator quick start, commands, runtime, and repo layout.
-2. `../MYELIN.md` — canonical product design and north star.
-3. `../CONTEXT.md` — product-language glossary and resolved naming/shape ambiguities.
-4. `IMPLEMENTATION_ALIGNMENT.md` — how the current codebase maps to the V2 product shape.
-5. `DONE.md` — what is currently built and verified.
-6. `TODO.md` — known gaps between the current code and `MYELIN.md`.
+2. `CLI.md` — exhaustive operator command reference.
+3. `../MYELIN.md` — canonical product design and north star.
+4. `../CONTEXT.md` — product-language glossary and resolved naming/shape ambiguities.
+5. `IMPLEMENTATION_ALIGNMENT.md` — how the current codebase maps to the V2 product shape.
+6. `DONE.md` — what is currently built and verified.
+7. `TODO.md` — known gaps between the current code and `MYELIN.md`.
 
 ## Active Reference Docs
 
 - `inbox-item-schema.md` — current inbox item contract.
+- `CLI.md` — command usage, arguments, side effects, and examples.
 - `adr/` — append-only decision records. These are canonical decisions, but they are not the starting point for understanding the product.
 
 ## Archive

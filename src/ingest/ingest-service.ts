@@ -15,6 +15,7 @@ import { countExperienceEvents } from "../memory/experience.ts";
 import type { IngestJobRow } from "../memory/ingest-types.ts";
 import { loadConfig } from "../runtime/config.ts";
 import { createId } from "../runtime/ids.ts";
+import { findProject } from "../runtime/projects.ts";
 
 export type IngestProvider = "codex" | "claude";
 
@@ -144,10 +145,11 @@ export class IngestService {
     }
   }
 
-  status(input: { jobId?: string; projectKey?: string }): IngestStatusResult {
+  async status(input: { jobId?: string; projectKey?: string }): Promise<IngestStatusResult> {
     const db = openMemoryDb(this.root);
     try {
       if (input.projectKey) {
+        await findProject(this.root, input.projectKey);
         this.refreshRunningProjectIngestJobs(db, input.projectKey);
         return { kind: "project", status: readIngestProjectStatus(db, input.projectKey) };
       }

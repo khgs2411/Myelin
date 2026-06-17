@@ -41,6 +41,8 @@ make ingest PROJECT=<project-key>
 
 Myelin V2 uses product-language commands instead of the V1 pipeline names:
 
+For the exhaustive command reference, including arguments, options, side effects, and examples, see `docs/CLI.md`.
+
 | V1/operator habit | V2 command |
 | --- | --- |
 | `make compile PROJECT=<key>` | `myelin project learn <key>` / `make learn PROJECT=<key>` |

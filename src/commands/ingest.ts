@@ -6,14 +6,53 @@ import {
   type IngestServiceDeps,
   type StartIngestResult,
 } from "../ingest/ingest-service.ts";
+import {
+  IngestJobAdminService,
+  ingestJobErrorCode,
+  type IngestJobAdminServiceDeps,
+} from "../ingest/job-admin-service.ts";
+import { INGEST_JOB_STATUSES, type IngestJobRow, type IngestJobStatus } from "../memory/ingest-types.ts";
 import { repoRoot } from "../runtime/fs.ts";
 
-export type IngestCommandDeps = IngestServiceDeps;
+export type IngestCommandDeps = IngestServiceDeps & IngestJobAdminServiceDeps;
 
 export function registerIngestCommands(cli: Cli, deps: IngestCommandDeps = {}): void {
+  cli.command(["ingest", "jobs", "resolve"], (args) => resolveJobs(args, deps));
+  cli.command(["ingest", "jobs"], (args) => jobs(args, deps));
   cli.command(["ingest", "status"], (args) => status(args, deps));
   cli.command(["ingest", "worker"], (args) => worker(args, deps));
   cli.command(["ingest"], (args) => start(args, deps));
+}
+
+function jobs(args: string[], deps: IngestCommandDeps) {
+  const parsed = parseJobsArgs(args);
+  if (parsed.error) return fail(parsed.error);
+
+  const result = new IngestJobAdminService(repoRoot().root, deps).list({
+    projectKey: parsed.projectKey,
+    status: parsed.status,
+    limit: parsed.limit,
+  });
+  if (parsed.json) return ok(JSON.stringify(result, null, 2));
+  if (result.jobs.length === 0) return ok(`No ingest jobs for ${parsed.projectKey}.`);
+  return ok(result.jobs.map(formatIngestJob).join("\n"));
+}
+
+function resolveJobs(args: string[], deps: IngestCommandDeps) {
+  const parsed = parseResolveJobsArgs(args);
+  if (parsed.error) return fail(parsed.error);
+
+  const result = new IngestJobAdminService(repoRoot().root, deps).resolveFailed({
+    projectKey: parsed.projectKey,
+    ids: parsed.ids,
+    errorCode: parsed.errorCode,
+    reason: parsed.reason,
+    dryRun: parsed.dryRun,
+  });
+  if (parsed.json) return ok(JSON.stringify(result, null, 2));
+  const verb = result.dry_run ? "Would resolve" : "Resolved";
+  if (result.resolved.length === 0) return ok(`${verb} 0 failed ingest jobs for ${parsed.projectKey}.`);
+  return ok(`${verb} ${result.resolved.length} failed ingest job${result.resolved.length === 1 ? "" : "s"} for ${parsed.projectKey}.`);
 }
 
 async function start(args: string[], deps: IngestCommandDeps) {
@@ -33,12 +72,12 @@ async function start(args: string[], deps: IngestCommandDeps) {
   }
 }
 
-function status(args: string[], deps: IngestCommandDeps) {
+async function status(args: string[], deps: IngestCommandDeps) {
   const parsed = parseStatusArgs(args);
   if (parsed.error) return fail(parsed.error);
 
   try {
-    const result = new IngestService(repoRoot().root, deps).status({
+    const result = await new IngestService(repoRoot().root, deps).status({
       jobId: parsed.jobId,
       projectKey: parsed.projectKey,
     });
@@ -146,6 +185,110 @@ function parseStartArgs(args: string[]): {
   return { projectKey, limit, batchSize, json, provider };
 }
 
+function parseJobsArgs(args: string[]): {
+  projectKey: string;
+  status?: IngestJobStatus;
+  limit: number;
+  json: boolean;
+  error?: string;
+} {
+  let projectKey = "";
+  let status: IngestJobStatus | undefined;
+  let limit = 50;
+  let json = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--json") json = true;
+    else if (arg === "--status") {
+      const parsed = parseIngestJobStatus(args[++index]);
+      if (!parsed) return { projectKey, status, limit, json, error: "--status must be one of: starting, running, needs_followup, completed, failed" };
+      status = parsed;
+    } else if (arg === "--limit") {
+      const parsed = parsePositiveInteger(args[++index]);
+      if (!parsed) return { projectKey, status, limit, json, error: "--limit must be a positive integer" };
+      limit = parsed;
+    } else if (arg.startsWith("-")) {
+      return { projectKey, status, limit, json, error: `Unknown ingest jobs option: ${arg}` };
+    } else if (!projectKey) {
+      projectKey = arg;
+    } else {
+      return { projectKey, status, limit, json, error: `Unexpected ingest jobs argument: ${arg}` };
+    }
+  }
+
+  if (!projectKey) {
+    return {
+      projectKey,
+      status,
+      limit,
+      json,
+      error: "Usage: myelin ingest jobs <project-key> [--status starting|running|needs_followup|completed|failed] [--limit N] [--json]",
+    };
+  }
+  return { projectKey, status, limit, json };
+}
+
+function parseResolveJobsArgs(args: string[]): {
+  projectKey: string;
+  ids: string[];
+  errorCode?: string;
+  reason: string;
+  dryRun: boolean;
+  json: boolean;
+  error?: string;
+} {
+  let projectKey = "";
+  const ids: string[] = [];
+  let errorCode: string | undefined;
+  let reason = "";
+  let dryRun = false;
+  let json = false;
+  let all = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--json") json = true;
+    else if (arg === "--dry-run") dryRun = true;
+    else if (arg === "--all") all = true;
+    else if (arg === "--id") {
+      const value = args[++index];
+      if (!value) return { projectKey, ids, errorCode, reason, dryRun, json, error: "--id requires a value" };
+      ids.push(value);
+    } else if (arg === "--code") {
+      const value = args[++index];
+      if (!value) return { projectKey, ids, errorCode, reason, dryRun, json, error: "--code requires a value" };
+      errorCode = value;
+    } else if (arg === "--reason") {
+      const value = args[++index];
+      if (!value) return { projectKey, ids, errorCode, reason, dryRun, json, error: "--reason requires a value" };
+      reason = value;
+    } else if (arg.startsWith("-")) {
+      return { projectKey, ids, errorCode, reason, dryRun, json, error: `Unknown ingest jobs resolve option: ${arg}` };
+    } else if (!projectKey) {
+      projectKey = arg;
+    } else {
+      return { projectKey, ids, errorCode, reason, dryRun, json, error: `Unexpected ingest jobs resolve argument: ${arg}` };
+    }
+  }
+
+  if (!projectKey) {
+    return {
+      projectKey,
+      ids,
+      errorCode,
+      reason,
+      dryRun,
+      json,
+      error: "Usage: myelin ingest jobs resolve <project-key> (--id <job-id> | --all) --reason <text> [--code <error-code>] [--dry-run] [--json]",
+    };
+  }
+  if (!reason) return { projectKey, ids, errorCode, reason, dryRun, json, error: "--reason is required" };
+  if (!all && ids.length === 0) return { projectKey, ids, errorCode, reason, dryRun, json, error: "Use --id <job-id> or --all" };
+  if (all && ids.length > 0) return { projectKey, ids, errorCode, reason, dryRun, json, error: "Use either --all or --id, not both" };
+  return { projectKey, ids, errorCode, reason, dryRun, json };
+}
+
 function parseStatusArgs(args: string[]): { jobId?: string; projectKey?: string; json: boolean; error?: string } {
   let jobId = "";
   let projectKey = "";
@@ -169,4 +312,20 @@ function parseStatusArgs(args: string[]): { jobId?: string; projectKey?: string;
     };
   }
   return { jobId: jobId || undefined, projectKey: projectKey || undefined, json };
+}
+
+function parseIngestJobStatus(value: string | undefined): IngestJobStatus | null {
+  if (!value) return null;
+  return (INGEST_JOB_STATUSES as readonly string[]).includes(value) ? (value as IngestJobStatus) : null;
+}
+
+function parsePositiveInteger(value: string | undefined): number | null {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function formatIngestJob(job: IngestJobRow): string {
+  const code = ingestJobErrorCode(job);
+  const error = code ? ` error=${code}` : "";
+  return `${job.id} [${job.status}] provider=${job.provider} created=${job.created_at}${error}`;
 }
