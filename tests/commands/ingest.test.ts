@@ -75,7 +75,8 @@ test("top-level ingest starts one detached worker per configured batch", async (
   ]);
 });
 
-test("top-level ingest records a failed job on branch mismatch before spawn", async () => {
+test("top-level ingest warns and starts on non-master branches", async () => {
+  await seedExperienceEvents(1);
   let spawned = false;
   const cli = createCli("myelin");
   registerIngestCommands(cli, {
@@ -91,13 +92,10 @@ test("top-level ingest records a failed job on branch mismatch before spawn", as
   const response = JSON.parse(result.message);
 
   expect(result.exitCode).toBe(0);
-  expect(response.job.status).toBe("failed");
-  expect(JSON.parse(response.job.error_json)).toMatchObject({
-    code: "target_branch_mismatch",
-    expected_branch: "master",
-    actual_branch: "feature/cli",
-  });
-  expect(spawned).toBe(false);
+  expect(response.target_branch).toBe("feature/cli");
+  expect(response.job.status).toBe("running");
+  expect(JSON.parse(response.job.input_json)).toMatchObject({ target_branch: "feature/cli" });
+  expect(spawned).toBe(true);
 });
 
 test("ingest status reads stored job status", async () => {
@@ -105,7 +103,10 @@ test("ingest status reads stored job status", async () => {
   registerIngestCommands(cli, {
     now: () => new Date("2026-06-13T10:00:00.000Z"),
     runner: async () => ({ exitCode: 0, stdout: "feature/cli\n", stderr: "" }),
+    spawn: () => ({ pid: 2469, unref: () => {} }),
+    isProcessAlive: () => true,
   });
+  await seedExperienceEvents(1);
   const started = await cli.run(["ingest", "demo", "--json"]);
   const jobId = JSON.parse(started.message).job.id;
 
@@ -114,7 +115,7 @@ test("ingest status reads stored job status", async () => {
 
   expect(status.exitCode).toBe(0);
   expect(response.job.id).toBe(jobId);
-  expect(response.job.status).toBe("failed");
+  expect(response.job.status).toBe("running");
 });
 
 test("ingest status marks detached running job failed when stored pid is dead", async () => {
@@ -185,7 +186,9 @@ test("ingest status --project refreshes stale running jobs before counting", asy
 
   const db = openMemoryDb(root);
   try {
-    expect(getIngestJob(db, jobId)?.status).toBe("failed");
+    const job = getIngestJob(db, jobId);
+    expect(job?.status).toBe("failed");
+    expect(JSON.parse(job?.input_json ?? "{}")).toMatchObject({ target_branch: "master" });
   } finally {
     db.close();
   }
@@ -265,7 +268,9 @@ test("ingest worker dispatches stored job input to the worker runtime", async ()
   registerIngestCommands(cli, {
     now: () => new Date("2026-06-13T10:00:00.000Z"),
     runner: async () => ({ exitCode: 0, stdout: "feature/cli\n", stderr: "" }),
+    spawn: () => ({ pid: 2470, unref: () => {} }),
   });
+  await seedExperienceEvents(2);
   const started = await cli.run(["ingest", "demo", "--limit", "2", "--json"]);
   const jobId = JSON.parse(started.message).job.id;
   const calls: unknown[] = [];
@@ -293,7 +298,9 @@ test("ingest worker dispatches stored job input to the worker runtime", async ()
 
   const db = openMemoryDb(root);
   try {
-    expect(getIngestJob(db, jobId)?.status).toBe("failed");
+    const job = getIngestJob(db, jobId);
+    expect(job?.status).toBe("running");
+    expect(JSON.parse(job?.input_json ?? "{}")).toMatchObject({ target_branch: "feature/cli" });
   } finally {
     db.close();
   }

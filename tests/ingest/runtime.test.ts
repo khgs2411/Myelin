@@ -7,9 +7,9 @@ import { leaseExperienceEvents, recordExperienceEvent } from "../../src/memory/e
 import { writeJson } from "../../src/runtime/json.ts";
 import { createIngestJob, getIngestJob, updateIngestJobStatus } from "../../src/ingest/jobs.ts";
 import {
-  assertMasterBranch,
   ingestJobLogPath,
   launchDetachedIngestWorker,
+  readCurrentGitBranch,
   refreshDetachedIngestJobStatus,
   resolveIngestTargetRepo,
   spawnDetachedIngestWorker,
@@ -40,14 +40,14 @@ test("resolves target repository from project metadata", async () => {
   await expect(resolveIngestTargetRepo(root, "class-kit")).resolves.toBe(repo);
 });
 
-test("branch preflight accepts master", async () => {
-  const result = await assertMasterBranch("/repo", async () => ({ exitCode: 0, stdout: "master\n", stderr: "" }));
-  expect(result).toEqual({ ok: true, branch: "master" });
+test("branch metadata reads the current branch", async () => {
+  const result = await readCurrentGitBranch("/repo", async () => ({ exitCode: 0, stdout: "master\n", stderr: "" }));
+  expect(result).toBe("master");
 });
 
-test("branch preflight rejects non-master", async () => {
-  const result = await assertMasterBranch("/repo", async () => ({ exitCode: 0, stdout: "feature/auth\n", stderr: "" }));
-  expect(result).toEqual({ ok: false, branch: "feature/auth" });
+test("branch metadata allows non-master branches", async () => {
+  const result = await readCurrentGitBranch("/repo", async () => ({ exitCode: 0, stdout: "feature/auth\n", stderr: "" }));
+  expect(result).toBe("feature/auth");
 });
 
 test("detached spawn runs worker from target repo and returns pid plus log path", async () => {
@@ -92,7 +92,7 @@ test("detached spawn runs worker from target repo and returns pid plus log path"
   });
 });
 
-test("launch fails job on non-master before spawning", async () => {
+test("launch allows non-master and records branch metadata", async () => {
   const repo = join(root, "repos", "class-kit");
   await mkdir(repo, { recursive: true });
   await writeJson(join(root, "projects", "class-kit", "state", "project.json"), {
@@ -122,13 +122,12 @@ test("launch fails job on non-master before spawning", async () => {
   });
 
   const job = getIngestJob(db, "job_2");
-  expect(result).toEqual({ status: "failed", branch: "feature/auth" });
-  expect(spawned).toBe(false);
-  expect(job?.status).toBe("failed");
-  expect(JSON.parse(job?.error_json ?? "{}")).toMatchObject({
-    code: "target_branch_mismatch",
-    expected_branch: "master",
-    actual_branch: "feature/auth",
+  expect(result).toEqual({ status: "running", pid: 1, logPath: ingestJobLogPath(root, "class-kit", "job_2"), branch: "feature/auth" });
+  expect(spawned).toBe(true);
+  expect(job?.status).toBe("running");
+  expect(JSON.parse(job?.followup_state_json ?? "{}")).toMatchObject({
+    target_repo: repo,
+    branch: "feature/auth",
   });
 });
 
@@ -158,7 +157,7 @@ test("launch records detached pid and log path in followup state without provide
   });
 
   const job = getIngestJob(db, "job_3");
-  expect(result).toEqual({ status: "running", pid: 9876, logPath: ingestJobLogPath(root, "class-kit", "job_3") });
+  expect(result).toEqual({ status: "running", pid: 9876, logPath: ingestJobLogPath(root, "class-kit", "job_3"), branch: "master" });
   expect(job?.status).toBe("running");
   expect(job?.provider_session_id).toBeNull();
   expect(JSON.parse(job?.followup_state_json ?? "{}")).toEqual({

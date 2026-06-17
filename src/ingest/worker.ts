@@ -20,6 +20,10 @@ import {
   type SessionMemoryKind,
 } from "../memory/ingest-types.ts";
 import { createSessionMemory } from "../memory/session-memories.ts";
+import {
+  createSessionMemoryContexts,
+  type SessionMemoryContextInput,
+} from "../memory/session-memory-contexts.ts";
 import { loadConfig } from "../runtime/config.ts";
 import { updateIngestJobStatus } from "./jobs.ts";
 
@@ -301,6 +305,11 @@ export function applyIngestWorkerOutput(
         risk: memory.risk,
         now: input.finalizedAt,
       });
+      createSessionMemoryContexts(db, contextsForSessionMemory(db, {
+        sessionMemoryId: memoryId,
+        projectKey: input.projectKey,
+        sourceEventRefs,
+      }));
       sessionMemoryIds.set(memory.id, memoryId);
       sessionMemories += 1;
     }
@@ -395,6 +404,50 @@ function uniqueOutputId(db: Database, table: string, desiredId: string, jobId: s
     suffix += 1;
   }
   return candidate;
+}
+
+function contextsForSessionMemory(
+  db: Database,
+  input: { sessionMemoryId: string; projectKey: string; sourceEventRefs: string[] },
+): SessionMemoryContextInput[] {
+  const contexts: SessionMemoryContextInput[] = [];
+  const query = db.query(
+    "SELECT source_metadata_json FROM experience_event_tombstones WHERE id = ? AND project_key = ?",
+  );
+  for (const sourceEventRef of input.sourceEventRefs) {
+    const row = query.get(sourceEventRef, input.projectKey) as { source_metadata_json: string } | null;
+    const metadata = parseContextMetadata(row?.source_metadata_json);
+    contexts.push({
+      session_memory_id: input.sessionMemoryId,
+      project_key: input.projectKey,
+      repo_path: metadata.repo_path,
+      git_branch: metadata.git_branch,
+      git_commit: metadata.git_commit,
+      git_worktree_id: metadata.git_worktree_id,
+      source_event_ref: sourceEventRef,
+    });
+  }
+  return contexts;
+}
+
+function parseContextMetadata(value: string | undefined): {
+  repo_path: string | null;
+  git_branch: string | null;
+  git_commit: string | null;
+  git_worktree_id: string | null;
+} {
+  if (!value) return { repo_path: null, git_branch: null, git_commit: null, git_worktree_id: null };
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    return {
+      repo_path: typeof parsed.repo_path === "string" ? parsed.repo_path : null,
+      git_branch: typeof parsed.git_branch === "string" ? parsed.git_branch : null,
+      git_commit: typeof parsed.git_commit === "string" ? parsed.git_commit : null,
+      git_worktree_id: typeof parsed.git_worktree_id === "string" ? parsed.git_worktree_id : null,
+    };
+  } catch {
+    return { repo_path: null, git_branch: null, git_commit: null, git_worktree_id: null };
+  }
 }
 
 export async function runIngestWorker(input: {

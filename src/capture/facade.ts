@@ -1,7 +1,8 @@
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { openMemoryDb } from "../memory/db.ts";
 import { recordExperienceEvent, recordHookError, type ExperienceStatus } from "../memory/experience.ts";
-import { projectForRepoPath } from "../runtime/projects.ts";
+import { projectForRepoPath, type Project } from "../runtime/projects.ts";
+import { readGitWorktreeContext, type GitContextRunner, type GitWorktreeContext } from "./git-context.ts";
 
 export type NormalizedCaptureEvent = {
   id?: string;
@@ -23,12 +24,18 @@ export type CaptureResult =
   | { status: "dropped-unregistered-repo" }
   | { status: "failed-open"; error_message: string };
 
-export async function handleCaptureEvent(root: string, event: NormalizedCaptureEvent): Promise<CaptureResult> {
+export async function handleCaptureEvent(
+  root: string,
+  event: NormalizedCaptureEvent,
+  deps: { gitContextRunner?: GitContextRunner } = {},
+): Promise<CaptureResult> {
   try {
     if (!event.cwd) return { status: "dropped-unregistered-repo" };
 
     const project = await projectForRepoPath(root, event.cwd);
     if (!project) return { status: "dropped-unregistered-repo" };
+    const repoPath = matchingRepoPath(project, event.cwd);
+    const gitContext = await readGitWorktreeContext(repoPath, deps.gitContextRunner);
 
     const eventId = event.id ?? crypto.randomUUID();
     const db = openMemoryDb(root);
@@ -47,6 +54,10 @@ export async function handleCaptureEvent(root: string, event: NormalizedCaptureE
         raw_payload_json: event.raw_payload_json,
         source: event.source,
         status: event.status,
+        repo_path: gitContext.repo_path,
+        git_branch: gitContext.git_branch,
+        git_commit: gitContext.git_commit,
+        git_worktree_id: gitContext.git_worktree_id,
       });
 
       return { status: "stored", project_key: project.key, event_id: row?.id ?? eventId };
@@ -86,4 +97,16 @@ export async function handleCaptureEvent(root: string, event: NormalizedCaptureE
 
     return { status: "failed-open", error_message: message };
   }
+}
+
+function matchingRepoPath(project: Project, cwd: string): string | null {
+  const resolvedCwd = resolve(cwd);
+  for (const repoPath of project.config.repo_paths ?? []) {
+    const resolvedRepo = resolve(repoPath);
+    const rel = relative(resolvedRepo, resolvedCwd);
+    if (rel === "" || (!rel.startsWith("..") && !isAbsolute(rel))) {
+      return repoPath;
+    }
+  }
+  return project.config.repo_paths?.[0] ?? null;
 }

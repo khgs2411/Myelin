@@ -4,6 +4,7 @@ import type { EmbeddingProviderClient } from "../../src/memory/embedding-provide
 import { openMemoryDbAt, type MemoryDb } from "../../src/memory/db.ts";
 import { markSessionMemoryEmbeddingIndexed } from "../../src/memory/session-memory-embeddings.ts";
 import { querySessionMemory, type SessionMemoryQueryVectorStore } from "../../src/memory/session-memory-query.ts";
+import { createSessionMemoryContexts } from "../../src/memory/session-memory-contexts.ts";
 import { createSessionMemory } from "../../src/memory/session-memories.ts";
 
 let db: MemoryDb;
@@ -91,6 +92,71 @@ test("embeds the question as retrieval query and hydrates vector matches", async
     memory_kind: "decision",
     summary: "Session memories need vector embeddings before briefing reads.",
     distance: 0.12,
+  });
+});
+
+test("filters hydrated vector matches by git branch context", async () => {
+  createSessionMemory(db, {
+    id: "mem_other_branch",
+    project_key: "class-kit",
+    source_event_refs: ["tomb_2"],
+    memory_kind: "continuity",
+    title: "Other branch",
+    summary: "Work from another branch.",
+    payload: {},
+    confidence: "medium",
+    risk: "low",
+    now: "2026-06-13T10:01:00.000Z",
+  });
+  createSessionMemoryContexts(db, [
+    {
+      session_memory_id: "mem_decision",
+      project_key: "class-kit",
+      repo_path: "/repo/class-kit",
+      git_branch: "feature/sqlite-vec",
+      git_commit: "abc123",
+      git_worktree_id: "/repo/class-kit",
+      source_event_ref: "tomb_1",
+    },
+    {
+      session_memory_id: "mem_other_branch",
+      project_key: "class-kit",
+      repo_path: "/repo/class-kit",
+      git_branch: "feature/auth",
+      git_commit: "def456",
+      git_worktree_id: "/repo/class-kit",
+      source_event_ref: "tomb_2",
+    },
+  ]);
+  for (const row of db.query("SELECT id FROM session_memory_embeddings").all() as Array<{ id: string }>) {
+    markSessionMemoryEmbeddingIndexed(db, {
+      id: row.id,
+      normalized_text_hash: `hash_${row.id}`,
+      now: "2026-06-13T10:05:00.000Z",
+    });
+  }
+
+  const result = await querySessionMemory(db, {
+    project_key: "class-kit",
+    question: "What happened on this branch?",
+    document_contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+    provider: fixedProvider(),
+    limit: 5,
+    filters: { git_branch: "feature/sqlite-vec" },
+    vector_store: {
+      ensure: () => ({ available: true }),
+      search: () => [
+        { memory_id: "mem_other_branch", distance: 0.01 },
+        { memory_id: "mem_decision", distance: 0.02 },
+      ],
+    },
+  });
+
+  expect(result.degraded).toBe(false);
+  expect(result.matches.map((match) => match.id)).toEqual(["mem_decision"]);
+  expect(result.matches[0].contexts[0]).toMatchObject({
+    git_branch: "feature/sqlite-vec",
+    source_event_ref: "tomb_1",
   });
 });
 

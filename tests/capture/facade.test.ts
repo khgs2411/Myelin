@@ -48,13 +48,23 @@ test("stores valid events for bootstrapped project", async () => {
     raw_payload_json: "{}",
     status: "valid",
     occurred_at: "2026-06-12T10:00:00.000Z",
+  }, {
+    gitContextRunner: async (command) => {
+      if (command.join(" ") === "git branch --show-current") return { exitCode: 0, stdout: "feature/sqlite-vec\n", stderr: "" };
+      if (command.join(" ") === "git rev-parse HEAD") return { exitCode: 0, stdout: "abc123\n", stderr: "" };
+      return { exitCode: 1, stdout: "", stderr: "unknown command" };
+    },
   });
 
   expect(result).toEqual({ status: "stored", project_key: "class-kit", event_id: "evt_1" });
 
   const db = openMemoryDbAt(join(root, "state", "memory.db"));
   try {
-    expect(listExperienceEvents(db, "class-kit")).toHaveLength(1);
+    const [event] = listExperienceEvents(db, "class-kit");
+    expect(event.git_branch).toBe("feature/sqlite-vec");
+    expect(event.git_commit).toBe("abc123");
+    expect(event.repo_path).toBe(repo);
+    expect(event.git_worktree_id).toBe(repo);
   } finally {
     db.close();
   }

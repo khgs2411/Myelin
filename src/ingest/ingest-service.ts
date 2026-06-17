@@ -1,8 +1,8 @@
 import { createIngestJob, getIngestJob, updateIngestJobStatus } from "./jobs.ts";
 import { readIngestProjectStatus, type IngestProjectStatus } from "./status.ts";
 import {
-  assertMasterBranch,
   launchDetachedIngestWorker,
+  readCurrentGitBranch,
   refreshDetachedIngestJobStatus,
   resolveIngestTargetRepo,
   type DetachedSpawner,
@@ -35,17 +35,11 @@ export type StartIngestInput = {
 
 export type StartIngestResult =
   | {
-      kind: "branch_mismatch";
-      project_key: string;
-      job: IngestJobRow;
-      jobs: IngestJobRow[];
-      branch: string;
-    }
-  | {
       kind: "no_work";
       project_key: string;
       queued_count: number;
       batch_size: number;
+      target_branch: string | null;
       jobs: IngestJobRow[];
     }
   | {
@@ -55,6 +49,7 @@ export type StartIngestResult =
       selected_count: number;
       batch_size: number;
       batch_count: number;
+      target_branch: string | null;
       job: IngestJobRow;
       jobs: IngestJobRow[];
       launches: Array<Awaited<ReturnType<typeof launchDetachedIngestWorker>>>;
@@ -77,36 +72,7 @@ export class IngestService {
       const config = await loadConfig(this.root);
       const batchSize = input.batchSize ?? config.ingest.batchSize;
       const targetRepo = await resolveIngestTargetRepo(this.root, input.projectKey);
-      const branch = await assertMasterBranch(targetRepo, this.deps.runner);
-
-      if (!branch.ok) {
-        const job = createIngestJob(db, {
-          id: `ingest_${createId()}`,
-          project_key: input.projectKey,
-          provider: input.provider,
-          input: { limit: input.limit, target_repo: targetRepo, batch_size: batchSize },
-          now,
-        });
-        const failed = updateIngestJobStatus(db, {
-          id: job.id,
-          status: "failed",
-          updated_at: now,
-          finished_at: now,
-          error: {
-            code: "target_branch_mismatch",
-            expected_branch: "master",
-            actual_branch: branch.branch,
-            target_repo: targetRepo,
-          },
-        });
-        return {
-          kind: "branch_mismatch",
-          project_key: input.projectKey,
-          job: failed,
-          jobs: [failed],
-          branch: branch.branch,
-        };
-      }
+      const targetBranch = await readCurrentGitBranch(targetRepo, this.deps.runner);
 
       const queuedCount = countExperienceEvents(db, input.projectKey);
       const selectedCount = input.limit === undefined ? queuedCount : Math.min(input.limit, queuedCount);
@@ -116,6 +82,7 @@ export class IngestService {
           project_key: input.projectKey,
           queued_count: queuedCount,
           batch_size: batchSize,
+          target_branch: targetBranch,
           jobs: [],
         };
       }
@@ -134,6 +101,7 @@ export class IngestService {
           input: {
             limit: batchLimit,
             target_repo: targetRepo,
+            target_branch: targetBranch,
             batch_size: batchSize,
             batch_index: batchIndex,
             batch_count: batchCount,
@@ -166,6 +134,7 @@ export class IngestService {
         selected_count: selectedCount,
         batch_size: batchSize,
         batch_count: batchCount,
+        target_branch: targetBranch,
         job: jobs[0],
         jobs,
         launches,

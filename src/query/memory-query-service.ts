@@ -40,6 +40,7 @@ export type MemoryQueryInput = {
   question: string;
   limit?: number;
   includeRoute?: boolean;
+  gitBranch?: string;
 };
 
 type SessionMemoryQueryRunner = typeof querySessionMemory;
@@ -66,6 +67,7 @@ export class MemoryQueryService {
         document_contract: this.deps.documentContract,
         provider: this.deps.embeddingProvider,
         limit: input.limit ?? 5,
+        filters: input.gitBranch ? { git_branch: input.gitBranch } : undefined,
       });
       return responseService.fromSessionMemoryResult(result, { includeRoute: input.includeRoute ?? false });
     } catch (error) {

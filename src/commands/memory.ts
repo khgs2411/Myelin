@@ -23,6 +23,7 @@ export function registerMemoryCommands(cli: Cli): void {
       question: parsed.question,
       limit: parsed.limit,
       includeRoute: parsed.debug,
+      branch: parsed.branch,
     });
     if (parsed.json) return ok(JSON.stringify(response, null, 2));
     if (response.degraded) return fail(response.answer);
@@ -219,6 +220,7 @@ function parseArgs(args: string[]): {
   limit: number;
   json: boolean;
   debug: boolean;
+  branch?: string;
   error?: string;
 } {
   let projectKey = "";
@@ -226,6 +228,7 @@ function parseArgs(args: string[]): {
   let limit = 5;
   let json = false;
   let debug = false;
+  let branch: string | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -233,15 +236,19 @@ function parseArgs(args: string[]): {
       json = true;
     } else if (arg === "--debug") {
       debug = true;
+    } else if (arg === "--branch") {
+      const value = args[++index];
+      if (!value) return { projectKey, question, limit, json, debug, branch, error: "--branch requires a value" };
+      branch = value;
     } else if (arg === "--limit") {
       const value = args[++index];
       const parsed = Number(value);
       if (!Number.isInteger(parsed) || parsed <= 0) {
-        return { projectKey, question, limit, json, debug, error: "--limit must be a positive integer" };
+        return { projectKey, question, limit, json, debug, branch, error: "--limit must be a positive integer" };
       }
       limit = parsed;
     } else if (arg.startsWith("-")) {
-      return { projectKey, question, limit, json, debug, error: `Unknown memory query option: ${arg}` };
+      return { projectKey, question, limit, json, debug, branch, error: `Unknown memory query option: ${arg}` };
     } else if (!projectKey) {
       projectKey = arg;
     } else if (!question) {
@@ -258,10 +265,11 @@ function parseArgs(args: string[]): {
       limit,
       json,
       debug,
-      error: "Usage: myelin memory query <key> <question> [--limit N] [--json] [--debug]",
+      branch,
+      error: "Usage: myelin memory query <key> <question> [--limit N] [--branch current|<name>] [--json] [--debug]",
     };
   }
-  return { projectKey, question, limit, json, debug };
+  return { projectKey, question, limit, json, debug, branch };
 }
 
 function candidateService(): MemoryCandidateService {

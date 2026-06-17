@@ -44,12 +44,12 @@ export async function currentGitBranch(
   return result.stdout.trim();
 }
 
-export async function assertMasterBranch(
-  cwd: string,
-  runner?: RuntimeProcessRunner,
-): Promise<{ ok: true; branch: "master" } | { ok: false; branch: string }> {
-  const branch = await currentGitBranch(cwd, runner);
-  return branch === "master" ? { ok: true, branch: "master" } : { ok: false, branch };
+export async function readCurrentGitBranch(cwd: string, runner?: RuntimeProcessRunner): Promise<string | null> {
+  try {
+    return await currentGitBranch(cwd, runner);
+  } catch {
+    return null;
+  }
 }
 
 export function ingestJobLogPath(root: string, projectKey: string, jobId: string): string {
@@ -136,25 +136,9 @@ export async function launchDetachedIngestWorker(input: {
   env?: NodeJS.ProcessEnv;
   runner?: RuntimeProcessRunner;
   spawn?: DetachedSpawner;
-}): Promise<{ status: "running"; pid: number | null; logPath: string } | { status: "failed"; branch: string }> {
+}): Promise<{ status: "running"; pid: number | null; logPath: string; branch: string | null }> {
   const targetRepo = await resolveIngestTargetRepo(input.root, input.projectKey);
-  const branch = await assertMasterBranch(targetRepo, input.runner);
-
-  if (!branch.ok) {
-    updateIngestJobStatus(input.db, {
-      id: input.jobId,
-      status: "failed",
-      updated_at: input.now,
-      finished_at: input.now,
-      error: {
-        code: "target_branch_mismatch",
-        expected_branch: "master",
-        actual_branch: branch.branch,
-        target_repo: targetRepo,
-      },
-    });
-    return { status: "failed", branch: branch.branch };
-  }
+  const branch = await readCurrentGitBranch(targetRepo, input.runner);
 
   const logPath = ingestJobLogPath(input.root, input.projectKey, input.jobId);
   let spawned: DetachedIngestSpawnResult;
@@ -197,12 +181,12 @@ export async function launchDetachedIngestWorker(input: {
         pid: spawned.pid,
         log_path: spawned.logPath,
         target_repo: targetRepo,
-        branch: "master",
+        branch,
       },
     });
   }
 
-  return { status: "running", pid: spawned.pid, logPath: spawned.logPath };
+  return { status: "running", pid: spawned.pid, logPath: spawned.logPath, branch };
 }
 
 function parseFollowupState(value: string | null): Record<string, unknown> | null {

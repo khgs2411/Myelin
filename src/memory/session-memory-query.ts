@@ -10,9 +10,15 @@ import {
   type SqliteVecAdapter,
 } from "./sqlite-vec.ts";
 import { getOrCreateQueryEmbedding } from "./query-embedding-cache.ts";
+import {
+  listSessionMemoryContexts,
+  sessionMemoryHasBranchContext,
+  type SessionMemoryContextRow,
+} from "./session-memory-contexts.ts";
 
 export type SessionMemoryQueryFilters = {
   memory_kind?: SessionMemoryKind[];
+  git_branch?: string;
 };
 
 export type SessionMemoryQueryMatch = {
@@ -22,6 +28,7 @@ export type SessionMemoryQueryMatch = {
   summary: string;
   payload: Record<string, unknown>;
   source_event_refs: string[];
+  contexts: SessionMemoryContextRow[];
   created_at: string;
   updated_at: string;
   distance: number;
@@ -214,6 +221,9 @@ function hydrateMatches(
       | null;
     if (!row) continue;
     if (filters?.memory_kind && !filters.memory_kind.includes(row.memory_kind)) continue;
+    if (filters?.git_branch && !sessionMemoryHasBranchContext(db, { sessionMemoryId: row.id, gitBranch: filters.git_branch })) {
+      continue;
+    }
     hydrated.push({
       id: row.id,
       memory_kind: row.memory_kind,
@@ -221,6 +231,7 @@ function hydrateMatches(
       summary: row.summary,
       payload: parseJsonObject(row.payload_json),
       source_event_refs: parseJsonArray(row.source_event_refs_json),
+      contexts: listSessionMemoryContexts(db, row.id),
       created_at: row.created_at,
       updated_at: row.updated_at,
       distance: match.distance,
@@ -230,7 +241,7 @@ function hydrateMatches(
 }
 
 function searchLimit(limit: number, filters?: SessionMemoryQueryFilters): number {
-  return filters?.memory_kind && filters.memory_kind.length > 0 ? limit * 3 : limit;
+  return (filters?.memory_kind && filters.memory_kind.length > 0) || filters?.git_branch ? limit * 10 : limit;
 }
 
 function parseJsonObject(text: string): Record<string, unknown> {

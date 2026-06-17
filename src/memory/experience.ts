@@ -19,12 +19,17 @@ export type ExperienceEventInput = {
   raw_payload_json: string;
   source: string;
   status: ExperienceStatus;
+  repo_path?: string | null;
+  git_branch?: string | null;
+  git_commit?: string | null;
+  git_worktree_id?: string | null;
 };
 
 export type ExperienceEventRow = Required<
   Omit<
     ExperienceEventInput,
     "hook_event_name" | "event_kind" | "cwd" | "provider_session_id" | "turn_id" | "raw_text"
+    | "repo_path" | "git_branch" | "git_commit" | "git_worktree_id"
   >
 > & {
   hook_event_name: string | null;
@@ -33,6 +38,10 @@ export type ExperienceEventRow = Required<
   provider_session_id: string | null;
   turn_id: string | null;
   raw_text: string | null;
+  repo_path: string | null;
+  git_branch: string | null;
+  git_commit: string | null;
+  git_worktree_id: string | null;
   dedupe_key: string | null;
   inserted_at: string;
 };
@@ -122,6 +131,10 @@ export function recordExperienceEvent(
     provider_session_id: input.provider_session_id ?? null,
     turn_id: input.turn_id ?? null,
     raw_text: input.raw_text ?? null,
+    repo_path: input.repo_path ?? null,
+    git_branch: input.git_branch ?? null,
+    git_commit: input.git_commit ?? null,
+    git_worktree_id: input.git_worktree_id ?? null,
     dedupe_key: dedupeKey,
     inserted_at: insertedAt.toISOString(),
   };
@@ -129,9 +142,9 @@ export function recordExperienceEvent(
   db.query(
     `INSERT OR IGNORE INTO experience_events
       (id, project_key, occurred_at, hook_event_name, event_kind, cwd, provider, provider_session_id, turn_id,
-       raw_text, raw_payload_json, source, status, dedupe_key, inserted_at)
+       raw_text, raw_payload_json, source, status, repo_path, git_branch, git_commit, git_worktree_id, dedupe_key, inserted_at)
      VALUES
-      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     row.id,
     row.project_key,
@@ -146,6 +159,10 @@ export function recordExperienceEvent(
     row.raw_payload_json,
     row.source,
     row.status,
+    row.repo_path,
+    row.git_branch,
+    row.git_commit,
+    row.git_worktree_id,
     row.dedupe_key,
     row.inserted_at,
   );
@@ -653,6 +670,10 @@ function buildLeasedExperienceEvent(
       hook_event_name: row.hook_event_name,
       event_kind: row.event_kind,
       cwd: row.cwd,
+      repo_path: row.repo_path,
+      git_branch: row.git_branch,
+      git_commit: row.git_commit,
+      git_worktree_id: row.git_worktree_id,
       provider: row.provider,
       provider_session_id: row.provider_session_id,
       turn_id: row.turn_id,
@@ -706,6 +727,10 @@ function buildClaimedTombstone(
       hook_event_name: row.hook_event_name,
       event_kind: row.event_kind,
       cwd: row.cwd,
+      repo_path: row.repo_path,
+      git_branch: row.git_branch,
+      git_commit: row.git_commit,
+      git_worktree_id: row.git_worktree_id,
       provider: row.provider,
       provider_session_id: row.provider_session_id,
       turn_id: row.turn_id,

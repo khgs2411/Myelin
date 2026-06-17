@@ -6,6 +6,7 @@ import { createIngestJob, getIngestJob } from "../../src/ingest/jobs.ts";
 import { applyIngestWorkerOutput, buildIngestPrompt, parseIngestWorkerOutput, runIngestWorker } from "../../src/ingest/worker.ts";
 import { openMemoryDbAt, type MemoryDb } from "../../src/memory/db.ts";
 import { listExperienceEvents, recordExperienceEvent } from "../../src/memory/experience.ts";
+import { listSessionMemoryContexts } from "../../src/memory/session-memory-contexts.ts";
 import type { RunProcessResult } from "../../src/runtime/process.ts";
 
 let root: string;
@@ -29,7 +30,17 @@ afterEach(async () => {
 });
 
 test("worker output writes session memory and finalizes tombstones", () => {
-  seedClaimedTombstone(db, { id: "tomb_1", ingest_job_id: "job_1", project_key: "class-kit" });
+  seedClaimedTombstone(db, {
+    id: "tomb_1",
+    ingest_job_id: "job_1",
+    project_key: "class-kit",
+    source_metadata: {
+      repo_path: "/repo/class-kit",
+      git_branch: "feature/sqlite-vec",
+      git_commit: "abc123",
+      git_worktree_id: "/repo/class-kit",
+    },
+  });
 
   const counts = applyIngestWorkerOutput(db, {
     projectKey: "class-kit",
@@ -54,6 +65,17 @@ test("worker output writes session memory and finalizes tombstones", () => {
 
   expect(counts.session_memories).toBe(1);
   expect(db.query("SELECT id FROM session_memories WHERE id = ?").get("mem_1")).toEqual({ id: "mem_1" });
+  expect(listSessionMemoryContexts(db, "mem_1")).toMatchObject([
+    {
+      session_memory_id: "mem_1",
+      project_key: "class-kit",
+      repo_path: "/repo/class-kit",
+      git_branch: "feature/sqlite-vec",
+      git_commit: "abc123",
+      git_worktree_id: "/repo/class-kit",
+      source_event_ref: "tomb_1",
+    },
+  ]);
   expect(db.query("SELECT state, output_references_json FROM experience_event_tombstones WHERE id = ?").get("tomb_1")).toEqual({
     state: "output",
     output_references_json: JSON.stringify(["session_memories/mem_1"]),
@@ -668,7 +690,7 @@ test("worker rejects invalid provider output before durable memory writes", asyn
 
 function seedClaimedTombstone(
   db: MemoryDb,
-  input: { id: string; ingest_job_id: string; project_key: string },
+  input: { id: string; ingest_job_id: string; project_key: string; source_metadata?: Record<string, unknown> },
 ): void {
   recordExperienceEvent(db, {
     id: `evt_${input.id}`,
@@ -692,7 +714,7 @@ function seedClaimedTombstone(
     input.project_key,
     input.ingest_job_id,
     "2026-06-13T09:59:00.000Z",
-    JSON.stringify({}),
+    JSON.stringify(input.source_metadata ?? {}),
     JSON.stringify({}),
     JSON.stringify([]),
   );

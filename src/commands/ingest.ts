@@ -71,17 +71,16 @@ async function worker(args: string[], deps: IngestCommandDeps) {
 
 function renderStart(result: StartIngestResult, json: boolean) {
   if (json) {
-    if (result.kind === "branch_mismatch") return ok(JSON.stringify({ job: result.job, jobs: result.jobs }, null, 2));
     return ok(JSON.stringify(stripKind(result), null, 2));
   }
 
-  if (result.kind === "branch_mismatch") {
-    return fail(`Ingest job ${result.job.id} failed: target repo is on ${result.branch}, expected master.`);
-  }
-  if (result.kind === "no_work") return ok(`No queued Experience Log rows for ${result.project_key}.`);
+  const warning = result.target_branch && result.target_branch !== "master"
+    ? `\nWarning: ingesting with target repo on ${result.target_branch}. Captured rows may include multiple branches; branch context is preserved per row.`
+    : "";
+  if (result.kind === "no_work") return ok(`No queued Experience Log rows for ${result.project_key}.${warning}`);
   return ok(
     `Started ${result.jobs.length} ingest job${result.jobs.length === 1 ? "" : "s"} for ${result.project_key}.` +
-      `\nqueued: ${result.queued_count}; selected: ${result.selected_count}; batch size: ${result.batch_size}`,
+      `\nqueued: ${result.queued_count}; selected: ${result.selected_count}; batch size: ${result.batch_size}${warning}`,
   );
 }
 

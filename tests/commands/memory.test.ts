@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { createCli } from "../../src/commands/registry.ts";
 import { registerMemoryCommands } from "../../src/commands/memory.ts";
 import { createMemoryCandidate } from "../../src/memory/candidates.ts";
+import { createSessionMemoryContexts } from "../../src/memory/session-memory-contexts.ts";
 import { createSessionMemory } from "../../src/memory/session-memories.ts";
 import { openMemoryDb } from "../../src/memory/db.ts";
 import { stubEmbeddingFilename, type EmbeddingRequest } from "../../src/memory/embedding-provider.ts";
@@ -85,6 +86,52 @@ test("memory query non-json output prints bounded session memory matches", async
   expect(result.message).toContain("mem_query_1");
   expect(result.message).toContain("Retention is kept in project memory");
   expect(result.message).not.toContain("mem_query_2");
+});
+
+test("memory query can filter session memory by captured git branch", async () => {
+  await seedQueryMemoryFixture("What decision explains retention?");
+  const db = openMemoryDb(root);
+  try {
+    createSessionMemoryContexts(db, [
+      {
+        session_memory_id: "mem_query_1",
+        project_key: "demo",
+        repo_path: join(root, "repos", "demo"),
+        git_branch: "feature/sqlite-vec",
+        git_commit: "abc123",
+        git_worktree_id: join(root, "repos", "demo"),
+        source_event_ref: "tomb_1",
+      },
+      {
+        session_memory_id: "mem_query_2",
+        project_key: "demo",
+        repo_path: join(root, "repos", "demo"),
+        git_branch: "feature/other",
+        git_commit: "def456",
+        git_worktree_id: join(root, "repos", "demo"),
+        source_event_ref: "tomb_2",
+      },
+    ]);
+  } finally {
+    db.close();
+  }
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+
+  const result = await cli.run([
+    "memory",
+    "query",
+    "demo",
+    "What decision explains retention?",
+    "--branch",
+    "feature/sqlite-vec",
+    "--json",
+  ]);
+  const response = JSON.parse(result.message);
+
+  expect(result.exitCode).toBe(0);
+  expect(response.matches.map((match: { id: string }) => match.id)).toEqual(["mem_query_1"]);
+  expect(response.matches[0].contexts[0].git_branch).toBe("feature/sqlite-vec");
 });
 
 test("memory candidates lists reviewable candidates with normalized status filters", async () => {

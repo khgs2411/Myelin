@@ -45,11 +45,16 @@ const MIGRATIONS: Migration[] = [
         raw_payload_json    TEXT NOT NULL,
         source              TEXT NOT NULL,
         status              TEXT NOT NULL CHECK (status IN ('valid', 'invalid')),
+        repo_path           TEXT,
+        git_branch          TEXT,
+        git_commit          TEXT,
+        git_worktree_id     TEXT,
         dedupe_key          TEXT,
         inserted_at         TEXT NOT NULL
       );
       CREATE INDEX experience_events_project_time ON experience_events(project_key, occurred_at);
       CREATE INDEX experience_events_project_kind_time ON experience_events(project_key, event_kind, occurred_at);
+      CREATE INDEX experience_events_project_branch_time ON experience_events(project_key, git_branch, occurred_at);
       CREATE INDEX experience_events_provider_turn ON experience_events(provider, provider_session_id, turn_id);
       CREATE UNIQUE INDEX experience_events_dedupe_key ON experience_events(dedupe_key) WHERE dedupe_key IS NOT NULL;
 
@@ -246,6 +251,10 @@ const MIGRATIONS: Migration[] = [
         ON query_embedding_cache(project_key, updated_at);
     `,
   },
+  {
+    version: 7,
+    apply: migrateBranchAwareSessionMemoryContext,
+  },
 ];
 
 export function runMigrations(db: Database, now: Date = new Date()): void {
@@ -413,4 +422,44 @@ function migrateSessionMemoryEmbeddings(db: Database, now: Date): void {
       timestamp,
     );
   }
+}
+
+function migrateBranchAwareSessionMemoryContext(db: Database): void {
+  if (tableExists(db, "experience_events")) {
+    const experienceColumns = tableColumns(db, "experience_events");
+    if (!experienceColumns.has("repo_path")) db.exec("ALTER TABLE experience_events ADD COLUMN repo_path TEXT;");
+    if (!experienceColumns.has("git_branch")) db.exec("ALTER TABLE experience_events ADD COLUMN git_branch TEXT;");
+    if (!experienceColumns.has("git_commit")) db.exec("ALTER TABLE experience_events ADD COLUMN git_commit TEXT;");
+    if (!experienceColumns.has("git_worktree_id")) db.exec("ALTER TABLE experience_events ADD COLUMN git_worktree_id TEXT;");
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS experience_events_project_branch_time
+        ON experience_events(project_key, git_branch, occurred_at);
+    `);
+  }
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS session_memory_contexts (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_memory_id TEXT NOT NULL REFERENCES session_memories(id),
+      project_key       TEXT NOT NULL,
+      repo_path         TEXT,
+      git_branch        TEXT,
+      git_commit        TEXT,
+      git_worktree_id   TEXT,
+      source_event_ref  TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS session_memory_contexts_project_branch
+      ON session_memory_contexts(project_key, git_branch, session_memory_id);
+    CREATE INDEX IF NOT EXISTS session_memory_contexts_memory
+      ON session_memory_contexts(session_memory_id);
+  `);
+}
+
+function tableExists(db: Database, table: string): boolean {
+  return Boolean(db.query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table));
+}
+
+function tableColumns(db: Database, table: string): Set<string> {
+  const columns = db.query(`PRAGMA table_info(${table})`).all() as TableColumn[];
+  return new Set(columns.map((column) => column.name));
 }

@@ -30,6 +30,7 @@ test("MemoryQueryService delegates retrieval and builds deterministic query resp
               summary: "Query logic belongs behind a service boundary.",
               payload: {},
               source_event_refs: ["tomb_1"],
+              contexts: [],
               created_at: "2026-06-15T10:00:00.000Z",
               updated_at: "2026-06-15T10:00:00.000Z",
               distance: 0.2,

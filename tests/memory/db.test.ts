@@ -22,10 +22,11 @@ test("opening creates the session schema and records the migration", () => {
   expect(names).toContain("hook_errors");
   expect(names).toContain("experience_event_tombstones");
   expect(names).toContain("session_memory_embeddings");
+  expect(names).toContain("session_memory_contexts");
   expect(names).toContain("query_embedding_cache");
   expect(names).toContain("schema_migrations");
   const applied = db.query("SELECT version FROM schema_migrations").all() as { version: number }[];
-  expect(applied.map((r) => r.version)).toEqual([1, 2, 3, 4, 5, 6]);
+  expect(applied.map((r) => r.version)).toEqual([1, 2, 3, 4, 5, 6, 7]);
   db.close();
 });
 
@@ -34,7 +35,7 @@ test("migrations are idempotent across re-opens", () => {
   openMemoryDbAt(path).close();
   const db = openMemoryDbAt(path);
   const count = db.query("SELECT count(*) AS n FROM schema_migrations").get() as { n: number };
-  expect(count.n).toBe(6);
+  expect(count.n).toBe(7);
   db.close();
 });
 
@@ -52,7 +53,11 @@ test("opening creates ingest, session memory, candidate, handoff, and tombstone 
     expect(tableNames).toContain("practice_handoff_instructions");
     expect(tableNames).toContain("personal_handoff_instructions");
     expect(tableNames).toContain("session_memory_embeddings");
+    expect(tableNames).toContain("session_memory_contexts");
     expect(tableNames).toContain("query_embedding_cache");
+
+    const experienceColumns = db.query("PRAGMA table_info(experience_events)").all() as Array<{ name: string }>;
+    expect(experienceColumns.map((column) => column.name)).toContain("git_branch");
 
     const tombstoneColumns = db.query("PRAGMA table_info(experience_event_tombstones)").all() as Array<{
       name: string;
