@@ -100,7 +100,12 @@ export function readIngestProjectStatus(db: Database, projectKey: string): Inges
   return {
     project_key: projectKey,
     completion_layer: completionLayer,
-    completion_label: ingestCompletionLabel(completionLayer),
+    completion_label: ingestProjectStatusLabel(completionLayer, {
+      activeEvents,
+      leasedEvents,
+      runningJobs,
+      failedJobs,
+    }),
     counts: {
       active_events: activeEvents,
       unleased_events: unleasedEvents,
@@ -114,6 +119,17 @@ export function readIngestProjectStatus(db: Database, projectKey: string): Inges
       pending_session_memory_embeddings: pendingEmbeddings,
     },
   };
+}
+
+function ingestProjectStatusLabel(
+  layer: IngestCompletionLayer,
+  counts: { activeEvents: number; leasedEvents: number; runningJobs: number; failedJobs: number },
+): string {
+  if (layer !== INGEST_COMPLETION_LAYERS.EXPERIENCE_LOG_DRAIN_PENDING) return ingestCompletionLabel(layer);
+  if (counts.runningJobs > 0) return "Experience Log drain running";
+  if (counts.failedJobs > 0 && counts.leasedEvents > 0) return "Experience Log retry pending";
+  if (counts.activeEvents > 0) return "Experience Log ingest pending";
+  return ingestCompletionLabel(layer);
 }
 
 function scalarCount(db: Database, sql: string, value: string): number {

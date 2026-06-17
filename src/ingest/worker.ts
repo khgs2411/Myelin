@@ -413,16 +413,16 @@ export function applyIngestWorkerOutput(
       sessionMemories += 1;
     }
 
-    const assertAllowedExistingMemory = (memoryId: string): void => {
+    const activeAllowedExistingMemory = (memoryId: string): boolean => {
       if (allowedExistingMemoryIds && !allowedExistingMemoryIds.has(memoryId)) {
         throw new Error(`Reconciliation operation references memory outside supplied context: ${memoryId}`);
       }
       const memory = getActiveSessionMemory(db, { id: memoryId, projectKey: input.projectKey });
-      if (!memory) throw new Error(`Reconciliation operation references non-active or missing memory: ${memoryId}`);
+      return Boolean(memory);
     };
 
     for (const supersession of input.output.memory_supersessions ?? []) {
-      assertAllowedExistingMemory(supersession.superseded_memory_id);
+      if (!activeAllowedExistingMemory(supersession.superseded_memory_id)) continue;
       const supersedingMemoryId = sessionMemoryIds.get(supersession.superseding_memory_id) ?? supersession.superseding_memory_id;
       const supersedingMemory = getActiveSessionMemory(db, { id: supersedingMemoryId, projectKey: input.projectKey });
       if (!supersedingMemory) {
@@ -452,7 +452,7 @@ export function applyIngestWorkerOutput(
     }
 
     for (const retraction of input.output.memory_retractions ?? []) {
-      assertAllowedExistingMemory(retraction.memory_id);
+      if (!activeAllowedExistingMemory(retraction.memory_id)) continue;
       const sourceEventRefs = addOutputRefs(
         retraction.source_event_refs,
         `session_memory_retractions/${retraction.memory_id}`,
@@ -467,7 +467,7 @@ export function applyIngestWorkerOutput(
     }
 
     for (const noop of input.output.memory_noops ?? []) {
-      assertAllowedExistingMemory(noop.memory_id);
+      activeAllowedExistingMemory(noop.memory_id);
     }
 
     for (const candidate of input.output.memory_candidates ?? []) {

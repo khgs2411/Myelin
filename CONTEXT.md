@@ -67,6 +67,10 @@ Project-scoped continuity about recent work, next actions, blockers, and verific
 Trusted agent-written Session Memory from Experience Log ingest lives in `session_memories`; `sessions` / `session_events` remain the existing manual session surface until a later status/current-briefing integration.
 _Avoid_: Session Brain, chat history
 
+**Session Memory Context**:
+Branch- and repo-scoped provenance rows that link Session Memory records to captured repo_path, git_branch, git_commit, git_worktree_id, and source_event_ref values for retrieval filtering.
+_Avoid_: branch partition, hidden provenance, extra memory scope
+
 **Practice Memory**:
 Canonical cross-project guidance for how recurring work is done, derived from project evidence and improved as better examples appear.
 _Avoid_: Recipe Memory, Recipe Brain, playbook
@@ -217,7 +221,7 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - An **Experience Log Tombstone** can reserve a raw **Experience Log** row as an in-progress lease while the raw row remains present, then receives final output or no-output metadata when ingest completes and archives the row.
 - An **External Work Tracker** can provide source evidence for memory, but Myelin does not model tracker-specific concepts as product primitives.
 - **Auto Mode** can mark **Experience Log** entries or candidates for later processing, but it is distinct from an explicit **Detached Ingest Job** started by the **Ingest Command**.
-- A **Detached Ingest Job** runs its provider session from the target repository cwd, on `master` for the first implementation.
+- A **Detached Ingest Job** runs its provider session from the target repository cwd and preserves branch metadata as retrieval context; branch state is not a launch gate for Session Memory ingest.
 - An **Answer Correction** in SQLite does not repair curated **Project Memory**; agents must still use `flag_stale_answer` or `enrich_gap` when the wiki should be updated.
 - A **Memory Candidate** targets exactly one of **Project Memory**, **Session Memory**, **Practice Memory**, or **Personal Memory**.
 - A **Memory Candidate** is a proposed memory output, while a **Layer Handoff Instruction** is downstream agent input; they use separate queues.

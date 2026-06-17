@@ -158,7 +158,7 @@ test("ingest status --project reports layered counts", async () => {
   expect(result.exitCode).toBe(0);
   expect(response.status.project_key).toBe("demo");
   expect(response.status.counts.active_events).toBe(2);
-  expect(response.status.completion_label).toBe("Experience Log drain pending");
+  expect(response.status.completion_label).toBe("Experience Log ingest pending");
 });
 
 test("ingest status --project fails for unknown project keys", async () => {

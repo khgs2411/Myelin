@@ -7,7 +7,7 @@ import { applyIngestWorkerOutput, buildIngestPrompt, parseIngestWorkerOutput, ru
 import { openMemoryDbAt, type MemoryDb } from "../../src/memory/db.ts";
 import { listExperienceEvents, recordExperienceEvent } from "../../src/memory/experience.ts";
 import { listSessionMemoryContexts } from "../../src/memory/session-memory-contexts.ts";
-import { createSessionMemory } from "../../src/memory/session-memories.ts";
+import { createSessionMemory, supersedeSessionMemory } from "../../src/memory/session-memories.ts";
 import type { RunProcessResult } from "../../src/runtime/process.ts";
 
 let root: string;
@@ -184,6 +184,85 @@ test("worker output rejects reconciliation outside supplied context", () => {
   ).toThrow("outside supplied context");
 
   expect(db.query("SELECT status FROM session_memories WHERE id = ?").get("mem_old")).toEqual({ status: "active" });
+});
+
+test("worker output skips reconciliation when supplied context became inactive in a parallel batch", () => {
+  createSessionMemory(db, {
+    id: "mem_old",
+    project_key: "class-kit",
+    source_event_refs: ["tomb_old"],
+    memory_kind: "decision",
+    summary: "Old memory that another worker already superseded.",
+    payload: {},
+    confidence: "high",
+    risk: "low",
+    now: "2026-06-13T09:00:00.000Z",
+  });
+  createSessionMemory(db, {
+    id: "mem_parallel",
+    project_key: "class-kit",
+    source_event_refs: ["tomb_parallel"],
+    memory_kind: "decision",
+    summary: "Replacement from a parallel worker.",
+    payload: {},
+    confidence: "high",
+    risk: "low",
+    now: "2026-06-13T09:30:00.000Z",
+  });
+  supersedeSessionMemory(db, {
+    id: "mem_old",
+    projectKey: "class-kit",
+    supersededBy: "mem_parallel",
+    reason: "Parallel worker already reconciled it.",
+    now: "2026-06-13T09:45:00.000Z",
+  });
+  seedClaimedTombstone(db, { id: "tomb_1", ingest_job_id: "job_1", project_key: "class-kit" });
+
+  const counts = applyIngestWorkerOutput(db, {
+    projectKey: "class-kit",
+    jobId: "job_1",
+    provider: "codex",
+    providerSessionId: null,
+    finalizedAt: "2026-06-13T10:00:00.000Z",
+    allowedExistingMemoryIds: ["mem_old"],
+    output: {
+      session_memories: [
+        {
+          id: "mem_new",
+          source_event_refs: ["tomb_1"],
+          memory_kind: "decision",
+          summary: "New memory from this worker still commits.",
+          payload: {},
+          confidence: "high",
+          risk: "low",
+        },
+      ],
+      memory_retractions: [
+        {
+          memory_id: "mem_old",
+          reason: "This operation is stale because the memory is already inactive.",
+          source_event_refs: ["tomb_1"],
+        },
+      ],
+      memory_noops: [
+        {
+          memory_id: "mem_old",
+          reason: "The memory was relevant when the prompt was built.",
+        },
+      ],
+    },
+  });
+
+  expect(counts.session_memories).toBe(1);
+  expect(db.query("SELECT id FROM session_memories WHERE id = ?").get("mem_new")).toEqual({ id: "mem_new" });
+  expect(db.query("SELECT status, superseded_by FROM session_memories WHERE id = ?").get("mem_old")).toEqual({
+    status: "superseded",
+    superseded_by: "mem_parallel",
+  });
+  expect(db.query("SELECT state, output_references_json FROM experience_event_tombstones WHERE id = ?").get("tomb_1")).toEqual({
+    state: "output",
+    output_references_json: JSON.stringify(["session_memories/mem_new"]),
+  });
 });
 
 test("candidate output stores source refs and finalizes the referenced tombstone", () => {

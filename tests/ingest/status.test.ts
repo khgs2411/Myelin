@@ -57,12 +57,48 @@ test("project status reports drain pending when rows, leases, or running jobs re
   const status = readIngestProjectStatus(db, "demo");
 
   expect(status.completion_layer).toBe(INGEST_COMPLETION_LAYERS.EXPERIENCE_LOG_DRAIN_PENDING);
+  expect(status.completion_label).toBe("Experience Log drain running");
   expect(status.counts).toMatchObject({
     active_events: 2,
     unleased_events: 1,
     leased_events: 1,
     running_jobs: 1,
     pending_session_memory_embeddings: 1,
+  });
+});
+
+test("project status reports retry pending when failed leases need recovery", () => {
+  seedExperienceEvent("evt_1");
+  createIngestJob(db, {
+    id: "job_1",
+    project_key: "demo",
+    provider: "codex",
+    input: {},
+    now: "2026-06-15T10:00:00.000Z",
+  });
+  leaseExperienceEvents(db, {
+    ingest_job_id: "job_1",
+    project_key: "demo",
+    limit: 1,
+    claimed_at: "2026-06-15T10:01:00.000Z",
+    tombstone_id_for: (event) => `tomb_${event.id}`,
+  });
+  updateIngestJobStatus(db, {
+    id: "job_1",
+    status: "failed",
+    updated_at: "2026-06-15T10:02:00.000Z",
+  });
+
+  const status = readIngestProjectStatus(db, "demo");
+
+  expect(status.completion_layer).toBe(INGEST_COMPLETION_LAYERS.EXPERIENCE_LOG_DRAIN_PENDING);
+  expect(status.completion_label).toBe("Experience Log retry pending");
+  expect(status.counts).toMatchObject({
+    active_events: 1,
+    unleased_events: 0,
+    leased_events: 1,
+    running_jobs: 0,
+    failed_jobs: 1,
   });
 });
 
