@@ -96,16 +96,18 @@ export function listPendingSessionMemoryEmbeddings(
   const placeholders = statuses.map(() => "?").join(", ");
   return db
     .query(
-      `SELECT *
-       FROM session_memory_embeddings
-       WHERE project_key = ?
-         AND embedding_provider = ?
-         AND embedding_model = ?
-         AND embedding_dimensions = ?
-         AND embedding_purpose = ?
-         AND format_version = ?
-         AND status IN (${placeholders})
-       ORDER BY updated_at ASC, id ASC
+      `SELECT e.*
+       FROM session_memory_embeddings e
+       JOIN session_memories sm ON sm.id = e.session_memory_id
+       WHERE e.project_key = ?
+         AND sm.status = 'active'
+         AND e.embedding_provider = ?
+         AND e.embedding_model = ?
+         AND e.embedding_dimensions = ?
+         AND e.embedding_purpose = ?
+         AND e.format_version = ?
+         AND e.status IN (${placeholders})
+       ORDER BY e.updated_at ASC, e.id ASC
        LIMIT ?`,
     )
     .all(

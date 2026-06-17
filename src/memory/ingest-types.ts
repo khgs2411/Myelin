@@ -21,6 +21,12 @@ export type MemoryCandidateStatus = (typeof MEMORY_CANDIDATE_STATUSES)[number];
 export const SESSION_MEMORY_KINDS = ["continuity", "decision", "blocker", "next_action", "verification"] as const;
 export type SessionMemoryKind = (typeof SESSION_MEMORY_KINDS)[number];
 
+export const SESSION_MEMORY_STATUSES = ["active", "superseded", "retracted"] as const;
+export type SessionMemoryStatus = (typeof SESSION_MEMORY_STATUSES)[number];
+
+export const SESSION_MEMORY_LINK_RELATIONSHIPS = ["supersedes", "refines", "contradicts", "duplicates"] as const;
+export type SessionMemoryLinkRelationship = (typeof SESSION_MEMORY_LINK_RELATIONSHIPS)[number];
+
 export const TOMBSTONE_STATES = ["claimed", "output", "no_output", "failed", "unfinished"] as const;
 export type TombstoneState = (typeof TOMBSTONE_STATES)[number];
 
@@ -55,6 +61,11 @@ export type SessionMemoryRow = {
   payload_json: string;
   confidence: string;
   risk: string;
+  status: SessionMemoryStatus;
+  superseded_by: string | null;
+  lifecycle_reason: string | null;
+  superseded_at: string | null;
+  retracted_at: string | null;
   created_at: string;
   updated_at: string;
 };

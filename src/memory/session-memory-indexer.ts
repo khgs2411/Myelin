@@ -216,14 +216,16 @@ function pendingRemaining(db: Database, projectKey: string, contract: ActiveEmbe
   const row = db
     .query(
       `SELECT count(*) AS n
-       FROM session_memory_embeddings
-       WHERE project_key = ?
-         AND embedding_provider = ?
-         AND embedding_model = ?
-         AND embedding_dimensions = ?
-         AND embedding_purpose = ?
-         AND format_version = ?
-         AND status = 'pending'`,
+       FROM session_memory_embeddings e
+       JOIN session_memories sm ON sm.id = e.session_memory_id
+       WHERE e.project_key = ?
+         AND sm.status = 'active'
+         AND e.embedding_provider = ?
+         AND e.embedding_model = ?
+         AND e.embedding_dimensions = ?
+         AND e.embedding_purpose = ?
+         AND e.format_version = ?
+         AND e.status = 'pending'`,
     )
     .get(
       projectKey,

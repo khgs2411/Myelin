@@ -1,7 +1,7 @@
 import type { Database } from "bun:sqlite";
 import type { ActiveEmbeddingContract } from "../runtime/config.ts";
 import type { EmbeddingProviderClient } from "./embedding-provider.ts";
-import type { SessionMemoryKind, SessionMemoryRow } from "./ingest-types.ts";
+import type { SessionMemoryKind, SessionMemoryRow, SessionMemoryStatus } from "./ingest-types.ts";
 import { ensureSessionMemoryVectorStorage } from "./session-memory-embeddings.ts";
 import {
   createSqliteVecAdapter,
@@ -19,6 +19,7 @@ import {
 export type SessionMemoryQueryFilters = {
   memory_kind?: SessionMemoryKind[];
   git_branch?: string;
+  status?: SessionMemoryStatus[];
 };
 
 export type SessionMemoryQueryMatch = {
@@ -165,15 +166,17 @@ function indexCounts(
   const row = db
     .query(
       `SELECT
-         sum(CASE WHEN status = 'indexed' THEN 1 ELSE 0 END) AS indexed_count,
-         sum(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_count
-       FROM session_memory_embeddings
-       WHERE project_key = ?
-         AND embedding_provider = ?
-         AND embedding_model = ?
-         AND embedding_dimensions = ?
-         AND embedding_purpose = ?
-         AND format_version = ?`,
+         sum(CASE WHEN e.status = 'indexed' THEN 1 ELSE 0 END) AS indexed_count,
+         sum(CASE WHEN e.status = 'pending' THEN 1 ELSE 0 END) AS pending_count
+       FROM session_memory_embeddings e
+       JOIN session_memories sm ON sm.id = e.session_memory_id
+       WHERE e.project_key = ?
+         AND sm.status = 'active'
+         AND e.embedding_provider = ?
+         AND e.embedding_model = ?
+         AND e.embedding_dimensions = ?
+         AND e.embedding_purpose = ?
+         AND e.format_version = ?`,
     )
     .get(
       input.project_key,
@@ -220,6 +223,8 @@ function hydrateMatches(
       | SessionMemoryRow
       | null;
     if (!row) continue;
+    const allowedStatuses = filters?.status ?? ["active"];
+    if (!allowedStatuses.includes(row.status)) continue;
     if (filters?.memory_kind && !filters.memory_kind.includes(row.memory_kind)) continue;
     if (filters?.git_branch && !sessionMemoryHasBranchContext(db, { sessionMemoryId: row.id, gitBranch: filters.git_branch })) {
       continue;
@@ -241,7 +246,9 @@ function hydrateMatches(
 }
 
 function searchLimit(limit: number, filters?: SessionMemoryQueryFilters): number {
-  return (filters?.memory_kind && filters.memory_kind.length > 0) || filters?.git_branch ? limit * 10 : limit;
+  return (filters?.memory_kind && filters.memory_kind.length > 0) || filters?.git_branch || (filters?.status ?? ["active"]).length > 0
+    ? limit * 10
+    : limit;
 }
 
 function parseJsonObject(text: string): Record<string, unknown> {

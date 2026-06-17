@@ -6,7 +6,8 @@ import { createCli } from "../../src/commands/registry.ts";
 import { registerMemoryCommands } from "../../src/commands/memory.ts";
 import { createMemoryCandidate } from "../../src/memory/candidates.ts";
 import { createSessionMemoryContexts } from "../../src/memory/session-memory-contexts.ts";
-import { createSessionMemory } from "../../src/memory/session-memories.ts";
+import { createSessionMemoryLink } from "../../src/memory/session-memory-links.ts";
+import { createSessionMemory, supersedeSessionMemory } from "../../src/memory/session-memories.ts";
 import { openMemoryDb } from "../../src/memory/db.ts";
 import { stubEmbeddingFilename, type EmbeddingRequest } from "../../src/memory/embedding-provider.ts";
 import { markSessionMemoryEmbeddingIndexed } from "../../src/memory/session-memory-embeddings.ts";
@@ -132,6 +133,55 @@ test("memory query can filter session memory by captured git branch", async () =
   expect(result.exitCode).toBe(0);
   expect(response.matches.map((match: { id: string }) => match.id)).toEqual(["mem_query_1"]);
   expect(response.matches[0].contexts[0].git_branch).toBe("feature/sqlite-vec");
+});
+
+test("memory session list filters lifecycle status", async () => {
+  await seedSessionLifecycleFixture();
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+
+  const active = await cli.run(["memory", "session", "list", "demo", "--status", "active", "--json"]);
+  const superseded = await cli.run(["memory", "session", "list", "demo", "--status", "superseded"]);
+
+  expect(active.exitCode).toBe(0);
+  expect(JSON.parse(active.message).memories.map((memory: { id: string }) => memory.id)).toEqual(["mem_life_new"]);
+  expect(superseded.exitCode).toBe(0);
+  expect(superseded.message).toContain("mem_life_old [superseded]");
+  expect(superseded.message).toContain("mem_life_new");
+});
+
+test("memory session show includes lifecycle and context details", async () => {
+  await seedSessionLifecycleFixture();
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+
+  const result = await cli.run(["memory", "session", "show", "mem_life_old"]);
+
+  expect(result.exitCode).toBe(0);
+  expect(result.message).toContain("mem_life_old [superseded] decision");
+  expect(result.message).toContain("superseded by: mem_life_new");
+  expect(result.message).toContain("lifecycle reason: New evidence changed the branch model.");
+  expect(result.message).toContain("feature/sqlite-vec");
+});
+
+test("memory session links lists reconciliation audit links", async () => {
+  await seedSessionLifecycleFixture();
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+
+  const json = await cli.run(["memory", "session", "links", "demo", "--memory", "mem_life_old", "--json"]);
+  const text = await cli.run(["memory", "session", "links", "demo", "--memory", "mem_life_old"]);
+
+  expect(json.exitCode).toBe(0);
+  expect(JSON.parse(json.message).links).toMatchObject([
+    {
+      source_memory_id: "mem_life_new",
+      target_memory_id: "mem_life_old",
+      relationship: "supersedes",
+    },
+  ]);
+  expect(text.exitCode).toBe(0);
+  expect(text.message).toContain("mem_life_new supersedes mem_life_old");
 });
 
 test("memory candidates lists reviewable candidates with normalized status filters", async () => {
@@ -320,6 +370,65 @@ async function seedQueryMemoryFixture(question: string): Promise<void> {
       embedding_purpose: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT.purpose,
       format_version: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT.formatVersion,
       embedding: unitVector(1),
+    });
+  } finally {
+    db.close();
+  }
+}
+
+async function seedSessionLifecycleFixture(): Promise<void> {
+  const db = openMemoryDb(root);
+  try {
+    createSessionMemory(db, {
+      id: "mem_life_old",
+      project_key: "demo",
+      source_event_refs: ["tomb_old"],
+      memory_kind: "decision",
+      title: "Old branch model",
+      summary: "Session Memory is branch-bound.",
+      payload: {},
+      confidence: "high",
+      risk: "low",
+      now: "2026-06-13T09:00:00.000Z",
+    });
+    createSessionMemory(db, {
+      id: "mem_life_new",
+      project_key: "demo",
+      source_event_refs: ["tomb_new"],
+      memory_kind: "decision",
+      title: "Repo-scoped branch-aware model",
+      summary: "Session Memory is repo-scoped and branch-aware when useful.",
+      payload: {},
+      confidence: "high",
+      risk: "low",
+      now: "2026-06-13T10:00:00.000Z",
+    });
+    createSessionMemoryContexts(db, [
+      {
+        session_memory_id: "mem_life_old",
+        project_key: "demo",
+        repo_path: join(root, "repos", "demo"),
+        git_branch: "feature/sqlite-vec",
+        git_commit: "abc123",
+        git_worktree_id: join(root, "repos", "demo"),
+        source_event_ref: "tomb_old",
+      },
+    ]);
+    supersedeSessionMemory(db, {
+      id: "mem_life_old",
+      projectKey: "demo",
+      supersededBy: "mem_life_new",
+      reason: "New evidence changed the branch model.",
+      now: "2026-06-13T10:05:00.000Z",
+    });
+    createSessionMemoryLink(db, {
+      source_memory_id: "mem_life_new",
+      target_memory_id: "mem_life_old",
+      project_key: "demo",
+      relationship: "supersedes",
+      reason: "New evidence changed the branch model.",
+      source_event_refs: ["tomb_new"],
+      created_at: "2026-06-13T10:05:00.000Z",
     });
   } finally {
     db.close();

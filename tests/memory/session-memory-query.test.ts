@@ -160,6 +160,54 @@ test("filters hydrated vector matches by git branch context", async () => {
   });
 });
 
+test("filters superseded memories from default query results", async () => {
+  createSessionMemory(db, {
+    id: "mem_active",
+    project_key: "class-kit",
+    source_event_refs: ["tomb_3"],
+    memory_kind: "decision",
+    title: "Current decision",
+    summary: "Current embedding decision.",
+    payload: {},
+    confidence: "high",
+    risk: "low",
+    now: "2026-06-13T10:02:00.000Z",
+  });
+  db.query(
+    `UPDATE session_memories
+     SET status = 'superseded',
+         superseded_by = 'mem_active',
+         lifecycle_reason = 'Updated by newer memory'
+     WHERE id = 'mem_decision'`,
+  ).run();
+  for (const row of db.query("SELECT id FROM session_memory_embeddings").all() as Array<{ id: string }>) {
+    markSessionMemoryEmbeddingIndexed(db, {
+      id: row.id,
+      normalized_text_hash: `hash_${row.id}`,
+      now: "2026-06-13T10:05:00.000Z",
+    });
+  }
+
+  const result = await querySessionMemory(db, {
+    project_key: "class-kit",
+    question: "What did we decide about embeddings?",
+    document_contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+    provider: fixedProvider(),
+    limit: 5,
+    vector_store: {
+      ensure: () => ({ available: true }),
+      search: () => [
+        { memory_id: "mem_decision", distance: 0.01 },
+        { memory_id: "mem_active", distance: 0.02 },
+      ],
+    },
+  });
+
+  expect(result.degraded).toBe(false);
+  expect(result.matches.map((match) => match.id)).toEqual(["mem_active"]);
+});
+
+
 test("reuses cached question embeddings on repeated queries", async () => {
   const row = db.query("SELECT id FROM session_memory_embeddings").get() as { id: string };
   markSessionMemoryEmbeddingIndexed(db, {

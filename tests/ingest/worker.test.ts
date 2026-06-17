@@ -7,6 +7,7 @@ import { applyIngestWorkerOutput, buildIngestPrompt, parseIngestWorkerOutput, ru
 import { openMemoryDbAt, type MemoryDb } from "../../src/memory/db.ts";
 import { listExperienceEvents, recordExperienceEvent } from "../../src/memory/experience.ts";
 import { listSessionMemoryContexts } from "../../src/memory/session-memory-contexts.ts";
+import { createSessionMemory } from "../../src/memory/session-memories.ts";
 import type { RunProcessResult } from "../../src/runtime/process.ts";
 
 let root: string;
@@ -80,6 +81,109 @@ test("worker output writes session memory and finalizes tombstones", () => {
     state: "output",
     output_references_json: JSON.stringify(["session_memories/mem_1"]),
   });
+});
+
+test("worker output can supersede supplied active session memory", () => {
+  createSessionMemory(db, {
+    id: "mem_old",
+    project_key: "class-kit",
+    source_event_refs: ["tomb_old"],
+    memory_kind: "decision",
+    title: "Old decision",
+    summary: "SQLite retrieval is not branch-aware.",
+    payload: {},
+    confidence: "high",
+    risk: "low",
+    now: "2026-06-13T09:00:00.000Z",
+  });
+  seedClaimedTombstone(db, { id: "tomb_1", ingest_job_id: "job_1", project_key: "class-kit" });
+
+  const counts = applyIngestWorkerOutput(db, {
+    projectKey: "class-kit",
+    jobId: "job_1",
+    provider: "codex",
+    providerSessionId: "sess_1",
+    finalizedAt: "2026-06-13T10:00:00.000Z",
+    allowedExistingMemoryIds: ["mem_old"],
+    output: {
+      session_memories: [
+        {
+          id: "mem_new",
+          source_event_refs: ["tomb_1"],
+          memory_kind: "decision",
+          title: "Branch-aware retrieval",
+          summary: "SQLite retrieval is branch-aware through session memory contexts.",
+          payload: {},
+          confidence: "high",
+          risk: "low",
+        },
+      ],
+      memory_supersessions: [
+        {
+          superseded_memory_id: "mem_old",
+          superseding_memory_id: "mem_new",
+          relationship: "supersedes",
+          reason: "New evidence added branch-aware retrieval.",
+          source_event_refs: ["tomb_1"],
+        },
+      ],
+    },
+  });
+
+  expect(counts.session_memories).toBe(1);
+  expect(db.query("SELECT status, superseded_by, lifecycle_reason FROM session_memories WHERE id = ?").get("mem_old")).toEqual({
+    status: "superseded",
+    superseded_by: "mem_new",
+    lifecycle_reason: "New evidence added branch-aware retrieval.",
+  });
+  expect(db.query("SELECT relationship, reason FROM session_memory_links").get()).toEqual({
+    relationship: "supersedes",
+    reason: "New evidence added branch-aware retrieval.",
+  });
+  expect(db.query("SELECT state, output_references_json FROM experience_event_tombstones WHERE id = ?").get("tomb_1")).toEqual({
+    state: "output",
+    output_references_json: JSON.stringify([
+      "session_memories/mem_new",
+      "session_memory_links/mem_old/mem_new",
+    ]),
+  });
+});
+
+test("worker output rejects reconciliation outside supplied context", () => {
+  createSessionMemory(db, {
+    id: "mem_old",
+    project_key: "class-kit",
+    source_event_refs: ["tomb_old"],
+    memory_kind: "continuity",
+    summary: "Old memory.",
+    payload: {},
+    confidence: "high",
+    risk: "low",
+    now: "2026-06-13T09:00:00.000Z",
+  });
+  seedClaimedTombstone(db, { id: "tomb_1", ingest_job_id: "job_1", project_key: "class-kit" });
+
+  expect(() =>
+    applyIngestWorkerOutput(db, {
+      projectKey: "class-kit",
+      jobId: "job_1",
+      provider: "codex",
+      providerSessionId: null,
+      finalizedAt: "2026-06-13T10:00:00.000Z",
+      allowedExistingMemoryIds: [],
+      output: {
+        memory_retractions: [
+          {
+            memory_id: "mem_old",
+            reason: "Not in supplied context.",
+            source_event_refs: ["tomb_1"],
+          },
+        ],
+      },
+    }),
+  ).toThrow("outside supplied context");
+
+  expect(db.query("SELECT status FROM session_memories WHERE id = ?").get("mem_old")).toEqual({ status: "active" });
 });
 
 test("candidate output stores source refs and finalizes the referenced tombstone", () => {

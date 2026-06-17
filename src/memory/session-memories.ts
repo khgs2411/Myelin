@@ -28,8 +28,8 @@ export function createSessionMemory(db: Database, input: CreateSessionMemoryInpu
     db.query(
       `INSERT INTO session_memories
         (id, project_key, provider, provider_session_id, ingest_job_id, source_event_refs_json,
-         memory_kind, title, summary, payload_json, confidence, risk, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         memory_kind, title, summary, payload_json, confidence, risk, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
     ).run(
       input.id,
       input.project_key,
@@ -65,6 +65,55 @@ export function createSessionMemory(db: Database, input: CreateSessionMemoryInpu
 
 export function listSessionMemories(db: Database, projectKey: string, limit = 20): SessionMemoryRow[] {
   return db
-    .query("SELECT * FROM session_memories WHERE project_key = ? ORDER BY created_at DESC, id DESC LIMIT ?")
+    .query("SELECT * FROM session_memories WHERE project_key = ? AND status = 'active' ORDER BY created_at DESC, id DESC LIMIT ?")
     .all(projectKey, limit) as SessionMemoryRow[];
+}
+
+export function getActiveSessionMemory(db: Database, input: { id: string; projectKey: string }): SessionMemoryRow | null {
+  return (db
+    .query("SELECT * FROM session_memories WHERE id = ? AND project_key = ? AND status = 'active'")
+    .get(input.id, input.projectKey) as SessionMemoryRow | null) ?? null;
+}
+
+export function supersedeSessionMemory(
+  db: Database,
+  input: { id: string; projectKey: string; supersededBy: string; reason: string; now: string },
+): SessionMemoryRow {
+  db.query(
+    `UPDATE session_memories
+     SET status = 'superseded',
+         superseded_by = ?,
+         lifecycle_reason = ?,
+         superseded_at = ?,
+         updated_at = ?
+     WHERE id = ?
+       AND project_key = ?
+       AND status = 'active'`,
+  ).run(input.supersededBy, input.reason, input.now, input.now, input.id, input.projectKey);
+  const row = db.query("SELECT * FROM session_memories WHERE id = ? AND project_key = ?").get(input.id, input.projectKey) as
+    | SessionMemoryRow
+    | null;
+  if (!row || row.status !== "superseded") throw new Error(`Active session memory not found for supersession: ${input.id}`);
+  return row;
+}
+
+export function retractSessionMemory(
+  db: Database,
+  input: { id: string; projectKey: string; reason: string; now: string },
+): SessionMemoryRow {
+  db.query(
+    `UPDATE session_memories
+     SET status = 'retracted',
+         lifecycle_reason = ?,
+         retracted_at = ?,
+         updated_at = ?
+     WHERE id = ?
+       AND project_key = ?
+       AND status = 'active'`,
+  ).run(input.reason, input.now, input.now, input.id, input.projectKey);
+  const row = db.query("SELECT * FROM session_memories WHERE id = ? AND project_key = ?").get(input.id, input.projectKey) as
+    | SessionMemoryRow
+    | null;
+  if (!row || row.status !== "retracted") throw new Error(`Active session memory not found for retraction: ${input.id}`);
+  return row;
 }

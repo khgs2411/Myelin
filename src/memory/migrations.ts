@@ -129,11 +129,17 @@ const MIGRATIONS: Migration[] = [
         payload_json           TEXT NOT NULL,
         confidence             TEXT NOT NULL,
         risk                   TEXT NOT NULL,
+        status                 TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'superseded', 'retracted')),
+        superseded_by          TEXT,
+        lifecycle_reason       TEXT,
+        superseded_at          TEXT,
+        retracted_at           TEXT,
         created_at             TEXT NOT NULL,
         updated_at             TEXT NOT NULL
       );
       CREATE INDEX session_memories_project_created ON session_memories(project_key, created_at);
       CREATE INDEX session_memories_project_kind_created ON session_memories(project_key, memory_kind, created_at);
+      CREATE INDEX session_memories_project_status_created ON session_memories(project_key, status, created_at);
 
       CREATE TABLE memory_candidates (
         id                    TEXT PRIMARY KEY,
@@ -254,6 +260,10 @@ const MIGRATIONS: Migration[] = [
   {
     version: 7,
     apply: migrateBranchAwareSessionMemoryContext,
+  },
+  {
+    version: 8,
+    apply: migrateSessionMemoryLifecycle,
   },
 ];
 
@@ -452,6 +462,40 @@ function migrateBranchAwareSessionMemoryContext(db: Database): void {
       ON session_memory_contexts(project_key, git_branch, session_memory_id);
     CREATE INDEX IF NOT EXISTS session_memory_contexts_memory
       ON session_memory_contexts(session_memory_id);
+  `);
+}
+
+function migrateSessionMemoryLifecycle(db: Database): void {
+  if (tableExists(db, "session_memories")) {
+    const columns = tableColumns(db, "session_memories");
+    if (!columns.has("status")) {
+      db.exec("ALTER TABLE session_memories ADD COLUMN status TEXT NOT NULL DEFAULT 'active';");
+    }
+    if (!columns.has("superseded_by")) db.exec("ALTER TABLE session_memories ADD COLUMN superseded_by TEXT;");
+    if (!columns.has("lifecycle_reason")) db.exec("ALTER TABLE session_memories ADD COLUMN lifecycle_reason TEXT;");
+    if (!columns.has("superseded_at")) db.exec("ALTER TABLE session_memories ADD COLUMN superseded_at TEXT;");
+    if (!columns.has("retracted_at")) db.exec("ALTER TABLE session_memories ADD COLUMN retracted_at TEXT;");
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS session_memories_project_status_created
+        ON session_memories(project_key, status, created_at);
+    `);
+  }
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS session_memory_links (
+      id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+      source_memory_id       TEXT NOT NULL REFERENCES session_memories(id),
+      target_memory_id       TEXT NOT NULL REFERENCES session_memories(id),
+      project_key            TEXT NOT NULL,
+      relationship           TEXT NOT NULL CHECK (relationship IN ('supersedes', 'refines', 'contradicts', 'duplicates')),
+      reason                 TEXT NOT NULL,
+      source_event_refs_json TEXT NOT NULL,
+      created_at             TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS session_memory_links_project_source
+      ON session_memory_links(project_key, source_memory_id, relationship);
+    CREATE INDEX IF NOT EXISTS session_memory_links_project_target
+      ON session_memory_links(project_key, target_memory_id, relationship);
   `);
 }
 

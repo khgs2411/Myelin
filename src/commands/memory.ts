@@ -2,8 +2,15 @@ import type { Cli, CommandResult } from "./registry.ts";
 import { fail, ok } from "./registry.ts";
 import { openMemoryDb } from "../memory/db.ts";
 import { EmbeddingProviderFactory } from "../memory/embedding-provider-factory.ts";
-import type { MemoryCandidateStatus, MemoryScope } from "../memory/ingest-types.ts";
+import {
+  SESSION_MEMORY_STATUSES,
+  type MemoryCandidateStatus,
+  type MemoryScope,
+  type SessionMemoryStatus,
+} from "../memory/ingest-types.ts";
 import { MemoryCandidateService } from "../memory/memory-candidate-service.ts";
+import { SessionMemoryInspectionService, type SessionMemoryInspectRow } from "../memory/session-memory-inspection-service.ts";
+import type { SessionMemoryLinkRow } from "../memory/session-memory-links.ts";
 import { SessionMemoryIndexService } from "../memory/session-memory-index-service.ts";
 import { repoRoot } from "../runtime/fs.ts";
 import { DEFAULT_EMBEDDING_BATCH_SIZE, loadConfig, MAX_EMBEDDING_BATCH_SIZE, selectActiveEmbeddingContract } from "../runtime/config.ts";
@@ -12,6 +19,9 @@ import { queryMemory } from "../query/engine.ts";
 export function registerMemoryCommands(cli: Cli): void {
   cli.command(["memory", "candidates"], (args) => candidates(args));
   cli.command(["memory", "candidate", "show"], (args) => candidateShow(args));
+  cli.command(["memory", "session", "list"], (args) => sessionList(args));
+  cli.command(["memory", "session", "show"], (args) => sessionShow(args));
+  cli.command(["memory", "session", "links"], (args) => sessionLinks(args));
   cli.command(["memory", "index", "session"], (args) => indexSession(args));
   cli.command(["memory", "query"], async (args) => {
     const parsed = parseArgs(args);
@@ -29,6 +39,195 @@ export function registerMemoryCommands(cli: Cli): void {
     if (response.degraded) return fail(response.answer);
     return ok(response.answer);
   });
+}
+
+function sessionList(args: string[]): CommandResult {
+  const parsed = parseSessionListArgs(args);
+  if (parsed.error) return fail(parsed.error);
+
+  const result = sessionInspectionService().list({
+    projectKey: parsed.projectKey,
+    status: parsed.status,
+    limit: parsed.limit,
+  });
+  if (parsed.json) return ok(JSON.stringify(result, null, 2));
+  if (result.memories.length === 0) return ok(`No session memories for ${parsed.projectKey}.`);
+  return ok(result.memories.map(formatSessionMemorySummary).join("\n"));
+}
+
+function sessionShow(args: string[]): CommandResult {
+  const parsed = parseSessionShowArgs(args);
+  if (parsed.error) return fail(parsed.error);
+
+  try {
+    const result = sessionInspectionService().show(parsed.id);
+    if (parsed.json) return ok(JSON.stringify(result, null, 2));
+    return ok(formatSessionMemoryDetail(result.memory));
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error));
+  }
+}
+
+function sessionLinks(args: string[]): CommandResult {
+  const parsed = parseSessionLinksArgs(args);
+  if (parsed.error) return fail(parsed.error);
+
+  const result = sessionInspectionService().links({
+    projectKey: parsed.projectKey,
+    memoryId: parsed.memoryId,
+    limit: parsed.limit,
+  });
+  if (parsed.json) return ok(JSON.stringify(result, null, 2));
+  if (result.links.length === 0) return ok(`No session memory links for ${parsed.projectKey}.`);
+  return ok(result.links.map(formatSessionMemoryLink).join("\n"));
+}
+
+function parseSessionListArgs(args: string[]): {
+  projectKey: string;
+  status?: SessionMemoryStatus;
+  limit: number;
+  json: boolean;
+  error?: string;
+} {
+  let projectKey = "";
+  let status: SessionMemoryStatus | undefined;
+  let limit = 50;
+  let json = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--json") json = true;
+    else if (arg === "--status") {
+      const value = args[++index];
+      const parsed = parseSessionMemoryStatus(value);
+      if (!parsed) return { projectKey, status, limit, json, error: "--status must be one of: active, superseded, retracted" };
+      status = parsed;
+    } else if (arg === "--limit") {
+      const value = args[++index];
+      const parsed = parsePositiveInteger(value);
+      if (!parsed) return { projectKey, status, limit, json, error: "--limit must be a positive integer" };
+      limit = parsed;
+    } else if (arg.startsWith("-")) {
+      return { projectKey, status, limit, json, error: `Unknown memory session list option: ${arg}` };
+    } else if (!projectKey) {
+      projectKey = arg;
+    } else {
+      return { projectKey, status, limit, json, error: `Unexpected memory session list argument: ${arg}` };
+    }
+  }
+
+  if (!projectKey) {
+    return {
+      projectKey,
+      status,
+      limit,
+      json,
+      error: "Usage: myelin memory session list <project-key> [--status active|superseded|retracted] [--limit N] [--json]",
+    };
+  }
+  return { projectKey, status, limit, json };
+}
+
+function parseSessionShowArgs(args: string[]): { id: string; json: boolean; error?: string } {
+  let id = "";
+  let json = false;
+
+  for (const arg of args) {
+    if (arg === "--json") json = true;
+    else if (arg.startsWith("-")) return { id, json, error: `Unknown memory session show option: ${arg}` };
+    else if (!id) id = arg;
+    else return { id, json, error: `Unexpected memory session show argument: ${arg}` };
+  }
+
+  if (!id) return { id, json, error: "Usage: myelin memory session show <memory-id> [--json]" };
+  return { id, json };
+}
+
+function parseSessionLinksArgs(args: string[]): {
+  projectKey: string;
+  memoryId?: string;
+  limit: number;
+  json: boolean;
+  error?: string;
+} {
+  let projectKey = "";
+  let memoryId: string | undefined;
+  let limit = 100;
+  let json = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--json") json = true;
+    else if (arg === "--memory") {
+      const value = args[++index];
+      if (!value) return { projectKey, memoryId, limit, json, error: "--memory requires a value" };
+      memoryId = value;
+    } else if (arg === "--limit") {
+      const value = args[++index];
+      const parsed = parsePositiveInteger(value);
+      if (!parsed) return { projectKey, memoryId, limit, json, error: "--limit must be a positive integer" };
+      limit = parsed;
+    } else if (arg.startsWith("-")) {
+      return { projectKey, memoryId, limit, json, error: `Unknown memory session links option: ${arg}` };
+    } else if (!projectKey) {
+      projectKey = arg;
+    } else {
+      return { projectKey, memoryId, limit, json, error: `Unexpected memory session links argument: ${arg}` };
+    }
+  }
+
+  if (!projectKey) {
+    return {
+      projectKey,
+      memoryId,
+      limit,
+      json,
+      error: "Usage: myelin memory session links <project-key> [--memory <memory-id>] [--limit N] [--json]",
+    };
+  }
+  return { projectKey, memoryId, limit, json };
+}
+
+function parseSessionMemoryStatus(value: string | undefined): SessionMemoryStatus | null {
+  if (!value) return null;
+  return (SESSION_MEMORY_STATUSES as readonly string[]).includes(value) ? (value as SessionMemoryStatus) : null;
+}
+
+function parsePositiveInteger(value: string | undefined): number | null {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function formatSessionMemorySummary(memory: SessionMemoryInspectRow): string {
+  const title = memory.title ? `${memory.title}: ` : "";
+  const lifecycle =
+    memory.status === "active"
+      ? ""
+      : ` -> ${memory.status}${memory.superseded_by ? ` by ${memory.superseded_by}` : ""}`;
+  return `${memory.id} [${memory.status}] ${memory.memory_kind}${lifecycle}: ${title}${memory.summary}`;
+}
+
+function formatSessionMemoryDetail(memory: SessionMemoryInspectRow): string {
+  const lines = [
+    `${memory.id} [${memory.status}] ${memory.memory_kind}`,
+    memory.title ? `title: ${memory.title}` : null,
+    `summary: ${memory.summary}`,
+    memory.superseded_by ? `superseded by: ${memory.superseded_by}` : null,
+    memory.lifecycle_reason ? `lifecycle reason: ${memory.lifecycle_reason}` : null,
+    `source refs: ${JSON.parse(memory.source_event_refs_json).join(", ")}`,
+  ].filter((line): line is string => Boolean(line));
+  if (memory.contexts.length > 0) {
+    lines.push(
+      `contexts: ${memory.contexts
+        .map((context) => [context.git_branch, context.repo_path].filter(Boolean).join(" @ "))
+        .join("; ")}`,
+    );
+  }
+  return lines.join("\n");
+}
+
+function formatSessionMemoryLink(link: SessionMemoryLinkRow): string {
+  return `${link.source_memory_id} ${link.relationship} ${link.target_memory_id}: ${link.reason}`;
 }
 
 async function indexSession(args: string[]): Promise<CommandResult> {
@@ -274,4 +473,8 @@ function parseArgs(args: string[]): {
 
 function candidateService(): MemoryCandidateService {
   return new MemoryCandidateService(repoRoot().root);
+}
+
+function sessionInspectionService(): SessionMemoryInspectionService {
+  return new SessionMemoryInspectionService(repoRoot().root);
 }

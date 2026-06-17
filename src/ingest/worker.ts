@@ -15,16 +15,29 @@ import {
   HANDOFF_SCOPES,
   MEMORY_SCOPES,
   SESSION_MEMORY_KINDS,
+  SESSION_MEMORY_LINK_RELATIONSHIPS,
   type HandoffScope,
   type MemoryScope,
+  type SessionMemoryLinkRelationship,
   type SessionMemoryKind,
 } from "../memory/ingest-types.ts";
-import { createSessionMemory } from "../memory/session-memories.ts";
+import { EmbeddingProviderFactory } from "../memory/embedding-provider-factory.ts";
+import { createSessionMemoryLink } from "../memory/session-memory-links.ts";
+import {
+  createSessionMemory,
+  getActiveSessionMemory,
+  retractSessionMemory,
+  supersedeSessionMemory,
+} from "../memory/session-memories.ts";
 import {
   createSessionMemoryContexts,
   type SessionMemoryContextInput,
 } from "../memory/session-memory-contexts.ts";
-import { loadConfig } from "../runtime/config.ts";
+import { loadConfig, selectActiveEmbeddingContract } from "../runtime/config.ts";
+import {
+  selectSessionMemoryReconciliationContext,
+  type ReconciliationMemoryContext,
+} from "./reconciliation-context.ts";
 import { updateIngestJobStatus } from "./jobs.ts";
 
 const MAX_PROMPT_RETAINED_EVIDENCE_CHARS = 6_000;
@@ -67,6 +80,22 @@ export type IngestWorkerOutput = {
     reason: string;
     confidence: string;
     risk: string;
+  }>;
+  memory_supersessions?: Array<{
+    superseded_memory_id: string;
+    superseding_memory_id: string;
+    relationship: SessionMemoryLinkRelationship;
+    reason: string;
+    source_event_refs: string[];
+  }>;
+  memory_retractions?: Array<{
+    memory_id: string;
+    reason: string;
+    source_event_refs: string[];
+  }>;
+  memory_noops?: Array<{
+    memory_id: string;
+    reason: string;
   }>;
   no_output_tombstone_ids?: string[];
   terminal_summary?: string;
@@ -129,6 +158,40 @@ export function parseIngestWorkerOutput(value: JsonObject): IngestWorkerOutput {
       };
     });
   }
+  if (value.memory_supersessions !== undefined) {
+    output.memory_supersessions = validateArray(value.memory_supersessions, "memory_supersessions").map((raw, index) => {
+      const path = `memory_supersessions[${index}]`;
+      const supersession = validateObject(raw, path);
+      return {
+        superseded_memory_id: validateString(supersession.superseded_memory_id, `${path}.superseded_memory_id`),
+        superseding_memory_id: validateString(supersession.superseding_memory_id, `${path}.superseding_memory_id`),
+        relationship: validateEnum(supersession.relationship ?? "supersedes", `${path}.relationship`, SESSION_MEMORY_LINK_RELATIONSHIPS),
+        reason: validateString(supersession.reason, `${path}.reason`),
+        source_event_refs: validateNonEmptyStringArray(supersession.source_event_refs, `${path}.source_event_refs`),
+      };
+    });
+  }
+  if (value.memory_retractions !== undefined) {
+    output.memory_retractions = validateArray(value.memory_retractions, "memory_retractions").map((raw, index) => {
+      const path = `memory_retractions[${index}]`;
+      const retraction = validateObject(raw, path);
+      return {
+        memory_id: validateString(retraction.memory_id, `${path}.memory_id`),
+        reason: validateString(retraction.reason, `${path}.reason`),
+        source_event_refs: validateNonEmptyStringArray(retraction.source_event_refs, `${path}.source_event_refs`),
+      };
+    });
+  }
+  if (value.memory_noops !== undefined) {
+    output.memory_noops = validateArray(value.memory_noops, "memory_noops").map((raw, index) => {
+      const path = `memory_noops[${index}]`;
+      const noop = validateObject(raw, path);
+      return {
+        memory_id: validateString(noop.memory_id, `${path}.memory_id`),
+        reason: validateString(noop.reason, `${path}.reason`),
+      };
+    });
+  }
   if (value.no_output_tombstone_ids !== undefined) {
     output.no_output_tombstone_ids = validateStringArray(value.no_output_tombstone_ids, "no_output_tombstone_ids");
   }
@@ -142,6 +205,7 @@ export function buildIngestPrompt(input: {
   projectKey: string;
   jobId: string;
   leased: LeasedExperienceEvent[];
+  reconciliationContext?: ReconciliationMemoryContext[];
   batchIndex?: number;
   batchCount?: number;
 }): string {
@@ -158,8 +222,17 @@ export function buildIngestPrompt(input: {
     "Create Session Memory candidates for ambiguous, risky, conflicting, or privacy-sensitive outputs.",
     "Create Project/Practice/Personal handoff instructions only as one-hop downstream inputs.",
     "Do not mutate curated wiki pages.",
-    "Return JSON only with keys: session_memories, memory_candidates, handoff_instructions, no_output_tombstone_ids, terminal_summary.",
+    "Return JSON only with keys: session_memories, memory_candidates, handoff_instructions, memory_supersessions, memory_retractions, memory_noops, no_output_tombstone_ids, terminal_summary.",
+    "Return empty arrays for output categories with no items.",
     "Every session memory, memory candidate, and handoff instruction must include source_event_refs containing leased tombstone ids.",
+    "Reconcile existing active Session Memory when new evidence makes old memory stale.",
+    "Do not physically delete memory. To update an existing memory, create a replacement session memory and add a memory_supersessions operation.",
+    "You may only supersede, retract, or noop existing memories listed in Existing active Session Memory context.",
+    "Every memory_supersessions item must include: superseded_memory_id, superseding_memory_id, relationship, reason, source_event_refs.",
+    "Allowed memory_supersessions relationship values: supersedes, refines, contradicts, duplicates.",
+    "Every memory_retractions item must include: memory_id, reason, source_event_refs.",
+    "Use memory_retractions only when the old memory should no longer be trusted and no replacement memory is created.",
+    "Use memory_noops for supplied existing memory that is relevant and remains current.",
     "Allowed session memory memory_kind values: continuity, decision, blocker, next_action, verification.",
     "Allowed memory candidate scope values: session, project, practice, personal.",
     "Allowed handoff target_scope values: project, practice, personal.",
@@ -168,12 +241,36 @@ export function buildIngestPrompt(input: {
     "Use candidate_type as a stable dotted classifier, for example session.continuity, project.decision, practice.workflow, or personal.preference.",
     "Every handoff instruction must include: id, target_scope, status, objective, prompt_text, source_session_memory_ids, source_event_refs, suggested_actions, reason, confidence, risk.",
     "Example session memory: {\"id\":\"mem_<short-id>\",\"source_event_refs\":[\"tomb_<claimed-id>\"],\"memory_kind\":\"continuity\",\"summary\":\"Useful continuity.\",\"payload\":{},\"confidence\":\"high\",\"risk\":\"low\"}.",
+    "Example supersession: {\"superseded_memory_id\":\"mem_old\",\"superseding_memory_id\":\"mem_new\",\"relationship\":\"supersedes\",\"reason\":\"New evidence changes the implementation truth.\",\"source_event_refs\":[\"tomb_<claimed-id>\"]}.",
+    "Example retraction: {\"memory_id\":\"mem_old\",\"reason\":\"New evidence shows this memory is false and no replacement is appropriate.\",\"source_event_refs\":[\"tomb_<claimed-id>\"]}.",
     "Example memory candidate: {\"id\":\"cand_<short-id>\",\"source_event_refs\":[\"tomb_<claimed-id>\"],\"scope\":\"session\",\"status\":\"needs_review\",\"candidate_type\":\"session.continuity\",\"summary\":\"Possible useful continuity.\",\"evidence\":{},\"proposed_payload\":{},\"confidence\":\"medium\",\"risk\":\"medium\",\"reason\":\"Needs review before trust\"}.",
     "Example handoff instruction: {\"id\":\"handoff_<short-id>\",\"target_scope\":\"project\",\"status\":\"pending\",\"objective\":\"Verify a durable project fact\",\"prompt_text\":\"Review the cited tombstones and update project memory if valid.\",\"source_session_memory_ids\":[],\"source_event_refs\":[\"tomb_<claimed-id>\"],\"suggested_actions\":[\"review evidence\"],\"reason\":\"May belong in project memory\",\"confidence\":\"medium\",\"risk\":\"medium\"}.",
+    "",
+    "Existing active Session Memory context:",
+    JSON.stringify((input.reconciliationContext ?? []).map(memoryForPrompt), null, 2),
     "",
     "Leased Experience Log rows:",
     JSON.stringify(input.leased.map(leaseForPrompt), null, 2),
   ].filter((line) => line !== null).join("\n");
+}
+
+function memoryForPrompt(memory: ReconciliationMemoryContext): JsonObject {
+  return {
+    id: memory.id,
+    memory_kind: memory.memory_kind,
+    title: memory.title,
+    summary: memory.summary,
+    created_at: memory.created_at,
+    updated_at: memory.updated_at,
+    selection_reasons: memory.selection_reasons,
+    contexts: memory.contexts.map((context) => ({
+      repo_path: context.repo_path,
+      git_branch: context.git_branch,
+      git_commit: context.git_commit,
+      git_worktree_id: context.git_worktree_id,
+      source_event_ref: context.source_event_ref,
+    })),
+  };
 }
 
 function leaseForPrompt(lease: LeasedExperienceEvent): JsonObject {
@@ -257,6 +354,7 @@ export function applyIngestWorkerOutput(
     providerSessionId: string | null;
     output: IngestWorkerOutput;
     finalizedAt: string;
+    allowedExistingMemoryIds?: string[];
   },
 ): { session_memories: number; memory_candidates: number; handoff_instructions: number } {
   const apply = db.transaction(() => {
@@ -273,6 +371,7 @@ export function applyIngestWorkerOutput(
     );
 
     const claimableRefs = (tombstoneIds: string[]) => tombstoneIds.filter((id) => claimableTombstoneIds.has(id));
+    const allowedExistingMemoryIds = input.allowedExistingMemoryIds ? new Set(input.allowedExistingMemoryIds) : null;
 
     const addOutputRefs = (tombstoneIds: string[], outputRef: string): string[] => {
       if (tombstoneIds.length === 0) throw new Error(`Output ${outputRef} must reference at least one tombstone`);
@@ -312,6 +411,63 @@ export function applyIngestWorkerOutput(
       }));
       sessionMemoryIds.set(memory.id, memoryId);
       sessionMemories += 1;
+    }
+
+    const assertAllowedExistingMemory = (memoryId: string): void => {
+      if (allowedExistingMemoryIds && !allowedExistingMemoryIds.has(memoryId)) {
+        throw new Error(`Reconciliation operation references memory outside supplied context: ${memoryId}`);
+      }
+      const memory = getActiveSessionMemory(db, { id: memoryId, projectKey: input.projectKey });
+      if (!memory) throw new Error(`Reconciliation operation references non-active or missing memory: ${memoryId}`);
+    };
+
+    for (const supersession of input.output.memory_supersessions ?? []) {
+      assertAllowedExistingMemory(supersession.superseded_memory_id);
+      const supersedingMemoryId = sessionMemoryIds.get(supersession.superseding_memory_id) ?? supersession.superseding_memory_id;
+      const supersedingMemory = getActiveSessionMemory(db, { id: supersedingMemoryId, projectKey: input.projectKey });
+      if (!supersedingMemory) {
+        throw new Error(`Supersession replacement memory is missing or inactive: ${supersession.superseding_memory_id}`);
+      }
+      const sourceEventRefs = addOutputRefs(
+        supersession.source_event_refs,
+        `session_memory_links/${supersession.superseded_memory_id}/${supersedingMemoryId}`,
+      );
+      if (sourceEventRefs.length === 0) continue;
+      supersedeSessionMemory(db, {
+        id: supersession.superseded_memory_id,
+        projectKey: input.projectKey,
+        supersededBy: supersedingMemoryId,
+        reason: supersession.reason,
+        now: input.finalizedAt,
+      });
+      createSessionMemoryLink(db, {
+        source_memory_id: supersedingMemoryId,
+        target_memory_id: supersession.superseded_memory_id,
+        project_key: input.projectKey,
+        relationship: supersession.relationship,
+        reason: supersession.reason,
+        source_event_refs: sourceEventRefs,
+        created_at: input.finalizedAt,
+      });
+    }
+
+    for (const retraction of input.output.memory_retractions ?? []) {
+      assertAllowedExistingMemory(retraction.memory_id);
+      const sourceEventRefs = addOutputRefs(
+        retraction.source_event_refs,
+        `session_memory_retractions/${retraction.memory_id}`,
+      );
+      if (sourceEventRefs.length === 0) continue;
+      retractSessionMemory(db, {
+        id: retraction.memory_id,
+        projectKey: input.projectKey,
+        reason: retraction.reason,
+        now: input.finalizedAt,
+      });
+    }
+
+    for (const noop of input.output.memory_noops ?? []) {
+      assertAllowedExistingMemory(noop.memory_id);
     }
 
     for (const candidate of input.output.memory_candidates ?? []) {
@@ -467,6 +623,8 @@ export async function runIngestWorker(input: {
 }): Promise<void> {
   const db = openMemoryDb(input.root);
   const config = await loadConfig(input.root);
+  const embeddingContract = selectActiveEmbeddingContract(config, "retrieval_document");
+  const embeddingProvider = new EmbeddingProviderFactory(config).create();
   const now = input.now ?? (() => new Date());
   let claimedCount = 0;
   let sessionMemories = 0;
@@ -501,6 +659,13 @@ export async function runIngestWorker(input: {
       });
       if (leased.length === 0) break;
       claimedCount += leased.length;
+      const reconciliationContext = await selectSessionMemoryReconciliationContext({
+        db,
+        projectKey: input.projectKey,
+        leased,
+        documentContract: embeddingContract,
+        provider: embeddingProvider,
+      });
 
       const response = await invokeLlm({
         root: input.root,
@@ -512,6 +677,7 @@ export async function runIngestWorker(input: {
           projectKey: input.projectKey,
           jobId: input.jobId,
           leased,
+          reconciliationContext,
           batchIndex: input.batchIndex,
           batchCount: input.batchCount,
         }),
@@ -526,6 +692,7 @@ export async function runIngestWorker(input: {
         providerSessionId: input.providerSessionId ?? null,
         output,
         finalizedAt: now().toISOString(),
+        allowedExistingMemoryIds: reconciliationContext.map((memory) => memory.id),
       });
       terminalSummary = output.terminal_summary ?? terminalSummary;
       sessionMemories += counts.session_memories;

@@ -5,6 +5,9 @@
     "session_memories",
     "memory_candidates",
     "handoff_instructions",
+    "memory_supersessions",
+    "memory_retractions",
+    "memory_noops",
     "no_output_tombstone_ids",
     "terminal_summary"
   ],
@@ -92,6 +95,46 @@
           "reason": { "type": "string", "minLength": 1 },
           "confidence": { "type": "string", "minLength": 1 },
           "risk": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "memory_supersessions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["superseded_memory_id", "superseding_memory_id", "relationship", "reason", "source_event_refs"],
+        "properties": {
+          "superseded_memory_id": { "type": "string", "minLength": 1 },
+          "superseding_memory_id": { "type": "string", "minLength": 1 },
+          "relationship": { "type": "string", "enum": ["supersedes", "refines", "contradicts", "duplicates"] },
+          "reason": { "type": "string", "minLength": 1 },
+          "source_event_refs": { "$ref": "#/$defs/stringArray" }
+        }
+      }
+    },
+    "memory_retractions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["memory_id", "reason", "source_event_refs"],
+        "properties": {
+          "memory_id": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 },
+          "source_event_refs": { "$ref": "#/$defs/stringArray" }
+        }
+      }
+    },
+    "memory_noops": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["memory_id", "reason"],
+        "properties": {
+          "memory_id": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 }
         }
       }
     },
