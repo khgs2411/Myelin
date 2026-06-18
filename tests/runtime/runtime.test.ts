@@ -140,6 +140,44 @@ test("loadConfig validates ingest runtime profile bounds", async () => {
   await expect(loadConfig(root, { INGEST_PROMPT_CHAR_LIMIT: "not-a-number" })).rejects.toThrow("Invalid ingest prompt char limit");
 });
 
+test("auto memory maintenance config is explicit and bounded", async () => {
+  await expect(loadConfig(root, {})).resolves.toMatchObject({
+    autoMemoryMaintenance: {
+      enabled: false,
+      minCapturedEvents: 10,
+      cooldownMs: 300000,
+      drainPollIntervalMs: 5000,
+      drainTimeoutMs: 600000,
+      indexLimit: 500,
+    },
+  });
+
+  await expect(
+    loadConfig(root, {
+      AUTO_MEMORY_MAINTENANCE: "1",
+      AUTO_MEMORY_MIN_CAPTURED_EVENTS: "3",
+      AUTO_MEMORY_COOLDOWN_MS: "0",
+      AUTO_MEMORY_DRAIN_POLL_INTERVAL_MS: "100",
+      AUTO_MEMORY_DRAIN_TIMEOUT_MS: "1000",
+      AUTO_MEMORY_INDEX_LIMIT: "25",
+    }),
+  ).resolves.toMatchObject({
+    autoMemoryMaintenance: {
+      enabled: true,
+      minCapturedEvents: 3,
+      cooldownMs: 0,
+      drainPollIntervalMs: 100,
+      drainTimeoutMs: 1000,
+      indexLimit: 25,
+    },
+  });
+
+  await expect(loadConfig(root, { AUTO_MEMORY_MIN_CAPTURED_EVENTS: "0" })).rejects.toThrow(
+    "Invalid auto memory min captured events",
+  );
+  await expect(loadConfig(root, { AUTO_MEMORY_COOLDOWN_MS: "-1" })).rejects.toThrow("Invalid auto memory cooldown");
+});
+
 test("embedding config honors file values and environment precedence", async () => {
   await writeFile(
     join(root, "myelin.config"),

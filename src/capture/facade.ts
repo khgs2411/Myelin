@@ -3,6 +3,7 @@ import { openMemoryDb } from "../memory/db.ts";
 import { recordExperienceEvent, recordHookError, type ExperienceStatus } from "../memory/experience.ts";
 import { projectForRepoPath, type Project } from "../runtime/projects.ts";
 import { readGitWorktreeContext, type GitContextRunner, type GitWorktreeContext } from "./git-context.ts";
+import { AutoMemoryMaintenanceService, type AutoMemoryMaintenanceScheduleResult } from "../maintenance/auto-memory-maintenance.ts";
 
 export type NormalizedCaptureEvent = {
   id?: string;
@@ -24,10 +25,14 @@ export type CaptureResult =
   | { status: "dropped-unregistered-repo" }
   | { status: "failed-open"; error_message: string };
 
+export type AutoMemoryMaintenanceScheduler = {
+  maybeSchedule: (projectKey: string) => Promise<AutoMemoryMaintenanceScheduleResult>;
+};
+
 export async function handleCaptureEvent(
   root: string,
   event: NormalizedCaptureEvent,
-  deps: { gitContextRunner?: GitContextRunner } = {},
+  deps: { gitContextRunner?: GitContextRunner; maintenanceScheduler?: AutoMemoryMaintenanceScheduler } = {},
 ): Promise<CaptureResult> {
   try {
     if (!event.cwd) return { status: "dropped-unregistered-repo" };
@@ -38,6 +43,7 @@ export async function handleCaptureEvent(
     const gitContext = await readGitWorktreeContext(repoPath, deps.gitContextRunner);
 
     const eventId = event.id ?? crypto.randomUUID();
+    let storedEventId = eventId;
     const db = openMemoryDb(root);
     try {
       const row = recordExperienceEvent(db, {
@@ -59,11 +65,12 @@ export async function handleCaptureEvent(
         git_commit: gitContext.git_commit,
         git_worktree_id: gitContext.git_worktree_id,
       });
-
-      return { status: "stored", project_key: project.key, event_id: row?.id ?? eventId };
+      storedEventId = row?.id ?? eventId;
     } finally {
       db.close();
     }
+    await scheduleAutoMemoryMaintenance(root, project.key, deps.maintenanceScheduler);
+    return { status: "stored", project_key: project.key, event_id: storedEventId };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const fallbackPath = join(root, "state", "hook-errors.jsonl");
@@ -96,6 +103,18 @@ export async function handleCaptureEvent(
     }
 
     return { status: "failed-open", error_message: message };
+  }
+}
+
+async function scheduleAutoMemoryMaintenance(
+  root: string,
+  projectKey: string,
+  scheduler: AutoMemoryMaintenanceScheduler | undefined,
+): Promise<void> {
+  try {
+    await (scheduler ?? new AutoMemoryMaintenanceService(root)).maybeSchedule(projectKey);
+  } catch {
+    // Capture hooks must remain fail-open; maintenance state/logs carry operator detail.
   }
 }
 

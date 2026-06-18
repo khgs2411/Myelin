@@ -8,6 +8,7 @@ import { openMemoryDbAt, type MemoryDb } from "../../src/memory/db.ts";
 import { listExperienceEvents, recordExperienceEvent } from "../../src/memory/experience.ts";
 import { listSessionMemoryContexts } from "../../src/memory/session-memory-contexts.ts";
 import { createSessionMemory, supersedeSessionMemory } from "../../src/memory/session-memories.ts";
+import { PROMPT_SIZE_LIMIT } from "../../src/runtime/llm-client.ts";
 import type { RunProcessResult } from "../../src/runtime/process.ts";
 
 let root: string;
@@ -554,6 +555,51 @@ test("prompt caps oversized retained evidence without mutating the tombstone", (
   expect(rawPayload.length).toBe(80_000);
 });
 
+test("prompt instructs ingest to retire completed next actions", () => {
+  const prompt = buildIngestPrompt({
+    projectKey: "class-kit",
+    jobId: "job_1",
+    leased: [],
+    projectStatus: {
+      project_key: "class-kit",
+      completion_layer: 10,
+      completion_label: "Session Memory write complete",
+      counts: {
+        active_events: 0,
+        unleased_events: 0,
+        leased_events: 0,
+        running_jobs: 0,
+        failed_jobs: 0,
+        terminal_tombstones: 1,
+        session_memories: 1,
+        memory_candidates: 0,
+        handoff_instructions: 0,
+        pending_session_memory_embeddings: 0,
+      },
+    },
+    reconciliationContext: [
+      {
+        id: "mem_next_action",
+        memory_kind: "next_action",
+        title: "Retry failed ingest",
+        summary: "Retry failed ingest after a fix lands.",
+        created_at: "2026-06-13T09:00:00.000Z",
+        updated_at: "2026-06-13T09:00:00.000Z",
+        contexts: [],
+        selection_reasons: ["active_next_action"],
+        score: 45,
+      },
+    ],
+  });
+
+  expect(prompt).toContain("Treat next_action memories as short-lived");
+  expect(prompt).toContain("Prefer retracting completed next_action memories");
+  expect(prompt).toContain("Project maintenance status context");
+  expect(prompt).toContain("\"failed_jobs\": 0");
+  expect(prompt).toContain("\"selection_reasons\": [");
+  expect(prompt).toContain("\"active_next_action\"");
+});
+
 test("worker claims batches from target repo cwd and completes when queue is empty", async () => {
   recordExperienceEvent(db, {
     id: "evt_1",
@@ -606,11 +652,111 @@ test("worker claims batches from target repo cwd and completes when queue is emp
   expect(calls[0].cwd).toBe("/target/repo");
   expect(calls[0].stdin).toContain("Every session memory, memory candidate, and handoff instruction must include source_event_refs");
   expect(calls[0].stdin).toContain("Every memory candidate must include: id, source_event_refs, scope, status, candidate_type");
+  expect(calls[0].stdin).toContain("Project maintenance status context");
+  expect(calls[0].stdin).toContain("\"running_jobs\": 1");
   expect(calls[0].stdin).toContain("\"candidate_type\":\"session.continuity\"");
   expect(listExperienceEvents(db, "class-kit")).toEqual([]);
   expect(db.query("SELECT id FROM session_memories WHERE id = ?").get("mem_1")).toEqual({ id: "mem_1" });
   expect(getIngestJob(db, "job_1")?.status).toBe("completed");
   expect(getIngestJob(db, "job_1")?.terminal_summary).toBe("Created one memory.");
+});
+
+test("worker packs large experience rows into prompt-safe sub-batches", async () => {
+  for (let index = 0; index < 45; index += 1) {
+    recordExperienceEvent(db, {
+      id: `evt_${index}`,
+      project_key: "class-kit",
+      occurred_at: `2026-06-13T09:${String(index).padStart(2, "0")}:00.000Z`,
+      provider: "codex",
+      raw_payload_json: JSON.stringify({ text: "x".repeat(8_000), index }),
+      source: "codex-hook",
+      status: "valid",
+    });
+  }
+  db.close();
+
+  const promptLengths: number[] = [];
+  await runIngestWorker({
+    root,
+    projectKey: "class-kit",
+    jobId: "job_1",
+    targetRepo: "/target/repo",
+    provider: "codex",
+    limit: 45,
+    batchSize: 100,
+    maxPromptChars: 180_000,
+    now: fixedNow(),
+    runner: async (_command, options): Promise<RunProcessResult> => {
+      const prompt = options?.stdin ?? "";
+      promptLengths.push(prompt.length);
+      const tombstoneIds = [...prompt.matchAll(/"id": "(tomb_job_1_evt_\d+)"/g)].map((match) => match[1]);
+      return {
+        exitCode: 0,
+        stdout: JSON.stringify({ no_output_tombstone_ids: tombstoneIds }),
+        stderr: "",
+      };
+    },
+  });
+
+  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  expect(promptLengths.length).toBeGreaterThan(1);
+  expect(promptLengths.every((length) => length < PROMPT_SIZE_LIMIT)).toBe(true);
+  expect(listExperienceEvents(db, "class-kit")).toEqual([]);
+  expect(getIngestJob(db, "job_1")?.status).toBe("completed");
+});
+
+test("worker trims reconciliation context to the computed context budget", async () => {
+  for (let index = 0; index < 12; index += 1) {
+    createSessionMemory(db, {
+      id: `mem_large_${index}`,
+      project_key: "class-kit",
+      source_event_refs: [`tomb_old_${index}`],
+      memory_kind: "continuity",
+      summary: `Large active memory ${index}: ${"x".repeat(16_000)}`,
+      payload: {},
+      confidence: "high",
+      risk: "low",
+      now: `2026-06-13T08:${String(index).padStart(2, "0")}:00.000Z`,
+    });
+  }
+  recordExperienceEvent(db, {
+    id: "evt_1",
+    project_key: "class-kit",
+    occurred_at: "2026-06-13T09:59:00.000Z",
+    provider: "codex",
+    raw_payload_json: "{}",
+    source: "codex-hook",
+    status: "valid",
+  });
+  db.close();
+
+  const prompts: string[] = [];
+  await runIngestWorker({
+    root,
+    projectKey: "class-kit",
+    jobId: "job_1",
+    targetRepo: "/target/repo",
+    provider: "codex",
+    limit: 1,
+    batchSize: 1,
+    maxPromptChars: 180_000,
+    now: fixedNow(),
+    runner: async (_command, options): Promise<RunProcessResult> => {
+      const prompt = options?.stdin ?? "";
+      prompts.push(prompt);
+      return {
+        exitCode: 0,
+        stdout: JSON.stringify({ no_output_tombstone_ids: ["tomb_job_1_evt_1"] }),
+        stderr: "",
+      };
+    },
+  });
+
+  const prompt = prompts[0] ?? "";
+  const suppliedMemoryIds = [...prompt.matchAll(/"id": "mem_large_\d+"/g)];
+  expect(prompt.length).toBeLessThan(PROMPT_SIZE_LIMIT);
+  expect(suppliedMemoryIds.length).toBeGreaterThan(0);
+  expect(suppliedMemoryIds.length).toBeLessThan(12);
 });
 
 test("worker keeps leased rows retryable when provider invocation fails", async () => {

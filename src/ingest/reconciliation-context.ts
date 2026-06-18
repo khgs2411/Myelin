@@ -78,6 +78,10 @@ export async function selectSessionMemoryReconciliationContext(
     }
   }
 
+  for (const row of activeNextActionMemories(input.db, input.projectKey, 12)) {
+    addRow(row, "active_next_action", 45);
+  }
+
   for (const row of recentActiveMemories(input.db, input.projectKey, 12)) {
     addRow(row, "recent", 20);
   }
@@ -131,6 +135,20 @@ function recentActiveMemories(db: Database, projectKey: string, limit: number): 
        FROM session_memories
        WHERE project_key = ?
          AND status = 'active'
+       ORDER BY created_at DESC, id DESC
+       LIMIT ?`,
+    )
+    .all(projectKey, limit) as SessionMemoryRow[];
+}
+
+function activeNextActionMemories(db: Database, projectKey: string, limit: number): SessionMemoryRow[] {
+  return db
+    .query(
+      `SELECT *
+       FROM session_memories
+       WHERE project_key = ?
+         AND status = 'active'
+         AND memory_kind = 'next_action'
        ORDER BY created_at DESC, id DESC
        LIMIT ?`,
     )
@@ -254,4 +272,3 @@ const STOP_WORDS = new Set([
   "where",
   "which",
 ]);
-

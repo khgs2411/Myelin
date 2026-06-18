@@ -30,6 +30,15 @@ export type IngestConfig = {
   profiles: Partial<Record<Provider, ModelProfile>>;
 };
 
+export type AutoMemoryMaintenanceConfig = {
+  enabled: boolean;
+  minCapturedEvents: number;
+  cooldownMs: number;
+  drainPollIntervalMs: number;
+  drainTimeoutMs: number;
+  indexLimit: number;
+};
+
 export type ActiveEmbeddingContract = {
   provider: EmbeddingProvider;
   model: string;
@@ -43,6 +52,7 @@ export type MyelinConfig = {
   profiles: Record<Workload, Partial<Record<Provider, ModelProfile>>>;
   embedding: EmbeddingConfig;
   ingest: IngestConfig;
+  autoMemoryMaintenance: AutoMemoryMaintenanceConfig;
   values: Record<string, string>;
 };
 
@@ -59,6 +69,11 @@ export const MAX_INGEST_WORKER_CONCURRENCY = 16;
 export const DEFAULT_INGEST_WORKER_START_DELAY_MS = 750;
 export const DEFAULT_INGEST_LLM_TIMEOUT_MS = 10 * 60 * 1000;
 export const DEFAULT_INGEST_PROMPT_CHAR_LIMIT = 180_000;
+export const DEFAULT_AUTO_MEMORY_MIN_CAPTURED_EVENTS = 10;
+export const DEFAULT_AUTO_MEMORY_COOLDOWN_MS = 5 * 60 * 1000;
+export const DEFAULT_AUTO_MEMORY_DRAIN_POLL_INTERVAL_MS = 5_000;
+export const DEFAULT_AUTO_MEMORY_DRAIN_TIMEOUT_MS = 10 * 60 * 1000;
+export const DEFAULT_AUTO_MEMORY_INDEX_LIMIT = 500;
 export const DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT: ActiveEmbeddingContract = {
   provider: DEFAULT_EMBEDDING_PROVIDER,
   model: DEFAULT_GEMINI_EMBEDDING_MODEL,
@@ -100,6 +115,14 @@ const DEFAULT_CONFIG: MyelinConfig = {
       claude: { provider: "claude" },
     },
   },
+  autoMemoryMaintenance: {
+    enabled: false,
+    minCapturedEvents: DEFAULT_AUTO_MEMORY_MIN_CAPTURED_EVENTS,
+    cooldownMs: DEFAULT_AUTO_MEMORY_COOLDOWN_MS,
+    drainPollIntervalMs: DEFAULT_AUTO_MEMORY_DRAIN_POLL_INTERVAL_MS,
+    drainTimeoutMs: DEFAULT_AUTO_MEMORY_DRAIN_TIMEOUT_MS,
+    indexLimit: DEFAULT_AUTO_MEMORY_INDEX_LIMIT,
+  },
   values: {},
 };
 
@@ -129,6 +152,7 @@ export async function loadConfig(root: string, env: NodeJS.ProcessEnv = process.
     },
     embedding: embeddingConfig(merged),
     ingest: ingestConfig(merged),
+    autoMemoryMaintenance: autoMemoryMaintenanceConfig(merged),
     values: merged,
   };
 }
@@ -211,6 +235,32 @@ function ingestConfig(values: Record<string, string>): IngestConfig {
       codex: profile("ingest", "codex", values),
       claude: profile("ingest", "claude", values),
     },
+  };
+}
+
+function autoMemoryMaintenanceConfig(values: Record<string, string>): AutoMemoryMaintenanceConfig {
+  return {
+    enabled: values.AUTO_MEMORY_MAINTENANCE === "1",
+    minCapturedEvents: parsePositiveInteger(
+      values.AUTO_MEMORY_MIN_CAPTURED_EVENTS ?? String(DEFAULT_AUTO_MEMORY_MIN_CAPTURED_EVENTS),
+      "Invalid auto memory min captured events",
+    ),
+    cooldownMs: parseNonNegativeInteger(
+      values.AUTO_MEMORY_COOLDOWN_MS ?? String(DEFAULT_AUTO_MEMORY_COOLDOWN_MS),
+      "Invalid auto memory cooldown",
+    ),
+    drainPollIntervalMs: parsePositiveInteger(
+      values.AUTO_MEMORY_DRAIN_POLL_INTERVAL_MS ?? String(DEFAULT_AUTO_MEMORY_DRAIN_POLL_INTERVAL_MS),
+      "Invalid auto memory drain poll interval",
+    ),
+    drainTimeoutMs: parsePositiveInteger(
+      values.AUTO_MEMORY_DRAIN_TIMEOUT_MS ?? String(DEFAULT_AUTO_MEMORY_DRAIN_TIMEOUT_MS),
+      "Invalid auto memory drain timeout",
+    ),
+    indexLimit: parsePositiveInteger(
+      values.AUTO_MEMORY_INDEX_LIMIT ?? String(DEFAULT_AUTO_MEMORY_INDEX_LIMIT),
+      "Invalid auto memory index limit",
+    ),
   };
 }
 

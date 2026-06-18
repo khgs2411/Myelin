@@ -1,7 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { join } from "node:path";
 import type { JsonObject, ProcessRunner } from "../runtime/llm-client.ts";
-import { invokeLlm } from "../runtime/llm-client.ts";
+import { invokeLlm, PROMPT_SIZE_LIMIT } from "../runtime/llm-client.ts";
 import type { LeasedExperienceEvent } from "../memory/experience.ts";
 import {
   finalizeLeasedExperienceEventsInOpenTransaction,
@@ -39,9 +39,12 @@ import {
   type ReconciliationMemoryContext,
 } from "./reconciliation-context.ts";
 import { updateIngestJobStatus } from "./jobs.ts";
+import { readIngestProjectStatus, type IngestProjectStatus } from "./status.ts";
 
 const MAX_PROMPT_RETAINED_EVIDENCE_CHARS = 6_000;
 const TRUNCATED_EVIDENCE_SUFFIX = "\n...[truncated for ingest prompt; full evidence is preserved in the tombstone audit row]";
+const INGEST_PROMPT_SAFETY_MARGIN_CHARS = 5_000;
+const INGEST_RECONCILIATION_CONTEXT_BUDGET_CHARS = 25_000;
 
 export type IngestWorkerOutput = {
   session_memories?: Array<{
@@ -206,6 +209,7 @@ export function buildIngestPrompt(input: {
   jobId: string;
   leased: LeasedExperienceEvent[];
   reconciliationContext?: ReconciliationMemoryContext[];
+  projectStatus?: IngestProjectStatus;
   batchIndex?: number;
   batchCount?: number;
 }): string {
@@ -226,12 +230,15 @@ export function buildIngestPrompt(input: {
     "Return empty arrays for output categories with no items.",
     "Every session memory, memory candidate, and handoff instruction must include source_event_refs containing leased tombstone ids.",
     "Reconcile existing active Session Memory when new evidence makes old memory stale.",
+    "Use Project maintenance status context as factual product state when deciding whether next_action, blocker, or verification memories are now stale.",
     "Do not physically delete memory. To update an existing memory, create a replacement session memory and add a memory_supersessions operation.",
     "You may only supersede, retract, or noop existing memories listed in Existing active Session Memory context.",
     "Every memory_supersessions item must include: superseded_memory_id, superseding_memory_id, relationship, reason, source_event_refs.",
     "Allowed memory_supersessions relationship values: supersedes, refines, contradicts, duplicates.",
     "Every memory_retractions item must include: memory_id, reason, source_event_refs.",
     "Use memory_retractions only when the old memory should no longer be trusted and no replacement memory is created.",
+    "Treat next_action memories as short-lived. If leased evidence shows a supplied next_action has been completed, superseded by a new next step, or made obsolete, emit memory_retractions or memory_supersessions instead of memory_noops.",
+    "Prefer retracting completed next_action memories over keeping stale instructions active.",
     "Use memory_noops for supplied existing memory that is relevant and remains current.",
     "Allowed session memory memory_kind values: continuity, decision, blocker, next_action, verification.",
     "Allowed memory candidate scope values: session, project, practice, personal.",
@@ -246,12 +253,82 @@ export function buildIngestPrompt(input: {
     "Example memory candidate: {\"id\":\"cand_<short-id>\",\"source_event_refs\":[\"tomb_<claimed-id>\"],\"scope\":\"session\",\"status\":\"needs_review\",\"candidate_type\":\"session.continuity\",\"summary\":\"Possible useful continuity.\",\"evidence\":{},\"proposed_payload\":{},\"confidence\":\"medium\",\"risk\":\"medium\",\"reason\":\"Needs review before trust\"}.",
     "Example handoff instruction: {\"id\":\"handoff_<short-id>\",\"target_scope\":\"project\",\"status\":\"pending\",\"objective\":\"Verify a durable project fact\",\"prompt_text\":\"Review the cited tombstones and update project memory if valid.\",\"source_session_memory_ids\":[],\"source_event_refs\":[\"tomb_<claimed-id>\"],\"suggested_actions\":[\"review evidence\"],\"reason\":\"May belong in project memory\",\"confidence\":\"medium\",\"risk\":\"medium\"}.",
     "",
+    "Project maintenance status context:",
+    JSON.stringify(statusForPrompt(input.projectStatus), null, 2),
+    "",
     "Existing active Session Memory context:",
     JSON.stringify((input.reconciliationContext ?? []).map(memoryForPrompt), null, 2),
     "",
     "Leased Experience Log rows:",
     JSON.stringify(input.leased.map(leaseForPrompt), null, 2),
   ].filter((line) => line !== null).join("\n");
+}
+
+function buildBoundedIngestPrompt(input: {
+  projectKey: string;
+  jobId: string;
+  leased: LeasedExperienceEvent[];
+  reconciliationContext: ReconciliationMemoryContext[];
+  projectStatus: IngestProjectStatus;
+  batchIndex?: number;
+  batchCount?: number;
+}): { prompt: string; reconciliationContext: ReconciliationMemoryContext[] } {
+  let reconciliationContext = input.reconciliationContext;
+  let prompt = buildIngestPrompt({ ...input, reconciliationContext });
+  const promptLimit = promptSizeLimitWithMargin();
+  const promptWithoutContext = buildIngestPrompt({ ...input, reconciliationContext: [] });
+  const maxContextChars = Math.min(
+    INGEST_RECONCILIATION_CONTEXT_BUDGET_CHARS,
+    Math.max(0, promptLimit - promptWithoutContext.length),
+  );
+
+  while (
+    reconciliationContext.length > 0 &&
+    (prompt.length > promptLimit || prompt.length - promptWithoutContext.length > maxContextChars)
+  ) {
+    reconciliationContext = reconciliationContext.slice(0, -1);
+    prompt = buildIngestPrompt({ ...input, reconciliationContext });
+  }
+
+  if (prompt.length > PROMPT_SIZE_LIMIT) {
+    throw new Error(`ingest prompt too large after budgeting: ${prompt.length} chars exceeds ${PROMPT_SIZE_LIMIT}`);
+  }
+
+  return { prompt, reconciliationContext };
+}
+
+function leasePromptCharLimit(input: {
+  configuredLimit: number;
+  projectKey: string;
+  jobId: string;
+  projectStatus: IngestProjectStatus;
+  batchIndex?: number;
+  batchCount?: number;
+}): number {
+  const fixedPromptOverhead = buildIngestPrompt({
+    projectKey: input.projectKey,
+    jobId: input.jobId,
+    leased: [],
+    reconciliationContext: [],
+    projectStatus: input.projectStatus,
+    batchIndex: input.batchIndex,
+    batchCount: input.batchCount,
+  }).length;
+  const computedLimit = promptSizeLimitWithMargin() - fixedPromptOverhead - INGEST_RECONCILIATION_CONTEXT_BUDGET_CHARS;
+  return Math.max(1, Math.min(input.configuredLimit, computedLimit));
+}
+
+function promptSizeLimitWithMargin(): number {
+  return PROMPT_SIZE_LIMIT - INGEST_PROMPT_SAFETY_MARGIN_CHARS;
+}
+
+function statusForPrompt(status: IngestProjectStatus | undefined): JsonObject {
+  if (!status) return {};
+  return {
+    project_key: status.project_key,
+    completion_label: status.completion_label,
+    counts: status.counts,
+  };
 }
 
 function memoryForPrompt(memory: ReconciliationMemoryContext): JsonObject {
@@ -647,12 +724,20 @@ export async function runIngestWorker(input: {
       if (remaining <= 0) break;
 
       const claimedAt = now().toISOString();
+      const projectStatus = readIngestProjectStatus(db, input.projectKey);
       const leased = leaseExperienceEvents(db, {
         ingest_job_id: input.jobId,
         project_key: input.projectKey,
         provider_session_id: input.providerSessionId ?? null,
         limit: remaining,
-        max_prompt_chars: input.maxPromptChars ?? config.ingest.promptCharLimit,
+        max_prompt_chars: leasePromptCharLimit({
+          configuredLimit: input.maxPromptChars ?? config.ingest.promptCharLimit,
+          projectKey: input.projectKey,
+          jobId: input.jobId,
+          projectStatus,
+          batchIndex: input.batchIndex,
+          batchCount: input.batchCount,
+        }),
         prompt_chars_for_lease: (lease) => JSON.stringify(leaseForPrompt(lease), null, 2).length,
         claimed_at: claimedAt,
         tombstone_id_for: (event) => `tomb_${input.jobId}_${event.id}`,
@@ -666,6 +751,15 @@ export async function runIngestWorker(input: {
         documentContract: embeddingContract,
         provider: embeddingProvider,
       });
+      const boundedPrompt = buildBoundedIngestPrompt({
+        projectKey: input.projectKey,
+        jobId: input.jobId,
+        leased,
+        reconciliationContext,
+        projectStatus,
+        batchIndex: input.batchIndex,
+        batchCount: input.batchCount,
+      });
 
       const response = await invokeLlm({
         root: input.root,
@@ -673,14 +767,7 @@ export async function runIngestWorker(input: {
         provider: input.provider,
         timeoutMs: config.ingest.llmTimeoutMs,
         outputSchema: join(input.root, "src", "ingest", "worker-output.schema.json"),
-        prompt: buildIngestPrompt({
-          projectKey: input.projectKey,
-          jobId: input.jobId,
-          leased,
-          reconciliationContext,
-          batchIndex: input.batchIndex,
-          batchCount: input.batchCount,
-        }),
+        prompt: boundedPrompt.prompt,
         cwd: input.targetRepo,
         runner: input.runner,
       });
@@ -692,7 +779,7 @@ export async function runIngestWorker(input: {
         providerSessionId: input.providerSessionId ?? null,
         output,
         finalizedAt: now().toISOString(),
-        allowedExistingMemoryIds: reconciliationContext.map((memory) => memory.id),
+        allowedExistingMemoryIds: boundedPrompt.reconciliationContext.map((memory) => memory.id),
       });
       terminalSummary = output.terminal_summary ?? terminalSummary;
       sessionMemories += counts.session_memories;

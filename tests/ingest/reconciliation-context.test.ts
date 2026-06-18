@@ -77,6 +77,45 @@ test("selects recent and branch-aware active memories for ingest reconciliation"
   expect(result.find((memory) => memory.id === "mem_branch")?.selection_reasons).toContain("branch:feature/sqlite-vec");
 });
 
+test("prioritizes active next_action memories for stale lifecycle reconciliation", async () => {
+  for (let index = 0; index < 8; index += 1) {
+    createSessionMemory(db, {
+      id: `mem_recent_${index}`,
+      project_key: "wizepal",
+      source_event_refs: [`tomb_recent_${index}`],
+      memory_kind: "continuity",
+      summary: `Recent continuity ${index}.`,
+      payload: {},
+      confidence: "high",
+      risk: "low",
+      now: `2026-06-17T10:0${index}:00.000Z`,
+    });
+  }
+  createSessionMemory(db, {
+    id: "mem_stale_next_action",
+    project_key: "wizepal",
+    source_event_refs: ["tomb_next_action"],
+    memory_kind: "next_action",
+    title: "Retry failed auto-maintenance ingest",
+    summary: "Retry failed auto-maintenance ingest after the prompt-size fix.",
+    payload: {},
+    confidence: "high",
+    risk: "low",
+    now: "2026-06-17T09:00:00.000Z",
+  });
+
+  const result = await selectSessionMemoryReconciliationContext({
+    db,
+    projectKey: "wizepal",
+    leased: [leasedEvent()],
+    limit: 5,
+  });
+
+  const nextAction = result.find((memory) => memory.id === "mem_stale_next_action");
+  expect(nextAction?.memory_kind).toBe("next_action");
+  expect(nextAction?.selection_reasons).toContain("active_next_action");
+});
+
 function leasedEvent(): LeasedExperienceEvent {
   return {
     id: "tomb_new",
@@ -100,4 +139,3 @@ function leasedEvent(): LeasedExperienceEvent {
     },
   };
 }
-

@@ -74,6 +74,7 @@ Important runtime variables:
 | `EMBEDDING_PROVIDER`, `EMBEDDING_GEMINI_MODEL`, `EMBEDDING_DIMENSIONS`, `EMBEDDING_BATCH_SIZE` | Session Memory embedding provider/model/dimension/batch profile. |
 | `EMBEDDING_STUB_RESPONSES_DIR` | Use canned embedding responses for deterministic embedding/index tests. |
 | `GOOGLE_API_KEY`, `GEMINI_API_KEY` | Gemini embedding credential; `GOOGLE_API_KEY` is preferred, `GEMINI_API_KEY` is accepted as an alias. |
+| `AUTO_MEMORY_MAINTENANCE`, `AUTO_MEMORY_MIN_CAPTURED_EVENTS`, `AUTO_MEMORY_COOLDOWN_MS`, `AUTO_MEMORY_DRAIN_POLL_INTERVAL_MS`, `AUTO_MEMORY_DRAIN_TIMEOUT_MS`, `AUTO_MEMORY_INDEX_LIMIT` | Optional hook-triggered Session Memory maintenance scheduler. When enabled, capture schedules a detached worker that runs Experience Log ingest and Session Memory indexing after enough queued captured events. |
 | `MYELIN_SQLITE_DYLIB_PATH`, `SQLITE_DYLIB_PATH` | Optional SQLite dynamic library path override for extension loading; Myelin uses its vendored runtime when available. |
 | `LLM_STUB_RESPONSES_DIR=<path>` | Use canned LLM responses for deterministic tests. |
 | `UPDATE_PROJECTS_ROOT`, `UPDATE_ARTIFACTS_ROOT`, `UPDATE_STAGES_ROOT` | Test/runtime root overrides. |
@@ -100,6 +101,7 @@ Do not make `/mcp` part of the root package graph. Core query behavior lives in 
 - Codex-backed stages must run with `--sandbox read-only`.
 - LLM-stage prompts must require JSON on stdout; do not ask the model to write artifacts directly.
 - Top-level `myelin ingest <key>` counts queued Experience Log rows and launches detached target-repo agents according to the ingest runtime profile. Workers create tombstone-backed lease stubs without deleting raw rows before provider output is accepted; terminal commit finalizes tombstones and archives source rows.
+- Optional auto Session Memory maintenance is scheduled from capture hooks only after the Experience Log row is stored. Hooks do not run ingest or indexing synchronously; they spawn a detached maintenance worker guarded by a project lock and cooldown. Codex `Stop` means assistant turn complete, not session end.
 - On macOS, sqlite-vec requires a SQLite build that supports loadable extensions. Myelin prefers its vendored SQLite runtime, falls back to Homebrew SQLite, and can be overridden with `MYELIN_SQLITE_DYLIB_PATH`.
 - Session Memory vector indexing is explicit operator work: use `myelin memory index session <key> [--limit N] [--batch-size N] [--retry-failed] [--json]`.
 - `memory query <key> "<question>"` is the future multi-layer query facade; in the current slice it queries indexed Session Memory vectors only and uses cached query embeddings.

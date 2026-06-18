@@ -70,6 +70,63 @@ test("stores valid events for bootstrapped project", async () => {
   }
 });
 
+test("stored capture events schedule auto memory maintenance through injected scheduler", async () => {
+  await bootstrapProject(root, "class-kit", repo);
+  const scheduled: string[] = [];
+
+  const result = await handleCaptureEvent(
+    root,
+    {
+      id: "evt_1",
+      provider: "codex",
+      source: "codex-hook",
+      cwd: repo,
+      hook_event_name: "UserPromptSubmit",
+      event_kind: "user.prompt",
+      raw_text: "hello",
+      raw_payload_json: "{}",
+      status: "valid",
+      occurred_at: "2026-06-12T10:00:00.000Z",
+    },
+    {
+      maintenanceScheduler: {
+        async maybeSchedule(projectKey) {
+          scheduled.push(projectKey);
+          return { status: "skipped", reason: "test scheduler" };
+        },
+      },
+    },
+  );
+
+  expect(result).toEqual({ status: "stored", project_key: "class-kit", event_id: "evt_1" });
+  expect(scheduled).toEqual(["class-kit"]);
+});
+
+test("auto memory maintenance scheduling failures do not break capture", async () => {
+  await bootstrapProject(root, "class-kit", repo);
+
+  const result = await handleCaptureEvent(
+    root,
+    {
+      id: "evt_1",
+      provider: "codex",
+      source: "codex-hook",
+      cwd: repo,
+      raw_payload_json: "{}",
+      status: "valid",
+    },
+    {
+      maintenanceScheduler: {
+        async maybeSchedule() {
+          throw new Error("scheduler failed");
+        },
+      },
+    },
+  );
+
+  expect(result).toEqual({ status: "stored", project_key: "class-kit", event_id: "evt_1" });
+});
+
 test("stores malformed bootstrapped project events as invalid", async () => {
   await bootstrapProject(root, "class-kit", repo);
 
