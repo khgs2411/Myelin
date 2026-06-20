@@ -248,13 +248,29 @@ test("project discovery reads project registry state and resolves cwd ownership"
     name: "Demo",
     repo_paths: [repo],
   });
+  await writeJson(join(root, "projects", "old-v1", "state", "project.json"), {
+    key: "old-v1",
+    name: "Old V1",
+    lifecycle: "legacy",
+    repo_paths: [join(root, "repos", "old-v1")],
+  });
   await writeJson(join(root, "projects", "ignored", "state", "other.json"), { key: "ignored" });
 
   const projects = await discoverProjects(root);
 
   expect(projects.map((project) => project.key)).toEqual(["demo"]);
+  expect((await discoverProjects(root, { includeLegacy: true })).map((project) => project.key)).toEqual([
+    "demo",
+    "old-v1",
+  ]);
   expect((await findProject(root, "demo")).config.name).toBe("Demo");
+  await expect(findProject(root, "old-v1")).rejects.toThrow("Unknown project");
+  expect((await findProject(root, "old-v1", { includeLegacy: true })).config.lifecycle).toBe("legacy");
   expect((await projectForRepoPath(root, join(repo, "src")))?.key).toBe("demo");
+  expect(await projectForRepoPath(root, join(root, "repos", "old-v1", "src"))).toBeNull();
+  expect((await projectForRepoPath(root, join(root, "repos", "old-v1", "src"), { includeLegacy: true }))?.key).toBe(
+    "old-v1",
+  );
   await expect(findProject(root, "missing")).rejects.toThrow("Unknown project");
 });
 
@@ -273,7 +289,14 @@ test("artifact paths are deterministic and reject unsafe run ids", async () => {
   expect(id).toBe("2026-06-02T12-34-56.000Z-run");
   expect(runDir(root, "demo", id)).toBe(join(root, "projects", "demo", "runs", id));
   expect(await createRunDir(root, "demo", id)).toBe(join(root, "projects", "demo", "runs", id));
+  expect(runDir(root, "demo", id, "project-learn")).toBe(
+    join(root, "projects", "demo", "runs", "project-learn", id),
+  );
+  expect(await createRunDir(root, "demo", id, "project-learn")).toBe(
+    join(root, "projects", "demo", "runs", "project-learn", id),
+  );
   expect(() => runDir(root, "demo", "../bad")).toThrow("Invalid run id");
+  expect(() => runDir(root, "demo", id, "../bad")).toThrow("Invalid run command");
 });
 
 test("subprocess helper captures stdout, stderr, exit code, and checked failure", async () => {

@@ -185,15 +185,29 @@ async function latestRunDir(root: string, project: Project): Promise<string | nu
     throw error;
   }
 
-  const candidates = await Promise.all(
-    entries.map(async (entry) => {
-      const path = join(runsDir, entry);
-      const info = await stat(path);
-      return info.isDirectory() ? { path: `projects/${project.key}/runs/${entry}`, mtime: info.mtime.toISOString() } : null;
-    }),
-  );
+  const candidates = (await Promise.all(entries.map((entry) => runCandidates(runsDir, project.key, entry)))).flat();
 
   return candidates
     .filter((candidate): candidate is { path: string; mtime: string } => candidate !== null)
     .sort((a, b) => b.mtime.localeCompare(a.mtime) || b.path.localeCompare(a.path))[0]?.path ?? null;
+}
+
+async function runCandidates(runsDir: string, projectKey: string, entry: string): Promise<Array<{ path: string; mtime: string } | null>> {
+  const path = join(runsDir, entry);
+  const info = await stat(path);
+  if (!info.isDirectory()) return [null];
+  if (entry.endsWith("-run")) {
+    return [{ path: `projects/${projectKey}/runs/${entry}`, mtime: info.mtime.toISOString() }];
+  }
+
+  const children = await readdir(path);
+  return Promise.all(
+    children.map(async (child) => {
+      const childPath = join(path, child);
+      const childInfo = await stat(childPath);
+      return childInfo.isDirectory()
+        ? { path: `projects/${projectKey}/runs/${entry}/${child}`, mtime: childInfo.mtime.toISOString() }
+        : null;
+    }),
+  );
 }

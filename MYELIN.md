@@ -187,12 +187,14 @@ Core owns query logic once; the detached MCP consumes it via the `myelin memory 
 
 ```
 projects/<key>/
-  sources/   preserved source material
-  wiki/      curated markdown pages (Project Memory)
-  schema/    project-local schema
-  state/     metadata, routing, provenance, freshness, generated schema-context.json
-  log/       changelog / run logs
-  runs/      pipeline run artifacts
+  readme.md  project-brain entrypoint
+  index.md   project-folder navigation
+  wiki/      curated markdown pages (Project Memory), with index.md in every folder
+  state/     metadata, routing, provenance, freshness, generated schema-context.json, with index.md
+  log/       changelog and memory history, with index.md
+  runs/      command-scoped run artifacts, with index.md
+  sources/   optional preserved source material, created only when preserved sources exist
+  schema/    optional project-local schema, created only when project-local rules exist
 state/
   memory.db  repo-root SQLite serving layer (git-ignored)
 schema/      global authored schema inputs

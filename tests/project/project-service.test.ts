@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ProjectService } from "../../src/project/project-service.ts";
+import { writeJson } from "../../src/runtime/json.ts";
 
 let root: string;
 
@@ -23,4 +24,26 @@ test("project service owns layout migration workflow", async () => {
 
   expect(result.projectActions.length).toBeGreaterThan(0);
   expect(await readFile(join(root, "projects", "demo", "wiki", "index.md"), "utf8")).toBe("# Demo\n");
+});
+
+test("project service lists active projects unless legacy projects are requested", async () => {
+  await writeJson(join(root, "projects", "active", "state", "project.json"), {
+    key: "active",
+    name: "Active",
+    repo_paths: [join(root, "repos", "active")],
+  });
+  await writeJson(join(root, "projects", "old-v1", "state", "project.json"), {
+    key: "old-v1",
+    name: "Old V1",
+    lifecycle: "legacy",
+    repo_paths: [join(root, "repos", "old-v1")],
+  });
+
+  const service = new ProjectService(root);
+
+  expect((await service.listProjects()).projects.map((project) => project.key)).toEqual(["active"]);
+  expect((await service.listProjects({ includeLegacy: true })).projects.map((project) => project.key)).toEqual([
+    "active",
+    "old-v1",
+  ]);
 });

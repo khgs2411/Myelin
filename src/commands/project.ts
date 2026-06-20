@@ -6,6 +6,7 @@ import type { PipelineKind } from "../pipeline/runner.ts";
 import { ProjectService } from "../project/project-service.ts";
 
 export function registerProjectCommands(cli: Cli): void {
+  cli.command(["project", "list"], async (args) => listProjectsCommand(args));
   cli.command(["project", "learn"], async (args) => runPipelineCommand("learn", args));
   cli.command(["project", "ingest"], async (args) => runPipelineCommand("ingest", args));
   cli.command(["project", "migrate-layout"], async (args) => {
@@ -27,6 +28,30 @@ export function registerProjectCommands(cli: Cli): void {
   });
 }
 
+async function listProjectsCommand(args: string[]) {
+  const parsed = parseProjectListArgs(args);
+  if (parsed.error) return fail(parsed.error);
+
+  try {
+    const result = await new ProjectService(repoRoot().root).listProjects({
+      includeLegacy: parsed.includeLegacy,
+    });
+    if (parsed.json) return ok(stableJson(result));
+
+    const lines = [
+      parsed.includeLegacy ? "Projects:" : "Active projects:",
+      ...result.projects.map((project) => {
+        const repo = project.repo_paths[0] ? ` repo=${project.repo_paths[0]}` : "";
+        return `- ${project.key} [${project.lifecycle}]${repo}`;
+      }),
+    ];
+    if (!parsed.includeLegacy) lines.push("", "Use --include-legacy to show archived V1 projects.");
+    return ok(lines.join("\n"));
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error));
+  }
+}
+
 async function runPipelineCommand(kind: PipelineKind, args: string[]) {
   const parsed = parsePipelineArgs(kind, args);
   if (parsed.error) return fail(parsed.error);
@@ -46,6 +71,23 @@ async function runPipelineCommand(kind: PipelineKind, args: string[]) {
   } catch (error) {
     return fail(error instanceof Error ? error.message : String(error));
   }
+}
+
+function parseProjectListArgs(args: string[]): {
+  includeLegacy: boolean;
+  json: boolean;
+  error?: string;
+} {
+  let includeLegacy = false;
+  let json = false;
+
+  for (const arg of args) {
+    if (arg === "--include-legacy") includeLegacy = true;
+    else if (arg === "--json") json = true;
+    else return { includeLegacy, json, error: `Unknown project list option: ${arg}` };
+  }
+
+  return { includeLegacy, json };
 }
 
 function parsePipelineArgs(

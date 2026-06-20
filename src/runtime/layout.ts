@@ -2,6 +2,7 @@ import { mkdir, readdir, rename, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { projectPath, resolveInside } from "./fs.ts";
 import { readJsonIfExists, writeJson } from "./json.ts";
+import { repairProjectShell } from "./project-shell.ts";
 
 export type ProjectLayoutPaths = {
   root: string;
@@ -14,7 +15,7 @@ export type ProjectLayoutPaths = {
 };
 
 export type MigrationAction = {
-  action: "created-dir" | "moved" | "copied" | "updated-state" | "kept";
+  action: "created-dir" | "created-file" | "moved" | "copied" | "updated-state" | "kept" | "removed";
   from?: string;
   to?: string;
   path?: string;
@@ -25,7 +26,7 @@ type UpdateState = {
   [key: string]: unknown;
 };
 
-const V2_PROJECT_DIRS = ["sources", "wiki", "schema", "state", "log", "runs"] as const;
+const V2_PROJECT_DIRS = ["wiki", "state", "log", "runs"] as const;
 
 export function projectLayout(root: string, key: string): ProjectLayoutPaths {
   const projectRoot = projectPath(root, key);
@@ -55,8 +56,22 @@ export async function migrateProjectLayout(root: string, key: string): Promise<M
   actions.push(...(await moveIfPresent(join(paths.root, "inbox"), join(paths.sources, "inbox"))));
   actions.push(...(await moveDirectoryChildrenIfPresent(resolveInside(root, "artifacts", key, "runs"), paths.runs)));
   actions.push(...(await updateLatestRunPointer(root, key)));
+  actions.push(...repairActions(await repairProjectShell(root, key)));
 
   return actions;
+}
+
+function repairActions(repair: Awaited<ReturnType<typeof repairProjectShell>>): MigrationAction[] {
+  return [
+    ...repair.created.map((path) => ({ action: createdActionFor(path), path }) satisfies MigrationAction),
+    ...repair.kept.map((path) => ({ action: "kept", path }) satisfies MigrationAction),
+    ...repair.removed.map((path) => ({ action: "removed", path }) satisfies MigrationAction),
+    ...repair.moved.map((move) => ({ action: "moved", from: move.from, to: move.to }) satisfies MigrationAction),
+  ];
+}
+
+function createdActionFor(path: string): MigrationAction["action"] {
+  return path.endsWith(".md") || path.endsWith(".json") ? "created-file" : "created-dir";
 }
 
 async function moveIfPresent(from: string, to: string): Promise<MigrationAction[]> {

@@ -17,6 +17,8 @@ export function registerBootstrapCommand(cli: Cli): void {
           `repo: ${result.repoPath}`,
           `created: ${result.created.length}`,
           `kept: ${result.kept.length}`,
+          `moved: ${result.moved.length}`,
+          `removed: ${result.removed.length}`,
         ].join("\n"),
       );
     } catch (error) {

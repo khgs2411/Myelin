@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { bootstrapProject } from "../../src/runtime/bootstrap.ts";
@@ -23,7 +23,13 @@ test("bootstrap creates an uncurated project memory shell", async () => {
 
   expect(result.projectKey).toBe("class-kit");
   expect(result.created).toContain("projects/class-kit/state/project.json");
+  expect(result.created).toContain("projects/class-kit/readme.md");
+  expect(result.created).toContain("projects/class-kit/index.md");
   expect(result.created).toContain("projects/class-kit/wiki/index.md");
+  expect(result.created).toContain("projects/class-kit/state/index.md");
+  expect(result.created).toContain("projects/class-kit/log/index.md");
+  expect(result.created).toContain("projects/class-kit/log/changelog.md");
+  expect(result.created).toContain("projects/class-kit/runs/index.md");
 
   const project = await readJson<{ key: string; name: string; repo_paths: string[] }>(
     join(root, "projects", "class-kit", "state", "project.json"),
@@ -34,12 +40,19 @@ test("bootstrap creates an uncurated project memory shell", async () => {
     repo_paths: [resolve(repo)],
   });
 
-  for (const dir of ["sources", "wiki", "schema", "state", "log", "runs"]) {
+  for (const dir of ["wiki", "state", "log", "runs"]) {
     expect(result.created).toContain(`projects/class-kit/${dir}`);
   }
+  expect(result.created).not.toContain("projects/class-kit/schema");
+  expect(result.created).not.toContain("projects/class-kit/sources");
+  expect(await Bun.file(join(root, "projects", "class-kit", "schema")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "projects", "class-kit", "sources")).exists()).toBe(false);
 
   expect(await readFile(join(root, "projects", "class-kit", "wiki", "index.md"), "utf8")).toContain(
     "Project Memory has not been curated yet.",
+  );
+  expect(await readFile(join(root, "projects", "class-kit", "readme.md"), "utf8")).toContain(
+    "myelin project learn class-kit",
   );
 });
 
@@ -53,6 +66,27 @@ test("bootstrap rerun is idempotent and does not overwrite curated index", async
   expect(result.created).toEqual([]);
   expect(result.kept).toContain("projects/class-kit/wiki/index.md");
   expect(await readFile(indexPath, "utf8")).toBe("Curated content\n");
+});
+
+test("bootstrap repairs older project shells without deleting preserved material", async () => {
+  const projectRoot = join(root, "projects", "class-kit");
+  await mkdir(join(projectRoot, "sources"), { recursive: true });
+  await mkdir(join(projectRoot, "schema"), { recursive: true });
+  await writeFile(join(projectRoot, "index.md"), "# Existing project memory\n", "utf8");
+  await writeFile(join(projectRoot, "sources", "source-note.md"), "source material\n", "utf8");
+
+  const result = await bootstrapProject(root, "class-kit", repo);
+
+  expect(result.moved).toContainEqual({
+    from: "projects/class-kit/index.md",
+    to: "projects/class-kit/wiki/index.md",
+  });
+  expect(result.removed).toContain("projects/class-kit/schema");
+  expect(await readFile(join(projectRoot, "wiki", "index.md"), "utf8")).toBe("# Existing project memory\n");
+  expect(await readFile(join(projectRoot, "index.md"), "utf8")).toContain("# class-kit Index");
+  expect(await readFile(join(projectRoot, "sources", "source-note.md"), "utf8")).toBe("source material\n");
+  expect(await readFile(join(projectRoot, "sources", "index.md"), "utf8")).toContain("Preserved legacy");
+  expect(await Bun.file(join(projectRoot, "schema")).exists()).toBe(false);
 });
 
 test("bootstrap rejects relative repo paths and invalid project keys", async () => {

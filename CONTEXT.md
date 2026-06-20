@@ -240,7 +240,7 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - The **Runtime Layout Migration** can change directories and data structures when the new layout has a clear purpose and migration path.
 - The **V2 Breakage Budget** prioritizes building the powerful brain over preserving weak V1 behavior.
 - The **V2 CLI Vocabulary** should expose product concepts directly, with Make targets only as convenience aliases where useful.
-- **V2 Project Layout** keeps project-owned sources, wiki, schema, state, logs, and runs together under `projects/<key>/`.
+- **V2 Project Layout** keeps the project brain under `projects/<key>/` with root `readme.md`/`index.md`, canonical `wiki/`, generated `state/`, `log/`, and command-scoped `runs/`; project-local `sources/` and `schema/` are lazy folders created only when they contain preserved sources or project-local rules.
 - The **Learn Command** is the broad Project Memory refresh verb.
 - **Auto-Apply Learning** is the default for day-to-day usefulness.
 - A **Learning Review Gate** is required for destructive, conflicting, low-confidence, or broad memory changes.
@@ -299,4 +299,4 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - Manual memory event recording could become noisy if it mirrors hooks. Resolved: record only high-signal events such as `session.note`, `session.stop`, `memory.candidate`, and `answer.correction`.
 - `answer.correction` overlaps with the existing gap/inbox flow. Resolved: **Answer Correction** is SQLite evidence only; `flag_stale_answer` and `enrich_gap` remain the canonical Project Memory repair path.
 - `memory.candidate` is generic as an event type, but candidate routing must not be arbitrary. Resolved: **Memory Candidate** records use a typed target scope.
-- V2 project data layout is `projects/<key>/sources/`, `wiki/`, `schema/`, `state/`, `log/`, and `runs/`; old global artifacts are reference material during migration, not the target layout.
+- V2 project data layout is root `readme.md`/`index.md`, `wiki/`, `state/`, `log/`, and `runs/` by default; `sources/` and `schema/` are created lazily when preserved source material or project-local schema rules exist. Old global artifacts are reference material during migration, not the target layout.

@@ -1,13 +1,14 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { readFile, readdir } from "node:fs/promises";
-import { basename, join, relative } from "node:path";
-import { createRunDir } from "../runtime/artifacts.ts";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { basename, dirname, join, relative } from "node:path";
+import { createRunDir, timestampRunId } from "../runtime/artifacts.ts";
 import { resolveInside } from "../runtime/fs.ts";
 import { readJsonIfExists, stableJson, writeJson } from "../runtime/json.ts";
 import { type JsonObject, type ProcessRunner, invokeLlm } from "../runtime/llm-client.ts";
+import { ensureProjectMemoryBrain, repairProjectShell } from "../runtime/project-shell.ts";
 import { findProject } from "../runtime/projects.ts";
-import { readProjectStateIfExists, statePath, writeProjectState } from "../runtime/state.ts";
+import { statePath, writeProjectState } from "../runtime/state.ts";
 import { buildSchemaContext, checkSchema, validateSchemaContext } from "../schema/compiler.ts";
 
 export type PipelineKind = "learn" | "ingest";
@@ -66,11 +67,16 @@ export async function runProjectPipeline(
 ): Promise<PipelineRunResult> {
   const project = await findProject(root, projectKey);
   const startedAt = options.now ?? new Date();
-  const runDir = await createRunDir(root, projectKey);
-  const runId = basename(runDir);
-  const stages = kind === "learn" ? LEARN_STAGES : INGEST_STAGES;
+  const runCommand = `project-${kind}`;
   const dryRun = Boolean(options.dryRun);
   const review = Boolean(options.review);
+  if (kind === "learn" && !dryRun) {
+    await repairProjectShell(root, projectKey, { repoPath: project.config.repo_paths?.[0] });
+  }
+
+  const runDir = await createRunDir(root, projectKey, timestampRunId(startedAt), runCommand);
+  const runId = basename(runDir);
+  const stages = kind === "learn" ? LEARN_STAGES : INGEST_STAGES;
   const stageResults: StageResult[] = [];
 
   const schema = await ensureSchemaForPipeline(root, projectKey, kind, dryRun, startedAt);
@@ -85,6 +91,15 @@ export async function runProjectPipeline(
     schema_context_hash: schema.hash,
   };
   await writeJson(join(runDir, "run-context.json"), runContext);
+  await writeJson(join(runDir, "input-packet.json"), {
+    command: runContext.command,
+    project_key: projectKey,
+    project_dir: runContext.project_dir,
+    run_id: runId,
+    schema_context_hash: schema.hash,
+    dry_run: dryRun,
+    review,
+  });
 
   let stoppedReason: string | undefined;
   for (const stageId of stages) {
@@ -110,9 +125,13 @@ export async function runProjectPipeline(
     }
   }
 
-  const validation = await readJsonIfExists<{ ok?: boolean; findings?: unknown[] }>(join(runDir, "validation-findings.json"));
-  const changedFiles = [...new Set([...(await collectChangedFiles(runDir)), "pipeline-result.json"])].sort();
   const failed = stageResults.some((stage) => stage.status === "failed");
+  if (kind === "learn" && !dryRun && !review && !failed) {
+    await ensureProjectMemoryBrain(root, projectKey, startedAt, relative(root, runDir));
+  }
+
+  const validation = await readJsonIfExists<{ ok?: boolean; findings?: unknown[] }>(join(runDir, "validation.json"));
+  const changedFiles = [...new Set([...(await collectChangedFiles(runDir)), "pipeline-result.json"])].sort();
   const status = failed ? "failed" : review ? "needs_review" : "completed";
   const result: PipelineRunResult = {
     status,
@@ -133,6 +152,7 @@ export async function runProjectPipeline(
   };
 
   await writeJson(join(runDir, "pipeline-result.json"), result);
+  await writeRunSummary(runDir, result);
   if (!dryRun && !review && !failed) {
     await writeProjectState(root, projectKey, "update-state.json", {
       project: projectKey,
@@ -234,6 +254,16 @@ async function runApplyStage(
   const proposal = await readJsonIfExists<{ response?: JsonObject }>(join(runDir, "propose-result.json"));
   const risk = classifyProposalRisk(proposal?.response, review);
   const artifact = "apply-result.json";
+  await writeJson(join(runDir, "mutation-plan.json"), {
+    stage: "apply",
+    operation: dryRun || risk.requires_review ? "preview" : "apply",
+    project_key: projectKey,
+    proposed_changes: [],
+    provenance: {
+      proposal: proposal ? "propose-result.json" : null,
+    },
+    risk,
+  });
   await writeJson(join(runDir, artifact), {
     stage: "apply",
     applied: !dryRun && !risk.requires_review,
@@ -261,16 +291,52 @@ async function runValidateStage(runDir: string): Promise<StageResult> {
   if (!apply) findings.push("apply-result.json is missing");
   if (apply?.risk?.requires_review) findings.push("run requires human review before durable apply");
   const ok = findings.length === 0;
-  const artifact = "validation-findings.json";
-  await writeJson(join(runDir, artifact), {
+  const artifact = "validation.json";
+  const validation = {
     stage: "validate",
     ok,
     findings,
     deferred: ["reconcile", "self-correct", "acceptance", "measure"],
-  });
+  };
+  await writeJson(join(runDir, artifact), validation);
+  await writeJson(join(runDir, "validation-findings.json"), validation);
   return ok
     ? { stage_id: "06-validate", kind: "validate", status: "completed", artifact }
     : { stage_id: "06-validate", kind: "validate", status: "failed", artifact, error: findings.join("; ") };
+}
+
+async function writeRunSummary(runDir: string, result: PipelineRunResult): Promise<void> {
+  const lines = [
+    `# ${result.command} ${result.run_id}`,
+    "",
+    `Status: ${result.status}`,
+    `Project: ${result.project_key}`,
+    `Validation: ${result.validation.ok ? "passed" : "failed"}`,
+    "",
+    "## Stages",
+    "",
+    ...result.stages.map((stage) => `- ${stage.stage_id}: ${stage.status}`),
+    "",
+  ];
+  if (result.stopped_reason) {
+    lines.push("## Stopped", "", result.stopped_reason, "");
+  }
+  await writeMarkdown(join(runDir, "summary.md"), lines.join("\n"));
+  await writeMarkdown(
+    join(runDir, "run.log"),
+    [
+      `${result.command} ${result.status}`,
+      `project=${result.project_key}`,
+      `run_id=${result.run_id}`,
+      `validation=${result.validation.ok ? "passed" : "failed"}`,
+      "",
+    ].join("\n"),
+  );
+}
+
+async function writeMarkdown(path: string, content: string): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, content.endsWith("\n") ? content : `${content}\n`, "utf8");
 }
 
 function classifyProposalRisk(proposal: JsonObject | undefined, review: boolean): { classification: string; requires_review: boolean; reasons: string[] } {

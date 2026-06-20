@@ -1,7 +1,7 @@
-import { mkdir, stat, writeFile } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import { projectPath } from "./fs.ts";
-import { projectLayout } from "./layout.ts";
+import { repairProjectShell, type ProjectShellMove } from "./project-shell.ts";
 import { readJsonIfExists, writeJson } from "./json.ts";
 import { discoverProjects } from "./projects.ts";
 
@@ -10,6 +10,8 @@ export type BootstrapResult = {
   repoPath: string;
   created: string[];
   kept: string[];
+  removed: string[];
+  moved: ProjectShellMove[];
 };
 
 type ProjectConfig = {
@@ -30,19 +32,9 @@ export async function bootstrapProject(
   await assertDirectory(resolvedRepo, "Repo path does not exist");
   await assertRepoPathAvailable(root, projectKey, resolvedRepo);
 
-  const paths = projectLayout(root, projectKey);
-  const created: string[] = [];
-  const kept: string[] = [];
-
-  for (const dir of ["sources", "wiki", "schema", "state", "log", "runs"] as const) {
-    const path = paths[dir];
-    if (await exists(path)) {
-      kept.push(`projects/${projectKey}/${dir}`);
-    } else {
-      await mkdir(path, { recursive: true });
-      created.push(`projects/${projectKey}/${dir}`);
-    }
-  }
+  const shell = await repairProjectShell(root, projectKey, { repoPath: resolvedRepo });
+  const created = [...shell.created];
+  const kept = [...shell.kept];
 
   const projectJsonPath = projectPath(root, projectKey, "state", "project.json");
   const existingConfig = await readJsonIfExists<ProjectConfig>(projectJsonPath);
@@ -56,37 +48,14 @@ export async function bootstrapProject(
   else created.push(`projects/${projectKey}/state/project.json`);
   await writeJson(projectJsonPath, nextConfig);
 
-  const indexPath = projectPath(root, projectKey, "wiki", "index.md");
-  if (await exists(indexPath)) {
-    kept.push(`projects/${projectKey}/wiki/index.md`);
-  } else {
-    await writeFile(
-      indexPath,
-      [
-        `# ${projectKey}`,
-        "",
-        "Project Memory has not been curated yet.",
-        "",
-        `Registered repo: \`${resolvedRepo}\``,
-        "",
-      ].join("\n"),
-      "utf8",
-    );
-    created.push(`projects/${projectKey}/wiki/index.md`);
-  }
-
-  const bootstrapStatePath = projectPath(root, projectKey, "state", "bootstrap-state.json");
-  if (await exists(bootstrapStatePath)) {
-    kept.push(`projects/${projectKey}/state/bootstrap-state.json`);
-  } else {
-    await writeJson(bootstrapStatePath, {
-      missing: ["curated_project_memory", "experience_log_capture_verification"],
-      status: "uncurated",
-    });
-    created.push(`projects/${projectKey}/state/bootstrap-state.json`);
-  }
-
-  return { projectKey, repoPath: resolvedRepo, created, kept };
+  return {
+    projectKey,
+    repoPath: resolvedRepo,
+    created,
+    kept,
+    removed: shell.removed,
+    moved: shell.moved,
+  };
 }
 
 async function assertRepoPathAvailable(root: string, projectKey: string, repoPath: string): Promise<void> {

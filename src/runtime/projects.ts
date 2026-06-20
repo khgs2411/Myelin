@@ -6,6 +6,7 @@ import { readJsonIfExists } from "./json.ts";
 export type ProjectConfig = {
   key: string;
   name?: string;
+  lifecycle?: "active" | "legacy" | "deprecated";
   repo_paths?: string[];
   tags?: string[];
   entry_pages?: string[];
@@ -19,7 +20,11 @@ export type Project = {
   config: ProjectConfig;
 };
 
-export async function discoverProjects(root: string): Promise<Project[]> {
+export type ProjectDiscoveryOptions = {
+  includeLegacy?: boolean;
+};
+
+export async function discoverProjects(root: string, options: ProjectDiscoveryOptions = {}): Promise<Project[]> {
   const projectsDir = resolveInside(root, "projects");
   let entries: string[];
 
@@ -37,21 +42,25 @@ export async function discoverProjects(root: string): Promise<Project[]> {
     const dir = resolveInside(projectsDir, entry);
     if (!(await stat(dir)).isDirectory()) continue;
     const config = await readJsonIfExists<ProjectConfig>(resolveInside(dir, "state", "project.json"));
-    if (config?.key) {
+    if (config?.key && (options.includeLegacy || isActiveProject(config))) {
       projects.push({ key: config.key, dir, config });
     }
   }
   return projects;
 }
 
-export async function findProject(root: string, key: string): Promise<Project> {
-  const project = (await discoverProjects(root)).find((candidate) => candidate.key === key);
+export async function findProject(root: string, key: string, options: ProjectDiscoveryOptions = {}): Promise<Project> {
+  const project = (await discoverProjects(root, options)).find((candidate) => candidate.key === key);
   if (!project) throw new Error(`Unknown project: ${key}`);
   return project;
 }
 
-export async function projectForRepoPath(root: string, cwd: string): Promise<Project | null> {
-  const projects = await discoverProjects(root);
+export async function projectForRepoPath(
+  root: string,
+  cwd: string,
+  options: ProjectDiscoveryOptions = {},
+): Promise<Project | null> {
+  const projects = await discoverProjects(root, options);
   const resolvedCwd = resolve(cwd);
 
   for (const project of projects) {
@@ -65,4 +74,8 @@ export async function projectForRepoPath(root: string, cwd: string): Promise<Pro
   }
 
   return null;
+}
+
+export function isActiveProject(config: ProjectConfig): boolean {
+  return config.lifecycle !== "legacy" && config.lifecycle !== "deprecated";
 }

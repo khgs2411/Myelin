@@ -29,6 +29,7 @@ test("learn runs sense through validate, verifies schema, and stops before defer
   });
 
   expect(result.status).toBe("completed");
+  expect(result.run_dir).toBe("projects/trygga/runs/project-learn/2026-06-04T12-00-00.000Z-run");
   expect(result.stages.map((stage) => stage.stage_id)).toEqual(["01-sense", "02-impact", "03-propose", "04-apply", "06-validate"]);
   expect(result.stages.some((stage) => stage.stage_id === "07-reconcile")).toBe(false);
   expect(result.validation.ok).toBe(true);
@@ -36,6 +37,50 @@ test("learn runs sense through validate, verifies schema, and stops before defer
   await expect(readFile(join(root, "projects", "trygga", "state", "schema-context.json"), "utf8")).rejects.toThrow();
   expect(result.schema_context_hash).toMatch(/^[a-f0-9]{64}$/);
   expect(result.changed_files).toContain("pipeline-result.json");
+});
+
+test("learn creates the initial project memory brain on successful durable run", async () => {
+  await mkdir(join(root, "projects", "trygga", "sources"), { recursive: true });
+  await mkdir(join(root, "projects", "trygga", "schema"), { recursive: true });
+
+  const result = await runProjectPipeline(root, "trygga", "learn", {
+    runner: stubRunner,
+    env: { ...process.env, LLM_STUB_RESPONSES_DIR: "" },
+    now: new Date("2026-06-04T12:00:00.000Z"),
+  });
+
+  expect(result.status).toBe("completed");
+  expect(result.run_dir).toBe("projects/trygga/runs/project-learn/2026-06-04T12-00-00.000Z-run");
+  expect(await readFile(join(root, "projects", "trygga", "readme.md"), "utf8")).toContain(
+    "Project Memory is curated",
+  );
+  const wikiIndex = await readFile(join(root, "projects", "trygga", "wiki", "index.md"), "utf8");
+  expect(wikiIndex).toContain("Curated Project Memory");
+  expect(wikiIndex).toContain("## Preserved Previous Content");
+  expect(wikiIndex).toContain("# Trygga");
+  for (const subject of ["architecture", "setup", "testing", "decisions"]) {
+    expect(await readFile(join(root, "projects", "trygga", "wiki", subject, "index.md"), "utf8")).toContain(
+      `# ${subject.slice(0, 1).toUpperCase()}${subject.slice(1)}`,
+    );
+  }
+  expect(await readFile(join(root, "projects", "trygga", "runs", "project-learn", "index.md"), "utf8")).toContain(
+    "Run artifacts",
+  );
+  expect(await Bun.file(join(root, "projects", "trygga", "sources")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "projects", "trygga", "schema")).exists()).toBe(false);
+  expect(await readFile(join(root, result.run_dir, "index.md"), "utf8")).toContain("project-learn");
+  expect(await readFile(join(root, result.run_dir, "summary.md"), "utf8")).toContain("Status: completed");
+  expect(await readFile(join(root, result.run_dir, "run.log"), "utf8")).toContain("project learn completed");
+  expect(await readFile(join(root, result.run_dir, "input-packet.json"), "utf8")).toContain("schema_context_hash");
+  expect(await readFile(join(root, result.run_dir, "mutation-plan.json"), "utf8")).toContain("proposed_changes");
+  expect(await readFile(join(root, result.run_dir, "validation.json"), "utf8")).toContain("\"ok\": true");
+  expect(
+    JSON.parse(await readFile(join(root, "projects", "trygga", "state", "project-memory.json"), "utf8")),
+  ).toMatchObject({
+    project_key: "trygga",
+    source_run_dir: result.run_dir,
+    status: "curated",
+  });
 });
 
 test("ingest runs queued-source stages with existing schema context and no auto-reconcile", async () => {

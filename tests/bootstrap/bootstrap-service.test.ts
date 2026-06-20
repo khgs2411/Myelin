@@ -26,9 +26,18 @@ test("bootstrap service creates the project memory shell", async () => {
   expect(result.projectKey).toBe("class-kit");
   expect(result.repoPath).toBe(resolve(repo));
   expect(result.created).toContain("projects/class-kit/state/project.json");
+  expect(result.created).toContain("projects/class-kit/readme.md");
+  expect(result.created).toContain("projects/class-kit/index.md");
   expect(result.created).toContain("projects/class-kit/wiki/index.md");
+  expect(result.created).not.toContain("projects/class-kit/schema");
+  expect(result.created).not.toContain("projects/class-kit/sources");
+  expect(await Bun.file(join(root, "projects", "class-kit", "schema")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "projects", "class-kit", "sources")).exists()).toBe(false);
   expect(await readFile(join(root, "projects", "class-kit", "wiki", "index.md"), "utf8")).toContain(
     "Project Memory has not been curated yet.",
+  );
+  expect(await readFile(join(root, "projects", "class-kit", "runs", "index.md"), "utf8")).toContain(
+    "Command run artifacts",
   );
   expect(
     await readJson<{ key: string; name: string; repo_paths: string[] }>(
