@@ -8,6 +8,7 @@ Related reading:
 
 - `CONTEXT.md` is the product-language glossary and records resolved naming/shape ambiguities.
 - `docs/README.md` is the documentation map and canonical reading path.
+- `docs/ROADMAP.md` is the canonical implementation checklist and current next step.
 - `docs/archive/V2_SPEC.md` is the raw brainstorming source for the project-rooted memory model.
 - `docs/IMPLEMENTATION_ALIGNMENT.md` maps the current codebase to this design and flags what to keep, reframe, or avoid extending blindly.
 - `docs/adr/*` contains append-only decision records; this document summarizes them but does not override them.

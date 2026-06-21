@@ -7,6 +7,7 @@ import { ProjectService } from "../project/project-service.ts";
 
 export function registerProjectCommands(cli: Cli): void {
   cli.command(["project", "list"], async (args) => listProjectsCommand(args));
+  cli.command(["project", "packet"], async (args) => projectPacketCommand(args));
   cli.command(["project", "learn"], async (args) => runPipelineCommand("learn", args));
   cli.command(["project", "ingest"], async (args) => runPipelineCommand("ingest", args));
   cli.command(["project", "migrate-layout"], async (args) => {
@@ -26,6 +27,34 @@ export function registerProjectCommands(cli: Cli): void {
       return fail(error instanceof Error ? error.message : String(error));
     }
   });
+}
+
+async function projectPacketCommand(args: string[]) {
+  const parsed = parseProjectPacketArgs(args);
+  if (parsed.error) return fail(parsed.error);
+
+  try {
+    const packet = await new ProjectService(repoRoot().root).buildMemoryPacket(parsed.projectKey);
+    if (parsed.json) return ok(stableJson(packet));
+
+    return ok(
+      [
+        `Project Memory packet for ${packet.project_key}`,
+        `mode: ${packet.mode}`,
+        `wiki pages: ${packet.wiki.page_count}`,
+        `project handoffs: ${packet.pending.project_handoffs.length}`,
+        `project candidates: ${packet.pending.project_candidates.length}`,
+        `session memories: ${packet.session_memory.selected.length}`,
+        `lookup queries: ${packet.lookup.queries.length}`,
+        `degraded: ${packet.degraded ? "yes" : "no"}`,
+        packet.degraded ? `degraded reasons: ${packet.degraded_reasons.join("; ")}` : "",
+        "",
+        "Use --json for the full packet.",
+      ].filter(Boolean).join("\n"),
+    );
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error));
+  }
 }
 
 async function listProjectsCommand(args: string[]) {
@@ -71,6 +100,25 @@ async function runPipelineCommand(kind: PipelineKind, args: string[]) {
   } catch (error) {
     return fail(error instanceof Error ? error.message : String(error));
   }
+}
+
+function parseProjectPacketArgs(args: string[]): {
+  projectKey: string;
+  json: boolean;
+  error?: string;
+} {
+  let projectKey = "";
+  let json = false;
+
+  for (const arg of args) {
+    if (arg === "--json") json = true;
+    else if (arg.startsWith("-")) return { projectKey, json, error: `Unknown project packet option: ${arg}` };
+    else if (!projectKey) projectKey = arg;
+    else return { projectKey, json, error: `Unexpected project packet argument: ${arg}` };
+  }
+
+  if (!projectKey) return { projectKey, json, error: "Usage: myelin project packet <project-key> [--json]" };
+  return { projectKey, json };
 }
 
 function parseProjectListArgs(args: string[]): {

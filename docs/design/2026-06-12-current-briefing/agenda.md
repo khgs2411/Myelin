@@ -137,7 +137,7 @@
 - Options:
   - A. Current Briefing wins, with conflicting session sources reported as degraded state - keeps the v0 surface coherent.
   - B. SQLite sessions win - aligns with future structured recall, but may over-trust immature session tooling.
-  - C. `wiki/sessions/*.md` wins - matches current status behavior, but preserves a known mismatch from `docs/TODO.md`.
+  - C. `wiki/sessions/*.md` wins - matches current status behavior, but preserves a known mismatch from `docs/ROADMAP.md`.
 - Recommendation: A for v0. Current Briefing is the curated session-start truth; session sources are supporting signals until recall is redesigned.
 - Answer:
 - Answer impact:

@@ -10,8 +10,7 @@ Related docs:
 - `CONTEXT.md` is the product-language glossary and resolved ambiguity log.
 - `docs/README.md` is the documentation map and canonical reading path.
 - `docs/archive/V2_SPEC.md` is the raw brainstorming source for the project-rooted memory model.
-- `docs/DONE.md` is the built-and-verified inventory.
-- `docs/TODO.md` is the known gap list against `MYELIN.md`.
+- `docs/ROADMAP.md` is the canonical implementation checklist, built status, known gap list, and next step.
 
 ## Product Shape
 

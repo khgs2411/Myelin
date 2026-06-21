@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { registerProjectCommands } from "../../src/commands/project.ts";
@@ -63,6 +63,45 @@ test("project list rejects unknown options", async () => {
 
   expect(result.exitCode).toBe(1);
   expect(result.message).toContain("Unknown project list option: --all");
+});
+
+test("project packet emits a read-only Project Memory packet", async () => {
+  await seedProject("active", "active");
+  await writeJson(join(root, "projects", "active", "state", "bootstrap-state.json"), {
+    status: "uncurated",
+    missing: ["curated_project_memory"],
+  });
+  await mkdir(join(root, "projects", "active", "wiki"), { recursive: true });
+  await writeFile(join(root, "projects", "active", "wiki", "index.md"), "# Project Memory\n\nShell only.\n", "utf8");
+  const cli = createCli("myelin");
+  registerProjectCommands(cli);
+
+  const summary = await cli.run(["project", "packet", "active"]);
+  expect(summary.exitCode).toBe(0);
+  expect(summary.message).toContain("Project Memory packet for active");
+  expect(summary.message).toContain("mode: create");
+  expect(summary.message).toContain("wiki pages: 1");
+  expect(summary.message).toContain("Use --json for the full packet.");
+
+  const packet = JSON.parse((await cli.run(["project", "packet", "active", "--json"])).message);
+  expect(packet.project_key).toBe("active");
+  expect(packet.wiki.page_count).toBe(1);
+  expect(packet.degraded_reasons).toContain(
+    "state/memory.db is missing; Session Memory and pending handoff inputs are unavailable",
+  );
+  expect(await Bun.file(join(root, "state", "memory.db")).exists()).toBe(false);
+});
+
+test("project packet rejects unknown options and missing project keys", async () => {
+  const cli = createCli("myelin");
+  registerProjectCommands(cli);
+
+  expect((await cli.run(["project", "packet"])).message).toContain(
+    "Usage: myelin project packet <project-key> [--json]",
+  );
+  expect((await cli.run(["project", "packet", "active", "--full"])).message).toContain(
+    "Unknown project packet option: --full",
+  );
 });
 
 async function seedProject(key: string, lifecycle: "active" | "legacy"): Promise<void> {

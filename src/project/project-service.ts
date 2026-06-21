@@ -1,6 +1,7 @@
 import { runProjectPipeline, type PipelineKind, type PipelineRunResult } from "../pipeline/runner.ts";
 import { migrateProjectLayout, type MigrationAction } from "../runtime/layout.ts";
 import { discoverProjects } from "../runtime/projects.ts";
+import { buildProjectMemoryPacket, type ProjectMemoryPacket } from "./project-memory-packet.ts";
 
 export type RunProjectPipelineInput = {
   projectKey: string;
@@ -35,6 +36,10 @@ export class ProjectService {
         repo_paths: project.config.repo_paths ?? [],
       })),
     };
+  }
+
+  async buildMemoryPacket(projectKey: string): Promise<ProjectMemoryPacket> {
+    return await buildProjectMemoryPacket(this.root, projectKey);
   }
 
   async runPipeline(input: RunProjectPipelineInput): Promise<PipelineRunResult> {

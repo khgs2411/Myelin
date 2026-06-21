@@ -11,8 +11,7 @@ Read these in order:
 3. `../MYELIN.md` — canonical product design and north star.
 4. `../CONTEXT.md` — product-language glossary and resolved naming/shape ambiguities.
 5. `IMPLEMENTATION_ALIGNMENT.md` — how the current codebase maps to the V2 product shape.
-6. `DONE.md` — what is currently built and verified.
-7. `TODO.md` — known gaps between the current code and `MYELIN.md`.
+6. `ROADMAP.md` — canonical implementation checklist, built status, known gaps, and next step.
 
 ## Active Reference Docs
 
@@ -33,8 +32,7 @@ Before adding a new long-lived doc, decide which role it has:
 - canonical design -> update `../MYELIN.md`
 - terminology or resolved ambiguity -> update `../CONTEXT.md`
 - current implementation alignment -> update `IMPLEMENTATION_ALIGNMENT.md`
-- built inventory -> update `DONE.md`
-- planned gap -> update `TODO.md`
+- implementation progress, built inventory, planned gap, or next step -> update `ROADMAP.md`
 - historical source material -> put it under `archive/`
 
 Avoid creating parallel design docs that compete with `MYELIN.md`.
