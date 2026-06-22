@@ -147,6 +147,26 @@ _Avoid_: init, onboard, global install
 The minimum project-owned layout and metadata needed before curated Project Memory exists.
 _Avoid_: generated project summary, invented wiki
 
+**Project Memory Creation Mode**:
+The `project learn` authority profile used when no trusted curated Project Memory exists.
+_Avoid_: migration mode, legacy mode
+
+**Project Memory Maintenance Mode**:
+The `project learn` authority profile used after trusted curated Project Memory exists.
+_Avoid_: one-size-fits-all learn mode
+
+**Project Memory Creation Draft**:
+The structured curator output for creating the first trusted Project Memory brain.
+_Avoid_: maintenance proposal, arbitrary wiki rewrite
+
+**Project Memory Maintenance Proposal**:
+The structured curator output for bounded updates to existing trusted Project Memory.
+_Avoid_: creation draft, free-form patch
+
+**Untrusted Existing Markdown Context**:
+Preexisting project wiki markdown that can inform creation mode but is not trusted Project Memory.
+_Avoid_: migrated Project Memory, already documented
+
 **Core Runtime Migration**:
 The complete migration of core Myelin behavior from Python/Bash to Bun/TypeScript.
 _Avoid_: read-only migration, thin wrapper, partial runtime split
@@ -236,6 +256,10 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - A **Capture Adapter** belongs behind the capture facade so provider-native events become provider-neutral **Experience Log** rows.
 - The **Install Command** configures machine-level **Capture Provider** integrations; the **Bootstrap Command** opts a specific repo into saved capture.
 - A **Bootstrap Command** creates a **Project Memory Shell**, not curated **Project Memory**.
+- **Project Memory Creation Mode** applies until trusted curated **Project Memory** exists.
+- **Project Memory Maintenance Mode** applies after trusted curated **Project Memory** exists.
+- **Untrusted Existing Markdown Context** may inform **Project Memory Creation Mode**, but it is not evidence that **Project Memory** is already curated.
+- A **Project Memory Creation Draft** creates the first trusted project brain; a **Project Memory Maintenance Proposal** updates an existing trusted brain.
 - The **Core Runtime Migration** replaces Python/Bash entrypoints for normal core operation with Bun/TypeScript implementations.
 - The **Runtime Layout Migration** can change directories and data structures when the new layout has a clear purpose and migration path.
 - The **V2 Breakage Budget** prioritizes building the powerful brain over preserving weak V1 behavior.

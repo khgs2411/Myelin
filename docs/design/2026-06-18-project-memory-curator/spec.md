@@ -1,544 +1,304 @@
-# Project Memory Curator Design
+# Project Memory Curator Pre-Write Gate Design
 
-Status: Working draft. Not approved for implementation planning yet.
+Status: Final design for review. Not approved for implementation planning yet.
 
 ## Goal
 
-Design the Project Memory layer as the next layer above Session Memory.
+Define the first behavior-focused slice that evolves `project learn <key>` from a Phase-0 pipeline scaffold into real Project Memory maintenance.
 
-Project Memory is the durable, curated understanding of one software repository. It should be created and maintained by an agent running from the target repository, with access to the codebase, existing Project Memory, and the downstream handoff/candidate records produced by Session Memory ingest.
+This slice stops at the pre-write gate for maintenance mode, and defines the state-based authority profiles for `project learn`. It defines how `project learn` should use the bounded Project Memory packet, what structured output the Project Memory Curator must return in each mode, and how Myelin deterministically rejects invalid maintenance proposals before canonical markdown can change.
 
-The design should also establish the reusable promotion pattern for Practice Memory and Personal Memory, while keeping those domains out of this implementation slice.
-
-This layer is agent-facing first. Markdown is the canonical format because it is inspectable, auditable, portable, and useful for occasional human confirmation, not because the operator is expected to approve routine memory changes.
-
-Karpathy's LLM Wiki pattern remains the product anchor: immutable sources, an LLM-maintained markdown wiki, and a schema/instruction layer that teaches agents how to maintain it. Myelin should preserve the compounding wiki idea while hardening it for autonomous coding agents, branch applicability, provenance, and machine-safe retrieval.
-
-Research intake in `docs/research/2026-06-18-agentic-memory-landscape.md` sharpens the core model: Project Memory should be governed evidence-backed wiki compilation, not an autonomous free-form wiki gardener.
+This design intentionally does not implement page patching, derived retrieval indexing, maintenance scheduling, Practice Memory, Personal Memory, or Current Briefing.
 
 ## Current Context
 
-Project Memory already has a canonical home:
+`docs/ROADMAP.md` defines the active Step 3 parent outcome as:
 
-- Markdown pages under `projects/<key>/wiki/`.
-- Project metadata, freshness, page catalogs, and routing state under `projects/<key>/state/`.
-- Optional preserved project source/evidence under `projects/<key>/sources/` when source material exists.
-- Operational run artifacts under `projects/<key>/runs/` and `projects/<key>/log/`.
+- Evolve `project learn` from a Phase-0 pipeline scaffold into behavior-focused Project Memory maintenance.
 
-The current `bootstrap` implementation creates a Project Memory shell only. It creates the project directories, `state/project.json`, a placeholder `wiki/index.md`, and `state/bootstrap-state.json` with `curated_project_memory` marked missing. This matches the glossary boundary that bootstrap creates a shell, not curated Project Memory.
+The active concrete work under that parent is:
 
-The current Session Memory ingest path is intentionally one hop:
+- Define the Project Memory Curator output schemas and validation contract.
+- Make `project learn` use the Project Memory packet as its curator input.
+- Reject invalid Project Memory Curator proposals before wiki writes.
 
-- It processes Experience Log rows into trusted Session Memory.
-- It can create `memory_candidates`.
-- It can create Project, Practice, and Personal handoff instructions.
-- It does not mutate curated wiki pages.
+The current implementation has useful shell pieces:
 
-The storage substrate for this next layer already exists in part:
+- `src/commands/project.ts` exposes `project learn`, `project ingest`, and `project packet`.
+- `src/project/project-memory-packet.ts` builds a bounded packet from project state, wiki markdown, pending project handoffs/candidates, selected Session Memory, and lookup results.
+- `src/project/project-memory-lookup.ts` provides degraded markdown text lookup over Project Memory pages.
+- `src/pipeline/runner.ts` runs Phase-0 stages and deterministic apply/validate placeholders.
+- `stages/03-propose/instructions.md` still describes the older ranked-domain proposal model.
 
-- `memory_candidates` supports `session`, `project`, `practice`, and `personal` scopes.
-- `project_handoff_instructions`, `practice_handoff_instructions`, and `personal_handoff_instructions` already exist.
-- Candidate and handoff records have status, source references, risk, confidence, reason, and prompt text or proposed payload.
+The current code does not yet answer "what durable project knowledge changed?" in a structured way. The apply stage writes run/freshness artifacts, but it does not validate Project Memory curator proposals or apply meaningful wiki updates.
 
-The current `project learn` pipeline is a scaffold, not the finished Project Memory Curator. It runs LLM stages and writes run/freshness artifacts, but the apply stage does not yet perform meaningful focused wiki updates. The next design should not extend that scaffold blindly.
+The `llm-wiki` dogfood project shows an important trust condition: `projects/llm-wiki/state/bootstrap-state.json` marks the project as `uncurated` and `project-memory.json` is absent, while preexisting wiki markdown pages still exist. The design must treat page presence as source context, not proof that Project Memory is trusted and curated.
 
-The current `memory query` command is Session Memory vector retrieval only. Older project-wiki query planning exists as a seed for Project Memory lookup, but it is not the full multi-layer query facade.
+The user-stated product direction is that `project learn` should be an authoritative command whose permission profile depends on project state. The harness should do the work that code is better suited for, such as verifying bootstrap shape, schema context, project state, file existence, packet shape, and proposal validity. The agent should do the work that requires judgment, such as creating the first project brain or deciding which durable project knowledge changed.
 
-The agentic-memory landscape review changes this design's center of gravity:
+The design posture for this slice is quality-first. Because Myelin is in early foundational development with no external deadline or waiting client, the design should prefer the strongest long-term product shape, clear boundaries, and durable code quality over minimizing implementation workload. This reflects the user's general preference: optimize for the best durable solution and strongest boundaries rather than the smallest implementation delta.
 
-- Keep the product-facing layers as scopes and policies.
-- Do not implement Project, Practice, and Personal Memory as independent memory engines.
-- Use shared lifecycle, provenance, applicability, authority, taint, assurance, and retrieval semantics underneath.
-- Treat markdown pages as canonical subject pages with addressable evidence-backed entries, not unrestricted prose edited directly by a model.
+ADR 0058 records the hard-to-reverse boundary decision: `project learn` uses mode-scoped curator contracts, with a Project Memory Creation Draft for first-brain creation and a Project Memory Maintenance Proposal for ongoing constrained maintenance.
 
-The Karpathy origin pattern adds an important product constraint: do not let the Project Memory layer collapse into generic vector RAG, raw codebase documentation, or opaque SQLite state. The durable wiki is the compiled project brain. The hardening work is about making that wiki safe for agents to maintain and query autonomously, not replacing it.
+## Documented Decisions
 
-## Product Boundary
-
-Project Memory is canonical curated truth for one project. SQLite can queue, retrieve, and serve derived state, but it is not the canonical Project Memory record.
-
-The canonical shape should be subject-oriented wiki pages. Architecture should split into architecture subjects, setup into setup subjects, testing into testing subjects, and so on. A durable fact should live where an agent would naturally look for it.
-
-Within those pages, important durable statements should be addressable entries with stable IDs, evidence, applicability, lifecycle, and validation state. These entries are not a second user-facing wiki. They are the machine-checkable structure inside the canonical subject pages.
-
-This intentionally extends the origin LLM Wiki pattern. Free-form agent-maintained pages are valuable for reading, but they are too weak as the only structure for autonomous maintenance because duplicate facts, stale branch-specific statements, and unsupported instructions can merge cleanly at the text level while still corrupting the agent's working context.
-
-Human-readable Project Memory does not imply human-operated Project Memory. Agents are the primary consumers through query, how, status, and curated context loading. The operator may inspect the markdown when desired, but the default maintenance path must be self-maintaining through validation, provenance, and fail-loud degraded states.
-
-Session Memory remains project-scoped continuity:
-
-- recent work
-- decisions
-- next actions
-- blockers
-- verification facts
-- downstream handoff instructions
-
-The Session Memory agent should not become a Project Memory curator. It may identify that something probably belongs in Project Memory, but the Project Memory Curator owns:
-
-- whether the fact is already documented
-- which canonical page should change
-- whether evidence is sufficient
-- whether the change is routine, risky, stale, conflicting, or requires stronger autonomous assurance
-- how page metadata, freshness, and provenance should be updated
-
-The Project Memory Curator should not receive "all SQLite data" as one undifferentiated prompt. It should receive a bounded curator packet assembled from scoped records and stable project context.
-
-The curator should produce typed mutation plans. Trusted runtime code validates, stamps, and publishes those plans. The model must not self-assign source authority, verification status, protected metadata, branch applicability, or publication state.
+- Project Memory canonical truth lives in markdown plus project state, not SQLite.
+- SQLite/vector Project Memory rows are derived retrieval state only and must point back to markdown.
+- Session Memory and Project Memory differ: Session Memory trusted records live in SQLite, while Project Memory answers must resolve back to markdown.
+- The Project Memory Curator must return structured proposals, not write markdown directly.
+- Myelin must validate proposals deterministically before canonical markdown can change.
+- `project learn` should use the bounded Project Memory packet as the curator input.
+- Current Briefing is not active scope until Project Memory curation and retrieval are stable.
+- `project learn` may inspect the live repository directly, but durable writes require traceable evidence or explicit inference labels.
+- Routine project learning should eventually auto-apply by default, but risky changes must not silently corrupt Project Memory.
 
 ## User-Facing Behavior
 
-### Creation Mode
+For this slice, `project learn <key>` should become visibly different from the Phase-0 scaffold even before maintenance-mode markdown application exists.
 
-After a project is bootstrapped, Myelin should support a Project Memory creation run.
+A run should:
 
-Bootstrap creates the Project Memory shell, not the brain:
+1. Ensure schema context is valid or rebuilt using the existing learn behavior.
+2. Build the Project Memory packet for the project.
+3. Pass that packet, not unbounded SQLite state or raw conversation history, to the Project Memory Curator.
+4. Require curator output to be strict JSON matching the active mode's Project Memory Curator output contract.
+5. Validate the proposal deterministically.
+6. Stop before wiki writes when validation fails.
+7. Write run artifacts that explain the proposal, validation outcome, rejected items, and pre-write status.
 
-```text
-projects/<key>/
-  readme.md
-  index.md
-  wiki/
-    index.md              # placeholder: Project Memory has not been curated yet
-  state/
-    index.md
-    project.json
-    bootstrap-state.json  # status: uncurated
-  log/
-    index.md
-    changelog.md
-  runs/
-    index.md
-```
+If the proposal is valid, this slice may still stop before actual markdown mutation. The important product behavior is that Myelin can prove a curator proposal is valid enough to be eligible for a later bounded apply stage.
 
-The first successful `project learn <key>` creates the initial Project Memory brain inside the same project shell. The exact subject pages depend on the repository, but the shape should look like:
+### Mode-Scoped Authority
 
-```text
-projects/<key>/
-  readme.md
-  index.md
-  wiki/
-    index.md
-    architecture/
-      index.md
-      <subject>.md
-    setup/
-      index.md
-      <subject>.md
-    testing/
-      index.md
-      <subject>.md
-    decisions/
-      index.md
-      <subject>.md
-  state/
-    index.md
-    project.json
-    bootstrap-state.json
-    project-memory.json
-    schema-context.json
-    pages.json
-    freshness.json
-  log/
-    index.md
-    changelog.md
-  runs/
-    index.md
-    project-learn/
-      index.md
-      <run-id>/
-        index.md
-        input-packet.json
-        mutation-plan.json
-        validation.json
-        run.log
-        summary.md
-```
+`project learn` is authoritative, but not uniformly permissive. The command should derive its authority profile from project state.
 
-Every created folder must have an `index.md` so the project works well in Obsidian and is navigable by agents. Project-local `schema/` and preserved `sources/` are lazy directories: create them only when project-local schema rules or preserved external source material actually exist. The curator should create only subject folders/pages that carry real durable value for that repository. It should not mirror the repo tree, and it should not create a separate folder of detached memory facts for material that naturally belongs under architecture, setup, testing, decisions, workflows, or another subject.
+Creation mode applies when the project has a valid bootstrap shell but no trusted curated Project Memory. This includes normal onboarding where `project onboard` runs `bootstrap` and then `project learn`.
 
-The creation run:
+The first implementation should use two deterministic modes:
 
-1. Runs from the target repository cwd, not the Myelin repo.
-2. Reads the repo codebase and project-owned Myelin shell.
-3. Reads any existing Project Memory pages if the project was partially curated before.
-4. Reads a bounded set of project-scoped candidates, project handoff instructions, Session Memory, source references, and project state.
-5. Produces initial curated Project Memory subject pages that describe behavior, architecture decisions, setup/runbooks, current state, and provenance without mirroring the repo tree.
-6. Updates state so the project no longer looks completely uncurated, or records exactly why creation degraded.
+- `create`: no trusted curated Project Memory exists.
+- `maintain`: trusted curated Project Memory exists.
 
-Bootstrap should remain the low-level shell creation contract. The product also needs a higher-level brain creation workflow so the operator does not have to manually run every layer for every project.
+Do not introduce a separate migration mode. If preexisting wiki markdown exists without `project-memory.json`, the project is still in `create` mode. The packet should flag those pages as untrusted existing markdown context so the agent can adopt, rewrite, ignore, or quarantine them while creating the first trusted Project Memory brain.
 
-Resolved direction:
+In creation mode:
 
-- `bootstrap` creates or repairs the Project Memory shell and capture routing.
-- `project learn <key>` creates the initial Project Memory brain when the project has a shell but no curated brain yet, and maintains Project Memory when a brain already exists.
-- `project onboard <key> --repo <path>` runs shell bootstrap first and then starts `project learn` sequentially.
+- the harness verifies the bootstrap shell, schema context, project state, repo path, and input packet;
+- the agent can have broad creative authority to create the first working Project Memory brain;
+- the run should use a strong model/reasoning profile by default or through configuration;
+- the expected output is initial wiki/project documentation, not only small patch proposals;
+- validation should focus on structural safety, provenance, forbidden paths, secret/sensitive content, and basic project-shape correctness.
+- old markdown can inform the agent, but it is not automatically trusted as current Project Memory.
+- the curator should emit a creation brain-draft contract, not the maintenance mutation-proposal contract.
 
-This creates three operator paths:
+Maintenance mode applies after trusted curated Project Memory exists.
 
-- Existing shell, missing brain: run `project learn <key>`.
-- New project, shell only: run `bootstrap <key> --repo <path>`.
-- New or retroactive project, ready for full setup: run `project onboard <key> --repo <path>`.
+In maintenance mode:
 
-The important contract is that shell creation must not fail just because agentic brain creation degrades, while full onboarding should make the agentic continuation visible and inspectable.
+- the harness builds a bounded Project Memory packet from pending project handoffs/candidates, selected Session Memory, existing wiki context, lookup results, and project state;
+- the agent proposes bounded durable-memory changes;
+- code validates proposal shape, packet references, provenance, target paths, operation scope, and risk before any write;
+- broad rewrite, destructive, unsupported, or ambiguous operations are rejected, quarantined, or routed to stronger assurance rather than silently applied.
+- the curator should emit a maintenance mutation-proposal contract, not the creation brain-draft contract.
 
-### Maintenance Mode
-
-Project Memory maintenance consumes new Project Memory handoffs and candidates created by Session Memory ingest.
-
-A maintenance run:
-
-1. Acquires a project-level curator lock.
-2. Builds a bounded input packet from pending project handoffs, project candidates, selected Session Memory, existing Project Memory pages, page metadata, and project state.
-3. Runs a curator agent in the target repo cwd.
-4. Verifies durable page entries against repo files, preserved source evidence, existing Project Memory, and cited Session Memory.
-5. Updates the smallest canonical page or page section that makes the knowledge reusable.
-6. Marks consumed handoffs/candidates as processed, rejected, deferred for autonomous reconciliation, or degraded with output references and reason.
-7. Refreshes page metadata, freshness, and derived indexing state as needed.
-
-Maintenance should be automatic behind debounce, budget, and locking rules. Operators also need an explicit command for immediate runs and recovery, but normal correctness should come from autonomous validation, deterministic checks, provenance, and fail-loud degraded states rather than operator approval.
+This distinction lets Myelin preserve self-maintenance without pretending that first-brain creation and routine maintenance need the same permissions.
 
 ## Technical Design
 
-### Curator Job Model
+### Curator Input Boundary
 
-The Project Memory Curator is a bounded agentic job with two modes:
+The Project Memory packet is the authoritative input bundle for this slice.
 
-- `create`: initial Project Memory creation for a shell or partially curated project.
-- `maintain`: incremental Project Memory updates from pending handoffs/candidates and project evidence.
+The curator may receive:
 
-The design uses two user-facing surfaces above the existing low-level `bootstrap` command:
+- project identity and lifecycle
+- project repo paths
+- bootstrap/project-memory/freshness/pages state
+- wiki page summaries and paths
+- pending project handoffs
+- pending project candidates
+- selected Session Memory rows
+- deterministic Project Memory lookup queries and results
+- degraded reasons
 
-- `project learn <key>` creates the initial Project Memory brain for an already bootstrapped project, then becomes the ongoing Project Memory maintenance command after creation.
-- `project onboard <key> --repo <path>` creates the shell and then runs `project learn`.
+The curator should not receive:
 
-The CLI keeps `brain` as user-facing product language rather than a new top-level namespace. Output text can say "creating project brain" or "project brain ready", but the command vocabulary stays under `project` because the layer being created is Project Memory.
-
-Regardless of command name, the internal boundary should be a Project Memory Curator service, not generic pipeline stages.
-
-### Governed Page Entry Model
-
-Project Memory should be compiled from evidence into subject pages with addressable entries.
-
-The page is the human and agent reading surface. The entry is the smallest page section that Myelin can validate, update, supersede, or mark stale without rewriting unrelated page content. This keeps the LLM Wiki product shape while giving autonomous agents stable IDs, provenance, applicability, lifecycle, and contradiction handling.
-
-An addressable page entry should carry:
-
-- stable ID
-- scope and applicability: project, branch, worktree, commit range, version range, paths, symbols
-- cognitive type: episodic, semantic, procedural, policy
-- epistemic role: evidence, signal, assertion, inference, instruction
-- source authority
-- source taint
-- evidence references
-- verification references
-- lifecycle status
-- valid-time and transaction-time metadata
-- supersedes / contradicts / depends-on relations
-- retrieval and usage telemetry hooks
-
-Initial lifecycle states:
-
-- `candidate`
-- `active`
-- `stale_pending`
-- `disputed`
-- `superseded`
-- `retracted`
-- `quarantined`
-- `rejected`
-
-This keeps important distinctions explicit:
-
-- `superseded`: once valid, later replaced
-- `retracted`: should not have been treated as valid
-- `stale_pending`: source dependencies changed and revalidation is required
-- `disputed`: credible conflicting evidence exists
-- `quarantined`: unsafe, malformed, tainted, or unresolved high-risk content
-
-Markdown remains canonical, but it should be structured enough for deterministic validation and index rebuilds. The serving layer can derive SQLite rows, FTS entries, vectors, relations, scores, and telemetry from canonical markdown.
-
-### Mutation Plan Boundary
-
-The curator should produce typed mutation plans rather than directly rewriting arbitrary markdown.
-
-Allowed operations:
-
-- `CREATE`
-- `PATCH`
-- `SPLIT`
-- `MERGE`
-- `ATTACH_EVIDENCE`
-- `REVALIDATE`
-- `SUPERSEDE`
-- `RETRACT`
-- `MARK_STALE`
-- `MARK_DISPUTED`
-- `QUARANTINE`
-- `NOOP`
-
-Each plan should include target page paths, target entry IDs when applicable, proposed content, evidence references, applicability, preconditions, expected document hashes, and risk features.
-
-Runtime-owned validation must enforce:
-
-- schema validity
-- stable-ID uniqueness
-- legal lifecycle transition
-- all source references resolve
-- project/worktree/branch/commit consistency
-- expected document hashes
-- markdown parsing
-- path/symbol/test/command existence when referenced
-- relation integrity
-- secret and sensitive-data scanning
-- duplicate and near-duplicate detection
-- contradiction lookup
-- mutation and token budgets
-- protected metadata enforcement
-
-The curator job should record:
-
-- project key
-- mode
-- target repo path
-- provider/session id
-- input packet reference
-- output references
-- changed wiki/state files
-- status
-- degraded reason or assurance failure reason
-- started/finished timestamps
-
-The curator must run with the target repository as cwd so the agent can inspect code and local instructions. Myelin should still own the input packet, output schema, status writes, and candidate/handoff lifecycle updates.
-
-### Curator Input Packet
-
-The curator input should be an explicit, scoped, auditable packet. Routine curator runs should not receive all SQLite data or unrestricted database access.
-
-Inputs should include:
-
-- project identity from `state/project.json`
-- target repo path and git metadata
-- mode and objective
-- current bootstrap/freshness/status state
-- selected existing Project Memory pages and page metadata
-- pending `project_handoff_instructions`
-- pending project-scoped `memory_candidates`
-- selected source Session Memory rows referenced by handoffs/candidates
-- tombstone/source references needed to audit evidence
-- compact recent Session Memory only when it affects candidate interpretation
-- current Project Memory lookup results for candidate topics
-- allowed write assurance policy for the run
-
-Inputs should not include:
-
+- all SQLite tables
 - all raw Experience Log rows
 - all Session Memory rows
-- all SQLite tables
 - unrelated Practice or Personal candidates
 - unbounded transcripts
 
-The packet builder should own prompt budgeting. If there are too many pending items, it should split work into batches and preserve ordering/reasoning in the job state. Narrow live tools can be added later only for concrete curator needs that the packet cannot satisfy.
+The live repo remains inspectable under ADR 0018, but any durable proposed update based on repo inspection must cite concrete evidence or label itself as inference.
 
-### Curator Reasoning Rules
+### Curator Output Contracts
 
-For each project handoff or candidate, the curator should classify the outcome:
+Creation and maintenance should use related but separate top-level output contracts. They should share evidence, path, risk, and validation-finding primitives, but the top-level contracts should reflect the different authority profiles.
 
-- already documented
-- update existing page
-- create new canonical page and update index
-- stale or contradicted by repo reality
-- insufficient evidence
-- belongs to another layer
-- requires autonomous validation or reconciliation
-- no durable Project Memory value
+Creation mode should emit a Project Memory brain draft. It can describe an initial page set and first-brain structure with broad creative authority, while still using shared primitives for paths, evidence, source references, risk, and validation findings.
 
-Routine updates should prefer existing canonical pages. New pages should be created only when the taxonomy supports a stable project-memory surface.
+Maintenance mode should emit a mutation proposal. It should be itemized and bounded so the harness can validate each proposed change mechanically before any markdown write.
 
-Project Memory should capture:
+Each maintenance proposal item should be small enough for deterministic validation. A proposal item should identify:
 
-- product or system behavior
-- feature intent
-- architecture decisions
-- setup and runbook knowledge
-- current state and known gaps
-- manual QA or verification flows
-- provenance and source history
+- operation
+- target page path
+- target entry ID when updating an existing addressable entry
+- proposed entry ID when creating a new addressable entry
+- proposed content or content intent
+- source packet references
+- evidence references
+- inference label when evidence is indirect
+- applicability scope
+- lifecycle intent
+- risk classification
+- preconditions
+- expected outcome
 
-Project Memory should avoid:
+Allowed maintenance operations for this pre-write slice should be narrower than the full future mutation list. The initial validator should focus on operations needed to classify eligibility before writes:
 
-- raw transcript summaries
-- generic codebase inventory an agent can cheaply inspect
-- speculative architecture statements
-- source material mixed into synthesized wiki prose
-- Practice or Personal guidance
+- `CREATE_ENTRY`
+- `PATCH_ENTRY`
+- `ATTACH_EVIDENCE`
+- `MARK_STALE`
+- `MARK_DISPUTED`
+- `SUPERSEDE_ENTRY`
+- `RETRACT_ENTRY`
+- `NOOP`
 
-### Session-To-Project Boundary
+Broader structural operations such as `SPLIT`, `MERGE`, full page creation, broad rewrite, and delete should be represented as review or quarantine candidates in this slice rather than eligible write operations.
 
-The Session Memory layer should avoid obvious duplicate Project Memory work, but it must not become a Project Memory curator. The resolved boundary is a cheap deterministic Project Memory existence check, not full Project Memory curation.
+Creation mode can allow broader first-brain output than maintenance mode, but the harness still owns structural checks and publication safety. The creation output schema should be a separate brain-draft contract, not a maintenance proposal with many optional fields.
 
-Resolved shape:
+### Validation Contract
 
-- Session ingest asks a deterministic Project Memory lookup facade whether a candidate topic appears already documented.
-- The lookup returns `known`, `possibly_known`, `not_found`, or `degraded`, with page citations.
-- Session ingest can use that as a hint to suppress obvious duplicate handoffs or mark a handoff as "verify/update existing page".
-- The Project Memory Curator still decides whether the wiki is current and whether a change belongs.
+Validation must be deterministic and run before any markdown write.
 
-This avoids mixing responsibilities while still reducing queue noise.
+The harness validates structured proposal items, not arbitrary prose quality. The curator must return machine-readable fields that code can inspect: operation, target page, source packet references, evidence references, risk, inference label, lifecycle intent, and content intent.
 
-### Project Memory Lookup And Query
+Validation should produce per-item outcomes plus a proposal-level summary. A mixed proposal should not force the harness to choose between "apply all" and "reject all." Each item can be independently classified:
 
-Project Memory needs two read surfaces:
+- `eligible`: the item is structurally valid, mode-allowed, target-safe, evidence-backed, and low enough risk to proceed to a later apply stage.
+- `rejected`: the item is malformed, unsupported, out of scope, missing mandatory references, missing provenance, or otherwise mechanically invalid.
+- `quarantined`: the item has valid shape but is too risky, broad, conflicting, degraded, or ambiguous for normal progression.
+- `noop`: the curator checked the input and proposes no durable Project Memory change.
 
-- a maintenance lookup surface for curators and Session ingest
-- a user/agent query surface for answering project questions
+The proposal-level result should be eligible only when at least one item is eligible and no global hard error invalidates the whole proposal. Global hard errors include invalid JSON, schema version mismatch, project key mismatch, unreadable packet, or malformed top-level proposal shape.
 
-Both should treat markdown Project Memory as canonical. Metadata, text chunks, and vectors are derived indexes over the markdown pages, not replacements for them.
+Hard rejection conditions:
 
-The maintenance lookup surface can start with deterministic page metadata and text search over `projects/<key>/wiki/`, then evolve toward chunked vector recall. It should return citations and degraded state rather than pretending absence from an index means absence from Project Memory.
+- invalid JSON or unknown schema version
+- project key mismatch
+- unknown operation
+- target path outside the project wiki
+- target page missing when the operation requires an existing page
+- new page requested without an explicit new-page operation supported by this slice
+- missing source packet references
+- missing evidence references and no explicit inference label
+- evidence reference has an invalid shape
+- source packet reference does not resolve to a handoff, candidate, Session Memory, lookup result, state field, or wiki page in the packet
+- proposed lifecycle transition is illegal
+- operation is too broad for the pre-write gate
+- proposal exceeds item or content-size budget
+- protected state or metadata is self-assigned by the curator
 
-The user-facing multi-layer `query` facade can later route across Project Memory, Session Memory, Practice Memory, Personal Memory, and state. This design does not implement that full facade, but Project Memory lookup should be compatible with it.
+### Provenance Floor And Citation Standard
 
-Hard applicability gates must run before relevance ranking. A semantically strong memory from the wrong branch, worktree, commit range, lifecycle state, or taint policy is not a valid current-memory result.
+Every proposal item needs at least one packet-resolvable evidence reference. This is the schema floor: code must be able to verify that the item points back to something included in the Project Memory packet, such as a handoff, candidate, Session Memory row, lookup result, state field, wiki page, preserved source, or repo evidence reference.
 
-Candidate generation should use independent channels:
+Repo/file citations are the practical standard whenever a claim can be grounded in repository files. The validator should not require repo citations for every proposal item because some durable Project Memory facts are decisions, current state, preserved-source facts, or synthesis rather than repo-line facts. But when the claim is about code behavior, commands, setup, tests, file layout, runtime behavior, or implementation boundaries, missing repo/file citations should prevent normal eligibility unless the item explicitly explains why repo evidence is unavailable and marks the claim as inference.
 
-- exact ID/path/symbol/error/test/commit lookup
-- FTS/BM25
-- vector similarity
-- relation expansion
-- recent Session Memory only when the query mode asks for current work
+Inference labels are allowed, but they are not a loophole. An inference-backed item should identify the packet evidence used for the inference and should usually be quarantined or treated with higher risk when direct repo evidence ought to exist.
 
-Initial query modes should be explicit in the internal API:
+Review or quarantine conditions:
 
-- `current_state`
-- `why`
-- `how_to`
-- `what_failed`
-- `verification`
-- `still_true`
-- `pre_action`
-- `historical`
+- destructive or broad rewrite intent
+- low confidence synthesis
+- conflicting evidence
+- decision-record changes
+- branch/applicability ambiguity
+- stale lookup or degraded packet state that affects the claim
+- old wiki pages exist but curated Project Memory state is absent
 
-### Autonomous Write Assurance Policy
+The validator should produce structured findings, not just a boolean. Each finding should include severity, code, item ID when applicable, message, and whether the proposal can proceed to the later apply stage.
 
-Project Memory should maintain itself. The default path is autonomous apply with strong assurance, not human approval.
+### Run Artifacts
 
-The write policy should distinguish human-auditable from human-operated:
+This slice should leave inspectable run artifacts:
 
-- routine, well-sourced updates auto-apply after validation
-- every applied change records provenance, source evidence, affected candidates/handoffs, before/after hashes, and validation results
-- broad rewrites, conflicting evidence, decision-record changes, destructive deletes, and low-confidence synthesis do not ask the operator by default
-- high-risk changes route to stronger autonomous assurance: narrower packets, independent validator pass, deterministic schema/page checks, repo evidence re-read, and reconciliation
-- if assurance still fails, the curator leaves a degraded or quarantined state that agents can see and work around, instead of silently writing questionable Project Memory
-- explicit `--review` or `--dry-run` may exist for debugging, audits, or deliberate operator control, but they are not the daily product path
-- every skipped, rejected, deferred, or quarantined change records why and what evidence would unblock autonomous processing
+- `input-packet.json`
+- `curator-proposal.json`
+- `curator-validation.json`
+- `mutation-plan.json` or pre-write eligibility artifact
+- `pipeline-result.json`
+- `summary.md`
 
-The curator should never silently discard pending inputs. Every consumed handoff/candidate ends in a terminal or explicitly deferred status.
+When validation fails, artifacts should say that the run stopped before wiki writes and list the rejected conditions. "Completed" should not mean "wiki updated" unless a later apply slice actually mutates markdown.
 
-### Reusable Promotion Pattern
+### Relationship To Existing Pipeline Stages
 
-Project, Practice, and Personal Memory should share the same high-level pattern:
+The existing runner is historical orchestration scaffolding. The `project learn` behavior should be renamed or reshaped around Project Memory Curator concepts when that produces clearer product and code boundaries.
 
-```text
-Session Memory interpretation
-  -> scoped candidate or layer handoff
-  -> layer-specific curator/promoter
-  -> canonical markdown memory
-  -> derived lookup/index state
-```
+- a curator input/packet stage should prepare the Project Memory packet and mode authority profile;
+- a curator proposal stage should invoke the agent and require strict proposal JSON;
+- a curator validation stage should validate proposal items before markdown mutation;
+- any later apply stage should consume only validated curator output.
 
-The domain rules differ:
-
-- Project Memory subject: one repository.
-- Practice Memory subject: repeatable cross-project workflows, tools, frameworks, deployments, and implementation practices.
-- Personal Memory subject: Liad's durable preferences and agent behavior expectations.
-
-This design should establish the shared handoff/curator/index lifecycle without pretending that Practice and Personal canonical homes are already designed.
+The older ranked-domain proposal schema is useful history, but it should not define the new Project Memory Curator contract. Ranked-domain coverage, shelf allowlists, and generic Phase-0 stage names belong to old scaffolding, not the target `project learn` model.
 
 ## Data / State
 
-Canonical Project Memory state:
+This slice should prefer typed TypeScript contracts over new durable storage.
 
-- `projects/<key>/wiki/**`
-- `projects/<key>/state/page-metadata.json`
-- `projects/<key>/state/pages.json`
-- `projects/<key>/state/freshness.json`
-- `projects/<key>/state/bootstrap-state.json`
-- optional `projects/<key>/sources/**` when preserved source material exists
-- `projects/<key>/log/changelog.md`
+Likely shared contract surfaces:
 
-SQLite queue and continuity state:
+- `ProjectMemoryPacket`
+- `ProjectMemoryEvidenceRef`
+- `ProjectMemoryPathRef`
+- `ProjectMemoryRisk`
+- `ProjectMemoryCuratorValidationResult`
+- `ProjectMemoryCuratorValidationFinding`
 
-- `session_memories`
-- `memory_candidates`
-- `project_handoff_instructions`
-- `experience_event_tombstones`
-- derived Session Memory vector state
+Likely mode-specific contract surfaces:
 
-Likely new or evolved state:
+- `ProjectMemoryCreationDraft`
+- `ProjectMemoryCreationPageDraft`
+- `ProjectMemoryMaintenanceProposal`
+- `ProjectMemoryMaintenanceProposalItem`
 
-- Project Memory curator job/run metadata.
-- Candidate and handoff processed output references.
-- Project Memory chunk/index metadata for derived lookup.
-- Curator locks and maintenance scheduling state.
-
-The exact schema is an implementation-planning concern, but the design requires terminal lifecycle state for each consumed input.
-
-## Integrations
-
-Likely integration points:
-
-- `bootstrap`: creates shell and capture routing only.
-- `project learn`: creates initial curated Project Memory for an existing shell, then maintains it after creation.
-- `project onboard`: runs bootstrap and then `project learn` sequentially.
-- `ingest`: continues producing Session Memory and downstream handoffs only.
-- `memory candidates`: lists and inspects candidate records.
-- handoff repositories: need list/show/process helpers for Project Memory.
-- `project learn`: either evolves into the Project Memory Curator or becomes a compatibility wrapper around it.
-- `query`: later routes across Project Memory and Session Memory through layer-specific facades.
-- `status`: should expose uncurated, partially curated, current, degraded, and pending-curation states.
-- Practice and Personal future promoters: should reuse the same lifecycle shape with different canonical homes and promotion rules.
+New durable state should be limited to run artifacts. Candidate/handoff lifecycle updates and markdown mutation belong to later slices unless needed to record a rejected pre-write run.
 
 ## Error Handling
 
-The curator should fail loud and leave inspectable state.
+The pre-write gate should fail loud.
 
-Failure cases:
+Failures should stop before wiki writes and preserve enough context for the next run:
 
-- target repo path missing or not readable
-- no provider available
-- prompt/input packet too large
-- candidate/handoff batch cannot be fully represented
-- existing Project Memory conflicts with repo evidence
-- proposed page change is broad or low confidence
-- proposed mutation lacks entry-level evidence or applicability
-- source taint attempts to cross into an unauthorized scope
-- page metadata/index refresh fails
-- derived vector/index refresh fails
-- lock already held by another curator job
+- malformed curator JSON
+- schema mismatch
+- missing packet references
+- unsupported operation
+- missing provenance
+- stale/degraded packet conditions
+- proposed write too broad for the current slice
 
-Canonical wiki writes should not be partially trusted if validation fails. If markdown files changed but metadata refresh failed, status should report degraded state and the changed files should remain visible in the run artifact.
+Provider or model failures should leave run artifacts where possible, but should not mutate Project Memory.
 
 ## Testing Strategy
 
-Future implementation should verify:
+Focused tests should prove:
 
-- bootstrap still creates only the shell unless the chosen creation trigger is enabled
-- creation mode can produce initial Project Memory from a fixture repo and bounded packet
-- Project Memory page entries preserve evidence, applicability, lifecycle, and verification metadata
-- curator outputs typed mutation plans instead of direct arbitrary markdown rewrites
-- deterministic validation rejects illegal lifecycle transitions, missing evidence, taint violations, and protected metadata self-assignment
-- maintenance mode consumes project handoffs/candidates and updates the smallest expected wiki surface
-- already-documented facts do not produce duplicate pages
-- risky/conflicting candidates route to autonomous validation, reconciliation, degraded, or quarantine states instead of silently applying
-- candidate/handoff lifecycle state records processed/rejected/deferred outcomes
-- Project Memory lookup cites markdown pages and degrades honestly when metadata/indexes are missing
-- derived indexing failure does not invalidate canonical markdown
-- curator locking prevents concurrent writes for one project
-- status reports uncurated, pending, running, degraded, and current states
+- `project learn` builds or receives a Project Memory packet for curator input.
+- Curator output must be JSON matching the proposal schema.
+- Invalid proposals are rejected before any wiki file write.
+- Missing provenance is rejected.
+- Unknown packet references are rejected.
+- Out-of-wiki target paths are rejected.
+- Unsupported broad operations are rejected or quarantined.
+- Degraded packet state is surfaced in validation findings.
+- Existing wiki markdown without `project-memory.json` is treated as context, not trusted curated state.
 
-Repo-native verification should remain:
+Repo-native verification remains:
 
 ```bash
 bun test
@@ -548,54 +308,40 @@ git diff --check
 
 ## Planning Boundary Guidance
 
-This design should split into focused implementation chunks later:
+Later implementation planning should split this design into smaller chunks:
 
-- Project Memory Curator command/service and run state.
-- Project Memory page-entry schema and lifecycle state machine.
-- Mutation plan schema and deterministic validator.
-- Source authority, taint, and cross-scope write policy.
-- Curator input packet builder and prompt budget controls.
-- Project handoff list/show/process helpers.
-- Project Memory lookup over markdown and page metadata.
-- Controlled autonomous wiki update/apply path with provenance, validation, reconciliation, and degraded/quarantine states.
-- Bootstrap creation trigger policy.
-- Maintenance scheduler with lock, cooldown, budget, and explicit command.
-- Project Memory derived index/backfill hooks.
-- Status/query integration.
-- Documentation and fixture validation.
+- Shared Project Memory curator primitives.
+- Creation brain-draft TypeScript schema and validator.
+- Maintenance mutation-proposal TypeScript schema and validator.
+- Pipeline runner wiring so `project learn` passes the Project Memory packet to the curator stage.
+- Run artifact changes for proposal and validation results.
+- Pre-write rejection tests for invalid proposals.
+- Later bounded apply path that mutates markdown with provenance.
 
-Do not combine Project, Practice, Personal, full multi-layer query, and curator scheduling into one implementation plan.
+Do not combine this pre-write contract with derived Project Memory vector indexing, auto-maintenance scheduling, Practice/Personal Memory promotion, or Current Briefing.
 
 ## Acceptance Criteria
 
-- A bootstrapped project can move from shell-only to initial curated Project Memory through the chosen creation trigger.
-- Project Memory maintenance can consume pending project handoffs/candidates from Session Memory output.
-- Project Memory is compiled into subject pages with addressable entries carrying evidence, applicability, lifecycle, authority, taint, and verification metadata.
-- Curator model output is a mutation plan; trusted runtime code validates, stamps, and publishes canonical markdown.
-- Session Memory remains responsible for continuity and downstream instructions, not curated wiki mutation.
-- Project Memory markdown remains canonical; SQLite records are queues, continuity, and derived serving state.
-- Curator outputs preserve provenance and terminal lifecycle status for each consumed input.
-- Duplicate or already-documented candidate topics are handled without generating noisy wiki changes.
-- Risky, broad, or conflicting updates do not silently apply; they route through autonomous assurance or fail loud into degraded/quarantined state.
-- The design leaves a reusable promotion pattern for Practice and Personal Memory without implementing those layers in this slice.
+- The design defines separate Project Memory Curator output contracts for creation and maintenance.
+- The design defines deterministic validation rules before wiki writes.
+- The design states how `project learn` uses the Project Memory packet as curator input.
+- The design handles creation-mode ambiguity when markdown exists but trusted Project Memory state is absent.
+- The design defines rejected, review/quarantine, and eligible proposal outcomes.
+- The design keeps markdown canonical and treats SQLite/vector state as non-canonical.
+- The design explicitly defers actual page mutation, derived retrieval indexing, scheduling, Practice/Personal Memory, and Current Briefing.
 
 ## Assumptions
 
-- The target repo is the best context for Project Memory curation.
-- Project Memory should remain compact, behavior-focused, and provenance-backed.
-- The current candidate/handoff schema is directionally correct but may need lifecycle/output-reference extensions.
-- Existing project wiki metadata can be reused as a starting point, but it should not constrain the final Project Memory Curator design.
-- Some existing wiki pages may need migration into structured subject pages with addressable entries.
-- Practice and Personal canonical homes remain deferred until Project Memory curation proves the shared lifecycle.
+- The current `project-memory-packet.ts` shape is directionally correct, though it may need small additions.
+- The first implementation can validate maintenance proposal eligibility without applying markdown changes.
+- Addressable Project Memory entries are still the intended durable unit, but their exact markdown encoding can be finalized in a later apply/write slice.
+- Preexisting wiki pages may be useful evidence or context, but they are not proof that the project has current curated Project Memory state.
 
 ## Open Questions
 
-- Should bootstrap automatically start Project Memory creation, expose it behind an explicit flag, or only print the next command?
-- How much Project Memory lookup should Session Memory ingest perform before creating project handoffs?
-- Should the curator receive only scoped packets, or should it have live read access to broader SQLite state?
-- What autonomous assurance pipeline should replace human review as the normal safety gate?
-- What is the Phase 1 Project Memory page structure: flat subject pages, subject folders, or another subject taxonomy?
-- What lifecycle states must be implemented before broad autonomous Project Memory curation is allowed?
-- What trigger threshold should start automatic maintenance?
-- What is the first Project Memory lookup/index implementation: metadata/text search, vector chunks, or both?
-- Is Current Briefing a Project Memory artifact, a status/query facade output, or a separate state product?
+No blocking design questions remain for this brainstorming slice.
+
+Remaining non-blocking shaping work:
+
+- Define exact fields for the Project Memory Creation Draft and Project Memory Maintenance Proposal.
+- Define exact validation blocking rules for creation publication versus maintenance eligibility.

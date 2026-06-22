@@ -1,0 +1,3 @@
+# Use mode-scoped Project Learn curator contracts
+
+`project learn` is an authoritative command whose permissions depend on trusted Project Memory state. When no trusted curated Project Memory exists, `project learn` runs in Project Memory Creation Mode and emits a Project Memory Creation Draft for the first brain; after trusted Project Memory exists, it runs in Project Memory Maintenance Mode and emits bounded Project Memory Maintenance Proposals validated before writes. This keeps first-brain creation powerful while keeping self-maintenance constrained, instead of forcing both lifecycles through one generic schema or preserving old pipeline-stage names for compatibility.
