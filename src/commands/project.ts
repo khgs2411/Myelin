@@ -2,14 +2,19 @@ import type { Cli } from "./registry.ts";
 import { fail, ok } from "./registry.ts";
 import { repoRoot } from "../runtime/fs.ts";
 import { stableJson } from "../runtime/json.ts";
-import type { PipelineKind } from "../pipeline/runner.ts";
+import type { ProcessRunner } from "../runtime/llm-client.ts";
 import { ProjectService } from "../project/project-service.ts";
 
-export function registerProjectCommands(cli: Cli): void {
+export type ProjectCommandDeps = {
+  now?: () => Date;
+  runner?: ProcessRunner;
+  env?: NodeJS.ProcessEnv;
+};
+
+export function registerProjectCommands(cli: Cli, deps: ProjectCommandDeps = {}): void {
   cli.command(["project", "list"], async (args) => listProjectsCommand(args));
   cli.command(["project", "packet"], async (args) => projectPacketCommand(args));
-  cli.command(["project", "learn"], async (args) => runPipelineCommand("learn", args));
-  cli.command(["project", "ingest"], async (args) => runPipelineCommand("ingest", args));
+  cli.command(["project", "learn"], async (args) => projectLearnCommand(args, deps));
   cli.command(["project", "migrate-layout"], async (args) => {
     const projectKey = args[0];
     if (!projectKey || args.length > 1) return fail("Usage: myelin project migrate-layout <project-key>");
@@ -81,19 +86,29 @@ async function listProjectsCommand(args: string[]) {
   }
 }
 
-async function runPipelineCommand(kind: PipelineKind, args: string[]) {
-  const parsed = parsePipelineArgs(kind, args);
+async function projectLearnCommand(args: string[], deps: ProjectCommandDeps) {
+  const parsed = parseProjectLearnArgs(args);
   if (parsed.error) return fail(parsed.error);
 
   try {
-    const result = await new ProjectService(repoRoot().root).runPipeline({ ...parsed, kind });
+    const result = await new ProjectService(repoRoot().root).runProjectLearn({
+      projectKey: parsed.projectKey,
+      dryRun: parsed.dryRun,
+      review: parsed.review,
+      provider: parsed.provider,
+      modelOverride: parsed.modelOverride,
+      env: deps.env,
+      runner: deps.runner,
+      now: deps.now?.(),
+    });
     if (parsed.json) return ok(stableJson(result));
 
     const lines = [
-      `Project ${kind} ${result.status} for ${result.project_key}.`,
+      `Project learn ${result.status} for ${result.project_key}.`,
+      `mode: ${result.mode}`,
       `run: ${result.run_dir}`,
-      `stages: ${result.stages.map((stage) => `${stage.stage_id}:${stage.status}`).join(", ")}`,
-      `validation: ${result.validation.ok ? "passed" : "failed"}`,
+      `validation: ${result.validation_ok ? "passed" : "failed"}`,
+      `stopped_before_writes: ${result.stopped_before_writes}`,
     ];
     if (result.stopped_reason) lines.push(`stopped: ${result.stopped_reason}`);
     return result.status === "failed" ? fail(lines.join("\n")) : ok(lines.join("\n"));
@@ -138,10 +153,7 @@ function parseProjectListArgs(args: string[]): {
   return { includeLegacy, json };
 }
 
-function parsePipelineArgs(
-  kind: PipelineKind,
-  args: string[],
-): {
+function parseProjectLearnArgs(args: string[]): {
   projectKey: string;
   dryRun: boolean;
   review: boolean;
@@ -170,14 +182,22 @@ function parsePipelineArgs(
       modelOverride = args[++index];
       if (!modelOverride) return { projectKey, dryRun, review, json, error: "--model requires a value" };
     } else if (arg.startsWith("-")) {
-      return { projectKey, dryRun, review, json, error: `Unknown project ${kind} option: ${arg}` };
+      return { projectKey, dryRun, review, json, error: `Unknown project learn option: ${arg}` };
     } else if (!projectKey) {
       projectKey = arg;
     } else {
-      return { projectKey, dryRun, review, json, error: `Unexpected project ${kind} argument: ${arg}` };
+      return { projectKey, dryRun, review, json, error: `Unexpected project learn argument: ${arg}` };
     }
   }
 
-  if (!projectKey) return { projectKey, dryRun, review, json, error: `Usage: myelin project ${kind} <project-key> [--dry-run] [--review] [--json]` };
+  if (!projectKey) {
+    return {
+      projectKey,
+      dryRun,
+      review,
+      json,
+      error: "Usage: myelin project learn <project-key> [--dry-run] [--review] [--json]",
+    };
+  }
   return { projectKey, dryRun, review, json, provider, modelOverride };
 }

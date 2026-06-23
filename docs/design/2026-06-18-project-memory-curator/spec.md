@@ -1,6 +1,6 @@
 # Project Memory Curator Pre-Write Gate Design
 
-Status: Final design for review. Not approved for implementation planning yet.
+Status: Approved for implementation planning.
 
 ## Goal
 
@@ -24,10 +24,10 @@ The active concrete work under that parent is:
 
 The current implementation has useful shell pieces:
 
-- `src/commands/project.ts` exposes `project learn`, `project ingest`, and `project packet`.
+- `src/commands/project.ts` exposes `project learn`, `project ingest`, and `project packet` today, but the target design removes `project ingest` as a separate Project Memory command.
 - `src/project/project-memory-packet.ts` builds a bounded packet from project state, wiki markdown, pending project handoffs/candidates, selected Session Memory, and lookup results.
 - `src/project/project-memory-lookup.ts` provides degraded markdown text lookup over Project Memory pages.
-- `src/pipeline/runner.ts` runs Phase-0 stages and deterministic apply/validate placeholders.
+- `src/pipeline/runner.ts` runs Phase-0 stages and deterministic apply/validate placeholders; it is implementation scaffolding, not a future product boundary.
 - `stages/03-propose/instructions.md` still describes the older ranked-domain proposal model.
 
 The current code does not yet answer "what durable project knowledge changed?" in a structured way. The apply stage writes run/freshness artifacts, but it does not validate Project Memory curator proposals or apply meaningful wiki updates.
@@ -40,6 +40,8 @@ The design posture for this slice is quality-first. Because Myelin is in early f
 
 ADR 0058 records the hard-to-reverse boundary decision: `project learn` uses mode-scoped curator contracts, with a Project Memory Creation Draft for first-brain creation and a Project Memory Maintenance Proposal for ongoing constrained maintenance.
 
+The pseudocode artifacts under `pseudocode/` are accepted first-class planning inputs for this slice. Implementation planning should preserve their domain boundaries, contract split, validator API shape, service ownership, and project-learn flow unless the plan records an evidence-backed divergence.
+
 ## Documented Decisions
 
 - Project Memory canonical truth lives in markdown plus project state, not SQLite.
@@ -51,6 +53,8 @@ ADR 0058 records the hard-to-reverse boundary decision: `project learn` uses mod
 - Current Briefing is not active scope until Project Memory curation and retrieval are stable.
 - `project learn` may inspect the live repository directly, but durable writes require traceable evidence or explicit inference labels.
 - Routine project learning should eventually auto-apply by default, but risky changes must not silently corrupt Project Memory.
+- `project ingest` should not remain as a separate Project Memory command in the ground-up V2 model. Source/inbox Project Memory intake is folded into authoritative `project learn`.
+- `src/pipeline/runner.ts` should not remain as the semantic owner for Project Memory behavior. Reusable mechanics may be extracted as runtime infrastructure, but the runner abstraction itself is not preserved for compatibility.
 
 ## User-Facing Behavior
 
@@ -59,12 +63,13 @@ For this slice, `project learn <key>` should become visibly different from the P
 A run should:
 
 1. Ensure schema context is valid or rebuilt using the existing learn behavior.
-2. Build the Project Memory packet for the project.
-3. Pass that packet, not unbounded SQLite state or raw conversation history, to the Project Memory Curator.
-4. Require curator output to be strict JSON matching the active mode's Project Memory Curator output contract.
-5. Validate the proposal deterministically.
-6. Stop before wiki writes when validation fails.
-7. Write run artifacts that explain the proposal, validation outcome, rejected items, and pre-write status.
+2. Gather pending Project Memory source/inbox material as part of packet construction, not through a separate `project ingest` command.
+3. Build the Project Memory packet for the project.
+4. Pass that packet, not unbounded SQLite state or raw conversation history, to the Project Memory Curator.
+5. Require curator output to be strict JSON matching the active mode's Project Memory Curator output contract.
+6. Validate the proposal deterministically.
+7. Stop before wiki writes when validation fails.
+8. Write run artifacts that explain the proposal, validation outcome, rejected items, and pre-write status.
 
 If the proposal is valid, this slice may still stop before actual markdown mutation. The important product behavior is that Myelin can prove a curator proposal is valid enough to be eligible for a later bounded apply stage.
 
@@ -72,7 +77,7 @@ If the proposal is valid, this slice may still stop before actual markdown mutat
 
 `project learn` is authoritative, but not uniformly permissive. The command should derive its authority profile from project state.
 
-Creation mode applies when the project has a valid bootstrap shell but no trusted curated Project Memory. This includes normal onboarding where `project onboard` runs `bootstrap` and then `project learn`.
+Creation mode applies when the project has a valid bootstrap shell but no trusted curated Project Memory. This includes normal onboarding where `bootstrap` is followed by `project learn`.
 
 The first implementation should use two deterministic modes:
 
@@ -126,6 +131,7 @@ The curator should not receive:
 - all SQLite tables
 - all raw Experience Log rows
 - all Session Memory rows
+- a separate `project ingest` result as an authority source
 - unrelated Practice or Personal candidates
 - unbounded transcripts
 
@@ -227,22 +233,35 @@ The validator should produce structured findings, not just a boolean. Each findi
 This slice should leave inspectable run artifacts:
 
 - `input-packet.json`
-- `curator-proposal.json`
+- `curator-creation-draft.json` or `curator-maintenance-proposal.json`
 - `curator-validation.json`
-- `mutation-plan.json` or pre-write eligibility artifact
-- `pipeline-result.json`
+- `curator-run-result.json`
 - `summary.md`
 
 When validation fails, artifacts should say that the run stopped before wiki writes and list the rejected conditions. "Completed" should not mean "wiki updated" unless a later apply slice actually mutates markdown.
 
+This pre-write slice should not write `mutation-plan.json`; mutation planning belongs to a later bounded apply slice that consumes validated curator output.
+
 ### Relationship To Existing Pipeline Stages
 
-The existing runner is historical orchestration scaffolding. The `project learn` behavior should be renamed or reshaped around Project Memory Curator concepts when that produces clearer product and code boundaries.
+The existing runner is historical orchestration scaffolding. The target design does not preserve `src/pipeline/runner.ts` as a product abstraction and does not preserve `project ingest` as a separate Project Memory command.
 
-- a curator input/packet stage should prepare the Project Memory packet and mode authority profile;
-- a curator proposal stage should invoke the agent and require strict proposal JSON;
-- a curator validation stage should validate proposal items before markdown mutation;
-- any later apply stage should consume only validated curator output.
+The `project learn` behavior should move semantically into a Project Memory Curator service under `src/project/`. Any useful runner mechanics should be extracted as mechanical helpers only:
+
+- project run directory creation
+- JSON artifact writing
+- provider invocation wrappers
+- run summary writing
+- schema context freshness helpers
+
+Those helpers must not know about Project Memory Creation Drafts, Project Memory Maintenance Proposals, mode authority, packet evidence, source intake, or validation outcomes.
+
+The target `project learn` flow should be named around Project Memory Curator concepts:
+
+- a curator input/packet step prepares the Project Memory packet, including pending Project Memory source/inbox material, and mode authority profile;
+- a curator output step invokes the agent and requires strict creation-draft or maintenance-proposal JSON;
+- a curator validation step validates curator output before markdown mutation;
+- any later apply step consumes only validated curator output.
 
 The older ranked-domain proposal schema is useful history, but it should not define the new Project Memory Curator contract. Ranked-domain coverage, shelf allowlists, and generic Phase-0 stage names belong to old scaffolding, not the target `project learn` model.
 
@@ -313,7 +332,9 @@ Later implementation planning should split this design into smaller chunks:
 - Shared Project Memory curator primitives.
 - Creation brain-draft TypeScript schema and validator.
 - Maintenance mutation-proposal TypeScript schema and validator.
-- Pipeline runner wiring so `project learn` passes the Project Memory packet to the curator stage.
+- Project Memory Curator service wiring so `project learn` uses the Project Memory packet and no longer depends on the Phase-0 pipeline runner.
+- Removal of `project ingest` as a separate Project Memory command, with pending source/inbox intake folded into `project learn` packet construction.
+- Extraction of any useful runner mechanics into runtime helpers only if the implementation needs them.
 - Run artifact changes for proposal and validation results.
 - Pre-write rejection tests for invalid proposals.
 - Later bounded apply path that mutates markdown with provenance.
@@ -325,6 +346,8 @@ Do not combine this pre-write contract with derived Project Memory vector indexi
 - The design defines separate Project Memory Curator output contracts for creation and maintenance.
 - The design defines deterministic validation rules before wiki writes.
 - The design states how `project learn` uses the Project Memory packet as curator input.
+- The design states that `project learn` supersedes separate Project Memory source/inbox ingest in the target model.
+- The design states that `src/pipeline/runner.ts` is not preserved as the future Project Memory product boundary.
 - The design handles creation-mode ambiguity when markdown exists but trusted Project Memory state is absent.
 - The design defines rejected, review/quarantine, and eligible proposal outcomes.
 - The design keeps markdown canonical and treats SQLite/vector state as non-canonical.

@@ -1,16 +1,8 @@
-import { runProjectPipeline, type PipelineKind, type PipelineRunResult } from "../pipeline/runner.ts";
 import { migrateProjectLayout, type MigrationAction } from "../runtime/layout.ts";
 import { discoverProjects } from "../runtime/projects.ts";
+import type { ProjectMemoryCuratorRunResult, RunProjectMemoryCuratorInput } from "./project-memory-curator-contracts.ts";
+import { ProjectMemoryCuratorService } from "./project-memory-curator-service.ts";
 import { buildProjectMemoryPacket, type ProjectMemoryPacket } from "./project-memory-packet.ts";
-
-export type RunProjectPipelineInput = {
-  projectKey: string;
-  kind: PipelineKind;
-  dryRun: boolean;
-  review: boolean;
-  provider?: "codex" | "claude";
-  modelOverride?: string;
-};
 
 export type MigrateProjectLayoutResult = {
   projectActions: MigrationAction[];
@@ -42,13 +34,8 @@ export class ProjectService {
     return await buildProjectMemoryPacket(this.root, projectKey);
   }
 
-  async runPipeline(input: RunProjectPipelineInput): Promise<PipelineRunResult> {
-    return runProjectPipeline(this.root, input.projectKey, input.kind, {
-      dryRun: input.dryRun,
-      review: input.review,
-      provider: input.provider,
-      modelOverride: input.modelOverride,
-    });
+  async runProjectLearn(input: RunProjectMemoryCuratorInput): Promise<ProjectMemoryCuratorRunResult> {
+    return await new ProjectMemoryCuratorService(this.root).runProjectLearn(input);
   }
 
   async migrateLayout(projectKey: string): Promise<MigrateProjectLayoutResult> {

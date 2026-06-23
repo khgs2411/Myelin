@@ -27,7 +27,7 @@ test("stub mode returns canned responses and verifies prompt hashes", async () =
   const prompt = "classify this source";
   await mkdir(stubDir, { recursive: true });
   await writeFile(
-    join(stubDir, "03-propose.json"),
+    join(stubDir, "curator-maintain.json"),
     JSON.stringify({
       prompt_hash: sha256(prompt),
       response: { source_kind: "spec" },
@@ -39,7 +39,7 @@ test("stub mode returns canned responses and verifies prompt hashes", async () =
   const result = await invokeLlm({
     root,
     workload: "pipeline",
-    stageId: "03-propose",
+    stageId: "curator-maintain",
     prompt,
     env: { LLM_STUB_RESPONSES_DIR: stubDir },
   });
@@ -50,7 +50,7 @@ test("stub mode returns canned responses and verifies prompt hashes", async () =
     invokeLlm({
       root,
       workload: "pipeline",
-      stageId: "03-propose",
+      stageId: "curator-maintain",
       prompt: "different",
       env: { LLM_STUB_RESPONSES_DIR: stubDir },
     }),

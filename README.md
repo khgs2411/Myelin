@@ -21,7 +21,6 @@ bun src/cli.ts schema build <project-key>
 bun src/cli.ts memory query <project-key> "What should I know?"
 bun src/cli.ts memory index session <project-key>
 bun src/cli.ts project learn <project-key> --dry-run
-bun src/cli.ts project ingest <project-key>
 bun src/cli.ts ingest <project-key>
 bun src/cli.ts ingest status <ingest-job-id>
 ```
@@ -46,7 +45,7 @@ For the exhaustive command reference, including arguments, options, side effects
 | V1/operator habit | V2 command |
 | --- | --- |
 | `make compile PROJECT=<key>` | `myelin project learn <key>` / `make learn PROJECT=<key>` |
-| `make update PROJECT=<key>` | `myelin project ingest <key>` / `make ingest PROJECT=<key>` |
+| `make update PROJECT=<key>` | `myelin ingest <key>` / `make ingest PROJECT=<key>` |
 | Experience Log to Session Memory ingest | `myelin ingest <key>` / `myelin ingest status <ingest-job-id>` |
 | Session Memory embedding index/backfill | `myelin memory index session <key> [--limit N] [--retry-failed] [--json]` |
 | `ask` / query helpers | `myelin memory query <key> "<question>"` / `make query ...` |
@@ -54,8 +53,6 @@ For the exhaustive command reference, including arguments, options, side effects
 | validate schema context | `myelin schema check <key>` / `myelin schema build <key>` |
 
 The old command names are V1 concepts. Keep them out of new docs and scripts unless a legacy escape hatch is explicitly being discussed.
-
-`project ingest <key>` processes queued source/inbox material through the project-memory pipeline. Top-level `ingest <key>` starts a detached provider-backed Experience Log to Session Memory job and returns a durable handle.
 
 Top-level `ingest <key>` batches queued Experience Log rows by `INGEST_BATCH_SIZE` and launches one detached target-repo agent per batch. The default batch size is `100`; the maximum accepted batch size is `500`.
 
@@ -68,7 +65,7 @@ Session Memory vector retrieval is currently an internal facade. MCP exposure, C
 - `projects/`: curated project memory, state, logs, sources, runs, and wiki pages.
 - `raw/`: unclassified global intake.
 - `concepts/`: cross-project knowledge.
-- `stages/`: V2 pipeline instruction assets.
+- `stages/`: retained non-Project-Memory stage/reference assets; the old Project Memory Phase-0 stage runner has been retired.
 - `mcp/`: detached MCP interface boundary; it is not part of the root package graph.
 
 ## Documentation

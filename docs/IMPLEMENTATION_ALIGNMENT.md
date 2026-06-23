@@ -190,21 +190,22 @@ Keep. Expand only after deciding what "current state" should mean as a product a
 
 What exists:
 
-- `myelin project learn <key>` runs Phase-0 stages: `sense -> impact -> propose -> apply -> validate`.
-- `myelin project ingest <key>` runs `ingest -> apply -> validate`.
-- Stage instructions live under `stages/<stage-id>/`.
-- LLM stages produce JSON artifacts.
-- Apply/validate are deterministic code.
+- `myelin project learn <key>` runs the Project Memory Curator pre-write flow.
+- Top-level `myelin ingest <key>` remains the Session Memory / Experience Log ingest command.
+- Project Memory Curator artifacts live under `projects/<key>/runs/project-learn/<run-id>/`.
+- Curator output is validated before any markdown write.
+- Markdown apply is not implemented in the current Project Memory Curator slice.
 
 Code evidence:
 
 - `src/commands/project.ts`
-- `src/pipeline/runner.ts`
-- `stages/*`
+- `src/project/project-memory-curator-service.ts`
+- `src/project/project-memory-curator-validator.ts`
+- `src/runtime/project-run-infrastructure.ts`
 
 Alignment:
 
-This is the weakest product fit. It is an orchestration scaffold, not yet the evolved Project Memory Curator from `MYELIN.md`.
+This is now aligned with the pre-write Project Memory Curator boundary. It still stops before canonical markdown mutation.
 
 Mismatch:
 
@@ -320,12 +321,12 @@ Keep but reframe:
 - inbox/gap flow
 - status command
 - project wiki metadata
-- stage instruction assets
+- retained non-Project-Memory stage/reference assets
 
 Do not extend blindly:
 
 - SQLite session logic
-- current `project learn` / `project ingest` apply path
+- future markdown apply beyond the current `project learn` pre-write curator flow
 - old MCP brain/wiki tool vocabulary
 - advanced schema candidates before real candidate examples exist
 

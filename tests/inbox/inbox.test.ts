@@ -139,5 +139,5 @@ test("detached auto-update writes logs under the project and releases the lock",
   }
 
   expect(existsSync(result.lockPath)).toBe(false);
-  expect(await readFile(result.logPath!, "utf8")).toContain("project ingest demo");
+  expect(await readFile(result.logPath!, "utf8")).toContain("ingest demo");
 });

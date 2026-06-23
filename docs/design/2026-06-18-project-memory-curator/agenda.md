@@ -8,6 +8,7 @@
   - Live agenda questions resolved: Yes
   - Pressure test complete: Yes
   - Spec finalized: Yes
+  - Approved for implementation planning: Yes
 
 ## Documented Decisions
 
@@ -22,6 +23,8 @@
 - The current Step 3 brainstorming scope covers the parent `project learn` evolution only through the pre-write gate: packet input, curator proposal schema, and rejection before wiki writes.
 - Design posture for this slice: because this is early foundational product work with no external deadline, prefer the strongest long-term product shape and clearest boundaries over minimizing implementation workload. The user clarified this as a general durable preference, not only a local project choice.
 - ADR 0058 records the mode-scoped `project learn` curator-contract decision.
+- Follow-up revision: there is no old Project Memory command surface to preserve. `project ingest` is obsolete in the target V2 model because authoritative `project learn` supersedes separate Project Memory source/inbox intake.
+- Follow-up revision: `src/pipeline/runner.ts` should not remain a Project Memory product abstraction. Useful mechanics may be extracted into runtime helpers, but Project Memory semantics move to `ProjectMemoryCuratorService`.
 
 ## Questions
 
@@ -56,7 +59,7 @@
 - Recommendation: A. The best boundary is not a third compatibility/migration mode; it is a strict trust distinction. Either trusted Project Memory exists or it does not.
 - Answer: A. Use two deterministic state-derived modes. `create` applies when no trusted curated Project Memory exists, even if preexisting wiki markdown exists. `maintain` applies after trusted curated Project Memory state exists. Preexisting wiki markdown should be included as flagged untrusted context inside the `create` packet rather than becoming a separate lifecycle mode.
 - Answer impact: Confirms branch
-- Spec impact: Updated the mode-scoped authority section to define `create` and `maintain` as the initial mode set and to classify old wiki pages as legacy context within `create`.
+- Spec impact: Updated the mode-scoped authority section to define `create` and `maintain` as the initial mode set and to classify old wiki pages as untrusted context within `create`.
 - Context impact: Updated - added Project Memory Creation Mode, Project Memory Maintenance Mode, and Untrusted Existing Markdown Context to `CONTEXT.md`.
 - ADR impact: Created - ADR 0058 records mode-scoped `project learn` curator contracts.
 - Follow-ups: Question 4 should be revised or marked obsolete because old markdown handling is now partly answered by this mode decision.
@@ -110,7 +113,7 @@
 - Recommendation: C. The packet should distinguish "markdown exists" from "trusted curated Project Memory exists" and let the proposal contract represent adoption intent without auto-trusting old pages.
 - Answer: Resolved by Question 1A. Preexisting markdown without trusted `project-memory.json` does not create a separate mode and does not count as trusted Project Memory. It is flagged as untrusted context inside `create` mode. Lookup matches in untrusted markdown can inform the agent, but they should not by themselves count as "already documented" in trusted Project Memory.
 - Answer impact: Resolves branch
-- Spec impact: The mode-scoped authority section now states that old wiki markdown remains create-mode legacy context until trusted Project Memory exists.
+- Spec impact: The mode-scoped authority section now states that old wiki markdown remains create-mode untrusted context until trusted Project Memory exists.
 - Context impact: Updated - added Untrusted Existing Markdown Context to `CONTEXT.md`.
 - ADR impact: Created - ADR 0058 includes the trust boundary for preexisting markdown.
 - Follow-ups: None.
@@ -120,7 +123,7 @@
 - Status: Answered
 - Branch type: Initial
 - Why it matters: The current runner uses `03-propose`, `04-apply`, and `06-validate`, but the new behavior is a curator proposal pre-write gate. Naming affects future plans, tests, and operator/debugging output.
-- Scenario probe: A future agent opens a failed run directory. Should they see generic `propose-result.json` and `apply-result.json`, or explicit `curator-proposal.json` and `curator-validation.json`?
+- Scenario probe: A future agent opens a failed run directory. Should they see generic `propose-result.json` and `apply-result.json`, or explicit mode-specific curator output such as `curator-maintenance-proposal.json` plus `curator-validation.json`?
 - Options:
   - A. Keep existing stage names and generic artifacts - least disruptive, but preserves old mental models.
   - B. Keep stage IDs as wrappers but write curator-named artifacts inside the run - clearer artifacts, but still hides the product boundary behind old stage names.
@@ -131,14 +134,14 @@
 - Spec impact: Updated the stage boundary guidance to prefer curator-specific stage and artifact naming for `project learn`, with any old generic pipeline naming treated as historical scaffolding rather than a compatibility constraint.
 - Context impact: Not needed
 - ADR impact: Not needed
-- Follow-ups: Re-evaluate earlier recommendations to ensure none were chosen only because they were less work.
+- Follow-ups: Completed by Question 7. The design now removes `project ingest` from the target model and demotes `runner.ts` to extractable mechanics only.
 
 ### Question 6: Creation output contract versus maintenance proposal contract
 
 - Status: Answered
 - Branch type: Pressure-test
 - Why it matters: The design now gives `create` mode broad first-brain authority and `maintain` mode constrained proposal authority. If both modes are forced through one proposal schema only for convenience, either creation becomes artificially cramped or maintenance becomes too permissive.
-- Scenario probe: `project onboard` runs `project learn` for a brand-new repo. The agent needs to create a whole first brain: root readme, wiki index, setup page, architecture page, and decisions page. Later, self-maintenance only needs to add one sourced setup entry and quarantine one risky architecture rewrite. Should both runs emit the same JSON contract?
+- Scenario probe: `bootstrap` is followed by `project learn` for a brand-new repo. The agent needs to create a whole first brain: root readme, wiki index, setup page, architecture page, and decisions page. Later, self-maintenance only needs to add one sourced setup entry and quarantine one risky architecture rewrite. Should both runs emit the same JSON contract?
 - Options:
   - A. One shared schema with mode-specific operation allowlists - fewer concepts, but creation and maintenance may keep pulling the schema in opposite directions.
   - B. Two related contracts: a creation brain-draft contract and a maintenance mutation-proposal contract - clearer boundaries and stronger long-term shape, but more design and implementation work.
@@ -151,6 +154,24 @@
 - ADR impact: Created - ADR 0058 records separate creation and maintenance curator contracts.
 - Follow-ups:
 
+### Question 7: Separate `project ingest` and runner preservation
+
+- Status: Answered
+- Branch type: Follow-up
+- Why it matters: The earlier artifacts left room for `project ingest` and `src/pipeline/runner.ts` to survive as compatibility surfaces. That contradicts the ground-up V2 posture: there is no active old product surface to preserve, and preserving weak boundaries would make planning inherit old Phase-0 assumptions.
+- Scenario probe: `project learn` has moved into `ProjectMemoryCuratorService`. There are queued Project Memory source/inbox items. Should the operator run a separate `project ingest`, should the old runner process them, or should `project learn` gather them into the curator packet?
+- Options:
+  - A. Preserve `project ingest` temporarily on `runner.ts`. This minimizes implementation work but keeps two Project Memory maintenance commands and old pipeline semantics alive.
+  - B. Remove `project ingest` as a Project Memory command and fold source/inbox intake into authoritative `project learn`. Extract only mechanical helpers from `runner.ts` if useful.
+  - C. Keep `project ingest` but rename it to a source-specific command. This clarifies naming but still splits Project Memory maintenance authority.
+- Recommendation: B. This matches the strongest-boundary posture: one authoritative Project Memory maintenance command, one semantic service, no compatibility shell.
+- Answer: B. `project ingest` is obsolete in the target V2 Project Memory model. `project learn` supersedes it by gathering source/inbox material into the Project Memory packet and sending it through the curator flow. `src/pipeline/runner.ts` should not remain as a semantic orchestrator; implementation may extract generic mechanics such as run directory creation, JSON artifact writing, provider invocation wrappers, summary writing, and schema freshness helpers.
+- Answer impact: Changes model
+- Spec impact: Updated current context, user-facing behavior, technical design, planning boundaries, and acceptance criteria to remove `project ingest` from the target model and demote `runner.ts` to optional mechanical helper extraction.
+- Context impact: Updated - clarified `Learn Command` as the authoritative Project Memory command and marked `project ingest` as obsolete in the target V2 model.
+- ADR impact: Updated ADR 0058 to include the command/boundary consequence.
+- Follow-ups:
+
 ## Pressure-Test Result
 
 - Status: Complete
@@ -159,3 +180,4 @@
 - Remaining non-blocking risks:
   - Exact field-level schemas for Project Memory Creation Draft and Project Memory Maintenance Proposal still need pseudocode or implementation planning.
   - Exact validation blocking rules for creation publication versus maintenance eligibility still need implementation-level shaping.
+  - Implementation planning must decide whether any mechanics should be extracted from `src/pipeline/runner.ts` before deleting or replacing it; no Project Memory semantics should remain there.

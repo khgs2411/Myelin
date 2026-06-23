@@ -30,7 +30,6 @@ const CONTEXT_FILE = "schema-context.json";
 const REQUIRED_CONTEXT_COMMANDS = [
   "bootstrap",
   "project learn",
-  "project ingest",
   "ingest",
   "ingest status",
   "memory query",

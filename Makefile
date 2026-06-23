@@ -16,7 +16,7 @@ learn:
 	$(MYELIN) project learn $(PROJECT)
 
 ingest:
-	$(MYELIN) project ingest $(PROJECT)
+	$(MYELIN) ingest $(PROJECT)
 
 bootstrap:
 	$(MYELIN) bootstrap $(PROJECT) --repo $(REPO)

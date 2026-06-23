@@ -86,31 +86,29 @@ Project Memory is the first durable curation layer. It should capture what the r
 
 Step 3 is complete when `project learn <key>` can safely maintain Project Memory from bounded evidence, with validated curator output and provenance-backed markdown updates.
 
-- [x] `done` `project learn <key>` and `project ingest <key>` exist as Phase-0 pipeline commands.
-  - Why: Myelin needs stable operator verbs for broad Project Memory refresh and queued source intake before deeper curation behavior can be attached to them.
-- [x] `done` Stage instructions live as data under `stages/`.
-  - Why: model-facing instructions need to evolve without hard-coding every prompt into the runtime.
-- [x] `done` The scaffold can run provider-backed stages and deterministic apply/validate code.
-  - Why: agent judgment and deterministic safety checks need separate roles; models can propose, but code must control validation and durable writes.
+- [x] `retired` The old Phase-0 `project learn` / `project ingest` runner scaffold has been removed from the active Project Memory command surface.
+  - Why: `project learn` now owns Project Memory curation through the mode-scoped Project Memory Curator pre-write flow, while top-level `ingest <key>` remains Session Memory / Experience Log ingest.
+- [x] `retired` The obsolete Phase-0 Project Memory stage assets have been removed from live runtime assets.
+  - Why: Project Memory curation now starts from curator contracts, packet input, validation, and run artifacts instead of generic staged proposal/apply scaffolding.
 - [x] `done` `project packet <key>` builds a read-only bounded Project Memory packet from project state, wiki markdown, pending project handoffs/candidates, recent Session Memory, and deterministic markdown lookup results.
   - Why: the curator needs a bounded project-specific evidence bundle instead of unbounded rediscovery or raw conversation history.
 - [x] `done` Project Memory lookup reports degraded state because it is currently deterministic markdown text search, not a derived metadata/vector index.
   - Why: we need honest retrieval quality signals; weak lookup is acceptable as a temporary existence check only if it is clearly labeled.
-- [ ] `partial` Evolve `project learn` from a Phase-0 pipeline scaffold into behavior-focused Project Memory maintenance.
-  - Description: Treat the existing pipeline as a working shell that still needs to become the real Project Memory maintenance flow.
-  - Why: the current command proves orchestration, but the product needs it to answer "what durable project knowledge changed?" and maintain the wiki accordingly.
-- [ ] `next` Define the Project Memory Curator output schema and validation contract.
+- [x] `done` Evolve `project learn` from a Phase-0 pipeline scaffold into a Project Memory Curator pre-write flow.
+  - Description: `project learn` now builds the Project Memory packet, invokes the mode-scoped curator, validates the result, writes curator artifacts, and stops before markdown writes.
+  - Why: the command now answers the pre-write question "what durable project knowledge changed?" through a bounded, inspectable proposal contract.
+- [x] `done` Define the Project Memory Curator output schema and validation contract.
   - Description: Define the structured proposal format returned by the curator and the deterministic validation rules Myelin applies before any proposal can become canonical Project Memory.
   - Why: before an agent can affect durable memory, Myelin needs a strict contract for what the curator may claim, update, create, reject, or mark uncertain.
-- [ ] `open` Make `project learn` use the Project Memory packet as its curator input.
+- [x] `done` Make `project learn` use the Project Memory packet as its curator input.
   - Description: `project learn` should pass the bounded Project Memory packet to the curator as the authoritative input bundle for deciding what durable project knowledge changed.
   - Why: `project learn` should reason from the same bounded evidence contract that we can inspect, test, and reuse later for Practice and Personal Memory.
-- [ ] `open` Reject invalid Project Memory Curator proposals before wiki writes.
+- [x] `done` Reject invalid Project Memory Curator proposals before wiki writes.
   - Description: Curator proposals that are malformed, unsupported, out of scope, too broad, or missing provenance should stop before touching markdown.
   - Why: Project Memory is trusted by future agents, so malformed, unsupported, low-confidence, or provenance-free output must fail before it changes canonical files.
-- [ ] `open` Apply bounded page updates with provenance.
+- [ ] `next` Apply bounded page updates with provenance.
   - Description: Accepted proposals should update specific wiki pages or clearly justified new pages, with traceable evidence for meaningful claims.
-  - Why: accepted curation must become durable markdown, and future agents need to know where each meaningful claim came from or whether it is explicitly inferred.
+  - Why: the pre-write curator flow now produces validated curator artifacts, but accepted curation must still become durable markdown. Future agents need to know where each meaningful claim came from or whether it is explicitly inferred.
 - [ ] `open` Route gaps and inbox items into Project Memory candidates.
   - Description: Missing, stale, or flagged knowledge should become structured Project Memory candidate input for the curator.
   - Why: missing or stale knowledge should become structured curator input instead of accumulating in a disconnected side channel.
@@ -127,15 +125,15 @@ Step 3 is complete when `project learn <key>` can safely maintain Project Memory
   - Description: Keep Current Briefing out of active work unless the core memory layers still need a derived session-start summary.
   - Why: Current Briefing should be a derived session-start view only if the core memory layers do not already cover that need.
 
-Acceptance criteria for the curator-write slice:
+Acceptance criteria for the next markdown-apply slice:
 
-- `project learn <key>` builds or receives the Project Memory packet.
-- Curator output is JSON with a validated schema.
 - Proposed markdown changes are bounded to known pages or explicit new-page requests.
 - Every proposed durable memory update carries provenance or an explicit inference label.
-- Tests prove invalid curator output is rejected before file writes.
+- Apply consumes validated curator artifacts, not raw provider output.
+- Invalid, rejected, quarantined, or review-required curator output cannot mutate canonical wiki files.
+- Tests prove accepted low-risk output updates only the expected markdown/state files.
 
-Evidence: `src/commands/project.ts`, `src/project/project-memory-packet.ts`, `src/project/project-memory-lookup.ts`, `src/pipeline/runner.ts`, `stages/*`
+Evidence: `src/commands/project.ts`, `src/project/project-memory-packet.ts`, `src/project/project-memory-lookup.ts`, `src/project/project-memory-curator-contracts.ts`, `src/project/project-memory-curator-validator.ts`, `src/project/project-memory-curator-service.ts`, `src/runtime/project-run-infrastructure.ts`
 
 ## Roadmap Step 4: Practice Memory Layer
 

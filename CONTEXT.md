@@ -188,8 +188,8 @@ The project-owned data layout based on sources, wiki, schema, state, log, and ru
 _Avoid_: repo-doc taxonomy, global artifacts as primary project state
 
 **Learn Command**:
-The V2 command for refreshing Project Memory from project evidence.
-_Avoid_: compile
+The authoritative V2 command for Project Memory creation, maintenance, and source/inbox intake.
+_Avoid_: compile, `project ingest` as a separate Project Memory command
 
 **Auto-Apply Learning**:
 The default mode where routine Project Memory learning writes are applied automatically while leaving reviewable artifacts.
@@ -316,7 +316,7 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - **Schema Context** regenerates when schema inputs change and is freshness-checked during `project learn`; unchanged inputs should not cause rewrites.
 - Old command names carry old product assumptions. Resolved: introduce a V2 CLI vocabulary and keep Make only as convenience aliases where useful.
 - V2 CLI is operator-facing; default output is human-readable, with `--json` for machine-readable output. Detached MCP remains the agent API.
-- `compile` and `update` are V1 mechanics. Resolved: use `project learn <key>` for broad Project Memory refresh, `project ingest <key>` for queued source/inbox processing, and top-level `ingest <key>` for detached Experience Log to Session Memory processing.
+- `compile`, `update`, and separate `project ingest` are not target Project Memory concepts. Resolved: use `project learn <key>` as the authoritative Project Memory command, including source/inbox intake into the curator packet; use top-level `ingest <key>` for detached Experience Log to Session Memory processing.
 - The **Learn Command** may read the live repo directly, but durable Project Memory writes require traceable evidence and provenance.
 - `project learn` should apply routine curated Project Memory updates by default. Review/proposal modes are opt-out controls for risky or manual workflows, not the daily default.
 - `project learn` must leave auto-apply for destructive deletes, decision-record supersession, low-confidence synthesis, conflicting sources, broad multi-area rewrites, or explicit `--review` / `--dry-run`.

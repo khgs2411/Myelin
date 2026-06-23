@@ -54,7 +54,7 @@ export async function spawnDetachedProjectIngest(root: string, projectKey: strin
   await mkdir(join(logPath, ".."), { recursive: true });
 
   const proc = Bun.spawn({
-    cmd: ["bun", resolveInside(root, "src", "cli.ts"), "project", "ingest", projectKey],
+    cmd: ["bun", resolveInside(root, "src", "cli.ts"), "ingest", projectKey],
     cwd: root,
     stdout: Bun.file(logPath),
     stderr: Bun.file(logPath),
