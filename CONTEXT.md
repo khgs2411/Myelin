@@ -163,6 +163,14 @@ _Avoid_: maintenance proposal, arbitrary wiki rewrite
 The structured curator output for bounded updates to existing trusted Project Memory.
 _Avoid_: creation draft, free-form patch
 
+**Project Memory Apply Payload**:
+A structured curator output fragment that code validates and deterministically renders into canonical Project Memory markdown.
+_Avoid_: free-form patch, markdown diff, content intent as write authority
+
+**Project Memory Source Consumption**:
+A project-level state record that links a consumed candidate or handoff source ref to the Project Memory apply run and wiki output refs that made it terminal.
+_Avoid_: tombstone, SQLite truth row, processed flag
+
 **Untrusted Existing Markdown Context**:
 Preexisting project wiki markdown that can inform creation mode but is not trusted Project Memory.
 _Avoid_: migrated Project Memory, already documented
@@ -260,6 +268,8 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - **Project Memory Maintenance Mode** applies after trusted curated **Project Memory** exists.
 - **Untrusted Existing Markdown Context** may inform **Project Memory Creation Mode**, but it is not evidence that **Project Memory** is already curated.
 - A **Project Memory Creation Draft** creates the first trusted project brain; a **Project Memory Maintenance Proposal** updates an existing trusted brain.
+- A **Project Memory Apply Payload** is proposed by a curator, validated by Myelin, and rendered by deterministic code into canonical Project Memory markdown.
+- A **Project Memory Source Consumption** record lets a later reconciler update candidate or handoff lifecycle from project-owned state rather than rescanning all run artifacts.
 - The **Core Runtime Migration** replaces Python/Bash entrypoints for normal core operation with Bun/TypeScript implementations.
 - The **Runtime Layout Migration** can change directories and data structures when the new layout has a clear purpose and migration path.
 - The **V2 Breakage Budget** prioritizes building the powerful brain over preserving weak V1 behavior.
