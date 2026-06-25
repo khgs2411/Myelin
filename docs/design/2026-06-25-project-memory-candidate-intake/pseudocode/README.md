@@ -114,7 +114,7 @@ Every source-like file in this folder is pseudocode reference material, not impl
 - `docs/ROADMAP.md`
 - `docs/CLI.md`
 - `docs/IMPLEMENTATION_ALIGNMENT.md`
-- `docs/inbox-item-schema.md`
+- `docs/inbox-item-schema.md` (non-authoritative existing producer-specific context; not the V2 runtime inbox contract)
 - `docs/design/2026-06-12-experience-log-drain-memory-candidate-queue/spec.md`
 - `docs/design/2026-06-18-project-memory-curator/spec.md`
 - `docs/design/2026-06-25-project-memory-candidate-intake/spec.md`
@@ -124,7 +124,7 @@ Every source-like file in this folder is pseudocode reference material, not impl
 
 ## Code Context Inspected
 
-- `src/inbox/items.ts`
+- `src/inbox/items.ts` (non-authoritative existing producer-specific context; do not preserve its source enum or top-level path as the V2 runtime inbox boundary)
 - `tests/inbox/inbox.test.ts`
 - `src/memory/candidates.ts`
 - `src/project/project-memory-packet.ts`

@@ -58,7 +58,7 @@ myelin memory inbox create <project-key> --layer project --body ...
 
 The command belongs under the broader `memory inbox` namespace so it can later
 support Practice and Personal proposals without creating separate command
-families. The first slice may default or constrain `--layer project`.
+families. The first slice accepts `--layer project` only.
 
 The runtime inbox item is preserved source material. It is not canonical memory
 and is not yet a normalized candidate.
@@ -107,6 +107,12 @@ Runtime durable-memory inbox items carry explicit proposal metadata:
 - risk
 - confidence
 
+`confidence` and `risk` are required bounded enum values:
+
+```text
+low | medium | high
+```
+
 The first implementation slice accepts `layer: "project"` and project scope.
 The contract still names Practice and Personal as native durable-memory layers
 so the runtime inbox does not become project-only by accident.
@@ -117,8 +123,8 @@ explicit unsupported-layer result until their consumers exist. See ADR 0061.
 
 The creation command should write a runtime inbox item, not a candidate row.
 
-It should accept inline text for the proposal body and may accept file-backed
-body input when that remains a small extension of the same validation path.
+It should accept inline text for the proposal body. File-backed body input is
+deferred until after the first slice proves the source/intake boundary.
 It should not expose a lifecycle status option. `confidence` and `risk` are
 required proposal metadata and should be shown in default command output rather
 than hidden behind an opt-in display flag.
@@ -252,6 +258,8 @@ Tests should prove:
   `sources/inbox/index.md` when it creates the lazy inbox source tree.
 - CLI creation writes pretty JSON inbox items under `sources/inbox/<id>.json`.
 - Invalid CLI input fails before writing source material.
+- CLI creation requires `confidence` and `risk` as `low | medium | high`.
+- File-backed body input is out of scope for the first implementation slice.
 - `memory inbox intake <project-key>` deterministically converts valid runtime
   inbox items into candidates without invoking a provider.
 - Intake creates exactly one project memory candidate for a valid project inbox
@@ -321,6 +329,9 @@ foundation exists.
   durable memory writes.
 - Runtime inbox creation exposes no lifecycle status option. Confidence and risk
   are always part of the proposal contract and default output.
+- Runtime inbox creation validates confidence and risk as `low | medium | high`.
+- Runtime inbox creation accepts inline `--body` input in the first slice;
+  `--file` is a later extension.
 - `memory inbox intake` and `project learn` should compose the same intake
   service; `project learn` still runs intake automatically for the product loop.
 - Runtime inbox source items live under `projects/<key>/sources/inbox/`.

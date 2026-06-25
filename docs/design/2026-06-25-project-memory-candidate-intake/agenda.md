@@ -63,13 +63,16 @@
     blurs source inbox items with normalized `memory_candidates`, which the
     design is explicitly trying to keep separate.
 - Recommendation: Option A. Use `memory inbox create` as the durable-memory
-  proposal surface, default `--layer project` for this slice, and support both
-  inline text and `--file` input if implementation cost stays low.
+  proposal surface and accept `--layer project` only for this slice. Start with
+  inline `--body` input; file-backed body input is deferred until the source
+  and intake boundary is proven.
 - Answer: Confirmed Option A.
 - Answer impact: Confirms branch.
 - Spec impact: The spec now names `myelin memory inbox create <project-key>
   --layer project --body ...` as the first CLI grammar and records that the
   command writes runtime inbox source material rather than candidate rows.
+  Follow-up audit refinement deferred file-backed body input out of the first
+  implementation slice.
 - Context impact: Updated `CONTEXT.md` with Runtime Durable-Memory Inbox.
 - ADR impact: Not needed; this is important product vocabulary, but not a
   hard-to-reverse architecture decision yet.
@@ -258,23 +261,20 @@
   wants to inspect preserved source material separately from generated
   lifecycle state.
 - Options:
-  - A. `projects/<key>/sources/runtime-inbox/<id>.json` — strongest alignment
-    with "preserved source material"; keeps lifecycle out of source files, but
-    the CLI term "inbox" is represented by a source subfolder.
+  - A. `projects/<key>/sources/inbox/<id>.json` — strongest alignment with
+    "preserved source material" and the clear product noun.
   - B. `projects/<key>/inbox/<id>.json` — shortest and most discoverable for
     the inbox concept, but it creates another top-level project folder outside
     the V2 source/state/wiki/log/runs layout vocabulary.
-  - C. `projects/<key>/state/runtime-inbox/<id>.json` — easy for machine reads,
+  - C. `projects/<key>/state/inbox/<id>.json` — easy for machine reads,
     but incorrectly frames immutable source proposals as generated state.
 - Recommendation: Option A. Runtime inbox items are source proposals, so store
-  them under `sources/runtime-inbox/`; let CLI/UI expose "inbox" as the product
-  concept.
-- Answer: Modified Option A. Store runtime inbox source items under
-  `projects/<key>/sources/inbox/`, not `sources/runtime-inbox/`. The command
-  should create and maintain `sources/index.md` and `sources/inbox/index.md`
-  because bootstrap creates `sources/` lazily only when preserved source
-  material exists.
-- Answer impact: Changes model.
+  them under `sources/inbox/`.
+- Answer: Confirmed Option A. Store runtime inbox source items under
+  `projects/<key>/sources/inbox/`. The command should create and maintain
+  `sources/index.md` and `sources/inbox/index.md` because bootstrap creates
+  `sources/` lazily only when preserved source material exists.
+- Answer impact: Confirms branch.
 - Spec impact: The spec now names `projects/<key>/sources/inbox/` as the inbox
   source path and states that `memory inbox create` owns the lazy source index
   files.
@@ -328,8 +328,22 @@
   boundaries; verification evidence; scope control; recovery paths; sequencing;
   user review points.
 - Result: The pressure test added and resolved the source path and file-format
-  questions. No live material branches remain.
+  questions. A follow-up external audit found and the design now resolves the
+  old inbox-schema reference, confidence/risk validation semantics, and
+  pseudocode synchronization bookkeeping. No live material branches remain.
 - Remaining non-blocking risks:
-  - Existing pseudocode artifacts should be synchronized before implementation
-    planning so they use `sources/inbox/<id>.json`, `inbox:<id>`, and
-    `project.inbox`.
+  - None.
+
+## External Audit Refinement
+
+- Auditor: Maxwell (`019eff23-17cd-76c2-8af1-cf6554ae3dfb`)
+- Status before refinement: Needs Refinement
+- Corrections applied:
+  - Marked the current top-level inbox schema/code as non-authoritative V2
+    context instead of source authority.
+  - Resolved `confidence` and `risk` as required `low | medium | high` enum
+    values.
+  - Deferred file-backed `--file` body input out of the first implementation
+    slice.
+  - Cleared stale pseudocode synchronization risk after updating pseudocode
+    artifacts to `sources/inbox/<id>.json`, `inbox:<id>`, and `project.inbox`.

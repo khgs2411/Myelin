@@ -21,8 +21,8 @@ Intended destination: `src/inbox/*`, `src/commands/*`, or future tool surfaces.
 - `body`: source/proposal text that explains the intended memory.
 - `rationale`: why this should become durable memory.
 - `evidence_refs`: citations, links, or source refs that justify the proposal.
-- `confidence`: explicit confidence signal.
-- `risk`: explicit risk signal.
+- `confidence`: required bounded enum, `low | medium | high`.
+- `risk`: required bounded enum, `low | medium | high`.
 - `target_hint`: optional routing hint for curator/intake.
 - `tags` or `labels`: optional bounded classification only if it helps intake routing.
 
@@ -47,6 +47,7 @@ Does not own:
 ### First-Slice Expectations
 
 - First slice validates and persists `target_layer: "project"` only.
+- First slice validates `confidence` and `risk` as `low | medium | high`.
 - `memory inbox create` does not expose lifecycle status on the source record.
 - Source records are preserved as evidence, not rewritten to reflect lifecycle.
 - The source record should stay distinct from normalized `memory_candidates`.

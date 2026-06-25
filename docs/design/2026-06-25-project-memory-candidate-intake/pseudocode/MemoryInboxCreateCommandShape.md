@@ -11,9 +11,9 @@ Intended destination: `src/commands/memory.ts` or a narrow inbox command module.
 ### Command Grammar
 
 - `myelin memory inbox create <project-key> --layer project --body ...`
-- `--file <path>` may be accepted later as a body source if it stays a thin extension of the same validation path.
+- `--file <path>` is deferred out of the first implementation slice.
 - `--title`, `--rationale`, `--evidence-ref`, `--confidence`, `--risk`, and `--target-hint` are proposal metadata, not lifecycle controls.
-- `--confidence` and `--risk` are part of the default-visible proposal contract.
+- `--confidence` and `--risk` are required `low | medium | high` values and are part of the default-visible proposal contract.
 - No `--status` option is exposed.
 - The first write should create or maintain `projects/<key>/sources/index.md` and `projects/<key>/sources/inbox/index.md`.
 

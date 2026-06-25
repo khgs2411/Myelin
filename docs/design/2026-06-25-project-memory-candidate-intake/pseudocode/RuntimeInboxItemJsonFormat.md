@@ -22,8 +22,8 @@ Intended destination: `projects/<key>/sources/inbox/<id>.json`
 - `rationale`: why the proposal should become durable memory
 - `evidence_refs`: source references, URLs, or local citations
 - `target_hint`: optional routing hint
-- `confidence`: explicit confidence string or bounded rating
-- `risk`: explicit risk string or bounded rating
+- `confidence`: `low | medium | high`
+- `risk`: `low | medium | high`
 - `tags`: optional small classification list
 
 ### Validation Rules
@@ -33,6 +33,8 @@ Intended destination: `projects/<key>/sources/inbox/<id>.json`
 - `project_key` must be non-empty and project-owned.
 - `target_layer` must be present and must be `project` in this slice.
 - `body`, `rationale`, `confidence`, and `risk` must be present.
+- `confidence` must be one of `low`, `medium`, or `high`.
+- `risk` must be one of `low`, `medium`, or `high`.
 - `evidence_refs` may be empty only if the command allows an explicit no-evidence rationale.
 - The file must be valid JSON and preserved as authored source material.
 
@@ -79,4 +81,5 @@ This file format does not own:
 
 - `body` should support multiline text. `rationale` may also be multiline if it uses the same JSON string validation path.
 - `evidence_refs` may start as opaque strings and become structured refs later if implementation evidence requires it.
+- File-backed body input is out of scope for the first implementation slice; inline `--body` establishes the source/intake boundary first.
 - Paired Markdown/JSON files are intentionally out of scope for this slice; accepted durable memory becomes markdown only after curator review and apply.

@@ -16,8 +16,8 @@ type IntakeInboxItem = {
   body: string;
   rationale: string;
   evidence_refs: string[];
-  confidence: string;
-  risk: string;
+  confidence: "low" | "medium" | "high";
+  risk: "low" | "medium" | "high";
   target_hint: string | null;
   created_at: string;
   creator: string;
@@ -87,8 +87,8 @@ export class ProjectMemoryCandidateIntakeService {
     source_event_refs: string[];
     evidence: Record<string, unknown>;
     proposed_payload: Record<string, unknown>;
-    confidence: string;
-    risk: string;
+    confidence: "low" | "medium" | "high";
+    risk: "low" | "medium" | "high";
     reason: string;
   } {
     // Preserve the inbox body, rationale, creator, layer, and evidence refs.
