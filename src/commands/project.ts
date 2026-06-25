@@ -110,6 +110,9 @@ async function projectLearnCommand(args: string[], deps: ProjectCommandDeps) {
       `validation: ${result.validation_ok ? "passed" : "failed"}`,
       `stopped_before_writes: ${result.stopped_before_writes}`,
     ];
+    if (result.applied_page_ids?.length) lines.push(`applied pages: ${result.applied_page_ids.join(", ")}`);
+    if (result.applied_item_ids?.length) lines.push(`applied items: ${result.applied_item_ids.join(", ")}`);
+    if (result.changed_files?.length) lines.push(`changed files: ${result.changed_files.join(", ")}`);
     if (result.stopped_reason) lines.push(`stopped: ${result.stopped_reason}`);
     return result.status === "failed" ? fail(lines.join("\n")) : ok(lines.join("\n"));
   } catch (error) {

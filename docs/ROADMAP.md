@@ -95,8 +95,8 @@ Step 3 is complete when `project learn <key>` can safely maintain Project Memory
 - [x] `done` Project Memory lookup reports degraded state because it is currently deterministic markdown text search, not a derived metadata/vector index.
   - Why: we need honest retrieval quality signals; weak lookup is acceptable as a temporary existence check only if it is clearly labeled.
 - [x] `done` Evolve `project learn` from a Phase-0 pipeline scaffold into a Project Memory Curator pre-write flow.
-  - Description: `project learn` now builds the Project Memory packet, invokes the mode-scoped curator, validates the result, writes curator artifacts, and stops before markdown writes.
-  - Why: the command now answers the pre-write question "what durable project knowledge changed?" through a bounded, inspectable proposal contract.
+  - Description: `project learn` builds the Project Memory packet, invokes the mode-scoped curator, validates the result, and records curator artifacts before any apply decision.
+  - Why: the command answers the question "what durable project knowledge changed?" through a bounded, inspectable proposal contract before canonical writes are considered.
 - [x] `done` Define the Project Memory Curator output schema and validation contract.
   - Description: Define the structured proposal format returned by the curator and the deterministic validation rules Myelin applies before any proposal can become canonical Project Memory.
   - Why: before an agent can affect durable memory, Myelin needs a strict contract for what the curator may claim, update, create, reject, or mark uncertain.
@@ -106,12 +106,16 @@ Step 3 is complete when `project learn <key>` can safely maintain Project Memory
 - [x] `done` Reject invalid Project Memory Curator proposals before wiki writes.
   - Description: Curator proposals that are malformed, unsupported, out of scope, too broad, or missing provenance should stop before touching markdown.
   - Why: Project Memory is trusted by future agents, so malformed, unsupported, low-confidence, or provenance-free output must fail before it changes canonical files.
-- [ ] `next` Apply bounded page updates with provenance.
-  - Description: Accepted proposals should update specific wiki pages or clearly justified new pages, with traceable evidence for meaningful claims.
-  - Why: the pre-write curator flow now produces validated curator artifacts, but accepted curation must still become durable markdown. Future agents need to know where each meaningful claim came from or whether it is explicitly inferred.
-- [ ] `open` Route gaps and inbox items into Project Memory candidates.
-  - Description: Missing, stale, or flagged knowledge should become structured Project Memory candidate input for the curator.
-  - Why: missing or stale knowledge should become structured curator input instead of accumulating in a disconnected side channel.
+- [x] `done` Apply bounded page updates with provenance.
+  - Description: `project learn` can apply validated structured Project Memory Apply Payloads for creation and maintenance through deterministic markdown rendering, staged outputs, apply journals, changesets, source-consumption state, and recovery preflight.
+  - Why: accepted low-risk curation now becomes durable markdown/state only after validation, while dry-run, review, invalid, rejected, quarantined, degraded, or unsupported output stops before canonical writes.
+  - Progress: implemented on 2026-06-24 and reviewed. Follow-up fixes closed journal terminal-artifact gaps, unpromoted and observed-promotion recovery drift, temp-file promotion, missing-artifact recovery failure reporting, and the explicit `no-domain-pages` creation rationale path.
+- [ ] `next` Reconcile Project Memory source-consumption records with pending candidates and handoffs.
+  - Description: Applied Project Memory source-consumption records should retire or terminally account for the consumed candidate and handoff refs without making apply directly own candidate/handoff mutation.
+  - Why: markdown apply now records consumed Project Memory sources, but pending curator input should not keep re-feeding sources that already became canonical memory.
+- [ ] `open` Route gaps, stale findings, and inbox items into Project Memory candidates.
+  - Description: Missing, stale, or flagged knowledge should become structured Project Memory candidate input for the curator after consumed-source reconciliation is reliable.
+  - Why: missing or stale knowledge should become structured curator input instead of accumulating in a disconnected side channel, but intake volume should not expand before the source lifecycle can close.
 - [ ] `open` Build a derived Project Memory retrieval index that points back to canonical wiki files.
   - Description: Build lookup state that helps agents find relevant Project Memory pages or sections without making SQLite the source of truth.
   - Why: agents will need better Project Memory retrieval, but indexes should derive from canonical markdown rather than becoming another source of truth.
@@ -125,15 +129,18 @@ Step 3 is complete when `project learn <key>` can safely maintain Project Memory
   - Description: Keep Current Briefing out of active work unless the core memory layers still need a derived session-start summary.
   - Why: Current Briefing should be a derived session-start view only if the core memory layers do not already cover that need.
 
-Acceptance criteria for the next markdown-apply slice:
+Completed markdown-apply acceptance evidence:
 
-- Proposed markdown changes are bounded to known pages or explicit new-page requests.
-- Every proposed durable memory update carries provenance or an explicit inference label.
-- Apply consumes validated curator artifacts, not raw provider output.
-- Invalid, rejected, quarantined, or review-required curator output cannot mutate canonical wiki files.
-- Tests prove accepted low-risk output updates only the expected markdown/state files.
+- [x] Proposed markdown changes are bounded to known pages or explicit new-page requests.
+- [x] Every proposed durable memory update carries provenance or an explicit inference label.
+- [x] Apply consumes validated curator artifacts, not raw provider output.
+- [x] Invalid, rejected, quarantined, degraded, dry-run, or review-required curator output cannot mutate canonical wiki files.
+- [x] Apply journals stay recoverable until apply result and changeset artifacts exist.
+- [x] Recovery fails closed on missing apply artifacts, unpromoted canonical hash drift, or observed-promotion drift.
+- [x] Tests prove accepted low-risk output updates only the expected markdown/state files.
+- [x] Final reported verification: targeted markdown-apply regressions, full `bun test` at 308 tests, `bun run typecheck`, and `git diff --check`.
 
-Evidence: `src/commands/project.ts`, `src/project/project-memory-packet.ts`, `src/project/project-memory-lookup.ts`, `src/project/project-memory-curator-contracts.ts`, `src/project/project-memory-curator-validator.ts`, `src/project/project-memory-curator-service.ts`, `src/runtime/project-run-infrastructure.ts`
+Evidence: `src/commands/project.ts`, `src/project/project-memory-packet.ts`, `src/project/project-memory-lookup.ts`, `src/project/project-memory-curator-contracts.ts`, `src/project/project-memory-apply-contracts.ts`, `src/project/project-memory-curator-validator.ts`, `src/project/project-memory-markdown-renderer.ts`, `src/project/project-memory-markdown-applier.ts`, `src/project/project-memory-curator-service.ts`, `src/runtime/project-run-infrastructure.ts`
 
 ## Roadmap Step 4: Practice Memory Layer
 

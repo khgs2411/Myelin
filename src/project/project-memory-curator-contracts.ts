@@ -1,5 +1,6 @@
 import type { ProcessRunner } from "../runtime/llm-client.ts";
 import type { Provider } from "../runtime/config.ts";
+import type { ProjectMemoryApplyPayload } from "./project-memory-apply-contracts.ts";
 import type { ProjectMemoryPacket } from "./project-memory-packet.ts";
 
 export const PROJECT_MEMORY_CURATOR_MODES = ["create", "maintain"] as const;
@@ -138,6 +139,7 @@ export type ProjectMemoryCreationPageDraft = {
   title: string;
   purpose: string;
   content_intent: string;
+  apply_payload?: ProjectMemoryApplyPayload;
   required_sections: string[];
   evidence_refs: ProjectMemoryEvidenceRef[];
   repo_citations: ProjectMemoryRepoCitation[];
@@ -162,6 +164,7 @@ export type ProjectMemoryMaintenanceProposalItem = {
   target_entry_id?: string;
   proposed_entry_id?: string;
   content_intent: string;
+  apply_payload?: ProjectMemoryApplyPayload;
   source_packet_refs: ProjectMemoryEvidenceRef[];
   evidence_refs: ProjectMemoryEvidenceRef[];
   repo_citations: ProjectMemoryRepoCitation[];
@@ -234,10 +237,17 @@ export type ProjectMemoryCuratorRunResult = {
     curator_validation: string;
     curator_run_result: string;
     summary: string;
+    apply_journal?: "project-memory-apply-journal.json";
+    apply_result?: "project-memory-apply-result.json";
+    changeset?: "project-memory-changeset.json";
   };
   validation_ok: boolean;
-  stopped_before_writes: true;
+  stopped_before_writes: boolean;
   dry_run: boolean;
   review: boolean;
+  applied_page_ids?: string[];
+  applied_item_ids?: string[];
+  changed_files?: string[];
+  source_consumptions?: string[];
   stopped_reason?: string;
 };

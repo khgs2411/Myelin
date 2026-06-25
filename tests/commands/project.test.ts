@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { registerProjectCommands } from "../../src/commands/project.ts";
 import { createCli } from "../../src/commands/registry.ts";
+import { openMemoryDb } from "../../src/memory/db.ts";
 import { writeJson } from "../../src/runtime/json.ts";
 
 let root: string;
@@ -112,6 +113,7 @@ test("project learn routes through curator service and writes curator artifacts"
   });
   await mkdir(join(root, "projects", "active", "wiki"), { recursive: true });
   await writeFile(join(root, "projects", "active", "wiki", "index.md"), "# Active\n", "utf8");
+  seedMemoryDb();
   await seedSchema();
   const cli = createCli("myelin");
   registerProjectCommands(cli, {
@@ -129,8 +131,9 @@ test("project learn routes through curator service and writes curator artifacts"
   expect(result.exitCode).toBe(0);
   expect(response.project_key).toBe("active");
   expect(response.artifacts.curator_output).toBe("curator-creation-draft.json");
-  expect(response.stopped_before_writes).toBe(true);
-  expect(await readFile(join(root, response.run_dir, "summary.md"), "utf8")).toContain("stopped_before_writes: true");
+  expect(response.artifacts.apply_journal).toBe("project-memory-apply-journal.json");
+  expect(response.stopped_before_writes).toBe(false);
+  expect(await readFile(join(root, response.run_dir, "summary.md"), "utf8")).toContain("stopped_before_writes: false");
 });
 
 test("project ingest is not a Project Memory command", async () => {
@@ -220,6 +223,11 @@ async function seedSchema(): Promise<void> {
   });
 }
 
+function seedMemoryDb(): void {
+  const db = openMemoryDb(root);
+  db.close();
+}
+
 function creationDraft(projectKey: string, runDir: string) {
   return {
     schema_version: 1,
@@ -234,21 +242,43 @@ function creationDraft(projectKey: string, runDir: string) {
       untrusted_existing_markdown_policy: "adopt",
     },
     pages: [
-      {
-        id: "index",
-        target: { path: "index.md", path_kind: "new_wiki_page" },
-        title: projectKey,
-        purpose: "Index",
-        content_intent: "Create index",
-        required_sections: ["Overview"],
-        evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
-        repo_citations: [],
-        notes_for_apply: [],
-      },
+      creationPage("index", "index.md", projectKey, "Project Memory index"),
+      creationPage("setup", "setup/index.md", "Setup", "Setup workflows"),
     ],
     state_intent: { mark_project_memory_curated: true, freshness_intent: "initialize" },
     evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
     repo_citations: [],
     risk: { level: "low", reasons: [], requires_quarantine: false },
+  };
+}
+
+function creationPage(id: string, path: string, title: string, purpose: string) {
+  return {
+    id,
+    target: { path, path_kind: "new_wiki_page" },
+    title,
+    purpose,
+    content_intent: `Create ${title}`,
+    apply_payload: {
+      schema_version: 1,
+      pages: [
+        {
+          page_path: path,
+          title,
+          purpose,
+          body: { paragraphs: [`${title} describes ${purpose}.`] },
+          evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
+          repo_citations: [],
+          inference: {
+            label: "initial_project_memory",
+            why_direct_repo_evidence_is_unavailable: "Creation summary is based on project state.",
+          },
+        },
+      ],
+    },
+    required_sections: ["Overview"],
+    evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
+    repo_citations: [],
+    notes_for_apply: [],
   };
 }

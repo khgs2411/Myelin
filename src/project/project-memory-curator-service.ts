@@ -1,10 +1,14 @@
 import {
+  type ProjectMemoryCreationDraft,
   type ProjectMemoryCuratorMode,
   type ProjectMemoryCuratorRunResult,
   type ProjectMemoryCuratorValidationResult,
+  type ProjectMemoryMaintenanceProposal,
   type RunProjectMemoryCuratorInput,
 } from "./project-memory-curator-contracts.ts";
 import { validateCuratorOutput } from "./project-memory-curator-validator.ts";
+import type { ProjectMemoryApplyResult } from "./project-memory-apply-contracts.ts";
+import { ProjectMemoryMarkdownApplier } from "./project-memory-markdown-applier.ts";
 import { buildProjectMemoryPacket, type ProjectMemoryPacket } from "./project-memory-packet.ts";
 import {
   createProjectCuratorRun,
@@ -24,6 +28,35 @@ export class ProjectMemoryCuratorService {
   async runProjectLearn(input: RunProjectMemoryCuratorInput): Promise<ProjectMemoryCuratorRunResult> {
     const now = input.now ?? new Date();
     const project = await findProject(this.root, input.projectKey);
+    const applier = new ProjectMemoryMarkdownApplier(this.root);
+    const incompleteJournals = await applier.findIncompleteApplyJournals(input.projectKey);
+    if (incompleteJournals.length > 0) {
+      const recovered = await applier.recoverFromJournal(incompleteJournals[0]);
+      const recoveredRun = runInfoFromJournalPath(incompleteJournals[0]);
+      return {
+        status: recovered.status === "applied" ? "completed" : "failed",
+        project_key: input.projectKey,
+        mode: recoveredRun.mode,
+        run_id: recoveredRun.run_id,
+        run_dir: recoveredRun.run_dir,
+        artifacts: {
+          input_packet: "input-packet.json",
+          curator_output: recoveredRun.mode === "create" ? "curator-creation-draft.json" : "curator-maintenance-proposal.json",
+          curator_validation: "curator-validation.json",
+          curator_run_result: "curator-run-result.json",
+          summary: "summary.md",
+          apply_journal: recovered.status === "applied" ? "project-memory-apply-journal.json" : undefined,
+          apply_result: recovered.status === "applied" ? "project-memory-apply-result.json" : undefined,
+          changeset: recovered.status === "applied" ? "project-memory-changeset.json" : undefined,
+        },
+        validation_ok: recovered.status === "applied",
+        stopped_before_writes: recovered.status !== "applied",
+        dry_run: input.dryRun,
+        review: input.review,
+        changed_files: recovered.changed_files.map((file) => file.path),
+        stopped_reason: recovered.status === "applied" ? undefined : recovered.reason,
+      };
+    }
     if (!input.dryRun) {
       await repairProjectShell(this.root, input.projectKey, { repoPath: project.config.repo_paths?.[0] });
     }
@@ -64,8 +97,44 @@ export class ProjectMemoryCuratorService {
     const outputArtifact = packet.mode === "create" ? "curator-creation-draft.json" : "curator-maintenance-proposal.json";
     await writeRunArtifact(run, outputArtifact, curatorOutput);
     const validation = validateCuratorOutput(packet, curatorOutput);
-    const status = validation.ok && !input.review ? "completed" : "needs_review";
-    const stoppedReason = validation.ok ? undefined : "curator validation did not produce eligible output";
+    const applyDecision = canApply({ dryRun: input.dryRun, review: input.review, packet, validation });
+    if (applyDecision.ok) {
+      const applyResult =
+        packet.mode === "create"
+          ? await applier.applyCreationDraft({
+              project_key: input.projectKey,
+              run_dir: run.relative_run_dir,
+              absolute_run_dir: run.absolute_run_dir,
+              draft: curatorOutput as ProjectMemoryCreationDraft,
+            })
+          : await applier.applyMaintenanceProposal({
+              project_key: input.projectKey,
+              run_dir: run.relative_run_dir,
+              absolute_run_dir: run.absolute_run_dir,
+              proposal: curatorOutput as ProjectMemoryMaintenanceProposal,
+              eligible_item_ids: validation.eligible_item_ids,
+            });
+      if (applyResult.status === "applied") {
+        return await this.writeTerminalArtifacts({
+          input,
+          run,
+          mode: packet.mode,
+          outputArtifact,
+          validation,
+          status: "completed",
+          apply: applyResult,
+        });
+      }
+      return await this.writeTerminalArtifacts({
+        input,
+        run,
+        mode: packet.mode,
+        outputArtifact,
+        validation,
+        status: "needs_review",
+        stoppedReason: applyResult.reason ?? "project memory apply skipped",
+      });
+    }
 
     return await this.writeTerminalArtifacts({
       input,
@@ -73,8 +142,8 @@ export class ProjectMemoryCuratorService {
       mode: packet.mode,
       outputArtifact,
       validation,
-      status,
-      stoppedReason,
+      status: applyDecision.status,
+      stoppedReason: applyDecision.reason,
     });
   }
 
@@ -105,6 +174,7 @@ export class ProjectMemoryCuratorService {
     validation: ProjectMemoryCuratorValidationResult;
     status: ProjectMemoryCuratorRunResult["status"];
     stoppedReason?: string;
+    apply?: ProjectMemoryApplyResult;
   }): Promise<ProjectMemoryCuratorRunResult> {
     if (input.outputValue !== undefined) {
       await writeRunArtifact(input.run, input.outputArtifact, input.outputValue);
@@ -119,6 +189,7 @@ export class ProjectMemoryCuratorService {
       validation: input.validation,
       status: input.status,
       stoppedReason: input.stoppedReason,
+      apply: input.apply,
     });
     await writeRunArtifact(input.run, "curator-run-result.json", result);
     await writeMarkdownArtifact(input.run, "summary.md", summaryFor(result));
@@ -135,6 +206,7 @@ function buildResult(input: {
   validation: ProjectMemoryCuratorValidationResult;
   status: ProjectMemoryCuratorRunResult["status"];
   stoppedReason?: string;
+  apply?: ProjectMemoryApplyResult;
 }): ProjectMemoryCuratorRunResult {
   return {
     status: input.status,
@@ -148,12 +220,65 @@ function buildResult(input: {
       curator_validation: "curator-validation.json",
       curator_run_result: "curator-run-result.json",
       summary: "summary.md",
+      apply_journal: input.apply ? "project-memory-apply-journal.json" : undefined,
+      apply_result: input.apply ? "project-memory-apply-result.json" : undefined,
+      changeset: input.apply ? "project-memory-changeset.json" : undefined,
     },
     validation_ok: input.validation.ok,
-    stopped_before_writes: true,
+    stopped_before_writes: !input.apply,
     dry_run: input.input.dryRun,
     review: input.input.review,
+    applied_page_ids: input.apply?.applied_page_ids,
+    applied_item_ids: input.apply?.applied_item_ids,
+    changed_files: input.apply?.changed_files.map((file) => file.path),
+    source_consumptions: input.apply?.source_consumptions.map((record) => `${record.source_kind}:${record.source_ref}`),
     stopped_reason: input.stoppedReason,
+  };
+}
+
+function canApply(input: {
+  dryRun: boolean;
+  review: boolean;
+  packet: ProjectMemoryPacket;
+  validation: ProjectMemoryCuratorValidationResult;
+}): { ok: true } | { ok: false; status: ProjectMemoryCuratorRunResult["status"]; reason?: string } {
+  if (input.dryRun) return { ok: false, status: "completed", reason: "dry-run requested" };
+  if (input.review) return { ok: false, status: "needs_review", reason: "review requested" };
+  if (!input.validation.ok) {
+    return { ok: false, status: "needs_review", reason: "curator validation did not produce eligible output" };
+  }
+  if (input.validation.rejected_item_ids.length > 0 || input.validation.quarantined_item_ids.length > 0) {
+    return { ok: false, status: "needs_review", reason: "curator validation produced rejected or quarantined output" };
+  }
+  if (input.packet.degraded) {
+    return { ok: false, status: "needs_review", reason: "packet was degraded" };
+  }
+  if (input.packet.mode === "maintain" && statusOf(input.packet.state.project_memory) !== "curated") {
+    return { ok: false, status: "needs_review", reason: "trusted Project Memory state is required for maintenance apply" };
+  }
+  if (input.packet.mode === "maintain" && input.validation.eligible_item_ids.length === 0) {
+    return { ok: false, status: "needs_review", reason: "maintenance proposal had no eligible items" };
+  }
+  return { ok: true };
+}
+
+function statusOf(value: unknown): string | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const status = (value as { status?: unknown }).status;
+  return typeof status === "string" ? status : null;
+}
+
+function runInfoFromJournalPath(journalPath: string): {
+  run_id: string;
+  run_dir: string;
+  mode: ProjectMemoryCuratorMode;
+} {
+  const normalized = journalPath.replaceAll("\\", "/");
+  const match = normalized.match(/(projects\/[^/]+\/runs\/project-learn\/([^/]+))\/project-memory-apply-journal\.json$/);
+  return {
+    run_id: match?.[2] ?? "recovered",
+    run_dir: match?.[1] ?? normalized,
+    mode: "maintain",
   };
 }
 

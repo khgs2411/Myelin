@@ -1,4 +1,5 @@
 import {
+  PROJECT_MEMORY_LIFECYCLE_INTENTS,
   PROJECT_MEMORY_MAINTENANCE_OPERATIONS,
   type ProjectMemoryCreationDraft,
   type ProjectMemoryCuratorMode,
@@ -117,6 +118,24 @@ export function validateCreationDraft(
         finding("blocker", "provenance", "creation_page_evidence_required", "Every creation page draft needs evidence refs."),
       );
     }
+    const payloadFindings = validateApplyPayload(item.apply_payload, {
+      mode: "create",
+      targetPath: typeof target.path === "string" ? target.path : undefined,
+      itemId: typeof item.id === "string" ? item.id : undefined,
+      packet,
+    });
+    globalFindings.push(...payloadFindings);
+  }
+
+  if (Array.isArray(draft.pages) && !creationPublicationMinimumMet(draft.pages)) {
+    globalFindings.push(
+      finding(
+        "blocker",
+        "schema",
+        "creation_publication_minimum_not_met",
+        "Creation apply requires index.md plus a domain page or explicit no-domain-pages rationale.",
+      ),
+    );
   }
 
   if (isRecord(draft.state_intent)) {
@@ -264,6 +283,16 @@ export function validateMaintenanceItem(
       finding("warn", "degraded_context", "packet_degraded", `Packet is degraded: ${packet.degraded_reasons.join("; ")}`, itemId),
     );
   }
+  findings.push(
+    ...validateApplyPayload(item.apply_payload, {
+      mode: "maintain",
+      targetPath: item.target_page?.path,
+      itemId,
+      packet,
+      operation: item.operation,
+      expectedEntryId: item.operation === "CREATE_ENTRY" ? item.proposed_entry_id : item.target_entry_id,
+    }),
+  );
 
   const hasBlocker = findings.some((entry) => entry.severity === "blocker");
   const hasQuarantine = findings.some((entry) => entry.code === "risk_requires_quarantine" || entry.code === "packet_degraded");
@@ -272,6 +301,158 @@ export function validateMaintenanceItem(
     outcome: hasBlocker ? "rejected" : hasQuarantine ? "quarantined" : item.operation === "NOOP" ? "noop" : "eligible",
     findings,
   };
+}
+
+function validateApplyPayload(
+  payload: unknown,
+  input: {
+    mode: ProjectMemoryCuratorMode;
+    targetPath?: string;
+    itemId?: string;
+    packet: ProjectMemoryPacket;
+    operation?: unknown;
+    expectedEntryId?: string;
+  },
+): ProjectMemoryValidationFinding[] {
+  const findings: ProjectMemoryValidationFinding[] = [];
+  if (!isRecord(payload)) {
+    findings.push(finding("blocker", "schema", "apply_payload_required", "Concrete apply_payload is required before apply.", input.itemId));
+    return findings;
+  }
+  if (payload.schema_version !== 1) {
+    findings.push(finding("blocker", "schema", "apply_payload_schema_version", "apply_payload.schema_version must be 1.", input.itemId));
+  }
+
+  if (input.mode === "create") {
+    if (!Array.isArray(payload.pages) || payload.pages.length === 0) {
+      findings.push(finding("blocker", "schema", "apply_payload_pages_required", "Creation apply_payload requires page drafts.", input.itemId));
+      return findings;
+    }
+    const page = payload.pages.find((candidate) => isRecord(candidate) && candidate.page_path === input.targetPath);
+    if (!isRecord(page)) {
+      findings.push(finding("blocker", "schema", "apply_payload_page_target_missing", "Creation apply_payload must include the target page.", input.itemId));
+      return findings;
+    }
+    findings.push(...validatePageDraft(page, input));
+    return findings;
+  }
+
+  if (input.operation === "NOOP") return findings;
+  if (!Array.isArray(payload.entries) || payload.entries.length === 0) {
+    findings.push(finding("blocker", "schema", "apply_payload_entries_required", "Maintenance apply_payload requires entry drafts.", input.itemId));
+    return findings;
+  }
+  const entry = isRecord(payload.entries[0]) ? payload.entries[0] : null;
+  if (!entry) {
+    findings.push(finding("blocker", "schema", "apply_payload_entry_invalid", "Maintenance apply_payload entry must be an object.", input.itemId));
+    return findings;
+  }
+  if (input.expectedEntryId && entry.entry_id !== input.expectedEntryId) {
+    findings.push(
+      finding("blocker", "schema", "apply_payload_entry_id_mismatch", "Maintenance apply_payload entry id must match the target/proposed entry id.", input.itemId),
+    );
+  }
+  findings.push(...validateEntryDraft(entry, input));
+  return findings;
+}
+
+function validatePageDraft(
+  page: Record<string, unknown>,
+  input: { targetPath?: string; itemId?: string; packet: ProjectMemoryPacket },
+): ProjectMemoryValidationFinding[] {
+  const findings: ProjectMemoryValidationFinding[] = [];
+  if (page.page_path !== input.targetPath || !isSafeWikiTarget(page.page_path)) {
+    findings.push(finding("blocker", "path", "apply_payload_page_path_invalid", "Apply payload page_path must match a safe wiki target.", input.itemId));
+  }
+  if (!nonEmptyString(page.title) || !nonEmptyString(page.purpose)) {
+    findings.push(finding("blocker", "schema", "apply_payload_page_metadata_required", "Page drafts require title and purpose.", input.itemId));
+  }
+  findings.push(...validateMarkdownLines(page.body, "apply_payload_page_body_invalid", input.itemId));
+  findings.push(...validateApplyProvenance(page, input.packet, input.itemId));
+  return findings;
+}
+
+function validateEntryDraft(
+  entry: Record<string, unknown>,
+  input: { itemId?: string; packet: ProjectMemoryPacket },
+): ProjectMemoryValidationFinding[] {
+  const findings: ProjectMemoryValidationFinding[] = [];
+  if (!nonEmptyString(entry.entry_id) || !nonEmptyString(entry.title)) {
+    findings.push(finding("blocker", "schema", "apply_payload_entry_metadata_required", "Entry drafts require entry_id and title.", input.itemId));
+  }
+  if (
+    typeof entry.lifecycle !== "string" ||
+    !PROJECT_MEMORY_LIFECYCLE_INTENTS.includes(entry.lifecycle as (typeof PROJECT_MEMORY_LIFECYCLE_INTENTS)[number])
+  ) {
+    findings.push(finding("blocker", "lifecycle", "apply_payload_entry_lifecycle_invalid", "Entry draft lifecycle is not supported.", input.itemId));
+  }
+  findings.push(...validateMarkdownLines(entry.body, "apply_payload_entry_body_invalid", input.itemId));
+  findings.push(...validateApplyProvenance(entry, input.packet, input.itemId));
+  return findings;
+}
+
+function validateMarkdownLines(body: unknown, code: string, itemId?: string): ProjectMemoryValidationFinding[] {
+  if (!isRecord(body) || !Array.isArray(body.paragraphs) || body.paragraphs.some((line) => !nonEmptyString(line))) {
+    return [finding("blocker", "schema", code, "Apply payload markdown body requires non-empty paragraph strings.", itemId)];
+  }
+  for (const key of ["bullets", "warnings"] as const) {
+    const value = body[key];
+    if (value !== undefined && (!Array.isArray(value) || value.some((line) => !nonEmptyString(line)))) {
+      return [finding("blocker", "schema", code, "Apply payload markdown lists must contain non-empty strings.", itemId)];
+    }
+  }
+  return [];
+}
+
+function validateApplyProvenance(
+  value: Record<string, unknown>,
+  packet: ProjectMemoryPacket,
+  itemId?: string,
+): ProjectMemoryValidationFinding[] {
+  const findings: ProjectMemoryValidationFinding[] = [];
+  const evidenceRefs = Array.isArray(value.evidence_refs) ? value.evidence_refs : [];
+  const repoCitations = Array.isArray(value.repo_citations) ? value.repo_citations : [];
+  const inference = isRecord(value.inference) ? value.inference : null;
+  if (evidenceRefs.length === 0) {
+    findings.push(finding("blocker", "provenance", "apply_payload_evidence_required", "Apply payload requires evidence refs.", itemId));
+  }
+  for (const ref of evidenceRefs) {
+    if (!validEvidenceRefShape(ref) || !resolvePacketRef(packet, ref)) {
+      findings.push(
+        finding(
+          "blocker",
+          "provenance",
+          "apply_payload_evidence_invalid",
+          `Invalid apply payload evidence ref: ${describeRef(ref)}`,
+          itemId,
+          validEvidenceRefShape(ref) ? [ref] : undefined,
+        ),
+      );
+    }
+  }
+  if (repoCitations.length === 0 && !validInference(inference)) {
+    findings.push(
+      finding(
+        "blocker",
+        "repo_citation",
+        "apply_payload_provenance_insufficient",
+        "Apply payload requires repo citations or an explicit inference label.",
+        itemId,
+      ),
+    );
+  }
+  return findings;
+}
+
+function creationPublicationMinimumMet(pages: unknown[]): boolean {
+  const pageRecords = pages.filter(isRecord);
+  const hasIndex = pageRecords.some((page) => isRecord(page.target) && page.target.path === "index.md");
+  const hasDomainPage = pageRecords.some((page) => isRecord(page.target) && page.target.path !== "index.md");
+  const hasRationale = pageRecords.some((page) =>
+    Array.isArray(page.notes_for_apply) &&
+      page.notes_for_apply.some((note) => typeof note === "string" && note.includes("no-domain-pages")),
+  );
+  return hasIndex && (hasDomainPage || hasRationale);
 }
 
 function result(
@@ -355,6 +536,16 @@ function hasInferenceExplanation(item: ProjectMemoryMaintenanceProposalItem): bo
   return Boolean(item.inference?.label && item.inference.why_direct_repo_evidence_is_unavailable);
 }
 
+function validInference(value: Record<string, unknown> | null): boolean {
+  return Boolean(
+    value &&
+      typeof value.label === "string" &&
+      value.label.length > 0 &&
+      typeof value.why_direct_repo_evidence_is_unavailable === "string" &&
+      value.why_direct_repo_evidence_is_unavailable.length > 0,
+  );
+}
+
 function finding(
   severity: ProjectMemoryValidationFinding["severity"],
   category: ProjectMemoryValidatorIssueCategory,
@@ -373,4 +564,8 @@ function describeRef(ref: unknown): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function nonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }

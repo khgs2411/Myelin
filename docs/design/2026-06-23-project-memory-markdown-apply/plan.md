@@ -5,7 +5,7 @@
 **Pseudocode:** `pseudocode/` loaded and treated as strong shaping artifacts
 **Context:** `CONTEXT.md` loaded
 **ADRs:** `0018`, `0019`, `0020`, `0058`, `0059`, `0060`
-**Status:** Chunk Plans Written
+**Status:** Implemented
 
 ## Goal
 
@@ -216,3 +216,7 @@ Execution must stop on unclear plan steps, failed verification, code/spec confli
 ## User Approval
 
 Roadmap approved by the user. Chunk plan files have been written and are ready for implementation.
+
+## Execution Note
+
+Implemented on 2026-06-24 in full-plan order. The implementation added structured apply payload contracts, deterministic markdown rendering, journaled staged promotion and recovery, creation and maintenance apply, changeset/source-consumption evidence, and `project learn` service/CLI integration. Final verification evidence is recorded in the executor response.

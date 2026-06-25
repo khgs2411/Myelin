@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { openMemoryDb } from "../../src/memory/db.ts";
 import { ProjectService } from "../../src/project/project-service.ts";
 import { writeJson } from "../../src/runtime/json.ts";
 
@@ -50,6 +51,7 @@ test("project service lists active projects unless legacy projects are requested
 
 test("project service exposes the project learn curator facade without changing pipeline routing", async () => {
   await seedCuratorProject();
+  seedMemoryDb();
   await seedSchema();
   const service = new ProjectService(root);
 
@@ -77,17 +79,8 @@ test("project service exposes the project learn curator facade without changing 
           untrusted_existing_markdown_policy: "adopt",
         },
         pages: [
-          {
-            id: "page_index",
-            target: { path: "index.md", path_kind: "new_wiki_page" },
-            title: "Demo",
-            purpose: "Index",
-            content_intent: "Create index",
-            required_sections: ["Overview"],
-            evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
-            repo_citations: [],
-            notes_for_apply: [],
-          },
+          creationPage("page_index", "index.md", "Demo", "Project Memory index"),
+          creationPage("page_setup", "setup/index.md", "Setup", "Setup workflows"),
         ],
         state_intent: { mark_project_memory_curated: true, freshness_intent: "initialize" },
         evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
@@ -100,7 +93,39 @@ test("project service exposes the project learn curator facade without changing 
 
   expect(result.status).toBe("completed");
   expect(result.artifacts.curator_output).toBe("curator-creation-draft.json");
+  expect(result.stopped_before_writes).toBe(false);
 });
+
+function creationPage(id: string, path: string, title: string, purpose: string) {
+  return {
+    id,
+    target: { path, path_kind: "new_wiki_page" },
+    title,
+    purpose,
+    content_intent: `Create ${title}`,
+    apply_payload: {
+      schema_version: 1,
+      pages: [
+        {
+          page_path: path,
+          title,
+          purpose,
+          body: { paragraphs: [`${title} describes ${purpose}.`] },
+          evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
+          repo_citations: [],
+          inference: {
+            label: "initial_project_memory",
+            why_direct_repo_evidence_is_unavailable: "Creation summary is based on project state.",
+          },
+        },
+      ],
+    },
+    required_sections: ["Overview"],
+    evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
+    repo_citations: [],
+    notes_for_apply: [],
+  };
+}
 
 async function seedCuratorProject(): Promise<void> {
   await writeJson(join(root, "projects", "demo", "state", "project.json"), {
@@ -139,4 +164,9 @@ async function seedSchema(): Promise<void> {
     description: "Page taxonomy.",
     categories: [{ key: "setup", summary: "Setup." }],
   });
+}
+
+function seedMemoryDb(): void {
+  const db = openMemoryDb(root);
+  db.close();
 }

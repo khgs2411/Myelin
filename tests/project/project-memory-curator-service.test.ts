@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ProjectMemoryCuratorService } from "../../src/project/project-memory-curator-service.ts";
+import { openMemoryDb } from "../../src/memory/db.ts";
 import { writeJson } from "../../src/runtime/json.ts";
 
 let root: string;
@@ -15,10 +16,10 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-test("runs project learn in create mode, writes curator artifacts, and stops before wiki writes", async () => {
+test("runs project learn in create mode and applies valid low-risk output", async () => {
   await seedProject("uncurated");
+  seedMemoryDb();
   await seedSchema();
-  const originalWiki = await readFile(join(root, "projects", "demo", "wiki", "index.md"), "utf8");
   const service = new ProjectMemoryCuratorService(root);
 
   const result = await service.runProjectLearn({
@@ -35,13 +36,44 @@ test("runs project learn in create mode, writes curator artifacts, and stops bef
 
   expect(result.status).toBe("completed");
   expect(result.mode).toBe("create");
-  expect(result.stopped_before_writes).toBe(true);
+  expect(result.stopped_before_writes).toBe(false);
   expect(result.artifacts.input_packet).toBe("input-packet.json");
   expect(result.artifacts.curator_output).toBe("curator-creation-draft.json");
+  expect(result.artifacts.apply_journal).toBe("project-memory-apply-journal.json");
+  expect(result.artifacts.apply_result).toBe("project-memory-apply-result.json");
+  expect(result.artifacts.changeset).toBe("project-memory-changeset.json");
   expect(await Bun.file(join(root, result.run_dir, "curator-validation.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_dir, "curator-run-result.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_dir, "summary.md")).exists()).toBe(true);
-  expect(await readFile(join(root, "projects", "demo", "wiki", "index.md"), "utf8")).toBe(originalWiki);
+  expect(await readFile(join(root, "projects", "demo", "wiki", "index.md"), "utf8")).toContain("# Demo");
+  expect(await readFile(join(root, "projects", "demo", "wiki", "setup", "index.md"), "utf8")).toContain("# Setup");
+});
+
+test("runs maintain mode and applies eligible low-risk maintenance output", async () => {
+  await seedProject("curated");
+  seedMemoryDb();
+  await mkdir(join(root, "projects", "demo", "wiki", "setup"), { recursive: true });
+  await writeFile(join(root, "projects", "demo", "wiki", "setup", "index.md"), "# Setup\n", "utf8");
+  await seedSchema();
+  const service = new ProjectMemoryCuratorService(root);
+
+  const result = await service.runProjectLearn({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    now: new Date("2026-06-23T13:00:00.000Z"),
+    runner: async () => ({
+      exitCode: 0,
+      stdout: JSON.stringify(maintenanceProposal("projects/demo/runs/project-learn/2026-06-23T13-00-00.000Z-run")),
+      stderr: "",
+    }),
+  });
+
+  expect(result.status).toBe("completed");
+  expect(result.mode).toBe("maintain");
+  expect(result.stopped_before_writes).toBe(false);
+  expect(result.applied_item_ids).toEqual(["item_1"]);
+  expect(await readFile(join(root, "projects", "demo", "wiki", "setup", "index.md"), "utf8")).toContain('id="setup.cli"');
 });
 
 test("runs maintain mode and returns needs_review when validation rejects all items", async () => {
@@ -138,6 +170,41 @@ test("writes failure artifacts when curator output is not valid JSON", async () 
   expect(await Bun.file(join(root, result.run_dir, "summary.md")).exists()).toBe(true);
 });
 
+test("recovery failure for missing apply artifacts does not advertise them", async () => {
+  await seedProject("curated");
+  await writeJson(join(root, "projects", "demo", "runs", "project-learn", "run-missing-artifacts", "project-memory-apply-journal.json"), {
+    schema_version: 1,
+    project_key: "demo",
+    run_dir: "projects/demo/runs/project-learn/run-missing-artifacts",
+    mode: "maintain",
+    status: "applied",
+    packet_ref: "input-packet.json",
+    curator_output_ref: "curator-maintenance-proposal.json",
+    validation_ref: "curator-validation.json",
+    staged_outputs_dir: "staged",
+    expected_writes: [],
+    observed_promotions: [],
+    recovery: { required_before_new_curator: false },
+  });
+  const service = new ProjectMemoryCuratorService(root);
+
+  const result = await service.runProjectLearn({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    now: new Date("2026-06-23T14:00:00.000Z"),
+    runner: async () => {
+      throw new Error("curator should not run during recovery preflight");
+    },
+  });
+
+  expect(result.status).toBe("failed");
+  expect(result.artifacts.apply_journal).toBeUndefined();
+  expect(result.artifacts.apply_result).toBeUndefined();
+  expect(result.artifacts.changeset).toBeUndefined();
+  expect(result.stopped_reason).toContain("apply result or changeset artifact is missing");
+});
+
 async function seedProject(status: "curated" | "uncurated"): Promise<void> {
   await writeJson(join(root, "projects", "demo", "state", "project.json"), {
     key: "demo",
@@ -180,6 +247,11 @@ async function seedSchema(): Promise<void> {
   });
 }
 
+function seedMemoryDb(): void {
+  const db = openMemoryDb(root);
+  db.close();
+}
+
 function creationDraft(runDir: string) {
   return {
     schema_version: 1,
@@ -194,21 +266,88 @@ function creationDraft(runDir: string) {
       untrusted_existing_markdown_policy: "adopt",
     },
     pages: [
-      {
-        id: "page_index",
-        target: { path: "index.md", path_kind: "new_wiki_page" },
-        title: "Demo",
-        purpose: "Index",
-        content_intent: "Create index",
-        required_sections: ["Overview"],
-        evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
-        repo_citations: [],
-        notes_for_apply: [],
-      },
+      creationPage("page_index", "index.md", "Demo", "Project Memory index"),
+      creationPage("page_setup", "setup/index.md", "Setup", "Setup workflows"),
     ],
     state_intent: { mark_project_memory_curated: true, freshness_intent: "initialize" },
     evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
     repo_citations: [],
+    risk: lowRisk(),
+  };
+}
+
+function creationPage(id: string, path: string, title: string, purpose: string) {
+  return {
+    id,
+    target: { path, path_kind: "new_wiki_page" },
+    title,
+    purpose,
+    content_intent: `Create ${title}`,
+    apply_payload: {
+      schema_version: 1,
+      pages: [
+        {
+          page_path: path,
+          title,
+          purpose,
+          body: { paragraphs: [`${title} describes ${purpose}.`] },
+          evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
+          repo_citations: [],
+          inference: {
+            label: "initial_project_memory",
+            why_direct_repo_evidence_is_unavailable: "Creation summary is based on project state.",
+          },
+        },
+      ],
+    },
+    required_sections: ["Overview"],
+    evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
+    repo_citations: [],
+    notes_for_apply: [],
+  };
+}
+
+function maintenanceProposal(runDir: string) {
+  return {
+    schema_version: 1,
+    project_key: "demo",
+    mode: "maintain",
+    packet_ref: { run_dir: runDir, artifact: "input-packet.json", packet_schema_version: 1 },
+    packet_context: packetContext(),
+    summary: "maintenance",
+    items: [
+      {
+        id: "item_1",
+        operation: "CREATE_ENTRY",
+        target_page: { path: "setup/index.md", path_kind: "existing_wiki_page" },
+        proposed_entry_id: "setup.cli",
+        content_intent: "Document CLI setup command.",
+        apply_payload: {
+          schema_version: 1,
+          entries: [
+            {
+              entry_id: "setup.cli",
+              title: "Setup CLI",
+              body: { paragraphs: ["Document CLI setup command."] },
+              lifecycle: "active",
+              evidence_refs: [{ kind: "project_state", ref: "project_memory" }],
+              repo_citations: [
+                { path: "src/commands/project.ts", line_start: 1, line_end: 20, reason: "CLI command registration" },
+              ],
+            },
+          ],
+        },
+        source_packet_refs: [{ kind: "project_state", ref: "project_memory" }],
+        evidence_refs: [{ kind: "project_state", ref: "project_memory" }],
+        repo_citations: [{ path: "src/commands/project.ts", line_start: 1, line_end: 20, reason: "CLI command registration" }],
+        applicability: { commands: ["myelin project learn demo"] },
+        lifecycle_intent: "active",
+        risk: lowRisk(),
+        preconditions: ["setup page exists"],
+        expected_outcome: "setup page changes",
+      },
+    ],
+    noop_inputs: [],
     risk: lowRisk(),
   };
 }
