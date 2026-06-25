@@ -110,12 +110,19 @@ Step 3 is complete when `project learn <key>` can safely maintain Project Memory
   - Description: `project learn` can apply validated structured Project Memory Apply Payloads for creation and maintenance through deterministic markdown rendering, staged outputs, apply journals, changesets, source-consumption state, and recovery preflight.
   - Why: accepted low-risk curation now becomes durable markdown/state only after validation, while dry-run, review, invalid, rejected, quarantined, degraded, or unsupported output stops before canonical writes.
   - Progress: implemented on 2026-06-24 and reviewed. Follow-up fixes closed journal terminal-artifact gaps, unpromoted and observed-promotion recovery drift, temp-file promotion, missing-artifact recovery failure reporting, and the explicit `no-domain-pages` creation rationale path.
-- [ ] `next` Reconcile Project Memory source-consumption records with pending candidates and handoffs.
+- [x] `done` Reconcile Project Memory source-consumption records with pending candidates and handoffs.
   - Description: Applied Project Memory source-consumption records should retire or terminally account for the consumed candidate and handoff refs without making apply directly own candidate/handoff mutation.
   - Why: markdown apply now records consumed Project Memory sources, but pending curator input should not keep re-feeding sources that already became canonical memory.
-- [ ] `open` Route gaps, stale findings, and inbox items into Project Memory candidates.
-  - Description: Missing, stale, or flagged knowledge should become structured Project Memory candidate input for the curator after consumed-source reconciliation is reliable.
-  - Why: missing or stale knowledge should become structured curator input instead of accumulating in a disconnected side channel, but intake volume should not expand before the source lifecycle can close.
+  - Progress: implemented on 2026-06-25. `project learn` now runs a deterministic source-consumption reconciler after apply recovery and before packet construction, moving consumed project candidates and project handoffs to `processed` in root SQLite while keeping apply and packet building separate.
+- [ ] `next` Add the V2 runtime durable-memory candidate inbox and Project Memory intake boundary.
+  - Description: Operators, runtime agents, and future tools can explicitly create project-scoped inbox candidate items that are validated, preserved with provenance, and normalized into `memory_candidates` for `project learn`.
+  - Why: Session Memory already creates automated candidates; Project Memory also needs an intentional runtime proposal path that shares the same downstream curator lifecycle without making Session Memory or the tool layer own Project Memory writes.
+- [ ] `open` Route project gaps and stale findings through the candidate intake boundary.
+  - Description: Gap/stale/finding producers should emit runtime inbox candidate items or normalized candidate drafts through the same intake contract instead of creating a parallel path.
+  - Why: missing or stale knowledge should become structured curator input instead of accumulating in disconnected side channels, but producer-specific routing should follow the intake boundary instead of defining it.
+- [ ] `open` Dogfood `project learn llm-wiki` against a real Project Memory candidate.
+  - Description: After candidate intake is reliable, run `project learn llm-wiki` on this repository with a real runtime-inbox-derived Project Memory candidate and verify packet input, curator behavior, markdown/state output or review gating, and candidate/source lifecycle.
+  - Why: this is the first point where Project Memory maintenance can be tested as a real product loop instead of isolated mechanics; retrieval indexing can wait until the curation pipeline proves it can handle real repo evidence.
 - [ ] `open` Build a derived Project Memory retrieval index that points back to canonical wiki files.
   - Description: Build lookup state that helps agents find relevant Project Memory pages or sections without making SQLite the source of truth.
   - Why: agents will need better Project Memory retrieval, but indexes should derive from canonical markdown rather than becoming another source of truth.

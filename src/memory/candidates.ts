@@ -18,6 +18,12 @@ export type CreateMemoryCandidateInput = {
   now: string;
 };
 
+export type QueueLifecycleUpdateResult =
+  | { status: "processed"; id: string }
+  | { status: "already_terminal"; id: string; current_status: "processed" | "rejected" }
+  | { status: "missing"; id: string }
+  | { status: "skipped"; id: string; current_status: string; reason: string };
+
 export function normalizeCandidateStatus(input: string): MemoryCandidateStatus {
   const normalized = input.replace(/-/g, "_");
   if (normalized === "pending" || normalized === "needs_review" || normalized === "processed" || normalized === "rejected") {
@@ -82,4 +88,44 @@ export function listMemoryCandidates(
   return db
     .query("SELECT * FROM memory_candidates WHERE project_key = ? ORDER BY created_at DESC, id DESC")
     .all(input.project_key) as MemoryCandidateRow[];
+}
+
+export function markProjectMemoryCandidateProcessed(
+  db: Database,
+  input: { project_key: string; id: string; now: string },
+): QueueLifecycleUpdateResult {
+  const row = db
+    .query("SELECT * FROM memory_candidates WHERE id = ? AND project_key = ? AND scope = 'project'")
+    .get(input.id, input.project_key) as MemoryCandidateRow | null;
+  if (!row) return { status: "missing", id: input.id };
+  if (row.status === "processed" || row.status === "rejected") {
+    return { status: "already_terminal", id: input.id, current_status: row.status };
+  }
+  if (row.status !== "pending" && row.status !== "needs_review") {
+    return { status: "skipped", id: input.id, current_status: row.status, reason: "unsupported candidate status" };
+  }
+
+  const result = db
+    .query(
+      `UPDATE memory_candidates
+       SET status = 'processed',
+           processed_at = ?,
+           updated_at = ?
+       WHERE id = ?
+         AND project_key = ?
+         AND scope = 'project'
+         AND status IN ('pending', 'needs_review')`,
+    )
+    .run(input.now, input.now, input.id, input.project_key);
+
+  if (result.changes > 0) return { status: "processed", id: input.id };
+
+  const current = db
+    .query("SELECT status FROM memory_candidates WHERE id = ? AND project_key = ? AND scope = 'project'")
+    .get(input.id, input.project_key) as { status: string } | null;
+  if (!current) return { status: "missing", id: input.id };
+  if (current.status === "processed" || current.status === "rejected") {
+    return { status: "already_terminal", id: input.id, current_status: current.status };
+  }
+  return { status: "skipped", id: input.id, current_status: current.status, reason: "candidate status changed before update" };
 }

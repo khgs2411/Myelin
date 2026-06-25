@@ -9,6 +9,7 @@ import {
 import { validateCuratorOutput } from "./project-memory-curator-validator.ts";
 import type { ProjectMemoryApplyResult } from "./project-memory-apply-contracts.ts";
 import { ProjectMemoryMarkdownApplier } from "./project-memory-markdown-applier.ts";
+import { ProjectMemorySourceConsumptionReconciler } from "./project-memory-source-consumption-reconciler.ts";
 import { buildProjectMemoryPacket, type ProjectMemoryPacket } from "./project-memory-packet.ts";
 import {
   createProjectCuratorRun,
@@ -20,7 +21,8 @@ import {
 } from "../runtime/project-run-infrastructure.ts";
 import { repairProjectShell } from "../runtime/project-shell.ts";
 import { findProject } from "../runtime/projects.ts";
-import { stableJson } from "../runtime/json.ts";
+import { readJsonIfExists, stableJson } from "../runtime/json.ts";
+import { projectPath } from "../runtime/fs.ts";
 
 export class ProjectMemoryCuratorService {
   constructor(private readonly root: string) {}
@@ -63,6 +65,29 @@ export class ProjectMemoryCuratorService {
 
     const run = await createProjectCuratorRun(this.root, input.projectKey, now);
     await ensureProjectLearnSchemaContext(this.root, input.projectKey, { dryRun: input.dryRun, now });
+    const reconciliation = await new ProjectMemorySourceConsumptionReconciler(this.root).reconcileProject(input.projectKey, {
+      now,
+    });
+    if (reconciliation.blocking) {
+      const mode = await projectLearnModeForState(this.root, input.projectKey);
+      const packet = await buildProjectMemoryPacket(this.root, input.projectKey);
+      await writeRunArtifact(run, "input-packet.json", packet);
+      return await this.writeTerminalArtifacts({
+        input,
+        run,
+        mode,
+        outputArtifact: "source-consumption-reconciliation.json",
+        outputValue: reconciliation,
+        validation: failureValidation(
+          input.projectKey,
+          mode,
+          "source_consumption_reconciliation_failed",
+          reconciliation.degraded_reasons.join("; ") || "source-consumption reconciliation failed",
+        ),
+        status: "failed",
+        stoppedReason: reconciliation.degraded_reasons.join("; ") || "source-consumption reconciliation failed",
+      });
+    }
     const packet = await buildProjectMemoryPacket(this.root, input.projectKey);
     await writeRunArtifact(run, "input-packet.json", packet);
 
@@ -266,6 +291,12 @@ function statusOf(value: unknown): string | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const status = (value as { status?: unknown }).status;
   return typeof status === "string" ? status : null;
+}
+
+async function projectLearnModeForState(root: string, projectKey: string): Promise<ProjectMemoryCuratorMode> {
+  const projectMemory = await readJsonIfExists(projectPath(root, projectKey, "state", "project-memory.json"));
+  const bootstrapState = await readJsonIfExists(projectPath(root, projectKey, "state", "bootstrap-state.json"));
+  return statusOf(projectMemory) === "curated" || statusOf(bootstrapState) === "curated" ? "maintain" : "create";
 }
 
 function runInfoFromJournalPath(journalPath: string): {

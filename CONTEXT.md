@@ -103,6 +103,10 @@ _Avoid_: Project Memory repair, gap-note replacement
 A proposed update or observation targeted at one memory scope for later curation.
 _Avoid_: Untyped note, generic todo
 
+**Runtime Durable-Memory Inbox**:
+A source/proposal lane where operators, runtime agents, and future tools explicitly submit durable-memory candidates before curation.
+_Avoid_: Canonical memory, direct candidate write
+
 **Layer Handoff Instruction**:
 A durable downstream candidate/instruction/prompt/input record created by one memory-layer agent for a later memory-layer agent, with structured fields and prompt text.
 _Avoid_: Hint, casual note, trusted memory
@@ -251,6 +255,9 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - **Auto Mode** can mark **Experience Log** entries or candidates for later processing, but it is distinct from an explicit **Detached Ingest Job** started by the **Ingest Command**.
 - A **Detached Ingest Job** runs its provider session from the target repository cwd and preserves branch metadata as retrieval context; branch state is not a launch gate for Session Memory ingest.
 - An **Answer Correction** in SQLite does not repair curated **Project Memory**; agents must still use `flag_stale_answer` or `enrich_gap` when the wiki should be updated.
+- A **Runtime Durable-Memory Inbox** item is explicit source material that can become a **Memory Candidate** through intake; it is not canonical memory and is not a direct candidate row.
+- **Runtime Durable-Memory Inbox** review means memory-layer curator/agent review against evidence, not ordinary operator/manual approval.
+- The **Runtime Durable-Memory Inbox** contract is layer-shaped across **Project Memory**, **Practice Memory**, and **Personal Memory**, but Myelin only accepts layers with implemented consumers.
 - A **Memory Candidate** targets exactly one of **Project Memory**, **Session Memory**, **Practice Memory**, or **Personal Memory**.
 - A **Memory Candidate** is a proposed memory output, while a **Layer Handoff Instruction** is downstream agent input; they use separate queues.
 - A **Layer Handoff Instruction** tells a future memory-layer agent what to read, query, fetch, compare, or verify; it includes structured fields plus prompt text, uses separate Project/Practice/Personal queues behind function/facade access, and is not trusted higher-layer memory by itself.

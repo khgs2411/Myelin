@@ -2,6 +2,8 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createMemoryCandidate, getMemoryCandidate } from "../../src/memory/candidates.ts";
+import { createHandoffInstruction, listHandoffInstructions } from "../../src/memory/handoffs.ts";
 import { ProjectMemoryCuratorService } from "../../src/project/project-memory-curator-service.ts";
 import { openMemoryDb } from "../../src/memory/db.ts";
 import { writeJson } from "../../src/runtime/json.ts";
@@ -74,6 +76,51 @@ test("runs maintain mode and applies eligible low-risk maintenance output", asyn
   expect(result.stopped_before_writes).toBe(false);
   expect(result.applied_item_ids).toEqual(["item_1"]);
   expect(await readFile(join(root, "projects", "demo", "wiki", "setup", "index.md"), "utf8")).toContain('id="setup.cli"');
+});
+
+test("reconciles consumed Project Memory sources before building the next curator packet", async () => {
+  await seedProject("curated");
+  seedMemoryDb();
+  seedPendingProjectSources();
+  await writeJson(join(root, "projects", "demo", "state", "project-memory-source-consumptions.json"), {
+    schema_version: 1,
+    project_key: "demo",
+    records: [
+      sourceRecord("project_candidate", "cand_1"),
+      sourceRecord("project_handoff", "handoff_1"),
+    ],
+  });
+  await mkdir(join(root, "projects", "demo", "wiki", "setup"), { recursive: true });
+  await writeFile(join(root, "projects", "demo", "wiki", "setup", "index.md"), "# Setup\n", "utf8");
+  await seedSchema();
+  const service = new ProjectMemoryCuratorService(root);
+
+  const result = await service.runProjectLearn({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    now: new Date("2026-06-23T13:30:00.000Z"),
+    runner: async (_command, options) => {
+      expect(options?.stdin).not.toContain("Already consumed candidate");
+      expect(options?.stdin).not.toContain("Already consumed handoff");
+      return {
+        exitCode: 0,
+        stdout: JSON.stringify(maintenanceProposal("projects/demo/runs/project-learn/2026-06-23T13-30-00.000Z-run")),
+        stderr: "",
+      };
+    },
+  });
+
+  expect(result.status).toBe("completed");
+  const db = openMemoryDb(root);
+  try {
+    expect(getMemoryCandidate(db, "cand_1")?.status).toBe("processed");
+    expect(listHandoffInstructions(db, { target_scope: "project", project_key: "demo", status: "processed" })[0]?.id).toBe(
+      "handoff_1",
+    );
+  } finally {
+    db.close();
+  }
 });
 
 test("runs maintain mode and returns needs_review when validation rejects all items", async () => {
@@ -250,6 +297,57 @@ async function seedSchema(): Promise<void> {
 function seedMemoryDb(): void {
   const db = openMemoryDb(root);
   db.close();
+}
+
+function seedPendingProjectSources(): void {
+  const db = openMemoryDb(root);
+  try {
+    createMemoryCandidate(db, {
+      id: "cand_1",
+      project_key: "demo",
+      scope: "project",
+      status: "pending",
+      candidate_type: "project.fact",
+      title: "Already consumed candidate",
+      summary: "Already consumed candidate should not be re-fed to the curator.",
+      source_event_refs: ["tomb_1"],
+      evidence: {},
+      proposed_payload: {},
+      confidence: "medium",
+      risk: "low",
+      reason: "Already consumed candidate",
+      now: "2026-06-23T13:20:00.000Z",
+    });
+    createHandoffInstruction(db, {
+      id: "handoff_1",
+      target_scope: "project",
+      project_key: "demo",
+      status: "pending",
+      objective: "Already consumed handoff",
+      prompt_text: "Already consumed handoff should not be re-fed to the curator.",
+      source_session_memory_ids: ["mem_1"],
+      source_event_refs: ["tomb_1"],
+      suggested_actions: ["query project memory"],
+      reason: "Already consumed handoff",
+      confidence: "medium",
+      risk: "low",
+      now: "2026-06-23T13:21:00.000Z",
+    });
+  } finally {
+    db.close();
+  }
+}
+
+function sourceRecord(source_kind: "project_candidate" | "project_handoff", source_ref: string) {
+  return {
+    source_kind,
+    source_ref,
+    project_key: "demo",
+    consumed_by_run: "projects/demo/runs/project-learn/previous-run",
+    consumed_at: "2026-06-23T13:25:00.000Z",
+    terminal_decision: "applied_to_project_memory" as const,
+    output_refs: ["project-memory-changeset.json"],
+  };
 }
 
 function creationDraft(runDir: string) {

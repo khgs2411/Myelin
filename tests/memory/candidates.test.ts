@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { createMemoryCandidate, getMemoryCandidate, listMemoryCandidates, normalizeCandidateStatus } from "../../src/memory/candidates.ts";
+import {
+  createMemoryCandidate,
+  getMemoryCandidate,
+  listMemoryCandidates,
+  markProjectMemoryCandidateProcessed,
+  normalizeCandidateStatus,
+} from "../../src/memory/candidates.ts";
 import { openMemoryDbAt, type MemoryDb } from "../../src/memory/db.ts";
 
 let db: MemoryDb;
@@ -42,4 +48,64 @@ test("creates and lists memory candidates by stored status and scope", () => {
     "cand_1",
   ]);
   expect(JSON.parse(getMemoryCandidate(db, "cand_1")?.source_event_refs_json ?? "[]")).toEqual(["tomb_1"]);
+});
+
+test("marks project memory candidates processed idempotently", () => {
+  createMemoryCandidate(db, {
+    id: "cand_1",
+    project_key: "class-kit",
+    scope: "project",
+    status: "needs_review",
+    candidate_type: "project.fact",
+    summary: "Possible project fact.",
+    source_event_refs: ["tomb_1"],
+    evidence: {},
+    proposed_payload: {},
+    confidence: "medium",
+    risk: "low",
+    reason: "Durable project fact",
+    now: "2026-06-13T10:00:00.000Z",
+  });
+  createMemoryCandidate(db, {
+    id: "cand_session",
+    project_key: "class-kit",
+    scope: "session",
+    status: "pending",
+    candidate_type: "session.continuity",
+    summary: "Session candidate.",
+    source_event_refs: ["tomb_2"],
+    evidence: {},
+    proposed_payload: {},
+    confidence: "medium",
+    risk: "low",
+    reason: "Session only",
+    now: "2026-06-13T10:00:00.000Z",
+  });
+
+  expect(
+    markProjectMemoryCandidateProcessed(db, {
+      project_key: "class-kit",
+      id: "cand_1",
+      now: "2026-06-13T11:00:00.000Z",
+    }),
+  ).toEqual({ status: "processed", id: "cand_1" });
+  const processed = getMemoryCandidate(db, "cand_1");
+  expect(processed?.status).toBe("processed");
+  expect(processed?.processed_at).toBe("2026-06-13T11:00:00.000Z");
+
+  expect(
+    markProjectMemoryCandidateProcessed(db, {
+      project_key: "class-kit",
+      id: "cand_1",
+      now: "2026-06-13T12:00:00.000Z",
+    }),
+  ).toEqual({ status: "already_terminal", id: "cand_1", current_status: "processed" });
+  expect(getMemoryCandidate(db, "cand_1")?.processed_at).toBe("2026-06-13T11:00:00.000Z");
+  expect(
+    markProjectMemoryCandidateProcessed(db, {
+      project_key: "class-kit",
+      id: "cand_session",
+      now: "2026-06-13T11:00:00.000Z",
+    }),
+  ).toEqual({ status: "missing", id: "cand_session" });
 });
