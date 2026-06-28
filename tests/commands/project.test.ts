@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { registerProjectCommands } from "../../src/commands/project.ts";
 import { createCli } from "../../src/commands/registry.ts";
+import { createRuntimeInboxItem } from "../../src/inbox/runtime-inbox-items.ts";
 import { openMemoryDb } from "../../src/memory/db.ts";
 import { writeJson } from "../../src/runtime/json.ts";
 
@@ -134,6 +135,49 @@ test("project learn routes through curator service and writes curator artifacts"
   expect(response.artifacts.apply_journal).toBe("project-memory-apply-journal.json");
   expect(response.stopped_before_writes).toBe(false);
   expect(await readFile(join(root, response.run_dir, "summary.md"), "utf8")).toContain("stopped_before_writes: false");
+});
+
+test("project learn JSON includes runtime inbox intake artifact when intake runs", async () => {
+  await seedProject("active", "active");
+  await writeJson(join(root, "projects", "active", "state", "bootstrap-state.json"), {
+    status: "uncurated",
+    missing: ["curated_project_memory"],
+  });
+  await mkdir(join(root, "projects", "active", "wiki"), { recursive: true });
+  await writeFile(join(root, "projects", "active", "wiki", "index.md"), "# Active\n", "utf8");
+  seedMemoryDb();
+  await seedSchema();
+  const inbox = await createRuntimeInboxItem(root, {
+    projectKey: "active",
+    targetLayer: "project",
+    title: "Runtime inbox candidate",
+    body: "Runtime inbox candidate visible to project learn.",
+    rationale: "Project learn should run intake before packet construction.",
+    evidenceRefs: [],
+    targetHint: null,
+    confidence: "medium",
+    risk: "low",
+    creator: "operator:test",
+    now: new Date("2026-06-25T10:00:00.000Z"),
+    id: "2026-06-25T10-00-00Z_a1b2c3",
+  });
+  if (inbox.status !== "created") throw new Error("failed to create inbox fixture");
+  const cli = createCli("myelin");
+  registerProjectCommands(cli, {
+    now: () => new Date("2026-06-25T11:00:00.000Z"),
+    runner: async () => ({
+      exitCode: 0,
+      stdout: JSON.stringify(creationDraft("active", "projects/active/runs/project-learn/2026-06-25T11-00-00.000Z-run")),
+      stderr: "",
+    }),
+  });
+
+  const result = await cli.run(["project", "learn", "active", "--json"]);
+  const response = JSON.parse(result.message);
+
+  expect(result.exitCode).toBe(0);
+  expect(response.artifacts.runtime_inbox_intake).toBe("runtime-inbox-intake.json");
+  expect(await Bun.file(join(root, response.run_dir, "runtime-inbox-intake.json")).exists()).toBe(true);
 });
 
 test("project ingest is not a Project Memory command", async () => {

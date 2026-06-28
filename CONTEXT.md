@@ -175,6 +175,34 @@ _Avoid_: free-form patch, markdown diff, content intent as write authority
 A project-level state record that links a consumed candidate or handoff source ref to the Project Memory apply run and wiki output refs that made it terminal.
 _Avoid_: tombstone, SQLite truth row, processed flag
 
+**Project Memory Retrieval Index**:
+Derived serving state that makes Project Memory markdown searchable while pointing back to canonical wiki sections.
+_Avoid_: canonical memory, SQLite Project Memory
+
+**Structural Retrieval Metadata**:
+Deterministic metadata extracted from Project Memory markdown paths, categories, titles, headings, sections, and content hashes.
+_Avoid_: agent hint, semantic summary
+
+**Retrieval Hint**:
+Semantic retrieval metadata such as keywords, aliases, topics, and likely query phrases generated for existing markdown sections.
+_Avoid_: source of truth, canonical claim
+
+**Hint Generation Flow**:
+The separate model-backed flow that creates or refreshes **Retrieval Hint** records from completed markdown plus **Structural Retrieval Metadata**.
+_Avoid_: Project Memory curator responsibility, markdown authoring
+
+**Retrieval Maintenance Queue**:
+A dedicated serving-state work queue for retrieval hint refresh, index repair, and poor-retrieval feedback.
+_Avoid_: Project Memory candidate, memory-content curation queue
+
+**Explicit No-Op Decision**:
+A curator result that says no durable Project Memory update is needed and cites the candidate/source refs plus canonical markdown refs checked.
+_Avoid_: empty proposal list as proof
+
+**Evidence Dependency**:
+An explicit curator-declared link from a proposal to the lookup results, canonical section refs, or source refs it relies on.
+_Avoid_: inferred citation dependency, packet-wide degradation
+
 **Untrusted Existing Markdown Context**:
 Preexisting project wiki markdown that can inform creation mode but is not trusted Project Memory.
 _Avoid_: migrated Project Memory, already documented
@@ -277,6 +305,12 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - A **Project Memory Creation Draft** creates the first trusted project brain; a **Project Memory Maintenance Proposal** updates an existing trusted brain.
 - A **Project Memory Apply Payload** is proposed by a curator, validated by Myelin, and rendered by deterministic code into canonical Project Memory markdown.
 - A **Project Memory Source Consumption** record lets a later reconciler update candidate or handoff lifecycle from project-owned state rather than rescanning all run artifacts.
+- A **Project Memory Retrieval Index** is derived from **Project Memory** markdown; it improves lookup but never replaces markdown as canonical memory.
+- **Structural Retrieval Metadata** owns deterministic pointers into Project Memory markdown; **Retrieval Hint** records improve semantic recall but never own pointer authority.
+- The **Hint Generation Flow** is separate from Project Memory curation; new memory entries/pages require hints before they are fully indexed, while existing entries/pages can reuse valid hints.
+- A **Retrieval Maintenance Queue** stores serving-state work such as hint refresh and poor-retrieval feedback instead of creating **Memory Candidate** records.
+- An **Explicit No-Op Decision** can complete a fallback-lookup learn run only when it cites the source/candidate and canonical memory evidence checked.
+- An **Evidence Dependency** lets validation apply scoped gating to one proposal instead of treating every lower-quality lookup result as packet-wide degradation.
 - The **Core Runtime Migration** replaces Python/Bash entrypoints for normal core operation with Bun/TypeScript implementations.
 - The **Runtime Layout Migration** can change directories and data structures when the new layout has a clear purpose and migration path.
 - The **V2 Breakage Budget** prioritizes building the powerful brain over preserving weak V1 behavior.
@@ -341,3 +375,4 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - `answer.correction` overlaps with the existing gap/inbox flow. Resolved: **Answer Correction** is SQLite evidence only; `flag_stale_answer` and `enrich_gap` remain the canonical Project Memory repair path.
 - `memory.candidate` is generic as an event type, but candidate routing must not be arbitrary. Resolved: **Memory Candidate** records use a typed target scope.
 - V2 project data layout is root `readme.md`/`index.md`, `wiki/`, `state/`, `log/`, and `runs/` by default; `sources/` and `schema/` are created lazily when preserved source material or project-local schema rules exist. Old global artifacts are reference material during migration, not the target layout.
+- Project Memory retrieval work has two separate surfaces. Resolved: canonical memory content changes use **Memory Candidate** / Project Memory curation, while retrieval-serving repairs use the **Retrieval Maintenance Queue**.

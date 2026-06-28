@@ -9,8 +9,10 @@ import {
 import { validateCuratorOutput } from "./project-memory-curator-validator.ts";
 import type { ProjectMemoryApplyResult } from "./project-memory-apply-contracts.ts";
 import { ProjectMemoryMarkdownApplier } from "./project-memory-markdown-applier.ts";
+import { ProjectMemoryCandidateIntakeService } from "./project-memory-candidate-intake-service.ts";
 import { ProjectMemorySourceConsumptionReconciler } from "./project-memory-source-consumption-reconciler.ts";
 import { buildProjectMemoryPacket, type ProjectMemoryPacket } from "./project-memory-packet.ts";
+import { buildPromptBudgetedProjectMemoryPacket } from "./project-memory-prompt-budget.ts";
 import {
   createProjectCuratorRun,
   ensureProjectLearnSchemaContext,
@@ -21,7 +23,7 @@ import {
 } from "../runtime/project-run-infrastructure.ts";
 import { repairProjectShell } from "../runtime/project-shell.ts";
 import { findProject } from "../runtime/projects.ts";
-import { readJsonIfExists, stableJson } from "../runtime/json.ts";
+import { readJsonIfExists } from "../runtime/json.ts";
 import { projectPath } from "../runtime/fs.ts";
 
 export class ProjectMemoryCuratorService {
@@ -88,8 +90,54 @@ export class ProjectMemoryCuratorService {
         stoppedReason: reconciliation.degraded_reasons.join("; ") || "source-consumption reconciliation failed",
       });
     }
-    const packet = await buildProjectMemoryPacket(this.root, input.projectKey);
+
+    const runtimeInboxIntake = await new ProjectMemoryCandidateIntakeService(this.root).intakeProjectInbox(input.projectKey, now);
+    await writeRunArtifact(run, "runtime-inbox-intake.json", runtimeInboxIntake);
+    if (runtimeInboxIntake.blocking) {
+      const mode = await projectLearnModeForState(this.root, input.projectKey);
+      const packet = await buildProjectMemoryPacket(this.root, input.projectKey);
+      await writeRunArtifact(run, "input-packet.json", packet);
+      return await this.writeTerminalArtifacts({
+        input,
+        run,
+        mode,
+        outputArtifact: "runtime-inbox-intake.json",
+        validation: failureValidation(
+          input.projectKey,
+          mode,
+          "runtime_inbox_intake_failed",
+          runtimeInboxIntake.degraded_reasons.join("; ") || "runtime inbox intake failed",
+        ),
+        status: "failed",
+        stoppedReason: runtimeInboxIntake.degraded_reasons.join("; ") || "runtime inbox intake failed",
+        runtimeInboxIntake: true,
+      });
+    }
+
+    const promptBudget = await buildPromptBudgetedProjectMemoryPacket({
+      root: this.root,
+      projectKey: input.projectKey,
+      runDir: run.relative_run_dir,
+      transport: "artifact_reference",
+    });
+    await writeRunArtifact(run, "prompt-budget.json", promptBudget.artifact);
+    const packet = promptBudget.packet;
     await writeRunArtifact(run, "input-packet.json", packet);
+    if (promptBudget.status === "too_large") {
+      const validation = failureValidation(input.projectKey, packet.mode, "curator_prompt_too_large", promptBudget.reason);
+      return await this.writeTerminalArtifacts({
+        input,
+        run,
+        mode: packet.mode,
+        outputArtifact: "curator-output-error.json",
+        outputValue: { error: promptBudget.reason },
+        validation,
+        status: "failed",
+        stoppedReason: promptBudget.reason,
+        promptBudget: true,
+        runtimeInboxIntake: true,
+      });
+    }
 
     const stageId = packet.mode === "create" ? "curator-create" : "curator-maintain";
     let curatorOutput: unknown;
@@ -97,7 +145,7 @@ export class ProjectMemoryCuratorService {
       const curator = await invokeProjectCurator({
         root: this.root,
         stageId,
-        prompt: this.promptFor(packet.mode, run.relative_run_dir, packet),
+        prompt: promptBudget.prompt,
         provider: input.provider,
         modelOverride: input.modelOverride,
         env: input.env,
@@ -116,6 +164,8 @@ export class ProjectMemoryCuratorService {
         validation,
         status: "failed",
         stoppedReason,
+        promptBudget: true,
+        runtimeInboxIntake: true,
       });
     }
 
@@ -148,6 +198,8 @@ export class ProjectMemoryCuratorService {
           validation,
           status: "completed",
           apply: applyResult,
+          promptBudget: true,
+          runtimeInboxIntake: true,
         });
       }
       return await this.writeTerminalArtifacts({
@@ -158,6 +210,8 @@ export class ProjectMemoryCuratorService {
         validation,
         status: "needs_review",
         stoppedReason: applyResult.reason ?? "project memory apply skipped",
+        promptBudget: true,
+        runtimeInboxIntake: true,
       });
     }
 
@@ -169,25 +223,9 @@ export class ProjectMemoryCuratorService {
       validation,
       status: applyDecision.status,
       stoppedReason: applyDecision.reason,
+      promptBudget: true,
+      runtimeInboxIntake: true,
     });
-  }
-
-  private promptFor(mode: ProjectMemoryCuratorMode, runDir: string, packet: ProjectMemoryPacket): string {
-    const outputName = mode === "create" ? "ProjectMemoryCreationDraft" : "ProjectMemoryMaintenanceProposal";
-    return [
-      "You are the Project Memory Curator.",
-      `Run directory: ${runDir}`,
-      `Input packet artifact: ${runDir}/input-packet.json`,
-      `Return ONLY strict JSON matching ${outputName}.`,
-      "Use packet references from the input packet. Do not invent packet refs.",
-      "Do not write files. Do not mutate wiki markdown.",
-      mode === "create"
-        ? "Create mode: propose the first trusted Project Memory brain draft."
-        : "Maintain mode: propose bounded itemized Project Memory updates only.",
-      "",
-      "Input packet JSON:",
-      stableJson(packet),
-    ].join("\n");
   }
 
   private async writeTerminalArtifacts(input: {
@@ -200,6 +238,8 @@ export class ProjectMemoryCuratorService {
     status: ProjectMemoryCuratorRunResult["status"];
     stoppedReason?: string;
     apply?: ProjectMemoryApplyResult;
+    promptBudget?: boolean;
+    runtimeInboxIntake?: boolean;
   }): Promise<ProjectMemoryCuratorRunResult> {
     if (input.outputValue !== undefined) {
       await writeRunArtifact(input.run, input.outputArtifact, input.outputValue);
@@ -215,6 +255,8 @@ export class ProjectMemoryCuratorService {
       status: input.status,
       stoppedReason: input.stoppedReason,
       apply: input.apply,
+      promptBudget: input.promptBudget,
+      runtimeInboxIntake: input.runtimeInboxIntake,
     });
     await writeRunArtifact(input.run, "curator-run-result.json", result);
     await writeMarkdownArtifact(input.run, "summary.md", summaryFor(result));
@@ -232,6 +274,8 @@ function buildResult(input: {
   status: ProjectMemoryCuratorRunResult["status"];
   stoppedReason?: string;
   apply?: ProjectMemoryApplyResult;
+  promptBudget?: boolean;
+  runtimeInboxIntake?: boolean;
 }): ProjectMemoryCuratorRunResult {
   return {
     status: input.status,
@@ -245,6 +289,8 @@ function buildResult(input: {
       curator_validation: "curator-validation.json",
       curator_run_result: "curator-run-result.json",
       summary: "summary.md",
+      prompt_budget: input.promptBudget ? "prompt-budget.json" : undefined,
+      runtime_inbox_intake: input.runtimeInboxIntake ? "runtime-inbox-intake.json" : undefined,
       apply_journal: input.apply ? "project-memory-apply-journal.json" : undefined,
       apply_result: input.apply ? "project-memory-apply-result.json" : undefined,
       changeset: input.apply ? "project-memory-changeset.json" : undefined,

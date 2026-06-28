@@ -146,6 +146,8 @@ Output:
 Side effects:
 
 - May invoke provider CLIs.
+- Runs deterministic runtime inbox intake before packet construction, creating or reusing Project Memory candidates for valid `projects/<project-key>/sources/inbox/*.json` source proposals.
+- Writes `prompt-budget.json` before curator invocation. Codex-backed curator prompts reference run artifacts instead of inlining the full packet; bounded inline prompt fallback can reduce supporting packet context when needed.
 - May write run artifacts under `projects/<project-key>/runs/`.
 - May update project memory outputs unless `--dry-run` stops writes.
 
@@ -335,6 +337,61 @@ Side effects:
 - Writes Session Memory outputs, memory candidates, handoff instructions, reconciliation links, and tombstone finalization.
 
 ## memory
+
+### `myelin memory inbox create <project-key> --layer project --body <text> --title <title> --rationale <text> --confidence low|medium|high --risk low|medium|high [--evidence-ref <ref>] [--target-hint <hint>] [--json]`
+
+Creates an explicit runtime durable-memory inbox source proposal for Project Memory.
+
+Arguments:
+
+- `project-key`: project that owns the proposal.
+
+Options:
+
+- `--layer project`: required. Practice and Personal layers are not accepted until their consumers exist.
+- `--body <text>`: required source/proposal text.
+- `--title <title>`: required short summary.
+- `--rationale <text>`: required explanation for why this should become durable memory.
+- `--confidence low|medium|high`: required proposal confidence signal.
+- `--risk low|medium|high`: required proposal risk signal.
+- `--evidence-ref <ref>`: optional repeatable source reference.
+- `--target-hint <hint>`: optional curator routing hint.
+- `--json`: emit the structured creation result.
+
+Output:
+
+- Human-readable created item id, source ref, path, confidence, and risk by default.
+- Structured creation result with `--json`.
+
+Side effects:
+
+- Writes immutable preserved source JSON under `projects/<project-key>/sources/inbox/<id>.json`.
+- Creates `projects/<project-key>/sources/index.md` and `projects/<project-key>/sources/inbox/index.md` when needed.
+- Does not create memory candidate rows. Use `myelin memory inbox intake <project-key>` or `myelin project learn <project-key>` after this command.
+
+### `myelin memory inbox intake <project-key> [--json]`
+
+Deterministically normalizes valid Project runtime inbox source records into Project Memory candidates without invoking a provider.
+
+Arguments:
+
+- `project-key`: project whose runtime inbox source records should be normalized.
+
+Options:
+
+- `--json`: emit the structured intake summary.
+
+Output:
+
+- Human-readable counts for created, existing, terminal duplicate, skipped, unsupported, and invalid source records by default.
+- Structured intake summary with `--json`.
+
+Side effects:
+
+- Creates or reuses `memory_candidates` rows for valid `projects/<project-key>/sources/inbox/*.json` files.
+- Creates only `scope="project"`, `candidate_type="project.inbox"`, `status="needs_review"` candidates in this slice.
+- Does not invoke the Project Memory Curator.
+- Does not rewrite runtime inbox source files.
 
 ### `myelin memory query <project-key> <question> [--limit N] [--branch current|<branch>] [--json] [--debug]`
 
@@ -576,4 +633,3 @@ Side effects:
 - No-ops when `MYELIN_CAPTURE_DISABLED=1`.
 
 This command is normally invoked by installed hooks, not by operators directly.
-

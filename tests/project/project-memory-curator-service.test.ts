@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createRuntimeInboxItem } from "../../src/inbox/runtime-inbox-items.ts";
 import { createMemoryCandidate, getMemoryCandidate } from "../../src/memory/candidates.ts";
 import { createHandoffInstruction, listHandoffInstructions } from "../../src/memory/handoffs.ts";
 import { ProjectMemoryCuratorService } from "../../src/project/project-memory-curator-service.ts";
@@ -40,12 +41,14 @@ test("runs project learn in create mode and applies valid low-risk output", asyn
   expect(result.mode).toBe("create");
   expect(result.stopped_before_writes).toBe(false);
   expect(result.artifacts.input_packet).toBe("input-packet.json");
+  expect(result.artifacts.prompt_budget).toBe("prompt-budget.json");
   expect(result.artifacts.curator_output).toBe("curator-creation-draft.json");
   expect(result.artifacts.apply_journal).toBe("project-memory-apply-journal.json");
   expect(result.artifacts.apply_result).toBe("project-memory-apply-result.json");
   expect(result.artifacts.changeset).toBe("project-memory-changeset.json");
   expect(await Bun.file(join(root, result.run_dir, "curator-validation.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_dir, "curator-run-result.json")).exists()).toBe(true);
+  expect(await Bun.file(join(root, result.run_dir, "prompt-budget.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_dir, "summary.md")).exists()).toBe(true);
   expect(await readFile(join(root, "projects", "demo", "wiki", "index.md"), "utf8")).toContain("# Demo");
   expect(await readFile(join(root, "projects", "demo", "wiki", "setup", "index.md"), "utf8")).toContain("# Setup");
@@ -123,6 +126,57 @@ test("reconciles consumed Project Memory sources before building the next curato
   }
 });
 
+test("runs runtime inbox intake before building the curator packet", async () => {
+  await seedProject("curated");
+  seedMemoryDb();
+  await seedSchema();
+  const inbox = await createRuntimeInboxItem(root, {
+    projectKey: "demo",
+    targetLayer: "project",
+    title: "Runtime inbox intake candidate",
+    body: "Runtime inbox intake should enter the Project Memory packet.",
+    rationale: "Project learn should compose runtime inbox intake before packet construction.",
+    evidenceRefs: ["docs/design/spec.md"],
+    targetHint: null,
+    confidence: "high",
+    risk: "medium",
+    creator: "operator:test",
+    now: new Date("2026-06-25T10:00:00.000Z"),
+    id: "2026-06-25T10-00-00Z_a1b2c3",
+  });
+  if (inbox.status !== "created") throw new Error("failed to create inbox fixture");
+  await mkdir(join(root, "projects", "demo", "wiki", "setup"), { recursive: true });
+  await writeFile(join(root, "projects", "demo", "wiki", "setup", "index.md"), "# Setup\n", "utf8");
+  const service = new ProjectMemoryCuratorService(root);
+
+  const result = await service.runProjectLearn({
+    projectKey: "demo",
+    dryRun: true,
+    review: false,
+    now: new Date("2026-06-25T11:00:00.000Z"),
+    runner: async (_command, options) => {
+      expect(options?.stdin).toContain(
+        "Input packet artifact: projects/demo/runs/project-learn/2026-06-25T11-00-00.000Z-run/input-packet.json",
+      );
+      expect(options?.stdin).toContain("Read the input packet artifact from the repository before answering.");
+      expect(options?.stdin).not.toContain("Runtime inbox intake should enter the Project Memory packet.");
+      return {
+        exitCode: 0,
+        stdout: JSON.stringify(maintenanceProposal("projects/demo/runs/project-learn/2026-06-25T11-00-00.000Z-run")),
+        stderr: "",
+      };
+    },
+  });
+
+  expect(result.status).toBe("completed");
+  expect(result.artifacts.runtime_inbox_intake).toBe("runtime-inbox-intake.json");
+  const packetArtifact = await readFile(join(root, result.run_dir, "input-packet.json"), "utf8");
+  expect(packetArtifact).toContain("Runtime inbox intake should enter the Project Memory packet.");
+  expect(packetArtifact).toContain("project.inbox");
+  const intakeArtifact = JSON.parse(await readFile(join(root, result.run_dir, "runtime-inbox-intake.json"), "utf8"));
+  expect(intakeArtifact.created_candidate_ids).toEqual(["project_inbox:demo:2026-06-25T10-00-00Z_a1b2c3"]);
+});
+
 test("runs maintain mode and returns needs_review when validation rejects all items", async () => {
   await seedProject("curated");
   await seedSchema();
@@ -191,7 +245,9 @@ test("writes failure artifacts when provider invocation fails after packet creat
   expect(result.status).toBe("failed");
   expect(result.validation_ok).toBe(false);
   expect(result.artifacts.curator_output).toBe("curator-output-error.json");
+  expect(result.artifacts.prompt_budget).toBe("prompt-budget.json");
   expect(await Bun.file(join(root, result.run_dir, "input-packet.json")).exists()).toBe(true);
+  expect(await Bun.file(join(root, result.run_dir, "prompt-budget.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_dir, "curator-output-error.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_dir, "curator-validation.json")).exists()).toBe(true);
   expect(await readFile(join(root, result.run_dir, "summary.md"), "utf8")).toContain("provider invocation failed");

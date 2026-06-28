@@ -237,6 +237,8 @@ export type ProjectMemoryCuratorRunResult = {
     curator_validation: string;
     curator_run_result: string;
     summary: string;
+    prompt_budget?: "prompt-budget.json";
+    runtime_inbox_intake?: "runtime-inbox-intake.json";
     apply_journal?: "project-memory-apply-journal.json";
     apply_result?: "project-memory-apply-result.json";
     changeset?: "project-memory-changeset.json";

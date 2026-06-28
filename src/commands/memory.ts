@@ -1,5 +1,6 @@
 import type { Cli, CommandResult } from "./registry.ts";
 import { fail, ok } from "./registry.ts";
+import { createRuntimeInboxItem, runtimeInboxRatings, type RuntimeInboxRating } from "../inbox/runtime-inbox-items.ts";
 import { openMemoryDb } from "../memory/db.ts";
 import { EmbeddingProviderFactory } from "../memory/embedding-provider-factory.ts";
 import {
@@ -12,11 +13,23 @@ import { MemoryCandidateService } from "../memory/memory-candidate-service.ts";
 import { SessionMemoryInspectionService, type SessionMemoryInspectRow } from "../memory/session-memory-inspection-service.ts";
 import type { SessionMemoryLinkRow } from "../memory/session-memory-links.ts";
 import { SessionMemoryIndexService } from "../memory/session-memory-index-service.ts";
+import {
+  ProjectMemoryCandidateIntakeService,
+  type ProjectInboxIntakeSummary,
+} from "../project/project-memory-candidate-intake-service.ts";
 import { repoRoot } from "../runtime/fs.ts";
+import { stableJson } from "../runtime/json.ts";
 import { DEFAULT_EMBEDDING_BATCH_SIZE, loadConfig, MAX_EMBEDDING_BATCH_SIZE, selectActiveEmbeddingContract } from "../runtime/config.ts";
 import { queryMemory } from "../query/engine.ts";
 
-export function registerMemoryCommands(cli: Cli): void {
+export type MemoryCommandDeps = {
+  now?: () => Date;
+  creator?: string;
+};
+
+export function registerMemoryCommands(cli: Cli, deps: MemoryCommandDeps = {}): void {
+  cli.command(["memory", "inbox", "create"], (args) => memoryInboxCreate(args, deps));
+  cli.command(["memory", "inbox", "intake"], (args) => memoryInboxIntake(args, deps));
   cli.command(["memory", "candidates"], (args) => candidates(args));
   cli.command(["memory", "candidate", "show"], (args) => candidateShow(args));
   cli.command(["memory", "session", "list"], (args) => sessionList(args));
@@ -39,6 +52,291 @@ export function registerMemoryCommands(cli: Cli): void {
     if (response.degraded) return fail(response.answer);
     return ok(response.answer);
   });
+}
+
+type ParsedMemoryInboxCreateArgs = {
+  projectKey: string;
+  layer: string;
+  title: string;
+  body: string;
+  rationale: string;
+  evidenceRefs: string[];
+  targetHint: string | null;
+  confidence?: RuntimeInboxRating;
+  risk?: RuntimeInboxRating;
+  json: boolean;
+  error?: string;
+};
+
+type ParsedMemoryInboxIntakeArgs = {
+  projectKey: string;
+  json: boolean;
+  error?: string;
+};
+
+async function memoryInboxCreate(args: string[], deps: MemoryCommandDeps): Promise<CommandResult> {
+  const parsed = parseMemoryInboxCreateArgs(args);
+  if (parsed.error) return fail(parsed.error);
+  if (!parsed.confidence) return fail("--confidence must be one of: low, medium, high");
+  if (!parsed.risk) return fail("--risk must be one of: low, medium, high");
+
+  const result = await createRuntimeInboxItem(repoRoot().root, {
+    projectKey: parsed.projectKey,
+    targetLayer: parsed.layer,
+    title: parsed.title,
+    body: parsed.body,
+    rationale: parsed.rationale,
+    evidenceRefs: parsed.evidenceRefs,
+    targetHint: parsed.targetHint,
+    confidence: parsed.confidence,
+    risk: parsed.risk,
+    creator: deps.creator ?? "operator",
+    now: deps.now?.(),
+  });
+
+  if (parsed.json) return result.status === "created" ? ok(stableJson(result)) : fail(stableJson(result));
+  if (result.status !== "created") {
+    return fail(result.reason);
+  }
+  return ok(
+    [
+      `Runtime inbox item created for ${result.item.project_key}.`,
+      `id: ${result.item.id}`,
+      `source ref: ${result.source_ref}`,
+      `path: ${result.path}`,
+      `confidence: ${result.item.confidence}`,
+      `risk: ${result.item.risk}`,
+    ].join("\n"),
+  );
+}
+
+function parseMemoryInboxCreateArgs(args: string[]): ParsedMemoryInboxCreateArgs {
+  let projectKey = "";
+  let layer = "";
+  let title = "";
+  let body = "";
+  let rationale = "";
+  const evidenceRefs: string[] = [];
+  let targetHint: string | null = null;
+  let confidence: RuntimeInboxRating | undefined;
+  let risk: RuntimeInboxRating | undefined;
+  let json = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--json") json = true;
+    else if (arg === "--layer") layer = args[++index] ?? "";
+    else if (arg === "--title") title = args[++index] ?? "";
+    else if (arg === "--body") body = args[++index] ?? "";
+    else if (arg === "--rationale") rationale = args[++index] ?? "";
+    else if (arg === "--evidence-ref") evidenceRefs.push(args[++index] ?? "");
+    else if (arg === "--target-hint") targetHint = args[++index] ?? "";
+    else if (arg === "--confidence") {
+      const value = args[++index];
+      if (!isRuntimeInboxRating(value)) {
+        return createArgsError(
+          projectKey,
+          layer,
+          title,
+          body,
+          rationale,
+          evidenceRefs,
+          targetHint,
+          confidence,
+          risk,
+          json,
+          "--confidence must be one of: low, medium, high",
+        );
+      }
+      confidence = value;
+    } else if (arg === "--risk") {
+      const value = args[++index];
+      if (!isRuntimeInboxRating(value)) {
+        return createArgsError(
+          projectKey,
+          layer,
+          title,
+          body,
+          rationale,
+          evidenceRefs,
+          targetHint,
+          confidence,
+          risk,
+          json,
+          "--risk must be one of: low, medium, high",
+        );
+      }
+      risk = value;
+    } else if (arg.startsWith("-")) {
+      return createArgsError(
+        projectKey,
+        layer,
+        title,
+        body,
+        rationale,
+        evidenceRefs,
+        targetHint,
+        confidence,
+        risk,
+        json,
+        `Unknown memory inbox create option: ${arg}`,
+      );
+    } else if (!projectKey) {
+      projectKey = arg;
+    } else {
+      return createArgsError(
+        projectKey,
+        layer,
+        title,
+        body,
+        rationale,
+        evidenceRefs,
+        targetHint,
+        confidence,
+        risk,
+        json,
+        `Unexpected memory inbox create argument: ${arg}`,
+      );
+    }
+  }
+
+  if (!confidence) {
+    return createArgsError(
+      projectKey,
+      layer,
+      title,
+      body,
+      rationale,
+      evidenceRefs,
+      targetHint,
+      confidence,
+      risk,
+      json,
+      "--confidence must be one of: low, medium, high",
+    );
+  }
+  if (!risk) {
+    return createArgsError(
+      projectKey,
+      layer,
+      title,
+      body,
+      rationale,
+      evidenceRefs,
+      targetHint,
+      confidence,
+      risk,
+      json,
+      "--risk must be one of: low, medium, high",
+    );
+  }
+  if (!projectKey || !layer || !title || !body || !rationale) {
+    return createArgsError(
+      projectKey,
+      layer,
+      title,
+      body,
+      rationale,
+      evidenceRefs,
+      targetHint,
+      confidence,
+      risk,
+      json,
+      "Usage: myelin memory inbox create <project-key> --layer project --title <title> --body <text> --rationale <text> --confidence low|medium|high --risk low|medium|high [--evidence-ref <ref>] [--target-hint <hint>] [--json]",
+    );
+  }
+  if (evidenceRefs.some((ref) => ref.trim().length === 0)) {
+    return createArgsError(
+      projectKey,
+      layer,
+      title,
+      body,
+      rationale,
+      evidenceRefs,
+      targetHint,
+      confidence,
+      risk,
+      json,
+      "--evidence-ref requires a non-empty value",
+    );
+  }
+  return { projectKey, layer, title, body, rationale, evidenceRefs, targetHint, confidence, risk, json };
+}
+
+function createArgsError(
+  projectKey: string,
+  layer: string,
+  title: string,
+  body: string,
+  rationale: string,
+  evidenceRefs: string[],
+  targetHint: string | null,
+  confidence: RuntimeInboxRating | undefined,
+  risk: RuntimeInboxRating | undefined,
+  json: boolean,
+  error: string,
+): ParsedMemoryInboxCreateArgs {
+  return {
+    projectKey,
+    layer,
+    title,
+    body,
+    rationale,
+    evidenceRefs,
+    targetHint,
+    confidence,
+    risk,
+    json,
+    error,
+  };
+}
+
+function isRuntimeInboxRating(value: string | undefined): value is RuntimeInboxRating {
+  return (runtimeInboxRatings as readonly string[]).includes(value ?? "");
+}
+
+async function memoryInboxIntake(args: string[], deps: MemoryCommandDeps): Promise<CommandResult> {
+  const parsed = parseMemoryInboxIntakeArgs(args);
+  if (parsed.error) return fail(parsed.error);
+
+  const result = await new ProjectMemoryCandidateIntakeService(repoRoot().root).intakeProjectInbox(
+    parsed.projectKey,
+    deps.now?.() ?? new Date(),
+  );
+  if (parsed.json) return result.blocking ? fail(stableJson(result)) : ok(stableJson(result));
+  const message = formatMemoryInboxIntakeSummary(result);
+  return result.blocking ? fail(message) : ok(message);
+}
+
+function parseMemoryInboxIntakeArgs(args: string[]): ParsedMemoryInboxIntakeArgs {
+  let projectKey = "";
+  let json = false;
+
+  for (const arg of args) {
+    if (arg === "--json") json = true;
+    else if (arg.startsWith("-")) return { projectKey, json, error: `Unknown memory inbox intake option: ${arg}` };
+    else if (!projectKey) projectKey = arg;
+    else return { projectKey, json, error: `Unexpected memory inbox intake argument: ${arg}` };
+  }
+
+  if (!projectKey) return { projectKey, json, error: "Usage: myelin memory inbox intake <project-key> [--json]" };
+  return { projectKey, json };
+}
+
+function formatMemoryInboxIntakeSummary(result: ProjectInboxIntakeSummary): string {
+  return [
+    `Runtime inbox intake for ${result.project_key}.`,
+    `created: ${result.created_candidate_ids.length}`,
+    `existing: ${result.existing_candidate_ids.length}`,
+    `terminal duplicates: ${result.terminal_duplicate_candidate_ids.length}`,
+    `skipped: ${result.skipped_source_refs.length}`,
+    `unsupported: ${result.unsupported_source_refs.length}`,
+    `invalid: ${result.invalid_source_refs.length}`,
+    `degraded: ${result.degraded ? "yes" : "no"}`,
+    result.degraded_reasons.length > 0 ? `degraded reasons: ${result.degraded_reasons.join("; ")}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function sessionList(args: string[]): CommandResult {

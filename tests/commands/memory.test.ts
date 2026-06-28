@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createCli } from "../../src/commands/registry.ts";
 import { registerMemoryCommands } from "../../src/commands/memory.ts";
-import { createMemoryCandidate } from "../../src/memory/candidates.ts";
+import { createRuntimeInboxItem } from "../../src/inbox/runtime-inbox-items.ts";
+import { createMemoryCandidate, getMemoryCandidate, listMemoryCandidates } from "../../src/memory/candidates.ts";
 import { createSessionMemoryContexts } from "../../src/memory/session-memory-contexts.ts";
 import { createSessionMemoryLink } from "../../src/memory/session-memory-links.ts";
 import { createSessionMemory, supersedeSessionMemory } from "../../src/memory/session-memories.ts";
@@ -249,6 +250,245 @@ test("memory candidate show returns a single candidate", async () => {
   expect(result.exitCode).toBe(0);
   expect(response.candidate.id).toBe("cand_2");
   expect(response.candidate.scope).toBe("project");
+});
+
+test("memory inbox create writes a runtime inbox source item and no candidate rows", async () => {
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli, {
+    now: () => new Date("2026-06-25T10:00:00.000Z"),
+    creator: "operator:test",
+  });
+
+  const result = await cli.run([
+    "memory",
+    "inbox",
+    "create",
+    "demo",
+    "--layer",
+    "project",
+    "--title",
+    "Runtime inbox source material",
+    "--body",
+    "Runtime inbox files are explicit durable-memory proposals.",
+    "--rationale",
+    "Project Memory curator must verify proposals before durable writes.",
+    "--evidence-ref",
+    "docs/design/spec.md",
+    "--confidence",
+    "high",
+    "--risk",
+    "medium",
+    "--target-hint",
+    "wiki/architecture/index.md",
+    "--json",
+  ]);
+
+  expect(result.exitCode).toBe(0);
+  const response = JSON.parse(result.message);
+  expect(response.status).toBe("created");
+  expect(response.item).toMatchObject({
+    project_key: "demo",
+    target_layer: "project",
+    confidence: "high",
+    risk: "medium",
+    creator: "operator:test",
+  });
+  expect(response.source_ref).toBe(`inbox:${response.item.id}`);
+
+  const saved = JSON.parse(await readFile(response.path, "utf8"));
+  expect(saved.body).toBe("Runtime inbox files are explicit durable-memory proposals.");
+  expect(saved.evidence_refs).toEqual(["docs/design/spec.md"]);
+
+  const db = openMemoryDb(root);
+  try {
+    expect(listMemoryCandidates(db, { project_key: "demo", scope: "project" })).toEqual([]);
+  } finally {
+    db.close();
+  }
+});
+
+test("memory inbox create default output includes confidence and risk", async () => {
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli, {
+    now: () => new Date("2026-06-25T10:00:00.000Z"),
+    creator: "operator:test",
+  });
+
+  const result = await cli.run([
+    "memory",
+    "inbox",
+    "create",
+    "demo",
+    "--layer",
+    "project",
+    "--title",
+    "Runtime inbox source material",
+    "--body",
+    "Proposal body.",
+    "--rationale",
+    "Proposal rationale.",
+    "--confidence",
+    "medium",
+    "--risk",
+    "low",
+  ]);
+
+  expect(result.exitCode).toBe(0);
+  expect(result.message).toContain("Runtime inbox item created for demo.");
+  expect(result.message).toContain("confidence: medium");
+  expect(result.message).toContain("risk: low");
+  expect(result.message).toContain("source ref: inbox:");
+});
+
+test("memory inbox create rejects unsupported layers, unknown projects, and invalid options before writing", async () => {
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli, {
+    now: () => new Date("2026-06-25T10:00:00.000Z"),
+    creator: "operator:test",
+  });
+
+  const unsupported = await cli.run([
+    "memory",
+    "inbox",
+    "create",
+    "demo",
+    "--layer",
+    "personal",
+    "--title",
+    "Personal",
+    "--body",
+    "Body",
+    "--rationale",
+    "Rationale",
+    "--confidence",
+    "medium",
+    "--risk",
+    "low",
+  ]);
+  const unknownProject = await cli.run([
+    "memory",
+    "inbox",
+    "create",
+    "missing",
+    "--layer",
+    "project",
+    "--title",
+    "Unknown project",
+    "--body",
+    "Body",
+    "--rationale",
+    "Rationale",
+    "--confidence",
+    "medium",
+    "--risk",
+    "low",
+  ]);
+  const missingRisk = await cli.run([
+    "memory",
+    "inbox",
+    "create",
+    "demo",
+    "--layer",
+    "project",
+    "--title",
+    "Missing risk",
+    "--body",
+    "Body",
+    "--rationale",
+    "Rationale",
+    "--confidence",
+    "medium",
+  ]);
+
+  expect(unsupported.exitCode).toBe(1);
+  expect(unsupported.message).toContain("Runtime inbox only supports project proposals in this slice");
+  expect(unknownProject.exitCode).toBe(1);
+  expect(unknownProject.message).toContain("Unknown project: missing");
+  expect(missingRisk.exitCode).toBe(1);
+  expect(missingRisk.message).toContain("--risk must be one of: low, medium, high");
+  expect(await Bun.file(join(root, "projects", "demo", "sources", "inbox")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "projects", "missing")).exists()).toBe(false);
+});
+
+test("memory inbox intake converts runtime inbox items into candidates", async () => {
+  const created = await createRuntimeInboxItem(root, {
+    projectKey: "demo",
+    targetLayer: "project",
+    title: "Runtime inbox intake",
+    body: "Runtime inbox intake creates candidates.",
+    rationale: "Project learn should consume normalized candidates.",
+    evidenceRefs: ["docs/design/spec.md"],
+    targetHint: null,
+    confidence: "high",
+    risk: "medium",
+    creator: "operator:test",
+    now: new Date("2026-06-25T10:00:00.000Z"),
+    id: "2026-06-25T10-00-00Z_a1b2c3",
+  });
+  if (created.status !== "created") throw new Error("failed to create inbox fixture");
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli, {
+    now: () => new Date("2026-06-25T11:00:00.000Z"),
+  });
+
+  const result = await cli.run(["memory", "inbox", "intake", "demo", "--json"]);
+  const response = JSON.parse(result.message);
+
+  expect(result.exitCode).toBe(0);
+  expect(response.created_candidate_ids).toEqual(["project_inbox:demo:2026-06-25T10-00-00Z_a1b2c3"]);
+  const db = openMemoryDb(root);
+  try {
+    expect(getMemoryCandidate(db, "project_inbox:demo:2026-06-25T10-00-00Z_a1b2c3")?.status).toBe("needs_review");
+  } finally {
+    db.close();
+  }
+});
+
+test("memory inbox intake reports summary counts in default output", async () => {
+  const created = await createRuntimeInboxItem(root, {
+    projectKey: "demo",
+    targetLayer: "project",
+    title: "Runtime inbox intake",
+    body: "Runtime inbox intake creates candidates.",
+    rationale: "Project learn should consume normalized candidates.",
+    evidenceRefs: [],
+    targetHint: null,
+    confidence: "medium",
+    risk: "low",
+    creator: "operator:test",
+    now: new Date("2026-06-25T10:00:00.000Z"),
+    id: "2026-06-25T10-00-00Z_a1b2c3",
+  });
+  if (created.status !== "created") throw new Error("failed to create inbox fixture");
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli, {
+    now: () => new Date("2026-06-25T11:00:00.000Z"),
+  });
+
+  const result = await cli.run(["memory", "inbox", "intake", "demo"]);
+
+  expect(result.exitCode).toBe(0);
+  expect(result.message).toContain("Runtime inbox intake for demo.");
+  expect(result.message).toContain("created: 1");
+  expect(result.message).toContain("existing: 0");
+  expect(result.message).toContain("terminal duplicates: 0");
+  expect(result.message).toContain("degraded: no");
+});
+
+test("memory inbox intake rejects unknown options, missing keys, and unknown projects", async () => {
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+
+  const missing = await cli.run(["memory", "inbox", "intake"]);
+  const unknown = await cli.run(["memory", "inbox", "intake", "demo", "--dry-run"]);
+  const unknownProject = await cli.run(["memory", "inbox", "intake", "missing"]);
+
+  expect(missing.exitCode).toBe(1);
+  expect(missing.message).toContain("Usage: myelin memory inbox intake <project-key> [--json]");
+  expect(unknown.exitCode).toBe(1);
+  expect(unknown.message).toContain("Unknown memory inbox intake option: --dry-run");
+  expect(unknownProject.exitCode).toBe(1);
+  expect(unknownProject.message).toContain("Unknown project: missing");
 });
 
 test("memory index session reports degraded indexing as JSON without throwing", async () => {

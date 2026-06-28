@@ -86,6 +86,8 @@ Project Memory is the first durable curation layer. It should capture what the r
 
 Step 3 is complete when `project learn <key>` can safely maintain Project Memory from bounded evidence, with validated curator output and provenance-backed markdown updates.
 
+Step 3 foundation is complete. Remaining Project Memory dogfood, retrieval-quality, producer-routing, and Current Briefing follow-up work lives in Step 3.5 because those items were surfaced by dogfooding the completed foundation.
+
 - [x] `retired` The old Phase-0 `project learn` / `project ingest` runner scaffold has been removed from the active Project Memory command surface.
   - Why: `project learn` now owns Project Memory curation through the mode-scoped Project Memory Curator pre-write flow, while top-level `ingest <key>` remains Session Memory / Experience Log ingest.
 - [x] `retired` The obsolete Phase-0 Project Memory stage assets have been removed from live runtime assets.
@@ -114,28 +116,10 @@ Step 3 is complete when `project learn <key>` can safely maintain Project Memory
   - Description: Applied Project Memory source-consumption records should retire or terminally account for the consumed candidate and handoff refs without making apply directly own candidate/handoff mutation.
   - Why: markdown apply now records consumed Project Memory sources, but pending curator input should not keep re-feeding sources that already became canonical memory.
   - Progress: implemented on 2026-06-25. `project learn` now runs a deterministic source-consumption reconciler after apply recovery and before packet construction, moving consumed project candidates and project handoffs to `processed` in root SQLite while keeping apply and packet building separate.
-- [ ] `next` Add the V2 runtime durable-memory candidate inbox and Project Memory intake boundary.
+- [x] `done` Add the V2 runtime durable-memory candidate inbox and Project Memory intake boundary.
   - Description: Operators, runtime agents, and future tools can explicitly create project-scoped inbox candidate items that are validated, preserved with provenance, and normalized into `memory_candidates` for `project learn`.
   - Why: Session Memory already creates automated candidates; Project Memory also needs an intentional runtime proposal path that shares the same downstream curator lifecycle without making Session Memory or the tool layer own Project Memory writes.
-- [ ] `open` Route project gaps and stale findings through the candidate intake boundary.
-  - Description: Gap/stale/finding producers should emit runtime inbox candidate items or normalized candidate drafts through the same intake contract instead of creating a parallel path.
-  - Why: missing or stale knowledge should become structured curator input instead of accumulating in disconnected side channels, but producer-specific routing should follow the intake boundary instead of defining it.
-- [ ] `open` Dogfood `project learn llm-wiki` against a real Project Memory candidate.
-  - Description: After candidate intake is reliable, run `project learn llm-wiki` on this repository with a real runtime-inbox-derived Project Memory candidate and verify packet input, curator behavior, markdown/state output or review gating, and candidate/source lifecycle.
-  - Why: this is the first point where Project Memory maintenance can be tested as a real product loop instead of isolated mechanics; retrieval indexing can wait until the curation pipeline proves it can handle real repo evidence.
-- [ ] `open` Build a derived Project Memory retrieval index that points back to canonical wiki files.
-  - Description: Build lookup state that helps agents find relevant Project Memory pages or sections without making SQLite the source of truth.
-  - Why: agents will need better Project Memory retrieval, but indexes should derive from canonical markdown rather than becoming another source of truth.
-  - Shape: Project Memory remains canonical in `.md` files. SQLite/vector rows are disposable serving state that store embeddings, page or section pointers, and freshness hashes. Query uses vector hits to select relevant wiki files or sections, then answers from the markdown source.
-  - Boundary: Session Memory rows are trusted memory records in SQLite; Project Memory vector rows are not trusted memory records. They are rebuildable pointers into trusted markdown.
-  - Rebuild rule: if the SQLite index is missing, stale, or disagrees with markdown, markdown wins and the index should be rebuilt from wiki files.
-- [ ] `open` Decide whether Current Briefing is needed after Project Memory curation and retrieval are stable.
-  - Description: Revisit session-start briefing only after Project Memory and Session Memory can prove whether a separate current-state view is still useful.
-  - Why: Myelin should not create another current-state surface unless Project Memory and Session Memory still leave a real session-start gap.
-- [ ] `deferred` Resume Current Briefing only if Project Memory curation and retrieval prove it is still needed.
-  - Description: Keep Current Briefing out of active work unless the core memory layers still need a derived session-start summary.
-  - Why: Current Briefing should be a derived session-start view only if the core memory layers do not already cover that need.
-
+  - Progress: implemented on 2026-06-28. `memory inbox create` writes immutable Project runtime inbox JSON under `projects/<key>/sources/inbox/<id>.json`, `memory inbox intake` normalizes valid items into idempotent `needs_review` `project.inbox` candidates, and `project learn` runs the same intake service after source-consumption reconciliation and before packet construction.
 Completed markdown-apply acceptance evidence:
 
 - [x] Proposed markdown changes are bounded to known pages or explicit new-page requests.
@@ -147,17 +131,112 @@ Completed markdown-apply acceptance evidence:
 - [x] Tests prove accepted low-risk output updates only the expected markdown/state files.
 - [x] Final reported verification: targeted markdown-apply regressions, full `bun test` at 308 tests, `bun run typecheck`, and `git diff --check`.
 
-Evidence: `src/commands/project.ts`, `src/project/project-memory-packet.ts`, `src/project/project-memory-lookup.ts`, `src/project/project-memory-curator-contracts.ts`, `src/project/project-memory-apply-contracts.ts`, `src/project/project-memory-curator-validator.ts`, `src/project/project-memory-markdown-renderer.ts`, `src/project/project-memory-markdown-applier.ts`, `src/project/project-memory-curator-service.ts`, `src/runtime/project-run-infrastructure.ts`
+Completed runtime-inbox/intake acceptance evidence:
 
-## Roadmap Step 4: Practice Memory Layer
+- [x] Runtime inbox item files are preserved as pretty JSON under `projects/<key>/sources/inbox/<id>.json`.
+- [x] Runtime inbox creation creates lazy source indexes and does not create candidate rows.
+- [x] Unsupported layers, invalid input, unknown projects, and duplicate ids fail before unsafe source writes.
+- [x] Intake creates exactly one `needs_review` `project.inbox` candidate per valid Project runtime inbox item.
+- [x] Repeated intake reports existing or terminal duplicates without inserting duplicate candidates.
+- [x] Malformed or unsupported source files degrade intake without rewriting source files or reaching curator packet input.
+- [x] `project learn` runs runtime inbox intake before packet construction and records `runtime-inbox-intake.json`.
+- [x] Final reported verification: focused affected suites at 37 tests, full `bun test` at 331 tests, `bun run typecheck`, and `git diff --check`.
+
+Evidence: `src/commands/project.ts`, `src/commands/memory.ts`, `src/inbox/runtime-inbox-items.ts`, `src/project/project-memory-candidate-intake-service.ts`, `src/project/project-memory-packet.ts`, `src/project/project-memory-lookup.ts`, `src/project/project-memory-curator-contracts.ts`, `src/project/project-memory-apply-contracts.ts`, `src/project/project-memory-curator-validator.ts`, `src/project/project-memory-markdown-renderer.ts`, `src/project/project-memory-markdown-applier.ts`, `src/project/project-memory-curator-service.ts`, `src/runtime/project-run-infrastructure.ts`
+
+## Roadmap Step 3.5: Project Memory Transport And Retrieval Quality
+
+Goal: correct the dogfood-discovered Project Memory reliability and retrieval gaps before adding more producer integrations.
+
+The first real `project learn llm-wiki` dogfood showed that the Project Memory foundation works mechanically, but also surfaced two product-shape issues: curator prompts should not inline large packet evidence when Codex can read run artifacts, and Project Memory lookup should not remain markdown text search once it is gating durable curation.
+
+Step 3.5 is complete when `project learn` uses artifact-reference prompt transport for Codex-backed curator stages, Project Memory lookup quality has a designed target architecture, and dogfooding can proceed without prompt-size workarounds or bootstrap-only lookup degradation dominating the apply decision.
+
+- [x] `done` Switch Codex-backed Project Memory curator prompts to artifact-reference transport.
+  - Description: Write the full Project Memory packet as a run artifact and prompt Codex with compact instructions plus artifact paths, instead of inlining the entire packet in stdin.
+  - Why: Codex-backed agents can read repository files under read-only sandboxing; prompt text should carry instructions and artifact references, while large evidence belongs in inspectable run artifacts.
+  - Boundary: Keep the transport boundary provider-aware. Codex can use artifact references now; unsupported providers may keep an inline bounded fallback until they have equivalent file/artifact semantics.
+  - Progress: implemented on 2026-06-28. `project learn` now writes the full packet artifact and invokes the curator with an artifact-reference prompt; inline bounded packet transport remains available as a fallback. Dogfood rerun `2026-06-28T11-21-13.506Z-run` used `transport: artifact_reference`, `prompt_chars: 641`, full `packet_chars: 222792`, `lookup_matches: 125`, and stopped only because the current lookup is still markdown text search.
+  - Refs: `src/project/project-memory-prompt-budget.ts`, `src/project/project-memory-curator-service.ts`, `tests/project/project-memory-prompt-budget.test.ts`, `tests/project/project-memory-curator-service.test.ts`, `projects/llm-wiki/runs/project-learn/2026-06-28T11-21-13.506Z-run/prompt-budget.json`, `projects/llm-wiki/runs/project-learn/2026-06-28T11-21-13.506Z-run/input-packet.json`, `projects/llm-wiki/runs/project-learn/2026-06-28T11-21-13.506Z-run/curator-run-result.json`.
+- [ ] `next` Review the current Project Memory lookup implementation against the dogfood failure mode.
+  - Description: Brainstorm the existing markdown text-search lookup, why it degraded the packet, what it was meant to bootstrap, and which parts should survive into the target retrieval architecture.
+  - Why: lookup quality now blocks the first real Project Memory apply path, so the design should be revisited before gap/stale producers add more inputs.
+  - Apply-gating note: the latest dogfood run stopped because the packet was degraded even though the curator draft contained zero proposals. The review should decide whether degraded lookup always blocks canonical writes/review completion, or only blocks proposals that depend on low-quality lookup evidence.
+  - Refs: `src/project/project-memory-lookup.ts` owns markdown corpus loading and text-search matching; `src/project/project-memory-packet.ts` calls lookup while building curator packet `lookup.queries` and `lookup.results`; `tests/project/project-memory-packet.test.ts` captures the current degraded lookup contract; latest dogfood evidence is in `projects/llm-wiki/runs/project-learn/2026-06-28T11-21-13.506Z-run/input-packet.json` and `projects/llm-wiki/runs/project-learn/2026-06-28T11-21-13.506Z-run/curator-run-result.json`.
+- [ ] `open` Draft pseudocode for Project Memory derived retrieval indexing.
+  - Description: Use pseudocode artifacts to shape index storage, indexing flow, query flow, freshness checks, and packet integration before implementation planning.
+  - Why: retrieval indexing is a core memory-layer boundary and should be designed deliberately instead of grown from the temporary markdown scanner.
+  - Refs: Use `src/memory/session-memory-indexer.ts`, `src/memory/session-memory-query.ts`, `src/memory/embedding-provider.ts`, and `src/memory/query-embedding-cache.ts` as comparison points for batching, embedding, cached query vectors, and SQLite/vector failure behavior. Do not copy Session Memory semantics directly: Project Memory index rows should point back to canonical wiki markdown rather than become trusted memory records.
+- [ ] `open` Build a derived Project Memory retrieval index that points back to canonical wiki files.
+  - Description: Build lookup state that helps agents find relevant Project Memory pages or sections without making SQLite the source of truth.
+  - Why: agents will need better Project Memory retrieval, but indexes should derive from canonical markdown rather than becoming another source of truth.
+  - Shape: Project Memory remains canonical in `.md` files. SQLite/vector rows are disposable serving state that store embeddings, page or section pointers, and freshness hashes. Query uses vector hits to select relevant wiki files or sections, then answers from the markdown source.
+  - Boundary: Session Memory rows are trusted memory records in SQLite; Project Memory vector rows are not trusted memory records. They are rebuildable pointers into trusted markdown.
+  - Rebuild rule: if the SQLite index is missing, stale, or disagrees with markdown, markdown wins and the index should be rebuilt from wiki files.
+  - Refs: Current schema/migration entry point is `src/memory/db.ts`; Session Memory vector storage and sqlite-vec helpers live around `src/memory/session-memory-embeddings.ts`, `src/memory/session-memory-indexer.ts`, and `src/memory/sqlite-vec.ts`. Current Project Memory canonical markdown readers live in `src/project/project-memory-lookup.ts`; packet integration lives in `src/project/project-memory-packet.ts`.
+- [ ] `open` Dogfood `project learn llm-wiki` against a real Project Memory candidate.
+  - Description: Run the same runtime-inbox-derived Project Memory candidate through `project learn` and verify packet input, curator behavior, markdown/state output or review gating, candidate/source lifecycle, prompt transport, and retrieval quality.
+  - Why: this is the first point where Project Memory maintenance can be tested as a real product loop instead of isolated mechanics; the first dogfood found architectural issues that Step 3.5 now owns.
+  - Progress: attempted on 2026-06-28 with runtime inbox source `inbox:2026-06-28T10-11-25.076Z_4a7d5d`. Runtime inbox intake succeeded and the packet contained the normalized `project.inbox` candidate. The first run failed before curator invocation because the prompt was too large (`223285` chars over the `200000` cap). A follow-up run after Project Memory prompt-budget preflight selected `lookup_limit=3`, reduced the curator prompt to `179758` chars, reached curator output, validated successfully, and stopped before canonical writes because the packet was still degraded. A second follow-up run after artifact-reference prompt transport kept full lookup breadth (`125` lookup matches, observed match limit `5`), reduced the curator prompt itself to `641` chars, reached valid curator output, and still stopped only because lookup remains markdown text search. This checkpoint remains open for retrieval-quality review-gated dogfood follow-up.
+  - Refs: runtime inbox source `projects/llm-wiki/sources/inbox/2026-06-28T10-11-25.076Z_4a7d5d.json`; normalized candidate id `project_inbox:llm-wiki:2026-06-28T10-11-25.076Z_4a7d5d`; failed prompt-size run `projects/llm-wiki/runs/project-learn/2026-06-28T10-11-48.488Z-run`; bounded inline retry `projects/llm-wiki/runs/project-learn/2026-06-28T10-35-30.982Z-run`; artifact-reference retry `projects/llm-wiki/runs/project-learn/2026-06-28T11-21-13.506Z-run`.
+- [ ] `open` Route project gaps and stale findings through the candidate intake boundary.
+  - Description: Gap/stale/finding producers should emit runtime inbox candidate items or normalized candidate drafts through the same intake contract instead of creating a parallel path.
+  - Why: missing or stale knowledge should become structured curator input instead of accumulating in disconnected side channels, but producer-specific routing should follow the intake boundary instead of defining it.
+  - Refs: runtime inbox source creation lives in `src/inbox/runtime-inbox-items.ts`; normalization into `memory_candidates` lives in `src/project/project-memory-candidate-intake-service.ts`; CLI surfaces are in `src/commands/memory.ts`; current candidate packet intake is in `src/project/project-memory-packet.ts`. Earlier gap/stale pseudocode artifacts were intentionally not part of this foundation unless redesigned through the intake boundary.
+- [ ] `open` Decide whether Current Briefing is needed after Project Memory curation and retrieval are stable.
+  - Description: Revisit session-start briefing only after Project Memory and Session Memory can prove whether a separate current-state view is still useful.
+  - Why: Myelin should not create another current-state surface unless Project Memory and Session Memory still leave a real session-start gap.
+  - Refs: revisit after Step 3.5 dogfood produces either applied Project Memory or a clear remaining retrieval/status gap. Compare against `src/commands/status.ts`, `src/status/status-service.ts`, `src/query/memory-query-service.ts`, and Session Memory query behavior in `src/memory/session-memory-query.ts`.
+- [ ] `deferred` Resume Current Briefing only if Project Memory curation and retrieval prove it is still needed.
+  - Description: Keep Current Briefing out of active work unless the core memory layers still need a derived session-start summary.
+  - Why: Current Briefing should be a derived session-start view only if the core memory layers do not already cover that need.
+  - Refs: no active implementation target yet; this remains gated by Project Memory retrieval, Session Memory freshness in Step 4, and status/query facade evidence.
+
+## Roadmap Step 4: Session Memory Freshness And Catch-Up
+
+Goal: make recent work catch up into Session Memory predictably enough that agents can trust it as current working context, not only older durable orientation.
+
+Session Memory retrieval is useful today, but the dogfood inspection showed a current freshness gap: active Session Memory can be accurate for older decisions while missing the latest work slice because auto-maintenance waits for a threshold and recent auto-ingest jobs can fail. Myelin needs an explicit product answer for when recent captured work should become durable Session Memory.
+
+Step 4 is complete when Myelin has a clear, tested catch-up mechanism for recent session work, with honest status reporting when the latest captured work has not yet been ingested, indexed, or reconciled.
+
+- [ ] `open` Audit shared memory-layer primitives before changing Session Memory freshness.
+  - Description: Compare Session Memory, Project Memory, and expected Practice/Personal Memory flows for repeated reliability logic that should live in shared runtime services, facades, or primitives instead of being reimplemented per layer.
+  - Why: Myelin should behave as one coherent product, not several memory applications inside one repository; freshness work is a good point to identify shared boundaries before adding more layer-specific code.
+- [ ] `open` Extract prompt-budget primitives into a shared runtime boundary.
+  - Description: Move shared prompt-size measurement, safety-margin handling, estimated-token diagnostics, attempt selection, and budget artifact fields into a reusable runtime service while keeping each memory layer responsible for its own reduction strategy.
+  - Why: Session Memory and Project Memory now both need preflight prompt reliability; prompt budgeting is the first concrete shared primitive that should benefit all memory layers without coupling their domain semantics.
+- [ ] `open` Identify shared candidate, lifecycle, and diagnostic patterns across memory layers.
+  - Description: Review whether candidate normalization, needs-review semantics, degraded-context reporting, source provenance, run artifacts, and status/freshness diagnostics have common primitives that Project, Practice, Personal, and Session Memory should reuse.
+  - Why: shared mechanics should be consistent across durable memory layers, while layer-specific curation authority, scope, and evidence rules remain separate.
+- [ ] `open` Reevaluate the auto-maintenance threshold and trigger policy.
+  - Description: Decide whether the current captured-event threshold is too high for work-slice completion and whether the default should be lower, adaptive, or tied to explicit session/work-slice boundaries.
+  - Why: recent work can remain absent from Session Memory even when capture is working, which makes query results useful but stale.
+- [ ] `open` Design an explicit Session Memory catch-up command or workflow.
+  - Description: Define a first-class way to ingest and index recent captured work for a project without relying only on background threshold scheduling.
+  - Why: before dogfooding memory-dependent workflows, operators and agents need a deliberate catch-up path that is not hidden inside auto-maintenance timing.
+- [ ] `open` Decide whether future tools/MCP should expose a session-memory catch-up action.
+  - Description: Evaluate whether a future agent tool should trigger Session Memory ingest/indexing at the end of an agreed work slice.
+  - Why: runtime agents may know when a meaningful slice is complete better than a raw message-count threshold does.
+- [ ] `open` Make Session Memory freshness visible in query/status output.
+  - Description: Surface whether active Session Memory is current, how many captured rows are queued, whether recent ingest jobs failed, and whether indexing is pending.
+  - Why: agents should not treat stale Session Memory as complete current context.
+- [ ] `open` Fix prompt-budget failure loops in recent auto-maintenance ingest.
+  - Description: The dogfood database showed recent retryable auto-ingest failures from prompts exceeding the configured budget; diagnose whether batching, retained context, or reconciliation payloads need tighter bounds.
+  - Why: failed auto-ingest prevents recent captured work from becoming durable Session Memory even when scheduling succeeds.
+- [ ] `open` Define how Session Memory catch-up interacts with Project Memory candidates.
+  - Description: Clarify whether catch-up should opportunistically create Project/Practice/Personal candidates and how to avoid duplicating candidates already handled by durable memory curation.
+  - Why: Session Memory is a producer for higher memory layers, but catch-up should not flood or duplicate the candidate queue.
+
+## Roadmap Step 5: Practice Memory Layer
 
 Goal: canonical utility, library, third-party provider, workflow, and tooling guidance derived from repeated or explicitly selected project evidence.
 
-Practice Memory should reuse the Project Memory curation pattern after Step 3 is stable: bounded evidence, structured curator proposals, deterministic validation, canonical markdown, and derived retrieval state. The subject changes from "what is true about this project?" to "how do we use this tool, library, provider, workflow, or platform across projects?"
+Practice Memory should reuse the Project Memory curation pattern after Project Memory and Session Memory freshness are stable: bounded evidence, structured curator proposals, deterministic validation, canonical markdown, and derived retrieval state. The subject changes from "what is true about this project?" to "how do we use this tool, library, provider, workflow, or platform across projects?"
 
 Example: Supabase Practice Memory should describe how we use Supabase Auth, Edge Functions, local development, migrations, storage, or vector search in general. Project-specific Supabase choices remain Project Memory and can cite or override the canonical practice.
 
-Step 4 is complete when Myelin can maintain reusable practice guidance as canonical markdown, promote practice candidates from project evidence, retrieve the right practice for agent work, and keep project-specific exceptions separate from canonical guidance.
+Step 5 is complete when Myelin can maintain reusable practice guidance as canonical markdown, promote practice candidates from project evidence, retrieve the right practice for agent work, and keep project-specific exceptions separate from canonical guidance.
 
 - [ ] `open` Design the canonical Practice Memory storage shape.
   - Description: Decide where reusable utility/library/provider/workflow guidance lives and what canonical Practice Memory files should contain.
@@ -180,13 +259,13 @@ Step 4 is complete when Myelin can maintain reusable practice guidance as canoni
 - [ ] `deferred` Keep automatic Practice promotion out of scope until evidence shape and manual promotion are proven.
   - Description: Avoid letting agents automatically create cross-project practices before the evidence and review boundaries are reliable.
 
-## Roadmap Step 5: Personal Memory Layer
+## Roadmap Step 6: Personal Memory Layer
 
 Goal: durable guidance about Liad's preferences and agent behavior expectations.
 
 Personal Memory should reuse the same curation pattern as Project and Practice Memory, but with stricter evidence rules. The subject is not a project or a tool; it is durable guidance about how agents should collaborate with Liad and how Liad prefers engineering work to be approached.
 
-Step 5 is complete when Myelin can preserve durable personal guidance as canonical markdown, distinguish explicit preferences from inferred patterns, retrieve that guidance for agent behavior, and update or retract stale preferences safely.
+Step 6 is complete when Myelin can preserve durable personal guidance as canonical markdown, distinguish explicit preferences from inferred patterns, retrieve that guidance for agent behavior, and update or retract stale preferences safely.
 
 - [ ] `open` Design the canonical Personal Memory storage shape.
   - Description: Decide where durable personal guidance lives and what kind of preference or agent-behavior knowledge belongs there.
@@ -211,11 +290,11 @@ Step 5 is complete when Myelin can preserve durable personal guidance as canonic
 - [ ] `deferred` Keep automatic Personal promotion out of scope until manual review boundaries are proven.
   - Description: Do not let agents automatically write personal preferences until the candidate and review model is trusted.
 
-## Roadmap Step 6: Query, How, And Status Facades
+## Roadmap Step 7: Query, How, And Status Facades
 
 Goal: small semantic interfaces over the memory layers.
 
-Step 6 is complete when agents can use stable semantic interfaces instead of knowing the storage layout. `query` answers explanatory questions, `how` answers prescriptive workflow questions, and `status` answers structured current-state questions.
+Step 7 is complete when agents can use stable semantic interfaces instead of knowing the storage layout. `query` answers explanatory questions, `how` answers prescriptive workflow questions, and `status` answers structured current-state questions.
 
 - [ ] `partial` `memory query` currently retrieves Session Memory vectors; it is not yet the full multi-layer query facade.
   - Description: Treat the current query command as a working Session Memory surface, not the final all-layer agent interface.
@@ -240,11 +319,11 @@ Step 6 is complete when agents can use stable semantic interfaces instead of kno
 - [ ] `open` Add end-to-end fixture questions for common agent workflows.
   - Description: Maintain executable examples for questions like "what did we last work on?", "how do we use Supabase?", and "what should I know before editing this project?"
 
-## Roadmap Step 7: Schema Layer
+## Roadmap Step 8: Schema Layer
 
 Goal: rules and conventions that teach agents how to maintain Myelin.
 
-Step 7 is complete when schema rules can evolve from real memory evidence without becoming a hidden source of product truth. Schema teaches agents how to maintain memory; it does not replace Project, Practice, or Personal Memory.
+Step 8 is complete when schema rules can evolve from real memory evidence without becoming a hidden source of product truth. Schema teaches agents how to maintain memory; it does not replace Project, Practice, or Personal Memory.
 
 - [x] `done` Global schema inputs and typed rules exist.
 - [x] `done` `schema check` validates authored/global schema context.
@@ -266,11 +345,11 @@ Step 7 is complete when schema rules can evolve from real memory evidence withou
 
 Reason for deferral: ADR 0049 keeps Phase 0 thin and global-only until real divergence proves the need.
 
-## Roadmap Step 8: Session Memory Hardening
+## Roadmap Step 9: Session Memory Hardening
 
 Goal: improve Session Memory quality and operations after Project Memory has a stable curation path.
 
-Step 8 is complete when Session Memory remains accurate across branches, retires stale continuity safely, reports maintenance failures clearly, and feeds higher memory layers without duplicating what those layers already know.
+Step 9 is complete when Session Memory remains accurate across branches, retires stale continuity safely, reports maintenance failures clearly, and feeds higher memory layers without duplicating what those layers already know.
 
 - [ ] `open` Refresh `tests/query/fixtures/llm-wiki-session-memory-quality.json` to match current live Session Memory.
   - Description: Update the quality fixture so it evaluates the current behavior rather than an older pre-auto-maintenance snapshot.
