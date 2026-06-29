@@ -2,7 +2,7 @@
 
 **Plan Set:** `../plan.md`  
 **Spec:** `../spec.md`  
-**Status:** Ready For Implementation  
+**Status:** Completed  
 **Depends on:** `01-retrieval-contracts-and-run-status.md`, `02-markdown-section-manifest.md`, `03-retrieval-storage-and-vector-state.md`, `05-indexer-and-status-command.md`  
 **Enables:** `07-curator-evidence-and-scoped-gating.md`, `09-project-learn-lifecycle-and-dogfood.md`
 

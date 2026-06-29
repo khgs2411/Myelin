@@ -2,7 +2,7 @@
 
 **Plan Set:** `../plan.md`  
 **Spec:** `../spec.md`  
-**Status:** Ready For Implementation  
+**Status:** Completed  
 **Depends on:** `01-retrieval-contracts-and-run-status.md`, `02-markdown-section-manifest.md`  
 **Enables:** `04-retrieval-maintenance-queue.md`, `05-indexer-and-status-command.md`, `06-lookup-and-packet-quality.md`, `09-project-learn-lifecycle-and-dogfood.md`
 
@@ -490,3 +490,13 @@ Verify these names are exact:
 - `ensureProjectMemoryRetrievalVectorTable`
 - `upsertProjectMemoryRetrievalVector`
 - `searchProjectMemoryRetrievalVectors`
+
+## Execution Notes
+
+### 2026-06-28: Accepted Local Drift
+
+- **Plan difference:** The draft migration showed a table-level `UNIQUE` constraint using `COALESCE(hint_hash, '')`.
+- **Current code reality:** SQLite table constraints do not accept expressions in this position, so the migration uses an explicit `hint_hash_key TEXT NOT NULL` column populated from `hint_hash ?? ""`.
+- **Reason accepted:** The plan named this compatibility mitigation, and the resulting uniqueness semantics are equivalent for nullable hint hashes.
+- **Implementation impact:** `src/memory/migrations.ts` migration 9 and `src/memory/project-memory-retrieval-storage.ts` write/read `hint_hash_key`.
+- **Verification evidence:** `rtk bun test tests/memory/project-memory-retrieval-storage.test.ts`, `rtk bun test tests/memory/sqlite-vec.test.ts`, `rtk bun test tests/memory/db.test.ts`, and `rtk bun run typecheck` passed.

@@ -142,6 +142,7 @@ Output:
 
 - Human-readable run summary by default.
 - Structured run result with `--json`.
+- Status `completed_with_pending_index` means canonical Project Memory writes succeeded, but derived retrieval hints or indexing still need follow-up.
 
 Side effects:
 

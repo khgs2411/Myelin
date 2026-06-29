@@ -2,7 +2,7 @@
 
 **Plan Set:** `../plan.md`  
 **Spec:** `../spec.md`  
-**Status:** Ready For Implementation  
+**Status:** Completed  
 **Depends on:** `05-indexer-and-status-command.md`, `06-lookup-and-packet-quality.md`, `07-curator-evidence-and-scoped-gating.md`, `08-hint-generation-flow.md`  
 **Enables:** Step 3.5 dogfood completion and next roadmap item selection
 
