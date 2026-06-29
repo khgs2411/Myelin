@@ -34,6 +34,7 @@ export type InvokeProjectCuratorInput = {
   provider?: Provider;
   modelOverride?: string;
   env?: NodeJS.ProcessEnv;
+  cwd?: string;
   runner?: ProcessRunner;
 };
 
@@ -109,7 +110,7 @@ export async function invokeProjectCurator(input: InvokeProjectCuratorInput): Pr
     provider: input.provider,
     modelOverride: input.modelOverride,
     env: input.env,
-    cwd: input.root,
+    cwd: input.cwd ?? input.root,
     runner: input.runner,
   });
 }

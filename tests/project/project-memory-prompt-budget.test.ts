@@ -58,11 +58,13 @@ test("artifact-reference transport keeps full packet evidence out of the prompt"
   expect(result.status).toBe("ok");
   expect(result.artifact.transport).toBe("artifact_reference");
   expect(result.artifact.adjusted).toBe(false);
-  expect(result.prompt).toContain("Input packet artifact: projects/demo/runs/project-learn/run-1/input-packet.json");
-  expect(result.prompt).toContain("Read the input packet artifact from the repository before answering.");
+  expect(result.prompt).toContain("Read input-packet.json from the current run directory before answering.");
+  expect(result.prompt).toContain("repo-root path is projects/demo/runs/project-learn/run-1/input-packet.json");
+  expect(result.prompt).toContain("Do not run broad repository searches.");
+  expect(result.prompt).toContain("ProjectMemoryMaintenanceProposal contract summary:");
   expect(result.prompt).not.toContain("sharedterm project memory context");
   expect(result.artifact.attempts[0].packet_chars).toBeGreaterThan(PROJECT_MEMORY_PROMPT_TARGET_CHARS);
-  expect(result.artifact.attempts[0].prompt_chars).toBeLessThan(2_000);
+  expect(result.artifact.attempts[0].prompt_chars).toBeLessThan(3_000);
   expect(result.packet.lookup.results[0]?.hits.length).toBe(5);
   expect(result.packet.lookup.quality_summary.proposal_scoped_result_ids.length).toBeGreaterThan(0);
 });

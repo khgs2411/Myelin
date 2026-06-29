@@ -46,6 +46,7 @@ export const PROJECT_MEMORY_VALIDATOR_ISSUE_CATEGORIES = [
   "lookup_dependency",
   "explicit_noop",
   "protected_state",
+  "provider",
 ] as const;
 
 export const PROJECT_MEMORY_CURATOR_BUDGET_KEYS = ["max_items", "max_content_chars"] as const;
@@ -270,4 +271,5 @@ export type ProjectMemoryCuratorRunResult = {
   changed_files?: string[];
   source_consumptions?: string[];
   stopped_reason?: string;
+  failure_kind?: "provider_failed_before_output" | "curator_output_invalid_json";
 };

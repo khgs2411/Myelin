@@ -175,21 +175,29 @@ export class ProjectMemoryCuratorService {
         provider: input.provider,
         modelOverride: input.modelOverride,
         env: input.env,
+        cwd: run.absolute_run_dir,
         runner: input.runner,
       });
       curatorOutput = curator.response;
     } catch (error) {
-      const stoppedReason = invocationStoppedReason(error);
-      const validation = failureValidation(input.projectKey, packet.mode, "curator_invocation_failed", stoppedReason);
+      const failure = classifyCuratorInvocationFailure(error);
+      const validation = failureValidation(
+        input.projectKey,
+        packet.mode,
+        failure.validationCode,
+        failure.stoppedReason,
+        failure.validationCategory,
+      );
       return await this.writeTerminalArtifacts({
         input,
         run,
         mode: packet.mode,
         outputArtifact: "curator-output-error.json",
-        outputValue: { error: stoppedReason },
+        outputValue: { error: failure.stoppedReason, failure_kind: failure.kind },
         validation,
         status: "failed",
-        stoppedReason,
+        stoppedReason: failure.stoppedReason,
+        failureKind: failure.kind,
         promptBudget: true,
         runtimeInboxIntake: true,
       });
@@ -276,6 +284,7 @@ export class ProjectMemoryCuratorService {
     retrievalArtifacts?: ProjectMemoryPostApplyRetrievalLifecycleResult["artifacts"];
     promptBudget?: boolean;
     runtimeInboxIntake?: boolean;
+    failureKind?: ProjectMemoryCuratorRunResult["failure_kind"];
   }): Promise<ProjectMemoryCuratorRunResult> {
     if (input.outputValue !== undefined) {
       await writeRunArtifact(input.run, input.outputArtifact, input.outputValue);
@@ -294,6 +303,7 @@ export class ProjectMemoryCuratorService {
       retrievalArtifacts: input.retrievalArtifacts,
       promptBudget: input.promptBudget,
       runtimeInboxIntake: input.runtimeInboxIntake,
+      failureKind: input.failureKind,
     });
     await writeRunArtifact(input.run, "curator-run-result.json", result);
     await writeMarkdownArtifact(input.run, "summary.md", summaryFor(result));
@@ -325,6 +335,7 @@ function buildResult(input: {
   retrievalArtifacts?: ProjectMemoryPostApplyRetrievalLifecycleResult["artifacts"];
   promptBudget?: boolean;
   runtimeInboxIntake?: boolean;
+  failureKind?: ProjectMemoryCuratorRunResult["failure_kind"];
 }): ProjectMemoryCuratorRunResult {
   return {
     status: input.status,
@@ -356,6 +367,7 @@ function buildResult(input: {
     changed_files: input.apply?.changed_files.map((file) => file.path),
     source_consumptions: input.apply?.source_consumptions.map((record) => `${record.source_kind}:${record.source_ref}`),
     stopped_reason: input.stoppedReason,
+    failure_kind: input.failureKind,
   };
 }
 
@@ -419,12 +431,13 @@ function failureValidation(
   mode: ProjectMemoryCuratorMode,
   code: string,
   message: string,
+  category: ProjectMemoryCuratorValidationResult["global_findings"][number]["category"] = "schema",
 ): ProjectMemoryCuratorValidationResult {
   return {
     ok: false,
     mode,
     project_key: projectKey,
-    global_findings: [{ severity: "blocker", category: "schema", code, message }],
+    global_findings: [{ severity: "blocker", category, code, message }],
     item_results: [],
     eligible_item_ids: [],
     rejected_item_ids: [],
@@ -433,16 +446,50 @@ function failureValidation(
   };
 }
 
-function invocationStoppedReason(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
+function classifyCuratorInvocationFailure(error: unknown): {
+  kind: NonNullable<ProjectMemoryCuratorRunResult["failure_kind"]>;
+  validationCode: string;
+  validationCategory: ProjectMemoryCuratorValidationResult["global_findings"][number]["category"];
+  stoppedReason: string;
+} {
+  const message = conciseInvocationMessage(error instanceof Error ? error.message : String(error));
   if (
     message.includes("response is not valid JSON") ||
     message.includes("empty output") ||
     message.includes("not valid JSON")
   ) {
-    return `curator output was not valid JSON: ${message}`;
+    return {
+      kind: "curator_output_invalid_json",
+      validationCode: "curator_output_invalid_json",
+      validationCategory: "schema",
+      stoppedReason: `curator output was not valid JSON: ${message}`,
+    };
   }
-  return `provider invocation failed: ${message}`;
+  return {
+    kind: "provider_failed_before_output",
+    validationCode: "provider_failed_before_output",
+    validationCategory: "provider",
+    stoppedReason: `provider invocation failed before curator output: ${message}`,
+  };
+}
+
+function conciseInvocationMessage(message: string): string {
+  const errorLines = [...message.matchAll(/^ERROR:\s*(.+)$/gim)]
+    .map((match) => match[1]?.trim())
+    .filter((line): line is string => Boolean(line));
+  const tokensUsed = message.match(/tokens used\s*[\r\n]+\s*([0-9,]+)/i)?.[1];
+  const exitPrefix = message.match(/\b(?:codex|claude) exited \d+/i)?.[0];
+  if (errorLines.length > 0) {
+    return [
+      exitPrefix,
+      ...errorLines.slice(-2).map((line) => `ERROR: ${line}`),
+      tokensUsed ? `tokens used ${tokensUsed}` : "",
+    ].filter(Boolean).join("; ");
+  }
+
+  const maxLength = 1_200;
+  if (message.length <= maxLength) return message;
+  return `${message.slice(0, maxLength)}...[truncated]`;
 }
 
 function summaryFor(result: ProjectMemoryCuratorRunResult): string {
@@ -453,6 +500,10 @@ function summaryFor(result: ProjectMemoryCuratorRunResult): string {
     `status: ${result.status}`,
     `validation_ok: ${result.validation_ok}`,
     `stopped_before_writes: ${result.stopped_before_writes}`,
+    result.failure_kind ? `failure_kind: ${result.failure_kind}` : "",
+    result.failure_kind === "provider_failed_before_output" ? "curator_output_status: not_produced" : "",
+    result.failure_kind === "curator_output_invalid_json" ? "curator_output_status: invalid_json" : "",
+    result.failure_kind ? "apply_stage: not_reached" : "",
     result.stopped_reason ? `stopped_reason: ${result.stopped_reason}` : "",
     result.artifacts.retrieval_sections ? `retrieval_sections: ${result.artifacts.retrieval_sections}` : "",
     result.artifacts.hint_generation ? `hint_generation: ${result.artifacts.hint_generation}` : "",

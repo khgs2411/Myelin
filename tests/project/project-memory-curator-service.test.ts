@@ -201,10 +201,12 @@ test("runs runtime inbox intake before building the curator packet", async () =>
     review: false,
     now: new Date("2026-06-25T11:00:00.000Z"),
     runner: async (_command, options) => {
+      expect(options?.cwd).toBe(join(root, "projects", "demo", "runs", "project-learn", "2026-06-25T11-00-00.000Z-run"));
+      expect(options?.stdin).toContain("Read input-packet.json from the current run directory before answering.");
       expect(options?.stdin).toContain(
-        "Input packet artifact: projects/demo/runs/project-learn/2026-06-25T11-00-00.000Z-run/input-packet.json",
+        "repo-root path is projects/demo/runs/project-learn/2026-06-25T11-00-00.000Z-run/input-packet.json",
       );
-      expect(options?.stdin).toContain("Read the input packet artifact from the repository before answering.");
+      expect(options?.stdin).toContain("Do not run broad repository searches.");
       expect(options?.stdin).not.toContain("Runtime inbox intake should enter the Project Memory packet.");
       return {
         exitCode: 0,
@@ -353,18 +355,43 @@ test("writes failure artifacts when provider invocation fails after packet creat
     dryRun: false,
     review: false,
     now: new Date("2026-06-23T12:00:00.000Z"),
-    runner: async () => ({ exitCode: 2, stdout: "", stderr: "provider unavailable" }),
+    runner: async () => ({
+      exitCode: 2,
+      stdout: "",
+      stderr: [
+        "large transcript prefix",
+        "ERROR: Selected model is at capacity. Please try a different model.",
+        "large transcript body ".repeat(500),
+        "tokens used",
+        "87,670",
+      ].join("\n"),
+    }),
   });
 
   expect(result.status).toBe("failed");
   expect(result.validation_ok).toBe(false);
+  expect(result.failure_kind).toBe("provider_failed_before_output");
+  const stoppedReason = result.stopped_reason ?? "";
+  expect(stoppedReason).toContain("provider invocation failed before curator output");
+  expect(stoppedReason).toContain("Selected model is at capacity");
+  expect(stoppedReason).toContain("tokens used 87,670");
+  expect(stoppedReason.length).toBeLessThan(400);
+  expect(stoppedReason).not.toContain("large transcript body");
   expect(result.artifacts.curator_output).toBe("curator-output-error.json");
   expect(result.artifacts.prompt_budget).toBe("prompt-budget.json");
   expect(await Bun.file(join(root, result.run_dir, "input-packet.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_dir, "prompt-budget.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_dir, "curator-output-error.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_dir, "curator-validation.json")).exists()).toBe(true);
-  expect(await readFile(join(root, result.run_dir, "summary.md"), "utf8")).toContain("provider invocation failed");
+  const errorArtifact = JSON.parse(await readFile(join(root, result.run_dir, "curator-output-error.json"), "utf8"));
+  const validation = JSON.parse(await readFile(join(root, result.run_dir, "curator-validation.json"), "utf8"));
+  const summary = await readFile(join(root, result.run_dir, "summary.md"), "utf8");
+  expect(errorArtifact.failure_kind).toBe("provider_failed_before_output");
+  expect(validation.global_findings[0].category).toBe("provider");
+  expect(validation.global_findings[0].code).toBe("provider_failed_before_output");
+  expect(summary).toContain("failure_kind: provider_failed_before_output");
+  expect(summary).toContain("curator_output_status: not_produced");
+  expect(summary).toContain("apply_stage: not_reached");
 });
 
 test("writes failure artifacts when curator output is not valid JSON", async () => {
@@ -382,7 +409,10 @@ test("writes failure artifacts when curator output is not valid JSON", async () 
 
   expect(result.status).toBe("failed");
   expect(result.validation_ok).toBe(false);
+  expect(result.failure_kind).toBe("curator_output_invalid_json");
   expect(result.stopped_reason).toContain("curator output was not valid JSON");
+  const validation = JSON.parse(await readFile(join(root, result.run_dir, "curator-validation.json"), "utf8"));
+  expect(validation.global_findings[0].code).toBe("curator_output_invalid_json");
   expect(await Bun.file(join(root, result.run_dir, "curator-run-result.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_dir, "summary.md")).exists()).toBe(true);
 });

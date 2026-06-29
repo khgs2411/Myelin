@@ -63,6 +63,7 @@ test("validator issue categories cover deterministic rejection and quarantine re
     "lookup_dependency",
     "explicit_noop",
     "protected_state",
+    "provider",
   ]);
 });
 

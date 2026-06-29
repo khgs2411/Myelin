@@ -167,22 +167,47 @@ export function buildProjectMemoryCuratorPrompt(
     `Return ONLY strict JSON matching ${outputName}.`,
     "Use packet references from the input packet. Do not invent packet refs.",
     "Do not write files. Do not mutate wiki markdown.",
+    "Do not inspect repo source, docs, plans, or tests to discover the JSON contract; use the contract summary in this prompt.",
+    "Do not run broad repository searches. Use the input packet as the evidence boundary unless a packet citation names a specific file that must be verified.",
     "When returning zero write proposals for a non-empty fallback-lookup packet, include explicit_noop_decisions with source_packet_refs and checked_existing_memory_refs.",
     "When a maintenance write depends on lookup evidence for dedupe, target selection, or supersession, include evidence_dependencies naming the lookup_result refs.",
     mode === "create"
       ? "Create mode: propose the first trusted Project Memory brain draft."
       : "Maintain mode: propose bounded itemized Project Memory updates only.",
+    curatorContractSummary(mode),
   ];
 
   if ((options.transport ?? "inline_packet") === "artifact_reference") {
     return [
       ...base,
-      "Read the input packet artifact from the repository before answering.",
+      `Read input-packet.json from the current run directory before answering. The repo-root path is ${runDir}/input-packet.json.`,
       "Treat the artifact as the authoritative input packet; this prompt intentionally does not inline it.",
     ].join("\n");
   }
 
   return [...base, "", "Input packet JSON:", stableJson(packet)].join("\n");
+}
+
+function curatorContractSummary(mode: ProjectMemoryCuratorMode): string {
+  const common =
+    "Common JSON: schema_version:1, project_key, mode, packet_ref{run_dir,artifact:'input-packet.json',packet_schema_version}, packet_context{degraded,degraded_reasons,budgets}, summary, optional explicit_noop_decisions[].";
+  if (mode === "create") {
+    return [
+      "ProjectMemoryCreationDraft contract summary:",
+      common,
+      "Create fields: brain_intent{name,first_brain_summary,untrusted_existing_markdown_policy}, pages[], state_intent{mark_project_memory_curated,freshness_intent}, evidence_refs[], repo_citations[], risk{level,reasons,requires_quarantine}.",
+      "Page draft: id,target{path,path_kind},title,purpose,content_intent,apply_payload,required_sections[],evidence_refs[],repo_citations[],notes_for_apply[].",
+      "Creation apply_payload: {schema_version:1,pages:[{page_path,title,purpose,body:{paragraphs:[]},evidence_refs,repo_citations,inference?}]} and must include the target page.",
+      "Creation publication requires index.md plus a domain page, unless notes_for_apply includes a no-domain-pages rationale.",
+    ].join("\n");
+  }
+  return [
+    "ProjectMemoryMaintenanceProposal contract summary:",
+    common,
+    "Maintain fields: items[], noop_inputs[], risk{level,reasons,requires_quarantine}.",
+    "Item: id,operation,target_page{path,path_kind:'existing_wiki_page'},target_entry_id?,proposed_entry_id?,content_intent,apply_payload,source_packet_refs[],evidence_refs[],evidence_dependencies?,repo_citations[],inference?,applicability,lifecycle_intent,risk,preconditions[],expected_outcome.",
+    "Maintenance apply_payload: {schema_version:1,entries:[{entry_id,title,body:{paragraphs:[]},lifecycle,evidence_refs,repo_citations,applicability}]} for write operations.",
+  ].join("\n");
 }
 
 export function measureProjectMemoryPromptAttempt(
