@@ -364,6 +364,191 @@ test("rejects proposals that exceed item or content budgets", () => {
   expect(contentBudget.item_results[0]?.findings.map((finding) => finding.code)).toContain("item_content_budget_exceeded");
 });
 
+test("requires explicit no-op decision for non-empty fallback lookup packet with zero maintenance items", () => {
+  const input = packet("maintain");
+  input.lookup.results = [fallbackLookupResult("lookup:cand_1", "cand_1")];
+  input.lookup.quality_summary = {
+    blocking: false,
+    blocking_reasons: [],
+    advisory_reasons: ["fallback markdown search"],
+    proposal_scoped_result_ids: ["lookup:cand_1"],
+  };
+
+  const result = validateCuratorOutput(input, {
+    schema_version: 1,
+    project_key: "demo",
+    mode: "maintain",
+    packet_ref: packetRef(),
+    packet_context: packetContext(),
+    summary: "No items",
+    items: [],
+    noop_inputs: [],
+    risk: lowRisk(),
+  });
+
+  expect(result.ok).toBe(false);
+  expect(result.global_findings.map((finding) => finding.code)).toContain("noop_missing_explicit_decision");
+});
+
+test("requires explicit no-op decision for non-empty fallback lookup packet with zero creation pages", () => {
+  const input = packet("create");
+  input.lookup.results = [fallbackLookupResult("lookup:cand_1", "cand_1")];
+  input.lookup.quality_summary = {
+    blocking: false,
+    blocking_reasons: [],
+    advisory_reasons: ["fallback markdown search"],
+    proposal_scoped_result_ids: ["lookup:cand_1"],
+  };
+
+  const result = validateCuratorOutput(input, {
+    schema_version: 1,
+    project_key: "demo",
+    mode: "create",
+    packet_ref: packetRef(),
+    packet_context: packetContext(),
+    summary: "No pages",
+    brain_intent: {
+      name: "Demo",
+      first_brain_summary: "Nothing to write.",
+      untrusted_existing_markdown_policy: "ignore",
+    },
+    pages: [],
+    state_intent: {
+      mark_project_memory_curated: false,
+      freshness_intent: "leave_degraded",
+    },
+    evidence_refs: [],
+    repo_citations: [],
+    risk: lowRisk(),
+  });
+
+  expect(result.ok).toBe(false);
+  expect(result.global_findings.map((finding) => finding.code)).toContain("noop_missing_explicit_decision");
+});
+
+test("accepts explicit no-op decision under fallback lookup when checked refs are present", () => {
+  const input = packet("maintain");
+  input.lookup.results = [fallbackLookupResult("lookup:cand_1", "cand_1")];
+  input.lookup.quality_summary = {
+    blocking: false,
+    blocking_reasons: [],
+    advisory_reasons: ["fallback markdown search"],
+    proposal_scoped_result_ids: ["lookup:cand_1"],
+  };
+
+  const result = validateCuratorOutput(input, {
+    schema_version: 1,
+    project_key: "demo",
+    mode: "maintain",
+    packet_ref: packetRef(),
+    packet_context: packetContext(),
+    summary: "Already covered",
+    items: [],
+    noop_inputs: [],
+    explicit_noop_decisions: [explicitNoopDecision("noop_1", "lookup:cand_1")],
+    risk: lowRisk(),
+  });
+
+  expect(result.ok).toBe(true);
+  expect(result.noop_refs).toEqual(["noop_1"]);
+});
+
+test("accepts explicit creation no-op decision under fallback lookup when checked refs are present", () => {
+  const input = packet("create");
+  input.lookup.results = [fallbackLookupResult("lookup:cand_1", "cand_1")];
+
+  const result = validateCuratorOutput(input, {
+    schema_version: 1,
+    project_key: "demo",
+    mode: "create",
+    packet_ref: packetRef(),
+    packet_context: packetContext(),
+    summary: "Already covered",
+    explicit_noop_decisions: [explicitNoopDecision("noop_create_1", "lookup:cand_1")],
+    brain_intent: {
+      name: "Demo",
+      first_brain_summary: "Nothing to write.",
+      untrusted_existing_markdown_policy: "ignore",
+    },
+    pages: [],
+    state_intent: {
+      mark_project_memory_curated: false,
+      freshness_intent: "leave_degraded",
+    },
+    evidence_refs: [],
+    repo_citations: [],
+    risk: lowRisk(),
+  });
+
+  expect(result.ok).toBe(true);
+  expect(result.noop_refs).toEqual(["noop_create_1"]);
+});
+
+test("keeps insufficient-evidence explicit no-op reviewable", () => {
+  const input = packet("maintain");
+  input.lookup.results = [fallbackLookupResult("lookup:cand_1", "cand_1")];
+  const output = {
+    schema_version: 1,
+    project_key: "demo",
+    mode: "maintain",
+    packet_ref: packetRef(),
+    packet_context: packetContext(),
+    summary: "No items",
+    items: [],
+    noop_inputs: [],
+    explicit_noop_decisions: [{ ...explicitNoopDecision("noop_1", "lookup:cand_1"), reason: "insufficient_evidence" }],
+    risk: lowRisk(),
+  };
+
+  const result = validateCuratorOutput(input, output);
+
+  expect(result.ok).toBe(false);
+  expect(result.global_findings.map((finding) => finding.code)).toContain("noop_insufficient_evidence");
+});
+
+test("requires review for maintenance item depending on fallback lookup", () => {
+  const input = packet("maintain");
+  input.lookup.results = [fallbackLookupResult("lookup:cand_1", "cand_1")];
+
+  const result = validateCuratorOutput(
+    input,
+    proposalWithItem({
+      id: "fallback_dep",
+      evidence_dependencies: [{ kind: "lookup_result", ref: "lookup:cand_1", required_for: "dedupe" }],
+    }),
+  );
+
+  expect(result.quarantined_item_ids).toEqual(["fallback_dep"]);
+  expect(result.item_results[0]?.findings.map((finding) => finding.code)).toContain(
+    "lookup_dependency_fallback_requires_review",
+  );
+});
+
+test("rejects item depending on stale lookup result without quarantining unrelated item", () => {
+  const input = packet("maintain");
+  input.lookup.results = [
+    staleLookupResult("lookup:stale", "cand_1"),
+    indexedLookupResult("lookup:fresh", "cand_2"),
+  ];
+
+  const result = validateCuratorOutput(
+    input,
+    proposalWithItems([
+      maintenanceItem({
+        id: "bad",
+        evidence_dependencies: [{ kind: "lookup_result", ref: "lookup:stale", required_for: "target_selection" }],
+      }),
+      maintenanceItem({
+        id: "good",
+        evidence_dependencies: [{ kind: "lookup_result", ref: "lookup:fresh", required_for: "target_selection" }],
+      }),
+    ]),
+  );
+
+  expect(result.rejected_item_ids).toEqual(["bad"]);
+  expect(result.eligible_item_ids).toEqual(["good"]);
+});
+
 function packet(mode: "create" | "maintain"): ProjectMemoryPacket {
   return {
     schema_version: 1,
@@ -397,7 +582,11 @@ function packet(mode: "create" | "maintain"): ProjectMemoryPacket {
       ],
     },
     session_memory: { selected: [] },
-    lookup: { queries: [], results: [] },
+    lookup: {
+      queries: [],
+      results: [],
+      quality_summary: { blocking: false, blocking_reasons: [], advisory_reasons: [], proposal_scoped_result_ids: [] },
+    },
     degraded: false,
     degraded_reasons: [],
   };
@@ -424,6 +613,20 @@ function proposalWithItem(overrides: Record<string, unknown>) {
     packet_context: packetContext(),
     summary: "proposal",
     items: [maintenanceItem(overrides)],
+    noop_inputs: [],
+    risk: lowRisk(),
+  };
+}
+
+function proposalWithItems(items: unknown[]) {
+  return {
+    schema_version: 1,
+    project_key: "demo",
+    mode: "maintain",
+    packet_ref: packetRef(),
+    packet_context: packetContext(),
+    summary: "proposal",
+    items,
     noop_inputs: [],
     risk: lowRisk(),
   };
@@ -466,5 +669,53 @@ function maintenanceItem(overrides: Record<string, unknown> = {}) {
     preconditions: ["setup page exists"],
     expected_outcome: "setup page receives a sourced entry in a later apply slice",
     ...overrides,
+  };
+}
+
+function explicitNoopDecision(id: string, lookupRef: string) {
+  return {
+    id,
+    source_packet_refs: [{ kind: "project_candidate", ref: "cand_1", required_for: "noop_support" }],
+    checked_existing_memory_refs: [{ kind: "lookup_result", ref: lookupRef, required_for: "noop_support" }],
+    reason: "already_trusted",
+    explanation: "Existing memory covers the candidate.",
+  };
+}
+
+function fallbackLookupResult(id: string, sourceId: string) {
+  return {
+    id,
+    query: "ranking",
+    source_kind: "project_candidate" as const,
+    source_id: sourceId,
+    retrieval_method: "fallback_markdown_search" as const,
+    lookup_quality: "fallback" as const,
+    lookup_freshness: "not_applicable" as const,
+    apply_severity: "proposal_scoped" as const,
+    degraded_reason: "fallback markdown search",
+    hits: [],
+    source_tools: ["project-memory-markdown-scan"],
+  };
+}
+
+function staleLookupResult(id: string, sourceId: string) {
+  return {
+    ...fallbackLookupResult(id, sourceId),
+    retrieval_method: "indexed_section_retrieval" as const,
+    lookup_quality: "indexed" as const,
+    lookup_freshness: "stale" as const,
+    apply_severity: "proposal_scoped" as const,
+    degraded_reason: "stale lookup result",
+  };
+}
+
+function indexedLookupResult(id: string, sourceId: string) {
+  return {
+    ...fallbackLookupResult(id, sourceId),
+    retrieval_method: "indexed_section_retrieval" as const,
+    lookup_quality: "indexed" as const,
+    lookup_freshness: "fresh" as const,
+    apply_severity: "advisory" as const,
+    degraded_reason: undefined,
   };
 }

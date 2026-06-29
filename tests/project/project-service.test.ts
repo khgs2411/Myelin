@@ -91,8 +91,9 @@ test("project service exposes the project learn curator facade without changing 
     }),
   });
 
-  expect(result.status).toBe("completed");
+  expect(result.status).toBe("completed_with_pending_index");
   expect(result.artifacts.curator_output).toBe("curator-creation-draft.json");
+  expect(result.artifacts.retrieval_index_result).toBe("project-memory-retrieval-index-result.json");
   expect(result.stopped_before_writes).toBe(false);
 });
 

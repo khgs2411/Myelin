@@ -1,6 +1,11 @@
 import { readFile, readdir, stat } from "node:fs/promises";
 import { basename, relative } from "node:path";
 import { projectPath, resolveInside } from "../runtime/fs.ts";
+import type {
+  ProjectMemoryLookupHit,
+  ProjectMemoryLookupResult,
+  ProjectMemoryLookupSourceKind,
+} from "./project-memory-retrieval-contracts.ts";
 
 export type ProjectMemoryPage = {
   path: string;
@@ -18,7 +23,7 @@ export type ProjectMemoryLookupMatch = {
   snippet: string;
 };
 
-export type ProjectMemoryLookupResult = {
+export type ProjectMemoryLegacyLookupResult = {
   query: string;
   normalized_terms: string[];
   matches: ProjectMemoryLookupMatch[];
@@ -30,6 +35,16 @@ export type ProjectMemoryLookupResult = {
 export type ProjectMemoryLookupCorpus = {
   pages: ProjectMemoryPage[];
   search_text_by_path: Record<string, string>;
+};
+
+export type LookupProjectMemoryInput = {
+  pages?: ProjectMemoryPage[];
+  searchTextByPath?: Record<string, string>;
+  limit?: number;
+  source_kind?: ProjectMemoryLookupSourceKind;
+  source_id?: string;
+  mode?: "create" | "maintain";
+  allow_fallback?: boolean;
 };
 
 const WORD_RE = /[a-z0-9][a-z0-9_-]*/g;
@@ -86,7 +101,7 @@ export async function lookupProjectMemory(
   root: string,
   projectKey: string,
   query: string,
-  input: { pages?: ProjectMemoryPage[]; searchTextByPath?: Record<string, string>; limit?: number } = {},
+  input: LookupProjectMemoryInput = {},
 ): Promise<ProjectMemoryLookupResult> {
   const pages = input.pages ?? (await loadProjectMemoryPages(root, projectKey));
   const terms = tokenize(query);
@@ -97,11 +112,17 @@ export async function lookupProjectMemory(
     .slice(0, input.limit ?? 5);
 
   return {
+    id: lookupResultId(input.source_kind ?? "manual", input.source_id ?? "manual", query),
     query,
-    normalized_terms: terms,
-    matches,
-    degraded: true,
-    degraded_reason: "Project Memory lookup is markdown text search only; derived metadata/vector indexes are not implemented.",
+    source_kind: input.source_kind ?? "manual",
+    source_id: input.source_id ?? "manual",
+    retrieval_method: "fallback_markdown_search",
+    lookup_quality: "fallback",
+    lookup_freshness: "not_applicable",
+    apply_severity: (input.mode ?? "create") === "maintain" ? "proposal_scoped" : "advisory",
+    degraded_reason:
+      "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+    hits: matches.map((match, index) => fallbackHitFor(match, projectKey, index)),
     source_tools: ["project-memory-markdown-scan"],
   };
 }
@@ -126,6 +147,44 @@ function scorePage(page: ProjectMemoryPage, terms: string[], fullText?: string):
     matched_terms: [...new Set(matched)].sort(),
     snippet: page.snippet,
   };
+}
+
+function fallbackHitFor(match: ProjectMemoryLookupMatch, projectKey: string, index: number): ProjectMemoryLookupHit {
+  return {
+    id: `hit:${index}`,
+    canonical_ref: {
+      project_key: projectKey,
+      wiki_path: match.path,
+      category: categoryFor(match.path),
+      page_title: match.title,
+      section_id: pageSectionId(match.path, match.title),
+      heading_path: [match.title],
+      section_hash: "sha256:unknown-fallback",
+    },
+    score: match.score,
+    snippet: match.snippet,
+    matched_terms: match.matched_terms,
+    source_components: {
+      structural_text: false,
+      retrieval_hints: false,
+      fallback_text: true,
+    },
+    freshness: "not_applicable",
+  };
+}
+
+function lookupResultId(sourceKind: ProjectMemoryLookupSourceKind, sourceId: string, query: string): string {
+  return `lookup:${sourceKind}:${sourceId}:${tokenize(query).join("-") || "empty"}`;
+}
+
+function categoryFor(wikiPath: string): string | null {
+  const parts = wikiPath.split("/");
+  return parts.length > 2 ? parts[1] : null;
+}
+
+function pageSectionId(path: string, title: string): string {
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return slug || basename(path, ".md");
 }
 
 async function markdownFiles(dir: string): Promise<string[]> {

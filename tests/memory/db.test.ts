@@ -24,9 +24,12 @@ test("opening creates the session schema and records the migration", () => {
   expect(names).toContain("session_memory_embeddings");
   expect(names).toContain("session_memory_contexts");
   expect(names).toContain("query_embedding_cache");
+  expect(names).toContain("project_memory_retrieval_embeddings");
+  expect(names).toContain("retrieval_maintenance_queue");
+  expect(names).toContain("project_memory_hint_jobs");
   expect(names).toContain("schema_migrations");
   const applied = db.query("SELECT version FROM schema_migrations").all() as { version: number }[];
-  expect(applied.map((r) => r.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+  expect(applied.map((r) => r.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
   db.close();
 });
 
@@ -35,7 +38,7 @@ test("migrations are idempotent across re-opens", () => {
   openMemoryDbAt(path).close();
   const db = openMemoryDbAt(path);
   const count = db.query("SELECT count(*) AS n FROM schema_migrations").get() as { n: number };
-  expect(count.n).toBe(8);
+  expect(count.n).toBe(11);
   db.close();
 });
 
@@ -56,6 +59,9 @@ test("opening creates ingest, session memory, candidate, handoff, and tombstone 
     expect(tableNames).toContain("session_memory_contexts");
     expect(tableNames).toContain("session_memory_links");
     expect(tableNames).toContain("query_embedding_cache");
+    expect(tableNames).toContain("project_memory_retrieval_embeddings");
+    expect(tableNames).toContain("retrieval_maintenance_queue");
+    expect(tableNames).toContain("project_memory_hint_jobs");
 
     const experienceColumns = db.query("PRAGMA table_info(experience_events)").all() as Array<{ name: string }>;
     expect(experienceColumns.map((column) => column.name)).toContain("git_branch");

@@ -23,7 +23,7 @@ test("runs project learn in create mode and applies valid low-risk output", asyn
   await seedProject("uncurated");
   seedMemoryDb();
   await seedSchema();
-  const service = new ProjectMemoryCuratorService(root);
+  const service = new ProjectMemoryCuratorService(root, completedRetrievalDeps());
 
   const result = await service.runProjectLearn({
     projectKey: "demo",
@@ -60,7 +60,7 @@ test("runs maintain mode and applies eligible low-risk maintenance output", asyn
   await mkdir(join(root, "projects", "demo", "wiki", "setup"), { recursive: true });
   await writeFile(join(root, "projects", "demo", "wiki", "setup", "index.md"), "# Setup\n", "utf8");
   await seedSchema();
-  const service = new ProjectMemoryCuratorService(root);
+  const service = new ProjectMemoryCuratorService(root, completedRetrievalDeps());
 
   const result = await service.runProjectLearn({
     projectKey: "demo",
@@ -81,6 +81,52 @@ test("runs maintain mode and applies eligible low-risk maintenance output", asyn
   expect(await readFile(join(root, "projects", "demo", "wiki", "setup", "index.md"), "utf8")).toContain('id="setup.cli"');
 });
 
+test("returns completed_with_pending_index when apply succeeds but retrieval indexing remains pending", async () => {
+  await seedProject("uncurated");
+  seedMemoryDb();
+  await seedSchema();
+  const service = new ProjectMemoryCuratorService(root, pendingRetrievalDeps());
+
+  const result = await service.runProjectLearn({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    now: new Date("2026-06-28T10:00:00.000Z"),
+    runner: async () => ({
+      exitCode: 0,
+      stdout: JSON.stringify(creationDraft("projects/demo/runs/project-learn/2026-06-28T10-00-00.000Z-run")),
+      stderr: "",
+    }),
+  });
+
+  expect(result.status).toBe("completed_with_pending_index");
+  expect(result.stopped_before_writes).toBe(false);
+  expect(result.stopped_reason).toContain("mandatory hint generation failed");
+  expect(result.artifacts.retrieval_index_result).toBe("project-memory-retrieval-index-result.json");
+});
+
+test("returns completed when apply and retrieval indexing succeed", async () => {
+  await seedProject("uncurated");
+  seedMemoryDb();
+  await seedSchema();
+  const service = new ProjectMemoryCuratorService(root, completedRetrievalDeps());
+
+  const result = await service.runProjectLearn({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    now: new Date("2026-06-28T10:30:00.000Z"),
+    runner: async () => ({
+      exitCode: 0,
+      stdout: JSON.stringify(creationDraft("projects/demo/runs/project-learn/2026-06-28T10-30-00.000Z-run")),
+      stderr: "",
+    }),
+  });
+
+  expect(result.status).toBe("completed");
+  expect(result.artifacts.retrieval_index_result).toBe("project-memory-retrieval-index-result.json");
+});
+
 test("reconciles consumed Project Memory sources before building the next curator packet", async () => {
   await seedProject("curated");
   seedMemoryDb();
@@ -96,7 +142,7 @@ test("reconciles consumed Project Memory sources before building the next curato
   await mkdir(join(root, "projects", "demo", "wiki", "setup"), { recursive: true });
   await writeFile(join(root, "projects", "demo", "wiki", "setup", "index.md"), "# Setup\n", "utf8");
   await seedSchema();
-  const service = new ProjectMemoryCuratorService(root);
+  const service = new ProjectMemoryCuratorService(root, completedRetrievalDeps());
 
   const result = await service.runProjectLearn({
     projectKey: "demo",
@@ -175,6 +221,74 @@ test("runs runtime inbox intake before building the curator packet", async () =>
   expect(packetArtifact).toContain("project.inbox");
   const intakeArtifact = JSON.parse(await readFile(join(root, result.run_dir, "runtime-inbox-intake.json"), "utf8"));
   expect(intakeArtifact.created_candidate_ids).toEqual(["project_inbox:demo:2026-06-25T10-00-00Z_a1b2c3"]);
+});
+
+test("completes fallback advisory no-op without treating the packet as degraded", async () => {
+  await seedProject("curated");
+  seedMemoryDb();
+  seedPendingCandidate("cand_1");
+  await mkdir(join(root, "projects", "demo", "wiki", "setup"), { recursive: true });
+  await writeFile(join(root, "projects", "demo", "wiki", "setup", "index.md"), "# Setup\nDocument setup.\n", "utf8");
+  await seedSchema();
+  const service = new ProjectMemoryCuratorService(root);
+  const runDir = "projects/demo/runs/project-learn/2026-06-25T12-00-00.000Z-run";
+
+  const result = await service.runProjectLearn({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    now: new Date("2026-06-25T12:00:00.000Z"),
+    runner: async () => {
+      const packet = JSON.parse(await readFile(join(root, runDir, "input-packet.json"), "utf8"));
+      expect(packet.degraded).toBe(false);
+      expect(packet.lookup.results[0]?.lookup_quality).toBe("fallback");
+      return {
+        exitCode: 0,
+        stdout: JSON.stringify(explicitNoopProposal(runDir, packet.lookup.results[0].id)),
+        stderr: "",
+      };
+    },
+  });
+
+  expect(result.status).toBe("completed");
+  expect(result.validation_ok).toBe(true);
+  expect(result.stopped_before_writes).toBe(true);
+  expect(result.stopped_reason).toBe("explicit no-op decision produced no writes");
+});
+
+test("requires review for maintenance writes depending on fallback lookup", async () => {
+  await seedProject("curated");
+  seedMemoryDb();
+  seedPendingCandidate("cand_1");
+  await mkdir(join(root, "projects", "demo", "wiki", "setup"), { recursive: true });
+  await writeFile(join(root, "projects", "demo", "wiki", "setup", "index.md"), "# Setup\nDocument setup.\n", "utf8");
+  await seedSchema();
+  const service = new ProjectMemoryCuratorService(root);
+  const runDir = "projects/demo/runs/project-learn/2026-06-25T12-30-00.000Z-run";
+
+  const result = await service.runProjectLearn({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    now: new Date("2026-06-25T12:30:00.000Z"),
+    runner: async () => {
+      const packet = JSON.parse(await readFile(join(root, runDir, "input-packet.json"), "utf8"));
+      const proposal = maintenanceProposal(runDir);
+      (proposal.items[0] as Record<string, unknown>).evidence_dependencies = [
+        { kind: "lookup_result", ref: packet.lookup.results[0].id, required_for: "dedupe" },
+      ];
+      return {
+        exitCode: 0,
+        stdout: JSON.stringify(proposal),
+        stderr: "",
+      };
+    },
+  });
+
+  expect(result.status).toBe("needs_review");
+  expect(result.validation_ok).toBe(false);
+  expect(result.stopped_reason).toBe("curator validation did not produce eligible output");
+  expect(await readFile(join(root, "projects", "demo", "wiki", "setup", "index.md"), "utf8")).not.toContain('id="setup.cli"');
 });
 
 test("runs maintain mode and returns needs_review when validation rejects all items", async () => {
@@ -394,6 +508,30 @@ function seedPendingProjectSources(): void {
   }
 }
 
+function seedPendingCandidate(id: string): void {
+  const db = openMemoryDb(root);
+  try {
+    createMemoryCandidate(db, {
+      id,
+      project_key: "demo",
+      scope: "project",
+      status: "pending",
+      candidate_type: "project.fact",
+      title: "Setup",
+      summary: "Document setup.",
+      source_event_refs: ["evt_1"],
+      evidence: {},
+      proposed_payload: {},
+      confidence: "medium",
+      risk: "low",
+      reason: "durable",
+      now: "2026-06-25T11:50:00.000Z",
+    });
+  } finally {
+    db.close();
+  }
+}
+
 function sourceRecord(source_kind: "project_candidate" | "project_handoff", source_ref: string) {
   return {
     source_kind,
@@ -403,6 +541,29 @@ function sourceRecord(source_kind: "project_candidate" | "project_handoff", sour
     consumed_at: "2026-06-23T13:25:00.000Z",
     terminal_decision: "applied_to_project_memory" as const,
     output_refs: ["project-memory-changeset.json"],
+  };
+}
+
+function explicitNoopProposal(runDir: string, lookupRef: string) {
+  return {
+    schema_version: 1,
+    project_key: "demo",
+    mode: "maintain",
+    packet_ref: { run_dir: runDir, artifact: "input-packet.json", packet_schema_version: 1 },
+    packet_context: packetContext(),
+    summary: "Existing memory already covers the candidate.",
+    items: [],
+    noop_inputs: [],
+    explicit_noop_decisions: [
+      {
+        id: "noop_1",
+        source_packet_refs: [{ kind: "project_candidate", ref: "cand_1", required_for: "noop_support" }],
+        checked_existing_memory_refs: [{ kind: "lookup_result", ref: lookupRef, required_for: "noop_support" }],
+        reason: "already_trusted",
+        explanation: "Existing setup memory covers the candidate.",
+      },
+    ],
+    risk: lowRisk(),
   };
 }
 
@@ -512,4 +673,39 @@ function packetContext() {
 
 function lowRisk() {
   return { level: "low" as const, reasons: [], requires_quarantine: false };
+}
+
+function completedRetrievalDeps() {
+  return {
+    retrievalLifecycle: {
+      async afterProjectMemoryApply() {
+        return {
+          status: "completed" as const,
+          artifacts: {
+            retrieval_sections: "project-memory-retrieval-sections.json" as const,
+            hint_generation: "project-memory-hint-generation-result.json" as const,
+            retrieval_index_result: "project-memory-retrieval-index-result.json" as const,
+          },
+        };
+      },
+    },
+  };
+}
+
+function pendingRetrievalDeps() {
+  return {
+    retrievalLifecycle: {
+      async afterProjectMemoryApply() {
+        return {
+          status: "pending" as const,
+          artifacts: {
+            retrieval_sections: "project-memory-retrieval-sections.json" as const,
+            hint_generation: "project-memory-hint-generation-result.json" as const,
+            retrieval_index_result: "project-memory-retrieval-index-result.json" as const,
+          },
+          degraded_reason: "mandatory hint generation failed",
+        };
+      },
+    },
+  };
 }

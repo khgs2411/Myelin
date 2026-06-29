@@ -10,9 +10,12 @@ import { findProject } from "../runtime/projects.ts";
 import {
   loadProjectMemoryCorpus,
   lookupProjectMemory,
-  type ProjectMemoryLookupResult,
   type ProjectMemoryPage,
 } from "./project-memory-lookup.ts";
+import type {
+  ProjectMemoryLookupQualitySummary,
+  ProjectMemoryLookupResult,
+} from "./project-memory-retrieval-contracts.ts";
 
 export type ProjectMemoryPacket = {
   schema_version: 1;
@@ -44,6 +47,7 @@ export type ProjectMemoryPacket = {
   lookup: {
     queries: PacketLookupQuery[];
     results: ProjectMemoryLookupResult[];
+    quality_summary: ProjectMemoryLookupQualitySummary;
   };
   degraded: boolean;
   degraded_reasons: string[];
@@ -127,20 +131,26 @@ export async function buildProjectMemoryPacket(
 
   const queries = lookupQueries(memoryInputs);
   const results: ProjectMemoryLookupResult[] = [];
+  const mode = packetMode(state.bootstrap_state, state.project_memory);
   for (const query of queries) {
     const result = await lookupProjectMemory(root, projectKey, query.query, {
       pages,
       searchTextByPath: corpus.search_text_by_path,
       limit: options.lookupLimit ?? DEFAULT_LOOKUP_LIMIT,
+      source_kind: query.source_kind,
+      source_id: query.source_id,
+      mode,
+      allow_fallback: true,
     });
     results.push(result);
-    if (result.degraded_reason) degradedReasons.push(result.degraded_reason);
   }
+  const lookupQuality = summarizeLookupQuality(results);
+  degradedReasons.push(...lookupQuality.blocking_reasons);
 
   return {
     schema_version: 1,
     project_key: projectKey,
-    mode: packetMode(state.bootstrap_state, state.project_memory),
+    mode,
     project: {
       key: project.key,
       name: project.config.name ?? project.key,
@@ -162,10 +172,26 @@ export async function buildProjectMemoryPacket(
     lookup: {
       queries,
       results,
+      quality_summary: lookupQuality,
     },
     degraded: degradedReasons.length > 0,
     degraded_reasons: [...new Set(degradedReasons)].sort(),
   };
+}
+
+function summarizeLookupQuality(results: ProjectMemoryLookupResult[]): ProjectMemoryLookupQualitySummary {
+  return {
+    blocking: results.some((result) => result.apply_severity === "blocking"),
+    blocking_reasons: uniqueReasons(results.filter((result) => result.apply_severity === "blocking")),
+    advisory_reasons: uniqueReasons(results.filter((result) => result.apply_severity === "advisory")),
+    proposal_scoped_result_ids: results
+      .filter((result) => result.apply_severity === "proposal_scoped")
+      .map((result) => result.id),
+  };
+}
+
+function uniqueReasons(results: ProjectMemoryLookupResult[]): string[] {
+  return [...new Set(results.map((result) => result.degraded_reason).filter((reason): reason is string => Boolean(reason)))].sort();
 }
 
 async function readMemoryInputs(

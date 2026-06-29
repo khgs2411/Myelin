@@ -10,6 +10,7 @@ import {
   type SessionMemoryStatus,
 } from "../memory/ingest-types.ts";
 import { MemoryCandidateService } from "../memory/memory-candidate-service.ts";
+import { ProjectMemoryRetrievalIndexService } from "../memory/project-memory-retrieval-index-service.ts";
 import { SessionMemoryInspectionService, type SessionMemoryInspectRow } from "../memory/session-memory-inspection-service.ts";
 import type { SessionMemoryLinkRow } from "../memory/session-memory-links.ts";
 import { SessionMemoryIndexService } from "../memory/session-memory-index-service.ts";
@@ -36,6 +37,7 @@ export function registerMemoryCommands(cli: Cli, deps: MemoryCommandDeps = {}): 
   cli.command(["memory", "session", "show"], (args) => sessionShow(args));
   cli.command(["memory", "session", "links"], (args) => sessionLinks(args));
   cli.command(["memory", "index", "session"], (args) => indexSession(args));
+  cli.command(["memory", "index", "project"], (args) => indexProject(args));
   cli.command(["memory", "query"], async (args) => {
     const parsed = parseArgs(args);
     if (parsed.error) return fail(parsed.error);
@@ -559,6 +561,25 @@ async function indexSession(args: string[]): Promise<CommandResult> {
   }
 }
 
+async function indexProject(args: string[]): Promise<CommandResult> {
+  const parsed = parseIndexProjectArgs(args);
+  if (parsed.error) return fail(parsed.error);
+
+  const root = repoRoot().root;
+  const config = await loadConfig(root);
+  const response = await new ProjectMemoryRetrievalIndexService({ root }).indexProject({
+    projectKey: parsed.projectKey,
+    limit: parsed.limit,
+    batchSize: parsed.batchSize ?? config.embedding.batchSize,
+    retryFailed: parsed.retryFailed,
+  });
+  if (parsed.json) return ok(stableJson(response));
+  const message =
+    `Project Memory retrieval index for ${parsed.projectKey}: ` +
+    `selected ${response.selected}, indexed ${response.indexed}, failed ${response.failed}, pending ${response.pending_remaining}.`;
+  return response.degraded ? fail(`${message}\n${response.degraded_reason ?? "Indexing degraded."}`) : ok(message);
+}
+
 function candidates(args: string[]): CommandResult {
   const parsed = parseCandidateListArgs(args);
   if (parsed.error) return fail(parsed.error);
@@ -706,6 +727,67 @@ function parseIndexSessionArgs(args: string[]): {
       retryFailed,
       json,
       error: "Usage: myelin memory index session <project-key> [--limit N] [--batch-size N] [--retry-failed] [--json]",
+    };
+  }
+  return { projectKey, limit, batchSize, retryFailed, json };
+}
+
+function parseIndexProjectArgs(args: string[]): {
+  projectKey: string;
+  limit: number;
+  batchSize?: number;
+  retryFailed: boolean;
+  json: boolean;
+  error?: string;
+} {
+  let projectKey = "";
+  let limit = DEFAULT_EMBEDDING_BATCH_SIZE;
+  let batchSize: number | undefined;
+  let retryFailed = false;
+  let json = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--json") json = true;
+    else if (arg === "--retry-failed") retryFailed = true;
+    else if (arg === "--limit") {
+      const value = args[++index];
+      const parsed = Number(value);
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        return { projectKey, limit, batchSize, retryFailed, json, error: "--limit must be a positive integer" };
+      }
+      limit = parsed;
+    } else if (arg === "--batch-size") {
+      const value = args[++index];
+      const parsed = Number(value);
+      if (!Number.isInteger(parsed) || parsed <= 0 || parsed > MAX_EMBEDDING_BATCH_SIZE) {
+        return {
+          projectKey,
+          limit,
+          batchSize,
+          retryFailed,
+          json,
+          error: `--batch-size must be an integer between 1 and ${MAX_EMBEDDING_BATCH_SIZE}`,
+        };
+      }
+      batchSize = parsed;
+    } else if (arg.startsWith("-")) {
+      return { projectKey, limit, batchSize, retryFailed, json, error: `Unknown memory index project option: ${arg}` };
+    } else if (!projectKey) {
+      projectKey = arg;
+    } else {
+      return { projectKey, limit, batchSize, retryFailed, json, error: `Unexpected memory index project argument: ${arg}` };
+    }
+  }
+
+  if (!projectKey) {
+    return {
+      projectKey,
+      limit,
+      batchSize,
+      retryFailed,
+      json,
+      error: "Usage: myelin memory index project <project-key> [--limit N] [--batch-size N] [--retry-failed] [--json]",
     };
   }
   return { projectKey, limit, batchSize, retryFailed, json };

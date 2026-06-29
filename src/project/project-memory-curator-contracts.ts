@@ -2,6 +2,10 @@ import type { ProcessRunner } from "../runtime/llm-client.ts";
 import type { Provider } from "../runtime/config.ts";
 import type { ProjectMemoryApplyPayload } from "./project-memory-apply-contracts.ts";
 import type { ProjectMemoryPacket } from "./project-memory-packet.ts";
+import type {
+  ExplicitNoOpDecision,
+  ProjectMemoryEvidenceDependency,
+} from "./project-memory-retrieval-contracts.ts";
 
 export const PROJECT_MEMORY_CURATOR_MODES = ["create", "maintain"] as const;
 
@@ -39,10 +43,19 @@ export const PROJECT_MEMORY_VALIDATOR_ISSUE_CATEGORIES = [
   "risk",
   "budget",
   "degraded_context",
+  "lookup_dependency",
+  "explicit_noop",
   "protected_state",
 ] as const;
 
 export const PROJECT_MEMORY_CURATOR_BUDGET_KEYS = ["max_items", "max_content_chars"] as const;
+
+export const PROJECT_MEMORY_CURATOR_RUN_STATUSES = [
+  "completed",
+  "completed_with_pending_index",
+  "failed",
+  "needs_review",
+] as const;
 
 export type ProjectMemoryCuratorMode = (typeof PROJECT_MEMORY_CURATOR_MODES)[number];
 
@@ -114,6 +127,7 @@ export type ProjectMemoryCuratorEnvelope = {
   };
   packet_context: ProjectMemoryCuratorPacketContext;
   summary: string;
+  explicit_noop_decisions?: ExplicitNoOpDecision[];
 };
 
 export type ProjectMemoryCreationDraft = ProjectMemoryCuratorEnvelope & {
@@ -167,6 +181,7 @@ export type ProjectMemoryMaintenanceProposalItem = {
   apply_payload?: ProjectMemoryApplyPayload;
   source_packet_refs: ProjectMemoryEvidenceRef[];
   evidence_refs: ProjectMemoryEvidenceRef[];
+  evidence_dependencies?: ProjectMemoryEvidenceDependency[];
   repo_citations: ProjectMemoryRepoCitation[];
   inference?: {
     label: string;
@@ -223,7 +238,7 @@ export type RunProjectMemoryCuratorInput = {
   now?: Date;
 };
 
-export type ProjectMemoryCuratorRunStatus = "completed" | "failed" | "needs_review";
+export type ProjectMemoryCuratorRunStatus = (typeof PROJECT_MEMORY_CURATOR_RUN_STATUSES)[number];
 
 export type ProjectMemoryCuratorRunResult = {
   status: ProjectMemoryCuratorRunStatus;
@@ -242,6 +257,9 @@ export type ProjectMemoryCuratorRunResult = {
     apply_journal?: "project-memory-apply-journal.json";
     apply_result?: "project-memory-apply-result.json";
     changeset?: "project-memory-changeset.json";
+    retrieval_sections?: "project-memory-retrieval-sections.json";
+    hint_generation?: "project-memory-hint-generation-result.json";
+    retrieval_index_result?: "project-memory-retrieval-index-result.json";
   };
   validation_ok: boolean;
   stopped_before_writes: boolean;

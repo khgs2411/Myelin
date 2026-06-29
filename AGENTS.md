@@ -4,7 +4,7 @@
 
 This file is the execution contract for agents operating inside Myelin.
 
-Myelin maintains durable project memory for software repositories: curated markdown wiki pages, raw/source preservation, machine-readable state, freshness signals, inbox items, and query contracts.
+Myelin maintains durable project memory for software repositories: curated markdown wiki pages, source-evidence preservation, machine-readable state, freshness signals, inbox items, and query contracts.
 
 Prefer this file over ad hoc phrasing unless the user explicitly overrides it for the current task.
 
@@ -89,12 +89,13 @@ Important runtime variables:
 - `src/`: Bun/TypeScript core runtime, CLI commands, schema, query, inbox, and pipeline orchestration.
 - `schema/`: global authored schema inputs.
 - `projects/<key>/`: project memory, wiki pages, state, sources, logs, and runs.
-- `raw/`: global unclassified intake.
-- `concepts/`: cross-project knowledge.
-- `stages/`: V2 pipeline stage instruction assets.
-- `mcp/`: detached MCP interface boundary.
+- `state/`: generated SQLite serving state; ignored, not curated truth.
+- `docs/`: current product docs, ADRs, and historical archives.
+- `.tasks/`: roadmap task stubs, not implementation plans.
+- `tests/`: Bun test coverage.
+- Detached MCP consumers use the CLI/JSON contract; MCP implementation source is not part of the root package graph.
 
-Do not make `/mcp` part of the root package graph. Core query behavior lives in `src/query/`; detached MCP consumers use the CLI/JSON contract from `myelin memory query --json`.
+Do not make a local MCP checkout part of the root package graph. Core query behavior lives in `src/query/`; detached MCP consumers use the CLI/JSON contract from `myelin memory query --json`.
 
 ## Pipeline Development Gotchas
 
@@ -117,7 +118,7 @@ Scope: software repositories only. Do not ingest non-repo content as canonical p
 Treat Myelin as four layers:
 
 - `repo/`: implementation truth
-- `raw/` and `sources/`: preserved source material
+- source evidence and `sources/`: preserved source material
 - `wiki/`: synthesized human-readable understanding
 - `state/`: machine-readable metadata, routing, provenance, and freshness
 
@@ -127,7 +128,7 @@ Default read priority:
 2. `index.md`
 3. `changelog.md` or `log/`
 4. relevant `wiki/` pages
-5. preserved raw/source files
+5. preserved source evidence
 6. repo files where verification or implementation requires them
 
 ## Non-Negotiable Rules

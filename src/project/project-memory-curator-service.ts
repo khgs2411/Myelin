@@ -13,6 +13,9 @@ import { ProjectMemoryCandidateIntakeService } from "./project-memory-candidate-
 import { ProjectMemorySourceConsumptionReconciler } from "./project-memory-source-consumption-reconciler.ts";
 import { buildProjectMemoryPacket, type ProjectMemoryPacket } from "./project-memory-packet.ts";
 import { buildPromptBudgetedProjectMemoryPacket } from "./project-memory-prompt-budget.ts";
+import { extractProjectMemorySections } from "./project-memory-markdown-sections.ts";
+import type { ProjectMemoryRetrievalIndexResult } from "../memory/project-memory-retrieval-indexer.ts";
+import { ProjectMemoryRetrievalIndexService } from "../memory/project-memory-retrieval-index-service.ts";
 import {
   createProjectCuratorRun,
   ensureProjectLearnSchemaContext,
@@ -26,8 +29,31 @@ import { findProject } from "../runtime/projects.ts";
 import { readJsonIfExists } from "../runtime/json.ts";
 import { projectPath } from "../runtime/fs.ts";
 
+export type ProjectMemoryPostApplyRetrievalLifecycleResult = {
+  status: "completed" | "pending";
+  artifacts: {
+    retrieval_sections?: "project-memory-retrieval-sections.json";
+    hint_generation?: "project-memory-hint-generation-result.json";
+    retrieval_index_result?: "project-memory-retrieval-index-result.json";
+  };
+  degraded_reason?: string;
+};
+
+export type ProjectMemoryPostApplyRetrievalLifecycle = {
+  afterProjectMemoryApply(input: {
+    projectKey: string;
+    mode: ProjectMemoryCuratorMode;
+    run: ProjectCuratorRunPaths;
+    apply: ProjectMemoryApplyResult;
+    now: Date;
+  }): Promise<ProjectMemoryPostApplyRetrievalLifecycleResult>;
+};
+
 export class ProjectMemoryCuratorService {
-  constructor(private readonly root: string) {}
+  constructor(
+    private readonly root: string,
+    private readonly deps: { retrievalLifecycle?: ProjectMemoryPostApplyRetrievalLifecycle } = {},
+  ) {}
 
   async runProjectLearn(input: RunProjectMemoryCuratorInput): Promise<ProjectMemoryCuratorRunResult> {
     const now = input.now ?? new Date();
@@ -190,14 +216,23 @@ export class ProjectMemoryCuratorService {
               eligible_item_ids: validation.eligible_item_ids,
             });
       if (applyResult.status === "applied") {
+        const retrieval = await this.postApplyRetrievalLifecycle({
+          projectKey: input.projectKey,
+          mode: packet.mode,
+          run,
+          apply: applyResult,
+          now,
+        });
         return await this.writeTerminalArtifacts({
           input,
           run,
           mode: packet.mode,
           outputArtifact,
           validation,
-          status: "completed",
+          status: retrieval.status === "completed" ? "completed" : "completed_with_pending_index",
+          stoppedReason: retrieval.degraded_reason,
           apply: applyResult,
+          retrievalArtifacts: retrieval.artifacts,
           promptBudget: true,
           runtimeInboxIntake: true,
         });
@@ -238,6 +273,7 @@ export class ProjectMemoryCuratorService {
     status: ProjectMemoryCuratorRunResult["status"];
     stoppedReason?: string;
     apply?: ProjectMemoryApplyResult;
+    retrievalArtifacts?: ProjectMemoryPostApplyRetrievalLifecycleResult["artifacts"];
     promptBudget?: boolean;
     runtimeInboxIntake?: boolean;
   }): Promise<ProjectMemoryCuratorRunResult> {
@@ -255,12 +291,24 @@ export class ProjectMemoryCuratorService {
       status: input.status,
       stoppedReason: input.stoppedReason,
       apply: input.apply,
+      retrievalArtifacts: input.retrievalArtifacts,
       promptBudget: input.promptBudget,
       runtimeInboxIntake: input.runtimeInboxIntake,
     });
     await writeRunArtifact(input.run, "curator-run-result.json", result);
     await writeMarkdownArtifact(input.run, "summary.md", summaryFor(result));
     return result;
+  }
+
+  private async postApplyRetrievalLifecycle(input: {
+    projectKey: string;
+    mode: ProjectMemoryCuratorMode;
+    run: ProjectCuratorRunPaths;
+    apply: ProjectMemoryApplyResult;
+    now: Date;
+  }): Promise<ProjectMemoryPostApplyRetrievalLifecycleResult> {
+    const lifecycle = this.deps.retrievalLifecycle ?? new DefaultProjectMemoryPostApplyRetrievalLifecycle(this.root);
+    return lifecycle.afterProjectMemoryApply(input);
   }
 }
 
@@ -274,6 +322,7 @@ function buildResult(input: {
   status: ProjectMemoryCuratorRunResult["status"];
   stoppedReason?: string;
   apply?: ProjectMemoryApplyResult;
+  retrievalArtifacts?: ProjectMemoryPostApplyRetrievalLifecycleResult["artifacts"];
   promptBudget?: boolean;
   runtimeInboxIntake?: boolean;
 }): ProjectMemoryCuratorRunResult {
@@ -294,6 +343,9 @@ function buildResult(input: {
       apply_journal: input.apply ? "project-memory-apply-journal.json" : undefined,
       apply_result: input.apply ? "project-memory-apply-result.json" : undefined,
       changeset: input.apply ? "project-memory-changeset.json" : undefined,
+      retrieval_sections: input.retrievalArtifacts?.retrieval_sections,
+      hint_generation: input.retrievalArtifacts?.hint_generation,
+      retrieval_index_result: input.retrievalArtifacts?.retrieval_index_result,
     },
     validation_ok: input.validation.ok,
     stopped_before_writes: !input.apply,
@@ -322,12 +374,15 @@ function canApply(input: {
     return { ok: false, status: "needs_review", reason: "curator validation produced rejected or quarantined output" };
   }
   if (input.packet.degraded) {
-    return { ok: false, status: "needs_review", reason: "packet was degraded" };
+    return { ok: false, status: "needs_review", reason: "packet has blocking degraded context" };
   }
   if (input.packet.mode === "maintain" && statusOf(input.packet.state.project_memory) !== "curated") {
     return { ok: false, status: "needs_review", reason: "trusted Project Memory state is required for maintenance apply" };
   }
   if (input.packet.mode === "maintain" && input.validation.eligible_item_ids.length === 0) {
+    if (input.validation.noop_refs.length > 0) {
+      return { ok: false, status: "completed", reason: "explicit no-op decision produced no writes" };
+    }
     return { ok: false, status: "needs_review", reason: "maintenance proposal had no eligible items" };
   }
   return { ok: true };
@@ -399,8 +454,71 @@ function summaryFor(result: ProjectMemoryCuratorRunResult): string {
     `validation_ok: ${result.validation_ok}`,
     `stopped_before_writes: ${result.stopped_before_writes}`,
     result.stopped_reason ? `stopped_reason: ${result.stopped_reason}` : "",
+    result.artifacts.retrieval_sections ? `retrieval_sections: ${result.artifacts.retrieval_sections}` : "",
+    result.artifacts.hint_generation ? `hint_generation: ${result.artifacts.hint_generation}` : "",
+    result.artifacts.retrieval_index_result ? `retrieval_index_result: ${result.artifacts.retrieval_index_result}` : "",
+    result.status === "completed_with_pending_index" ? "pending_retrieval_index: yes" : "",
     "",
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+class DefaultProjectMemoryPostApplyRetrievalLifecycle implements ProjectMemoryPostApplyRetrievalLifecycle {
+  constructor(private readonly root: string) {}
+
+  async afterProjectMemoryApply(input: {
+    projectKey: string;
+    mode: ProjectMemoryCuratorMode;
+    run: ProjectCuratorRunPaths;
+    apply: ProjectMemoryApplyResult;
+    now: Date;
+  }): Promise<ProjectMemoryPostApplyRetrievalLifecycleResult> {
+    const artifacts = {
+      retrieval_sections: "project-memory-retrieval-sections.json",
+      hint_generation: "project-memory-hint-generation-result.json",
+      retrieval_index_result: "project-memory-retrieval-index-result.json",
+    } as const;
+    const manifest = await extractProjectMemorySections(this.root, input.projectKey, { now: input.now });
+    await writeRunArtifact(input.run, artifacts.retrieval_sections, manifest);
+
+    const hintsRequired = (input.apply.applied_page_ids?.length ?? 0) > 0 || (input.apply.applied_item_ids?.length ?? 0) > 0;
+    const hintResult = {
+      status: hintsRequired ? "pending" : "skipped",
+      project_key: input.projectKey,
+      required: hintsRequired,
+      degraded: hintsRequired,
+      degraded_reason: hintsRequired ? "mandatory Project Memory retrieval hint generation is pending" : undefined,
+    };
+    await writeRunArtifact(input.run, artifacts.hint_generation, hintResult);
+
+    let indexResult: ProjectMemoryRetrievalIndexResult | { degraded: true; degraded_reason: string; pending_remaining?: number };
+    try {
+      indexResult = await new ProjectMemoryRetrievalIndexService({ root: this.root }).indexProject({
+        projectKey: input.projectKey,
+        limit: 500,
+        batchSize: 50,
+        retryFailed: false,
+      });
+    } catch (error) {
+      indexResult = {
+        degraded: true,
+        degraded_reason: error instanceof Error ? error.message : String(error),
+      };
+    }
+    await writeRunArtifact(input.run, artifacts.retrieval_index_result, indexResult);
+
+    const pendingReason = [
+      hintResult.degraded_reason,
+      indexResult.degraded_reason,
+      (indexResult.pending_remaining ?? 0) > 0
+        ? `${indexResult.pending_remaining} Project Memory retrieval rows remain pending`
+        : "",
+    ].filter(Boolean).join("; ");
+    return {
+      status: pendingReason ? "pending" : "completed",
+      artifacts,
+      degraded_reason: pendingReason || undefined,
+    };
+  }
 }

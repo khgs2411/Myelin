@@ -130,11 +130,43 @@ test("project learn routes through curator service and writes curator artifacts"
   const response = JSON.parse(result.message);
 
   expect(result.exitCode).toBe(0);
+  expect(response.status).toBe("completed_with_pending_index");
   expect(response.project_key).toBe("active");
   expect(response.artifacts.curator_output).toBe("curator-creation-draft.json");
   expect(response.artifacts.apply_journal).toBe("project-memory-apply-journal.json");
+  expect(response.artifacts.retrieval_index_result).toBe("project-memory-retrieval-index-result.json");
   expect(response.stopped_before_writes).toBe(false);
   expect(await readFile(join(root, response.run_dir, "summary.md"), "utf8")).toContain("stopped_before_writes: false");
+  expect(await readFile(join(root, response.run_dir, "summary.md"), "utf8")).toContain("pending_retrieval_index: yes");
+});
+
+test("project learn human output reports pending retrieval index after successful writes", async () => {
+  await seedProject("pending-index", "active");
+  await writeJson(join(root, "projects", "pending-index", "state", "bootstrap-state.json"), {
+    status: "uncurated",
+    missing: ["curated_project_memory"],
+  });
+  await mkdir(join(root, "projects", "pending-index", "wiki"), { recursive: true });
+  await writeFile(join(root, "projects", "pending-index", "wiki", "index.md"), "# Pending Index\n", "utf8");
+  seedMemoryDb();
+  await seedSchema();
+  const cli = createCli("myelin");
+  registerProjectCommands(cli, {
+    now: () => new Date("2026-06-28T10:00:00.000Z"),
+    runner: async () => ({
+      exitCode: 0,
+      stdout: JSON.stringify(
+        creationDraft("pending-index", "projects/pending-index/runs/project-learn/2026-06-28T10-00-00.000Z-run"),
+      ),
+      stderr: "",
+    }),
+  });
+
+  const result = await cli.run(["project", "learn", "pending-index"]);
+
+  expect(result.exitCode).toBe(0);
+  expect(result.message).toContain("Project learn completed_with_pending_index for pending-index.");
+  expect(result.message).toContain("pending retrieval index: yes");
 });
 
 test("project learn JSON includes runtime inbox intake artifact when intake runs", async () => {

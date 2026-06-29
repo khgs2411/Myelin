@@ -63,7 +63,8 @@ test("artifact-reference transport keeps full packet evidence out of the prompt"
   expect(result.prompt).not.toContain("sharedterm project memory context");
   expect(result.artifact.attempts[0].packet_chars).toBeGreaterThan(PROJECT_MEMORY_PROMPT_TARGET_CHARS);
   expect(result.artifact.attempts[0].prompt_chars).toBeLessThan(2_000);
-  expect(result.packet.lookup.results[0]?.matches.length).toBe(5);
+  expect(result.packet.lookup.results[0]?.hits.length).toBe(5);
+  expect(result.packet.lookup.quality_summary.proposal_scoped_result_ids.length).toBeGreaterThan(0);
 });
 
 async function seedLargeLookupProject(): Promise<void> {

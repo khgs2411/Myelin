@@ -265,6 +265,99 @@ const MIGRATIONS: Migration[] = [
     version: 8,
     apply: migrateSessionMemoryLifecycle,
   },
+  {
+    version: 9,
+    sql: `
+      CREATE TABLE project_memory_retrieval_embeddings (
+        id                    TEXT PRIMARY KEY,
+        project_key           TEXT NOT NULL,
+        wiki_path             TEXT NOT NULL,
+        section_id            TEXT NOT NULL,
+        section_hash          TEXT NOT NULL,
+        hint_hash             TEXT,
+        hint_hash_key         TEXT NOT NULL,
+        embedding_provider    TEXT NOT NULL,
+        embedding_model       TEXT NOT NULL,
+        embedding_dimensions  INTEGER NOT NULL,
+        embedding_purpose     TEXT NOT NULL CHECK (embedding_purpose IN ('retrieval_document')),
+        format_version        INTEGER NOT NULL,
+        normalized_text_hash  TEXT,
+        status                TEXT NOT NULL CHECK (status IN ('pending', 'indexed', 'failed', 'stale', 'orphaned')),
+        failure_reason        TEXT,
+        retry_count           INTEGER NOT NULL DEFAULT 0,
+        created_at            TEXT NOT NULL,
+        updated_at            TEXT NOT NULL,
+        indexed_at            TEXT,
+        UNIQUE (
+          project_key,
+          wiki_path,
+          section_id,
+          section_hash,
+          hint_hash_key,
+          embedding_provider,
+          embedding_model,
+          embedding_dimensions,
+          embedding_purpose,
+          format_version
+        )
+      );
+      CREATE INDEX project_memory_retrieval_embeddings_project_status
+        ON project_memory_retrieval_embeddings(project_key, status, updated_at);
+      CREATE INDEX project_memory_retrieval_embeddings_project_section
+        ON project_memory_retrieval_embeddings(project_key, wiki_path, section_id);
+    `,
+  },
+  {
+    version: 10,
+    sql: `
+      CREATE TABLE retrieval_maintenance_queue (
+        id                  TEXT PRIMARY KEY,
+        project_key         TEXT NOT NULL,
+        status              TEXT NOT NULL CHECK (status IN ('pending', 'claimed', 'processed', 'rejected', 'failed')),
+        kind                TEXT NOT NULL CHECK (kind IN ('hint_refresh', 'index_repair', 'poor_retrieval_feedback', 'missing_expected_hit')),
+        target_layer        TEXT NOT NULL CHECK (target_layer = 'project'),
+        wiki_refs_json      TEXT NOT NULL,
+        query_context_json  TEXT NOT NULL,
+        feedback_json       TEXT NOT NULL,
+        reason              TEXT NOT NULL,
+        dedupe_key          TEXT NOT NULL,
+        created_by          TEXT NOT NULL CHECK (created_by IN ('mcp_query', 'cli_query', 'project_learn', 'operator')),
+        created_at          TEXT NOT NULL,
+        updated_at          TEXT NOT NULL,
+        processed_at        TEXT,
+        failure_reason      TEXT
+      );
+      CREATE UNIQUE INDEX retrieval_maintenance_queue_pending_dedupe
+        ON retrieval_maintenance_queue(project_key, dedupe_key)
+        WHERE status IN ('pending', 'claimed', 'failed');
+      CREATE INDEX retrieval_maintenance_queue_project_status
+        ON retrieval_maintenance_queue(project_key, status, created_at);
+      CREATE INDEX retrieval_maintenance_queue_project_kind_status
+        ON retrieval_maintenance_queue(project_key, kind, status, created_at);
+    `,
+  },
+  {
+    version: 11,
+    sql: `
+      CREATE TABLE project_memory_hint_jobs (
+        id                  TEXT PRIMARY KEY,
+        project_key         TEXT NOT NULL,
+        category            TEXT,
+        status              TEXT NOT NULL CHECK (status IN ('pending', 'running', 'completed', 'failed', 'skipped')),
+        required            INTEGER NOT NULL CHECK (required IN (0, 1)),
+        section_refs_json   TEXT NOT NULL,
+        provider            TEXT,
+        model               TEXT,
+        run_ref             TEXT,
+        failure_reason      TEXT,
+        created_at          TEXT NOT NULL,
+        updated_at          TEXT NOT NULL,
+        completed_at        TEXT
+      );
+      CREATE INDEX project_memory_hint_jobs_project_status
+        ON project_memory_hint_jobs(project_key, status, created_at);
+    `,
+  },
 ];
 
 export function runMigrations(db: Database, now: Date = new Date()): void {

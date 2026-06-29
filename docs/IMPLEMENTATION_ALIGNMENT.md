@@ -229,8 +229,6 @@ Code evidence:
 - `src/inbox/items.ts`
 - `src/inbox/auto-update.ts`
 - `docs/inbox-item-schema.md`
-- `mcp/src/inbox.ts`
-- `mcp/src/tools.ts`
 
 Alignment:
 
@@ -276,18 +274,19 @@ Keep as non-harmful infrastructure. Do not wire it deeper or treat it as authori
 
 What exists:
 
-- Detached Bun/TypeScript MCP server under `mcp/`.
-- Published package surface with tools such as `query_wiki`, `plan_query`, `list_brain_pages`, `find_brain_pages`, `get_page_neighbors`, `get_wiki_page`, `enrich_gap`, `flag_stale_answer`, `create_inbox_item`, `list_wiki_projects`, and `get_version`.
-- MCP is detached from the root package graph.
+- Root config for a detached published MCP package.
+- Compatibility contracts for `LLM_WIKI_*` env and the `mcp__llm-wiki__*` namespace.
+- Core query behavior is owned by root `src/query/` and exposed through CLI/JSON contracts for detached consumers.
 
 Code evidence:
 
-- `mcp/src/*`
-- `mcp/package.json`
+- `.mcp.json`
+- `src/query/*`
+- `src/commands/memory.ts`
 
 Alignment:
 
-The boundary is aligned. The tool vocabulary is not.
+The boundary is aligned: MCP is not root-owned product logic. The legacy tool vocabulary remains a compatibility concern for the detached package.
 
 Mismatch:
 

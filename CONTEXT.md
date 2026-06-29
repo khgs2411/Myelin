@@ -321,7 +321,7 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - A **Learning Review Gate** is required for destructive, conflicting, low-confidence, or broad memory changes.
 - The **Ingest Command** is the explicit operator-triggered entrypoint for bounded agentic project evidence processing. In the current ingest design, it starts a **Detached Ingest Job** instead of requiring the operator to wait for a foreground agent run.
 - The **Core Runtime Module** is the first implementation shape for core TypeScript runtime helpers.
-- The **MCP Interface Boundary** keeps `/mcp` detached from core product logic; it communicates through stable repo files, commands, and JSON contracts.
+- The **MCP Interface Boundary** keeps MCP implementations detached from core product logic; they communicate through stable repo files, commands, and JSON contracts.
 
 ## Example dialogue
 
@@ -336,9 +336,9 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - "`what`" was proposed as the state/inventory MCP facade, but it overlaps with normal knowledge questions. Resolved: use **Status Facade** and expose the MCP tool as `status`.
 - "how" can mean either explanation or procedure. Resolved: use **Query Facade** for explanations such as "How does X work?" and **How Facade** for guidance such as "How should I do X?"
 - The globally installed MCP server cannot reliably know the caller's current working directory. Resolved: agents pass `project_key` explicitly, or operators configure `LLM_WIKI_PROJECT` for a scoped server instance.
-- The MCP implementation surface changed from the old Python server to the current TypeScript/Bun package under `/mcp`, and this points to a broader product-runtime direction. Resolved: new V2 infrastructure should build on a shared **Runtime Foundation** instead of adding more Python runtime surfaces.
-- The repo needs shared TypeScript infrastructure without turning the MCP server into product logic. Resolved: keep `/mcp` detached and gitignored; communicate through stable contracts rather than workspace/package imports.
-- Internal TypeScript package structure is premature while `/mcp` is detached. Resolved: start with root `src/runtime/*` for core runtime helpers, not `packages/runtime`.
+- The MCP implementation surface changed from the old Python server to a TypeScript/Bun package, and this points to a broader product-runtime direction. Resolved: new V2 infrastructure should build on a shared **Runtime Foundation** instead of adding more Python runtime surfaces.
+- The repo needs shared TypeScript infrastructure without turning the MCP server into product logic. Resolved: keep MCP detached from the root package graph; communicate through stable contracts rather than workspace/package imports.
+- Internal TypeScript package structure is premature while MCP is detached. Resolved: start with root `src/runtime/*` for core runtime helpers, not `packages/runtime`.
 - A read-only TypeScript foundation is insufficient. Resolved: the first V2 implementation slice is a complete core runtime migration to Bun/TypeScript, with Python/Bash used only as a temporary reference during porting.
 - This is a major refactor, not a small parity-only port. Resolved: the plan should deliberately reconsider directory and data structures instead of preserving the old Python/Bash tree by default.
 - V1 llm-wiki currently provides limited operator value and is barely used. Resolved: breaking existing behavior is acceptable when it moves toward the V2 brain, but useful project knowledge and provenance should not be discarded casually.

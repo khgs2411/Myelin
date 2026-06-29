@@ -167,6 +167,8 @@ export function buildProjectMemoryCuratorPrompt(
     `Return ONLY strict JSON matching ${outputName}.`,
     "Use packet references from the input packet. Do not invent packet refs.",
     "Do not write files. Do not mutate wiki markdown.",
+    "When returning zero write proposals for a non-empty fallback-lookup packet, include explicit_noop_decisions with source_packet_refs and checked_existing_memory_refs.",
+    "When a maintenance write depends on lookup evidence for dedupe, target selection, or supersession, include evidence_dependencies naming the lookup_result refs.",
     mode === "create"
       ? "Create mode: propose the first trusted Project Memory brain draft."
       : "Maintain mode: propose bounded itemized Project Memory updates only.",
@@ -203,7 +205,7 @@ export function measureProjectMemoryPromptAttempt(
       session_memories: packet.session_memory.selected.length,
       lookup_queries: packet.lookup.queries.length,
       lookup_results: lookupResults.length,
-      lookup_matches: lookupResults.reduce((sum, result) => sum + result.matches.length, 0),
+      lookup_matches: lookupResults.reduce((sum, result) => sum + result.hits.length, 0),
     },
     section_chars: {
       project: stableJson(packet.project).length,

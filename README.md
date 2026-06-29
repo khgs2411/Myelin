@@ -63,10 +63,11 @@ Session Memory vector retrieval is currently an internal facade. MCP exposure, C
 - `src/`: Bun/TypeScript core runtime, CLI commands, query, schema, inbox, and pipeline orchestration.
 - `schema/`: global authored schema inputs for generated project schema context.
 - `projects/`: curated project memory, state, logs, sources, runs, and wiki pages.
-- `raw/`: unclassified global intake.
-- `concepts/`: cross-project knowledge.
-- `stages/`: retained non-Project-Memory stage/reference assets; the old Project Memory Phase-0 stage runner has been retired.
-- `mcp/`: detached MCP interface boundary; it is not part of the root package graph.
+- `state/`: generated SQLite serving state; ignored, not curated truth.
+- `docs/`: current product docs, ADRs, and historical archives.
+- `.tasks/`: roadmap task stubs, not implementation plans.
+- `tests/`: Bun test coverage for runtime, memory, project, schema, query, and command behavior.
+- `vendor/`: vendored runtime dependencies such as the macOS SQLite library.
 
 ## Documentation
 
@@ -108,7 +109,7 @@ myelin memory query <project-key> "<question>" --json
 
 The JSON response includes `answer`, `confidence`, `memory_scope`, `citations`, `candidate_ids`, `degraded`, `degraded_reason`, and `source_tools`.
 
-The `/mcp` directory remains detached. Do not import root `src/` from `/mcp`, and do not import `/mcp` source from the core runtime.
+MCP implementations are detached from the root package graph. Do not import root `src/` from a local MCP checkout, and do not import MCP source from the core runtime.
 
 ## Compatibility Contracts
 

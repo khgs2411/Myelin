@@ -75,11 +75,11 @@ Experience Log (raw events)
 Myelin treats every project as four layers, read in priority order:
 
 1. **`repo/`** — implementation truth (the actual code).
-2. **`raw/` and `sources/`** — preserved source material, never rewritten during ingestion.
+2. **`sources/` and Experience Log evidence** — preserved source material, never rewritten during ingestion.
 3. **`wiki/`** — synthesized, human-readable understanding (curated truth).
 4. **`state/`** — machine-readable metadata, routing, provenance, freshness; plus the SQLite serving layer.
 
-Default read priority for an agent: `state/` → `index.md` → `changelog`/`log/` → relevant `wiki/` pages → preserved raw/sources → repo files when verification requires it.
+Default read priority for an agent: `state/` → `index.md` → `changelog`/`log/` if present → relevant `wiki/` pages → preserved sources/evidence → repo files when verification requires it.
 
 Scope is **software repositories only**. Non-repo content is not ingested as canonical project memory.
 
@@ -120,7 +120,7 @@ Two existing operator verbs refresh Project Memory from evidence (ADR 0017):
 
 The top-level **`ingest <key>`** command is a separate agentic evidence-processing path introduced by ADR 0056. It starts a detached provider-backed ingest job that turns Experience Log rows into Session Memory and downstream layer handoff inputs. It must not be treated as a synonym for the older source/inbox `project ingest` pipeline.
 
-Stage instructions live as data under `stages/<stage-id>/` and run through a stage runner; deterministic apply / structural-validate / commit are code, not model calls. The fuller pipeline also defines `acceptance`, `reconcile`, `self-correct`, and `measure` stages (ADR 0053).
+The old root stage-instruction asset tree has been retired. Current Project Memory work is implemented through TypeScript services and command run artifacts; model-backed stages still return JSON and deterministic apply/validation stays in code.
 
 Every auto-applied `learn` run writes an applied **changeset record** — run id, schema-context hash, before/after file hashes, source evidence per change, risk classification, and validation results — so changes are reproducible from git plus the record. A write that fails validation stops the run in a `needs-review` state with enough record to inspect what changed.
 
@@ -167,7 +167,7 @@ A `memory.candidate` event carries a `candidate_type` that routes it to exactly 
 
 ## 10. Agent-Facing Interface (MCP)
 
-Agents reach Myelin through a **detached** MCP server (`/mcp`), kept out of the core package graph; integration is contracts only — files, commands, env, JSON — with no cross-boundary source imports (ADR 0011, 0048). The detached server is Bun/TypeScript.
+Agents reach Myelin through a **detached** MCP server, kept out of the core package graph; integration is contracts only — files, commands, env, JSON — with no cross-boundary source imports (ADR 0011, 0048). The detached server is a separate Bun/TypeScript package or local checkout, not root-owned source.
 
 The public surface is three semantic facades (ADR 0005):
 
@@ -188,21 +188,19 @@ Core owns query logic once; the detached MCP consumes it via the `myelin memory 
 
 ```
 projects/<key>/
-  readme.md  project-brain entrypoint
   index.md   project-folder navigation
   wiki/      curated markdown pages (Project Memory), with index.md in every folder
   state/     metadata, routing, provenance, freshness, generated schema-context.json, with index.md
-  log/       changelog and memory history, with index.md
   runs/      command-scoped run artifacts, with index.md
+  log/       optional changelog and memory history, created only when used
   sources/   optional preserved source material, created only when preserved sources exist
   schema/    optional project-local schema, created only when project-local rules exist
 state/
   memory.db  repo-root SQLite serving layer (git-ignored)
 schema/      global authored schema inputs
-stages/      pipeline stage instruction assets (data)
-concepts/    cross-project knowledge
-raw/         unclassified global intake
-mcp/         detached MCP interface (not in the root package graph)
+docs/        current product docs, ADRs, and historical archives
+.tasks/      roadmap task stubs, not implementation plans
+tests/       Bun test coverage
 ```
 
 One repo-root SQLite DB partitioned by `project_key` (ADR 0001), not one DB per project. It is generated serving state and git-ignored.

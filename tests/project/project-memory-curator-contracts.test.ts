@@ -1,7 +1,14 @@
 import { expect, test } from "bun:test";
 import {
+  PROJECT_MEMORY_APPLY_SEVERITIES,
+  PROJECT_MEMORY_LOOKUP_FRESHNESS_VALUES,
+  PROJECT_MEMORY_LOOKUP_QUALITIES,
+  PROJECT_MEMORY_RETRIEVAL_METHODS,
+} from "../../src/project/project-memory-retrieval-contracts.ts";
+import {
   PROJECT_MEMORY_CURATOR_BUDGET_KEYS,
   PROJECT_MEMORY_CURATOR_MODES,
+  PROJECT_MEMORY_CURATOR_RUN_STATUSES,
   PROJECT_MEMORY_LIFECYCLE_INTENTS,
   PROJECT_MEMORY_MAINTENANCE_OPERATIONS,
   PROJECT_MEMORY_VALIDATION_OUTCOMES,
@@ -53,10 +60,44 @@ test("validator issue categories cover deterministic rejection and quarantine re
     "risk",
     "budget",
     "degraded_context",
+    "lookup_dependency",
+    "explicit_noop",
     "protected_state",
   ]);
 });
 
 test("curator budget keys expose the pre-write budget dimensions", () => {
   expect(PROJECT_MEMORY_CURATOR_BUDGET_KEYS).toEqual(["max_items", "max_content_chars"]);
+});
+
+test("Project Memory retrieval contracts expose lookup quality vocabulary", () => {
+  expect(PROJECT_MEMORY_RETRIEVAL_METHODS).toEqual([
+    "indexed_section_retrieval",
+    "fallback_markdown_search",
+    "unavailable",
+  ]);
+  expect(PROJECT_MEMORY_LOOKUP_QUALITIES).toEqual(["indexed", "fallback", "unavailable"]);
+  expect(PROJECT_MEMORY_LOOKUP_FRESHNESS_VALUES).toEqual([
+    "fresh",
+    "stale",
+    "orphaned",
+    "unknown",
+    "not_applicable",
+  ]);
+  expect(PROJECT_MEMORY_APPLY_SEVERITIES).toEqual(["advisory", "proposal_scoped", "blocking"]);
+});
+
+test("curator run statuses expose pending retrieval indexing state", () => {
+  expect(PROJECT_MEMORY_CURATOR_RUN_STATUSES).toEqual([
+    "completed",
+    "completed_with_pending_index",
+    "failed",
+    "needs_review",
+  ]);
+});
+
+test("validator issue categories include lookup dependency and explicit no-op findings", () => {
+  expect(PROJECT_MEMORY_VALIDATOR_ISSUE_CATEGORIES).toEqual(
+    expect.arrayContaining(["lookup_dependency", "explicit_noop"]),
+  );
 });

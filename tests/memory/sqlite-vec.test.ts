@@ -2,9 +2,12 @@ import { expect, test } from "bun:test";
 import { openMemoryDbAt } from "../../src/memory/db.ts";
 import {
   createSqliteVecAdapter,
+  ensureProjectMemoryRetrievalVectorTable,
   ensureSessionMemoryVectorTable,
   getSqliteVecAvailability,
+  searchProjectMemoryRetrievalVectors,
   searchSessionMemoryVectors,
+  upsertProjectMemoryRetrievalVector,
   upsertSessionMemoryVector,
 } from "../../src/memory/sqlite-vec.ts";
 
@@ -89,6 +92,54 @@ test("vector operations are project scoped when sqlite-vec is available", () => 
 
     expect(matches.map((match) => match.memory_id)).toEqual(["mem_class_close", "mem_class_far"]);
     expect(matches[0].distance).toBeLessThanOrEqual(matches[1].distance);
+  } finally {
+    db.close();
+  }
+});
+
+test("Project Memory vector operations are project and section scoped when sqlite-vec is available", () => {
+  const db = openMemoryDbAt(":memory:");
+  try {
+    const created = ensureProjectMemoryRetrievalVectorTable(db, { dimensions: 3 });
+    if (!created.available) {
+      console.warn(`sqlite-vec unavailable, skipping Project Memory vector assertion: ${created.reason}`);
+      return;
+    }
+
+    upsertProjectMemoryRetrievalVector(db, {
+      retrieval_row_id: "pmr_1",
+      project_key: "demo",
+      wiki_path: "wiki/index.md",
+      section_id: "demo",
+      embedding_model: "stub",
+      embedding_dimensions: 3,
+      embedding_purpose: "retrieval_document",
+      format_version: 1,
+      embedding: [0.1, 0.2, 0.3],
+    });
+    upsertProjectMemoryRetrievalVector(db, {
+      retrieval_row_id: "pmr_2",
+      project_key: "other",
+      wiki_path: "wiki/index.md",
+      section_id: "other",
+      embedding_model: "stub",
+      embedding_dimensions: 3,
+      embedding_purpose: "retrieval_document",
+      format_version: 1,
+      embedding: [0.1, 0.2, 0.3],
+    });
+
+    expect(
+      searchProjectMemoryRetrievalVectors(db, {
+        project_key: "demo",
+        embedding_model: "stub",
+        embedding_dimensions: 3,
+        embedding_purpose: "retrieval_document",
+        format_version: 1,
+        embedding: [0.1, 0.2, 0.3],
+        limit: 1,
+      })[0]?.retrieval_row_id,
+    ).toBe("pmr_1");
   } finally {
     db.close();
   }

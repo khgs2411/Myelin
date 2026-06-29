@@ -38,13 +38,23 @@ test("builds a bounded Project Memory packet with pending inputs and determinist
     "project_handoff",
     "session_memory",
   ]);
-  expect(packet.lookup.results.some((result) => result.matches.some((match) => match.path === "wiki/setup/index.md"))).toBe(
-    true,
+  expect(
+    packet.lookup.results.some((result) =>
+      result.hits.some((hit) => hit.canonical_ref?.wiki_path === "wiki/setup/index.md"),
+    ),
+  ).toBe(true);
+  expect(
+    packet.lookup.results.some((result) =>
+      result.hits.some((hit) => hit.canonical_ref?.wiki_path === "wiki/deep/index.md"),
+    ),
+  ).toBe(true);
+  expect(packet.lookup.results.every((result) => result.lookup_quality === "fallback")).toBe(true);
+  expect(packet.lookup.quality_summary.blocking).toBe(false);
+  expect(packet.lookup.quality_summary.advisory_reasons).toEqual(
+    expect.arrayContaining([expect.stringContaining("fallback markdown search")]),
   );
-  expect(packet.lookup.results.some((result) => result.matches.some((match) => match.path === "wiki/deep/index.md"))).toBe(
-    true,
-  );
-  expect(packet.degraded_reasons).toContain(
+  expect(packet.degraded).toBe(false);
+  expect(packet.degraded_reasons).not.toContain(
     "Project Memory lookup is markdown text search only; derived metadata/vector indexes are not implemented.",
   );
 });

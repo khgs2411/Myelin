@@ -526,6 +526,22 @@ test("memory index session reports degraded indexing as JSON without throwing", 
   expect(response.failures).toHaveLength(1);
 });
 
+test("memory index project reports Project Memory retrieval indexing as JSON", async () => {
+  await mkdir(join(root, "projects", "demo", "wiki"), { recursive: true });
+  await writeFile(join(root, "projects", "demo", "wiki", "index.md"), "# Demo\n\nProject memory body.\n", "utf8");
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+
+  const result = await cli.run(["memory", "index", "project", "demo", "--limit", "10", "--json"]);
+  const response = JSON.parse(result.message);
+
+  expect(result.exitCode).toBe(0);
+  expect(response.project_key).toBe("demo");
+  expect(response).toHaveProperty("structural_sections_seen");
+  expect(response).toHaveProperty("indexed");
+  expect(response).toHaveProperty("degraded");
+});
+
 async function seedProject(): Promise<void> {
   await writeJson(join(root, "projects", "demo", "state", "project.json"), {
     key: "demo",

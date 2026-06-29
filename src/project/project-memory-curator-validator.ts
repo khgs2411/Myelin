@@ -68,17 +68,21 @@ export function validateCreationDraft(
     pages?: unknown[];
     evidence_refs?: unknown[];
     state_intent?: unknown;
+    explicit_noop_decisions?: unknown;
   };
   const globalFindings: ProjectMemoryValidationFinding[] = [];
+  const hasPages = Array.isArray(draft.pages) && draft.pages.length > 0;
+  const noopValidation = validateExplicitNoopDecisions(packet, draft.explicit_noop_decisions, hasPages);
+  globalFindings.push(...noopValidation.findings);
   if (packet.mode !== "create") {
     globalFindings.push(finding("blocker", "mode", "creation_mode_required", "Creation draft requires packet mode create."));
   }
-  if (!Array.isArray(draft.pages) || draft.pages.length === 0) {
+  if (!hasPages && noopValidation.noopRefs.length === 0) {
     globalFindings.push(
       finding("blocker", "schema", "creation_pages_required", "Creation draft must include at least one page draft."),
     );
   }
-  if (!Array.isArray(draft.evidence_refs) || draft.evidence_refs.length === 0) {
+  if (hasPages && (!Array.isArray(draft.evidence_refs) || draft.evidence_refs.length === 0)) {
     globalFindings.push(
       finding("blocker", "provenance", "creation_evidence_required", "Creation draft must include proposal-level evidence refs."),
     );
@@ -127,7 +131,7 @@ export function validateCreationDraft(
     globalFindings.push(...payloadFindings);
   }
 
-  if (Array.isArray(draft.pages) && !creationPublicationMinimumMet(draft.pages)) {
+  if (hasPages && !creationPublicationMinimumMet(draft.pages ?? [])) {
     globalFindings.push(
       finding(
         "blocker",
@@ -154,7 +158,7 @@ export function validateCreationDraft(
     }
   }
 
-  return result(packet, "create", globalFindings, []);
+  return result(packet, "create", globalFindings, [], noopValidation.noopRefs);
 }
 
 export function validateMaintenanceProposal(
@@ -180,10 +184,13 @@ export function validateMaintenanceProposal(
       ),
     );
   }
-  if (globalFindings.length > 0) return result(packet, "maintain", globalFindings, []);
+  const hasItems = Array.isArray(proposal.items) && proposal.items.length > 0;
+  const noopValidation = validateExplicitNoopDecisions(packet, proposal.explicit_noop_decisions, hasItems);
+  globalFindings.push(...noopValidation.findings);
+  if (globalFindings.length > 0) return result(packet, "maintain", globalFindings, [], noopValidation.noopRefs);
 
   const itemResults = proposal.items.map((item) => validateMaintenanceItem(packet, item));
-  return result(packet, "maintain", globalFindings, itemResults);
+  return result(packet, "maintain", globalFindings, itemResults, noopValidation.noopRefs);
 }
 
 export function validateMaintenanceItem(
@@ -280,9 +287,16 @@ export function validateMaintenanceItem(
   }
   if (packet.degraded) {
     findings.push(
-      finding("warn", "degraded_context", "packet_degraded", `Packet is degraded: ${packet.degraded_reasons.join("; ")}`, itemId),
+      finding(
+        "warn",
+        "degraded_context",
+        "packet_degraded",
+        `Packet has blocking degraded context: ${packet.degraded_reasons.join("; ")}`,
+        itemId,
+      ),
     );
   }
+  findings.push(...validateEvidenceDependencies(packet, item, itemId));
   findings.push(
     ...validateApplyPayload(item.apply_payload, {
       mode: "maintain",
@@ -295,7 +309,11 @@ export function validateMaintenanceItem(
   );
 
   const hasBlocker = findings.some((entry) => entry.severity === "blocker");
-  const hasQuarantine = findings.some((entry) => entry.code === "risk_requires_quarantine" || entry.code === "packet_degraded");
+  const hasQuarantine = findings.some((entry) =>
+    entry.code === "risk_requires_quarantine" ||
+      entry.code === "packet_degraded" ||
+      entry.code === "lookup_dependency_fallback_requires_review"
+  );
   return {
     item_id: itemId,
     outcome: hasBlocker ? "rejected" : hasQuarantine ? "quarantined" : item.operation === "NOOP" ? "noop" : "eligible",
@@ -460,17 +478,19 @@ function result(
   mode: ProjectMemoryCuratorMode,
   global_findings: ProjectMemoryValidationFinding[],
   item_results: ProjectMemoryItemValidation[],
+  global_noop_refs: string[] = [],
 ): ProjectMemoryCuratorValidationResult {
   const eligible_item_ids = item_results.filter((item) => item.outcome === "eligible").map((item) => item.item_id);
   const rejected_item_ids = item_results.filter((item) => item.outcome === "rejected").map((item) => item.item_id);
   const quarantined_item_ids = item_results.filter((item) => item.outcome === "quarantined").map((item) => item.item_id);
-  const noop_refs = item_results.filter((item) => item.outcome === "noop").map((item) => item.item_id);
+  const noop_refs = [...global_noop_refs, ...item_results.filter((item) => item.outcome === "noop").map((item) => item.item_id)];
   const hasGlobalBlocker = global_findings.some((entry) => entry.severity === "blocker");
+  const hasItemFailures = rejected_item_ids.length > 0 || quarantined_item_ids.length > 0;
   return {
     ok:
       !hasGlobalBlocker &&
       (mode === "create" ||
-        (eligible_item_ids.length > 0 && rejected_item_ids.length === 0 && quarantined_item_ids.length === 0)),
+        ((eligible_item_ids.length > 0 || noop_refs.length > 0) && !hasItemFailures)),
     mode,
     project_key: packet.project_key,
     global_findings,
@@ -498,7 +518,9 @@ function resolvePacketRef(packet: ProjectMemoryPacket, ref: ProjectMemoryEvidenc
   if (ref.kind === "project_candidate") return packet.pending.project_candidates.some((item) => item.id === ref.ref);
   if (ref.kind === "session_memory") return packet.session_memory.selected.some((item) => item.id === ref.ref);
   if (ref.kind === "wiki_page") return packetHasWikiPage(packet, ref.ref);
-  if (ref.kind === "lookup_result") return packet.lookup.results.some((_, index) => ref.ref === `lookup:${index}`);
+  if (ref.kind === "lookup_result") {
+    return packet.lookup.results.some((result, index) => ref.ref === result.id || ref.ref === `lookup:${index}`);
+  }
   if (ref.kind === "project_state") return ["bootstrap_state", "project_memory", "freshness", "pages_manifest"].includes(ref.ref);
   return ref.kind === "repo_citation" || ref.kind === "inference";
 }
@@ -568,4 +590,134 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function nonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function packetHasInputs(packet: ProjectMemoryPacket): boolean {
+  return (
+    packet.pending.project_handoffs.length > 0 ||
+    packet.pending.project_candidates.length > 0 ||
+    packet.session_memory.selected.length > 0
+  );
+}
+
+function packetUsedFallbackLookup(packet: ProjectMemoryPacket): boolean {
+  return packet.lookup.results.some((entry) => entry.lookup_quality === "fallback");
+}
+
+function validateExplicitNoopDecisions(
+  packet: ProjectMemoryPacket,
+  decisions: unknown,
+  hasWriteProposals: boolean,
+): { findings: ProjectMemoryValidationFinding[]; noopRefs: string[] } {
+  const findings: ProjectMemoryValidationFinding[] = [];
+  const noopRefs: string[] = [];
+  const values = Array.isArray(decisions) ? decisions : [];
+
+  if (!hasWriteProposals && packetHasInputs(packet) && packetUsedFallbackLookup(packet) && values.length === 0) {
+    findings.push(
+      finding(
+        "blocker",
+        "explicit_noop",
+        "noop_missing_explicit_decision",
+        "Fallback lookup with zero write proposals requires an explicit no-op decision.",
+      ),
+    );
+  }
+
+  for (const decision of values) {
+    if (!isRecord(decision) || typeof decision.id !== "string") {
+      findings.push(finding("blocker", "explicit_noop", "noop_invalid_shape", "Explicit no-op decision requires an id."));
+      continue;
+    }
+    if (decision.reason === "insufficient_evidence") {
+      findings.push(
+        finding(
+          "blocker",
+          "explicit_noop",
+          "noop_insufficient_evidence",
+          "Insufficient-evidence no-op remains reviewable.",
+          decision.id,
+        ),
+      );
+    }
+    const sourceRefs = Array.isArray(decision.source_packet_refs) ? decision.source_packet_refs : [];
+    const checkedRefs = Array.isArray(decision.checked_existing_memory_refs) ? decision.checked_existing_memory_refs : [];
+    if (sourceRefs.length === 0) {
+      findings.push(
+        finding("blocker", "explicit_noop", "noop_missing_source_refs", "Explicit no-op requires source packet refs.", decision.id),
+      );
+    }
+    if (packetUsedFallbackLookup(packet) && checkedRefs.length === 0) {
+      findings.push(
+        finding(
+          "blocker",
+          "explicit_noop",
+          "noop_missing_checked_memory_refs",
+          "Fallback no-op requires checked existing memory refs.",
+          decision.id,
+        ),
+      );
+    }
+    for (const ref of checkedRefs) {
+      if (isRecord(ref) && ref.kind === "lookup_result" && typeof ref.ref === "string" && !lookupResult(packet, ref.ref)) {
+        findings.push(
+          finding("blocker", "explicit_noop", "noop_checked_lookup_missing", `Unknown checked lookup ref: ${ref.ref}`, decision.id),
+        );
+      }
+    }
+    noopRefs.push(decision.id);
+  }
+
+  return { findings, noopRefs };
+}
+
+function validateEvidenceDependencies(
+  packet: ProjectMemoryPacket,
+  item: ProjectMemoryMaintenanceProposalItem,
+  itemId: string,
+): ProjectMemoryValidationFinding[] {
+  const dependencies = Array.isArray(item.evidence_dependencies) ? item.evidence_dependencies : [];
+  const findings: ProjectMemoryValidationFinding[] = [];
+  for (const dependency of dependencies) {
+    if (!isRecord(dependency) || dependency.kind !== "lookup_result" || typeof dependency.ref !== "string") continue;
+    const lookup = lookupResult(packet, dependency.ref);
+    if (!lookup) {
+      findings.push(
+        finding("blocker", "lookup_dependency", "lookup_dependency_missing", `Unknown lookup dependency: ${dependency.ref}`, itemId),
+      );
+      continue;
+    }
+    if (
+      lookup.lookup_freshness === "stale" ||
+      lookup.lookup_freshness === "orphaned" ||
+      lookup.lookup_quality === "unavailable"
+    ) {
+      findings.push(
+        finding(
+          "blocker",
+          "lookup_dependency",
+          "lookup_dependency_stale",
+          `Lookup dependency is ${lookup.lookup_freshness}.`,
+          itemId,
+        ),
+      );
+      continue;
+    }
+    if (packet.mode === "maintain" && lookup.lookup_quality === "fallback") {
+      findings.push(
+        finding(
+          "warn",
+          "lookup_dependency",
+          "lookup_dependency_fallback_requires_review",
+          "Maintenance writes depending on fallback lookup require review.",
+          itemId,
+        ),
+      );
+    }
+  }
+  return findings;
+}
+
+function lookupResult(packet: ProjectMemoryPacket, ref: string) {
+  return packet.lookup.results.find((result, index) => ref === result.id || ref === `lookup:${index}`) ?? null;
 }
