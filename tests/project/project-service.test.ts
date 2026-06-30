@@ -81,6 +81,8 @@ test("project service exposes the project learn curator facade without changing 
         pages: [
           creationPage("page_index", "index.md", "Demo", "Project Memory index"),
           creationPage("page_setup", "setup/index.md", "Setup", "Setup workflows"),
+          creationPage("page_architecture", "architecture.md", "Architecture", "Architecture and data flow"),
+          creationPage("page_operations", "operations.md", "Operations", "Operations and current work"),
         ],
         state_intent: { mark_project_memory_curated: true, freshness_intent: "initialize" },
         evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
@@ -113,7 +115,7 @@ function creationPage(id: string, path: string, title: string, purpose: string) 
           purpose,
           body: { paragraphs: [`${title} describes ${purpose}.`] },
           evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
-          repo_citations: [],
+          repo_citations: [repoCitation()],
           inference: {
             label: "initial_project_memory",
             why_direct_repo_evidence_is_unavailable: "Creation summary is based on project state.",
@@ -123,9 +125,13 @@ function creationPage(id: string, path: string, title: string, purpose: string) 
     },
     required_sections: ["Overview"],
     evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
-    repo_citations: [],
+    repo_citations: [repoCitation()],
     notes_for_apply: [],
   };
+}
+
+function repoCitation() {
+  return { path: "README.md", line_start: 1, line_end: 5, reason: "Project overview" };
 }
 
 async function seedCuratorProject(): Promise<void> {

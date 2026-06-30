@@ -31,6 +31,7 @@ export type InvokeProjectCuratorInput = {
   root: string;
   prompt: string;
   stageId: "curator-create" | "curator-maintain" | string;
+  outputSchema?: string;
   provider?: Provider;
   modelOverride?: string;
   env?: NodeJS.ProcessEnv;
@@ -107,6 +108,7 @@ export async function invokeProjectCurator(input: InvokeProjectCuratorInput): Pr
     workload: "pipeline",
     stageId: input.stageId,
     prompt: input.prompt,
+    outputSchema: input.outputSchema,
     provider: input.provider,
     modelOverride: input.modelOverride,
     env: input.env,

@@ -77,6 +77,7 @@ test("invokes curator through pipeline workload without importing the old runner
     root,
     prompt: "Return JSON",
     stageId: "curator-maintain",
+    outputSchema: "/tmp/curator-output-contract.json",
     runner: async (command, options) => {
       captured.command = command;
       captured.stdin = options?.stdin;
@@ -87,6 +88,8 @@ test("invokes curator through pipeline workload without importing the old runner
   expect(result.response).toEqual({ ok: true });
   expect(captured.command).toContain("--sandbox");
   expect(captured.command).toContain("read-only");
+  expect(captured.command).toContain("--output-schema");
+  expect(captured.command).toContain("/tmp/curator-output-contract.json");
   expect(captured.command).toContain("--model");
   expect(captured.command).toContain("gpt-curator");
   expect(captured.stdin).toBe("Return JSON");

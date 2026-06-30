@@ -179,11 +179,16 @@ test("applies creation drafts as trusted wiki pages and project memory state", a
   expect(state.source_run_dir).toBe("projects/demo/runs/project-learn/run-create");
 
   const changeset = JSON.parse(await readFile(join(run, "project-memory-changeset.json"), "utf8"));
-  expect(changeset.page_changes.map((page: { page_id: string }) => page.page_id).sort()).toEqual(["page_index", "page_setup"]);
+  expect(changeset.page_changes.map((page: { page_id: string }) => page.page_id).sort()).toEqual([
+    "page_architecture",
+    "page_index",
+    "page_operations",
+    "page_setup",
+  ]);
   expect(changeset.page_changes[0].after_snippet.text.length).toBeGreaterThan(0);
 });
 
-test("rejects creation apply without index plus domain page or rationale", async () => {
+test("rejects creation apply without a full documentation page set", async () => {
   await seedProject();
   const run = await seedRun("run-create-minimum");
   const draft = creationDraft();
@@ -201,7 +206,7 @@ test("rejects creation apply without index plus domain page or rationale", async
   expect(result.reason).toContain("publication minimum");
 });
 
-test("applies creation draft with explicit no-domain-pages rationale", async () => {
+test("rejects creation apply with a no-domain-pages rationale instead of documentation pages", async () => {
   await seedProject();
   const run = await seedRun("run-create-rationale");
   const draft = creationDraft();
@@ -218,8 +223,8 @@ test("applies creation draft with explicit no-domain-pages rationale", async () 
     draft,
   });
 
-  expect(result.status).toBe("applied");
-  expect(result.applied_page_ids).toEqual(["page_index"]);
+  expect(result.status).toBe("skipped");
+  expect(result.reason).toContain("publication minimum");
 });
 
 test("applies maintenance CREATE_ENTRY and PATCH_ENTRY to existing wiki pages", async () => {
@@ -315,6 +320,8 @@ function creationDraft() {
     pages: [
       creationPage("page_index", "index.md", "Demo", "Project Memory index"),
       creationPage("page_setup", "setup/index.md", "Setup", "Setup workflows"),
+      creationPage("page_architecture", "architecture.md", "Architecture", "Architecture and data flow"),
+      creationPage("page_operations", "operations.md", "Operations", "Operations and current work"),
     ],
     state_intent: { mark_project_memory_curated: true, freshness_intent: "initialize" as const },
     evidence_refs: [{ kind: "project_state" as const, ref: "bootstrap_state" }],
@@ -332,13 +339,17 @@ function creationPage(id: string, path: string, title: string, purpose: string) 
     content_intent: `Create ${title}`,
     apply_payload: {
       schema_version: 1 as const,
-      pages: [{ page_path: path, title, purpose, body: { paragraphs: [`${title} describes ${purpose}.`] }, evidence_refs: [{ kind: "project_state" as const, ref: "bootstrap_state" }], repo_citations: [], inference: { label: "initial_project_memory", why_direct_repo_evidence_is_unavailable: "Creation summary is based on project state." } }],
+      pages: [{ page_path: path, title, purpose, body: { paragraphs: [`${title} describes ${purpose}.`] }, evidence_refs: [{ kind: "project_state" as const, ref: "bootstrap_state" }], repo_citations: [repoCitation()], inference: { label: "initial_project_memory", why_direct_repo_evidence_is_unavailable: "Creation summary is based on project state." } }],
     },
     required_sections: ["Overview"],
     evidence_refs: [{ kind: "project_state" as const, ref: "bootstrap_state" }],
-    repo_citations: [],
+    repo_citations: [repoCitation()],
     notes_for_apply: [] as string[],
   };
+}
+
+function repoCitation() {
+  return { path: "README.md", line_start: 1, line_end: 5, reason: "Project overview" };
 }
 
 function maintenanceProposal(items: ReturnType<typeof maintenanceItem>[]) {

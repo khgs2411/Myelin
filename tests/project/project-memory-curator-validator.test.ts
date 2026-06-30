@@ -155,60 +155,56 @@ test("rejects creation drafts with unsafe page targets or protected state assign
   );
 });
 
-test("accepts creation drafts with index and explicit no-domain-pages rationale", () => {
-  const result = validateCuratorOutput(packet("create"), {
-    schema_version: 1,
-    project_key: "demo",
-    mode: "create",
-    packet_ref: packetRef(),
-    packet_context: packetContext(),
-    summary: "index-only draft",
-    brain_intent: {
-      name: "Demo",
-      first_brain_summary: "Create first brain",
-      untrusted_existing_markdown_policy: "adopt",
-    },
-    pages: [
-      {
-        id: "index",
-        target: { path: "index.md", path_kind: "new_wiki_page" },
-        title: "Demo",
-        purpose: "Index",
-        content_intent: "Create index",
-        apply_payload: {
-          schema_version: 1,
-          pages: [
-            {
-              page_path: "index.md",
-              title: "Demo",
-              purpose: "Index",
-              body: { paragraphs: ["Demo index."] },
-              evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
-              repo_citations: [],
-              inference: {
-                label: "initial_project_memory",
-                why_direct_repo_evidence_is_unavailable: "Creation summary is based on project state.",
-              },
-            },
-          ],
-        },
-        required_sections: ["Overview"],
-        evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
-        repo_citations: [],
-        notes_for_apply: ["no-domain-pages: nothing durable beyond the index yet"],
-      },
-    ],
-    state_intent: { mark_project_memory_curated: true, freshness_intent: "initialize" },
-    evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
-    repo_citations: [],
-    risk: lowRisk(),
-  });
+test("accepts creation drafts with a full repo-grounded page set", () => {
+  const result = validateCuratorOutput(packet("create"), creationProposalWithPages(fullCreationPages()));
 
   expect(result.ok).toBe(true);
   expect(result.global_findings).toEqual([]);
 });
 
-test("rejects creation drafts that lack index plus domain page or rationale", () => {
+test("rejects creation draft targets prefixed with the wiki directory", () => {
+  const result = validateCuratorOutput(
+    packet("create"),
+    creationProposalWithPages([creationPage("index.md", "index"), creationPage("wiki/index.md", "wiki_prefixed")]),
+  );
+
+  expect(result.ok).toBe(false);
+  expect(result.global_findings.map((finding) => finding.code)).toContain("creation_target_path_outside_wiki");
+});
+
+test("rejects inference-only creation drafts without direct repo citations", () => {
+  const page = creationPage("index.md", "index");
+  page.repo_citations = [];
+  page.apply_payload.pages[0]!.repo_citations = [];
+
+  const result = validateCuratorOutput(packet("create"), creationProposalWithPages([page]));
+
+  expect(result.ok).toBe(false);
+  expect(result.global_findings.map((finding) => finding.code)).toEqual(
+    expect.arrayContaining(["creation_page_repo_citation_required", "creation_apply_payload_repo_citation_required"]),
+  );
+});
+
+test("rejects creation apply payloads that smuggle extra unapplied pages", () => {
+  const page = creationPage("index.md", "index");
+  page.apply_payload.pages.push({ ...page.apply_payload.pages[0]!, page_path: "runtime.md", title: "Runtime" });
+
+  const result = validateCuratorOutput(packet("create"), creationProposalWithPages([page]));
+
+  expect(result.ok).toBe(false);
+  expect(result.global_findings.map((finding) => finding.code)).toContain("apply_payload_page_count_invalid");
+});
+
+test("rejects creation drafts with fewer than the required non-index pages", () => {
+  const page = creationPage("index.md", "index");
+
+  const result = validateCuratorOutput(packet("create"), creationProposalWithPages([page]));
+
+  expect(result.ok).toBe(false);
+  expect(result.global_findings.map((finding) => finding.code)).toContain("creation_publication_minimum_not_met");
+});
+
+test("rejects creation drafts that lack a full documentation page set", () => {
   const result = validateCuratorOutput(packet("create"), {
     schema_version: 1,
     project_key: "demo",
@@ -237,7 +233,7 @@ test("rejects creation drafts that lack index plus domain page or rationale", ()
               purpose: "Index",
               body: { paragraphs: ["Demo index."] },
               evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
-              repo_citations: [],
+              repo_citations: [repoCitation()],
               inference: {
                 label: "initial_project_memory",
                 why_direct_repo_evidence_is_unavailable: "Creation summary is based on project state.",
@@ -247,13 +243,13 @@ test("rejects creation drafts that lack index plus domain page or rationale", ()
         },
         required_sections: ["Overview"],
         evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
-        repo_citations: [],
+        repo_citations: [repoCitation()],
         notes_for_apply: [],
       },
     ],
     state_intent: { mark_project_memory_curated: true, freshness_intent: "initialize" },
     evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
-    repo_citations: [],
+    repo_citations: [repoCitation()],
     risk: lowRisk(),
   });
 
@@ -388,6 +384,64 @@ test("requires explicit no-op decision for non-empty fallback lookup packet with
 
   expect(result.ok).toBe(false);
   expect(result.global_findings.map((finding) => finding.code)).toContain("noop_missing_explicit_decision");
+});
+
+test("accepts documented noop inputs for fallback lookup packet with zero maintenance items", () => {
+  const input = packet("maintain");
+  input.lookup.results = [fallbackLookupResult("lookup:cand_1", "cand_1")];
+  input.lookup.quality_summary = {
+    blocking: false,
+    blocking_reasons: [],
+    advisory_reasons: ["fallback markdown search"],
+    proposal_scoped_result_ids: ["lookup:cand_1"],
+  };
+
+  const result = validateCuratorOutput(input, {
+    schema_version: 1,
+    project_key: "demo",
+    mode: "maintain",
+    packet_ref: packetRef(),
+    packet_context: packetContext(),
+    summary: "No auto-applyable items",
+    items: [],
+    noop_inputs: [
+      {
+        source_packet_ref: { kind: "project_candidate", ref: "cand_1" },
+        reason: "insufficient_evidence",
+        notes: "Fallback lookup is insufficient for target selection.",
+      },
+    ],
+    risk: lowRisk(),
+  });
+
+  expect(result.ok).toBe(true);
+  expect(result.global_findings).toEqual([]);
+});
+
+test("rejects documented noop inputs with unknown source refs", () => {
+  const input = packet("maintain");
+  input.lookup.results = [fallbackLookupResult("lookup:cand_1", "cand_1")];
+
+  const result = validateCuratorOutput(input, {
+    schema_version: 1,
+    project_key: "demo",
+    mode: "maintain",
+    packet_ref: packetRef(),
+    packet_context: packetContext(),
+    summary: "Bad no-op",
+    items: [],
+    noop_inputs: [
+      {
+        source_packet_ref: { kind: "project_candidate", ref: "missing" },
+        reason: "insufficient_evidence",
+        notes: "Unknown source.",
+      },
+    ],
+    risk: lowRisk(),
+  });
+
+  expect(result.ok).toBe(false);
+  expect(result.global_findings.map((finding) => finding.code)).toContain("noop_input_source_ref_invalid");
 });
 
 test("requires explicit no-op decision for non-empty fallback lookup packet with zero creation pages", () => {
@@ -596,6 +650,10 @@ function lowRisk() {
   return { level: "low" as const, reasons: [], requires_quarantine: false };
 }
 
+function repoCitation() {
+  return { path: "README.md", line_start: 1, line_end: 5, reason: "Project overview" };
+}
+
 function packetRef() {
   return { run_dir: "projects/demo/runs/project-learn/run", artifact: "input-packet.json" as const, packet_schema_version: 1 as const };
 }
@@ -629,6 +687,67 @@ function proposalWithItems(items: unknown[]) {
     items,
     noop_inputs: [],
     risk: lowRisk(),
+  };
+}
+
+function creationProposalWithPages(pages: unknown[]) {
+  return {
+    schema_version: 1,
+    project_key: "demo",
+    mode: "create",
+    packet_ref: packetRef(),
+    packet_context: packetContext(),
+    summary: "creation proposal",
+    brain_intent: {
+      name: "Demo",
+      first_brain_summary: "Create first brain",
+      untrusted_existing_markdown_policy: "adopt",
+    },
+    pages,
+    state_intent: { mark_project_memory_curated: true, freshness_intent: "initialize" },
+    evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
+    repo_citations: [],
+    risk: lowRisk(),
+  };
+}
+
+function fullCreationPages() {
+  return [
+    creationPage("index.md", "index"),
+    creationPage("runtime.md", "runtime"),
+    creationPage("architecture.md", "architecture"),
+    creationPage("operations.md", "operations"),
+  ];
+}
+
+function creationPage(path: string, id: string) {
+  return {
+    id,
+    target: { path, path_kind: "new_wiki_page" },
+    title: "Demo",
+    purpose: "Index",
+    content_intent: "Create index",
+    apply_payload: {
+      schema_version: 1,
+      pages: [
+        {
+          page_path: path,
+          title: "Demo",
+          purpose: "Index",
+          body: { paragraphs: ["Demo index."] },
+          evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
+          repo_citations: [repoCitation()],
+          inference: {
+            label: "initial_project_memory",
+            why_direct_repo_evidence_is_unavailable: "Creation summary is based on project state.",
+          },
+        },
+      ],
+    },
+    required_sections: ["Overview"],
+    evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
+    repo_citations: [repoCitation()],
+    notes_for_apply: [],
   };
 }
 

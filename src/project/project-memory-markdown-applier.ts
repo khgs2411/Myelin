@@ -18,6 +18,7 @@ import type {
   ProjectMemoryMaintenanceProposalItem,
   ProjectMemoryRisk,
 } from "./project-memory-curator-contracts.ts";
+import { PROJECT_MEMORY_CREATION_MIN_PAGES } from "./project-memory-curator-contracts.ts";
 import {
   boundedSnippetForText,
   findEntryBlock,
@@ -440,11 +441,8 @@ function applyMaintenanceItem(pageText: string, item: ProjectMemoryMaintenancePr
 
 function creationPublicationMinimumMet(draft: ProjectMemoryCreationDraft): boolean {
   const hasIndex = draft.pages.some((page) => page.target.path === "index.md");
-  const hasDomainPage = draft.pages.some((page) => page.target.path !== "index.md");
-  const hasRationale = draft.pages.some((page) =>
-    page.notes_for_apply.some((note) => note.includes("no-domain-pages")),
-  );
-  return hasIndex && (hasDomainPage || hasRationale);
+  const nonIndexPages = draft.pages.filter((page) => page.target.path !== "index.md");
+  return hasIndex && nonIndexPages.length >= PROJECT_MEMORY_CREATION_MIN_PAGES - 1;
 }
 
 function snippetFromPage(pagePath: string, entryId: string, pageText: string) {

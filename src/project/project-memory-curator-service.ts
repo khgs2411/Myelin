@@ -5,6 +5,7 @@ import {
   type ProjectMemoryCuratorValidationResult,
   type ProjectMemoryMaintenanceProposal,
   type RunProjectMemoryCuratorInput,
+  PROJECT_MEMORY_CURATOR_OUTPUT_CONTRACT_ARTIFACT,
 } from "./project-memory-curator-contracts.ts";
 import { validateCuratorOutput } from "./project-memory-curator-validator.ts";
 import type { ProjectMemoryApplyResult } from "./project-memory-apply-contracts.ts";
@@ -13,6 +14,7 @@ import { ProjectMemoryCandidateIntakeService } from "./project-memory-candidate-
 import { ProjectMemorySourceConsumptionReconciler } from "./project-memory-source-consumption-reconciler.ts";
 import { buildProjectMemoryPacket, type ProjectMemoryPacket } from "./project-memory-packet.ts";
 import { buildPromptBudgetedProjectMemoryPacket } from "./project-memory-prompt-budget.ts";
+import { buildProjectMemoryCuratorOutputSchema } from "./project-memory-curator-output-schema.ts";
 import { extractProjectMemorySections } from "./project-memory-markdown-sections.ts";
 import type { ProjectMemoryRetrievalIndexResult } from "../memory/project-memory-retrieval-indexer.ts";
 import { ProjectMemoryRetrievalIndexService } from "../memory/project-memory-retrieval-index-service.ts";
@@ -144,11 +146,20 @@ export class ProjectMemoryCuratorService {
       root: this.root,
       projectKey: input.projectKey,
       runDir: run.relative_run_dir,
+      absoluteRunDir: run.absolute_run_dir,
+      repoPath: project.config.repo_paths?.[0] ?? this.root,
       transport: "artifact_reference",
     });
     await writeRunArtifact(run, "prompt-budget.json", promptBudget.artifact);
     const packet = promptBudget.packet;
     await writeRunArtifact(run, "input-packet.json", packet);
+    const outputSchema = buildProjectMemoryCuratorOutputSchema({
+      projectKey: input.projectKey,
+      mode: packet.mode,
+      runDir: run.relative_run_dir,
+      packetSchemaVersion: packet.schema_version,
+    });
+    await writeRunArtifact(run, PROJECT_MEMORY_CURATOR_OUTPUT_CONTRACT_ARTIFACT, outputSchema);
     if (promptBudget.status === "too_large") {
       const validation = failureValidation(input.projectKey, packet.mode, "curator_prompt_too_large", promptBudget.reason);
       return await this.writeTerminalArtifacts({
@@ -162,6 +173,7 @@ export class ProjectMemoryCuratorService {
         stoppedReason: promptBudget.reason,
         promptBudget: true,
         runtimeInboxIntake: true,
+        curatorOutputContract: true,
       });
     }
 
@@ -175,7 +187,8 @@ export class ProjectMemoryCuratorService {
         provider: input.provider,
         modelOverride: input.modelOverride,
         env: input.env,
-        cwd: run.absolute_run_dir,
+        cwd: project.config.repo_paths?.[0] ?? this.root,
+        outputSchema: projectPath(this.root, input.projectKey, "runs", "project-learn", run.run_id, PROJECT_MEMORY_CURATOR_OUTPUT_CONTRACT_ARTIFACT),
         runner: input.runner,
       });
       curatorOutput = curator.response;
@@ -200,6 +213,7 @@ export class ProjectMemoryCuratorService {
         failureKind: failure.kind,
         promptBudget: true,
         runtimeInboxIntake: true,
+        curatorOutputContract: true,
       });
     }
 
@@ -243,6 +257,7 @@ export class ProjectMemoryCuratorService {
           retrievalArtifacts: retrieval.artifacts,
           promptBudget: true,
           runtimeInboxIntake: true,
+          curatorOutputContract: true,
         });
       }
       return await this.writeTerminalArtifacts({
@@ -255,6 +270,7 @@ export class ProjectMemoryCuratorService {
         stoppedReason: applyResult.reason ?? "project memory apply skipped",
         promptBudget: true,
         runtimeInboxIntake: true,
+        curatorOutputContract: true,
       });
     }
 
@@ -268,6 +284,7 @@ export class ProjectMemoryCuratorService {
       stoppedReason: applyDecision.reason,
       promptBudget: true,
       runtimeInboxIntake: true,
+      curatorOutputContract: true,
     });
   }
 
@@ -284,6 +301,7 @@ export class ProjectMemoryCuratorService {
     retrievalArtifacts?: ProjectMemoryPostApplyRetrievalLifecycleResult["artifacts"];
     promptBudget?: boolean;
     runtimeInboxIntake?: boolean;
+    curatorOutputContract?: boolean;
     failureKind?: ProjectMemoryCuratorRunResult["failure_kind"];
   }): Promise<ProjectMemoryCuratorRunResult> {
     if (input.outputValue !== undefined) {
@@ -303,6 +321,7 @@ export class ProjectMemoryCuratorService {
       retrievalArtifacts: input.retrievalArtifacts,
       promptBudget: input.promptBudget,
       runtimeInboxIntake: input.runtimeInboxIntake,
+      curatorOutputContract: input.curatorOutputContract,
       failureKind: input.failureKind,
     });
     await writeRunArtifact(input.run, "curator-run-result.json", result);
@@ -335,6 +354,7 @@ function buildResult(input: {
   retrievalArtifacts?: ProjectMemoryPostApplyRetrievalLifecycleResult["artifacts"];
   promptBudget?: boolean;
   runtimeInboxIntake?: boolean;
+  curatorOutputContract?: boolean;
   failureKind?: ProjectMemoryCuratorRunResult["failure_kind"];
 }): ProjectMemoryCuratorRunResult {
   return {
@@ -346,6 +366,7 @@ function buildResult(input: {
     artifacts: {
       input_packet: "input-packet.json",
       curator_output: input.outputArtifact,
+      curator_output_contract: input.curatorOutputContract ? PROJECT_MEMORY_CURATOR_OUTPUT_CONTRACT_ARTIFACT : undefined,
       curator_validation: "curator-validation.json",
       curator_run_result: "curator-run-result.json",
       summary: "summary.md",
@@ -395,7 +416,7 @@ function canApply(input: {
     if (input.validation.noop_refs.length > 0) {
       return { ok: false, status: "completed", reason: "explicit no-op decision produced no writes" };
     }
-    return { ok: false, status: "needs_review", reason: "maintenance proposal had no eligible items" };
+    return { ok: false, status: "completed", reason: "documented no-op inputs produced no writes" };
   }
   return { ok: true };
 }
@@ -474,6 +495,9 @@ function classifyCuratorInvocationFailure(error: unknown): {
 }
 
 function conciseInvocationMessage(message: string): string {
+  const structuredError = extractStructuredErrorMessage(message);
+  if (structuredError) return structuredError;
+
   const errorLines = [...message.matchAll(/^ERROR:\s*(.+)$/gim)]
     .map((match) => match[1]?.trim())
     .filter((line): line is string => Boolean(line));
@@ -490,6 +514,66 @@ function conciseInvocationMessage(message: string): string {
   const maxLength = 1_200;
   if (message.length <= maxLength) return message;
   return `${message.slice(0, maxLength)}...[truncated]`;
+}
+
+function extractStructuredErrorMessage(message: string): string | null {
+  const marker = "ERROR:";
+  let searchFrom = 0;
+  while (searchFrom < message.length) {
+    const markerIndex = message.indexOf(marker, searchFrom);
+    if (markerIndex === -1) return null;
+    const jsonStart = message.indexOf("{", markerIndex + marker.length);
+    if (jsonStart === -1) return null;
+    const jsonText = balancedJsonAt(message, jsonStart);
+    if (!jsonText) {
+      searchFrom = markerIndex + marker.length;
+      continue;
+    }
+    try {
+      const parsed = JSON.parse(jsonText) as unknown;
+      const error = isRecord(parsed) ? parsed.error : null;
+      const messageText = isRecord(error) && typeof error.message === "string" ? error.message : null;
+      const type = isRecord(error) && typeof error.type === "string" ? error.type : null;
+      const param = isRecord(error) && typeof error.param === "string" ? error.param : null;
+      return [messageText, type ? `type=${type}` : "", param ? `param=${param}` : ""].filter(Boolean).join("; ");
+    } catch {
+      searchFrom = jsonStart + jsonText.length;
+    }
+  }
+  return null;
+}
+
+function balancedJsonAt(text: string, start: number): string | null {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let index = start; index < text.length; index += 1) {
+    const char = text[index];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === "\"") {
+        inString = false;
+      }
+      continue;
+    }
+    if (char === "\"") {
+      inString = true;
+      continue;
+    }
+    if (char === "{") depth += 1;
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return text.slice(start, index + 1);
+    }
+  }
+  return null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function summaryFor(result: ProjectMemoryCuratorRunResult): string {

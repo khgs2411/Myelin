@@ -58,6 +58,9 @@ export const PROJECT_MEMORY_CURATOR_RUN_STATUSES = [
   "needs_review",
 ] as const;
 
+export const PROJECT_MEMORY_CURATOR_OUTPUT_CONTRACT_ARTIFACT = "curator-output-contract.json" as const;
+export const PROJECT_MEMORY_CREATION_MIN_PAGES = 4 as const;
+
 export type ProjectMemoryCuratorMode = (typeof PROJECT_MEMORY_CURATOR_MODES)[number];
 
 export type ProjectMemoryEvidenceKind =
@@ -250,6 +253,7 @@ export type ProjectMemoryCuratorRunResult = {
   artifacts: {
     input_packet: string;
     curator_output: string;
+    curator_output_contract?: typeof PROJECT_MEMORY_CURATOR_OUTPUT_CONTRACT_ARTIFACT;
     curator_validation: string;
     curator_run_result: string;
     summary: string;

@@ -6,6 +6,10 @@ import {
   type ProjectMemoryPacketOptions,
 } from "./project-memory-packet.ts";
 import type { ProjectMemoryCuratorMode } from "./project-memory-curator-contracts.ts";
+import {
+  PROJECT_MEMORY_CREATION_MIN_PAGES,
+  PROJECT_MEMORY_CURATOR_OUTPUT_CONTRACT_ARTIFACT,
+} from "./project-memory-curator-contracts.ts";
 
 export const PROJECT_MEMORY_PROMPT_SAFETY_MARGIN_CHARS = 5_000;
 export const PROJECT_MEMORY_PROMPT_TARGET_CHARS = PROMPT_SIZE_LIMIT - PROJECT_MEMORY_PROMPT_SAFETY_MARGIN_CHARS;
@@ -87,12 +91,18 @@ export async function buildPromptBudgetedProjectMemoryPacket(input: {
   root: string;
   projectKey: string;
   runDir: string;
+  absoluteRunDir?: string;
+  repoPath?: string;
   transport?: ProjectMemoryPromptTransport;
 }): Promise<ProjectMemoryPromptBudgetResult> {
   const transport = input.transport ?? "inline_packet";
   if (transport === "artifact_reference") {
     const packet = await buildProjectMemoryPacket(input.root, input.projectKey);
-    const prompt = buildProjectMemoryCuratorPrompt(packet.mode, input.runDir, packet, { transport });
+    const prompt = buildProjectMemoryCuratorPrompt(packet.mode, input.runDir, packet, {
+      transport,
+      absoluteRunDir: input.absoluteRunDir,
+      repoPath: input.repoPath,
+    });
     const attempt = measureProjectMemoryPromptAttempt(packet, prompt, {});
     const artifact = buildArtifact(attempt.fits_hard_limit ? "ok" : "too_large", [attempt], 0, transport);
     if (attempt.fits_hard_limit) return { status: "ok", packet, prompt, artifact };
@@ -157,57 +167,54 @@ export function buildProjectMemoryCuratorPrompt(
   mode: ProjectMemoryCuratorMode,
   runDir: string,
   packet: ProjectMemoryPacket,
-  options: { transport?: ProjectMemoryPromptTransport } = {},
+  options: { transport?: ProjectMemoryPromptTransport; absoluteRunDir?: string; repoPath?: string } = {},
 ): string {
   const outputName = mode === "create" ? "ProjectMemoryCreationDraft" : "ProjectMemoryMaintenanceProposal";
+  const artifactRunDir = options.absoluteRunDir ?? runDir;
+  const repoContext = options.repoPath ? ` (${options.repoPath})` : "";
   const base = [
     "You are the Project Memory Curator.",
     `Run directory: ${runDir}`,
-    `Input packet artifact: ${runDir}/input-packet.json`,
+    `Input packet artifact: ${artifactRunDir}/input-packet.json`,
+    `Curator output contract artifact: ${artifactRunDir}/${PROJECT_MEMORY_CURATOR_OUTPUT_CONTRACT_ARTIFACT}`,
     `Return ONLY strict JSON matching ${outputName}.`,
+    `Your output must match ${PROJECT_MEMORY_CURATOR_OUTPUT_CONTRACT_ARTIFACT}; deterministic validation will reject unsupported packet refs, unsafe paths, or insufficient provenance.`,
     "Use packet references from the input packet. Do not invent packet refs.",
     "Do not write files. Do not mutate wiki markdown.",
-    "Do not inspect repo source, docs, plans, or tests to discover the JSON contract; use the contract summary in this prompt.",
-    "Do not run broad repository searches. Use the input packet as the evidence boundary unless a packet citation names a specific file that must be verified.",
-    "When returning zero write proposals for a non-empty fallback-lookup packet, include explicit_noop_decisions with source_packet_refs and checked_existing_memory_refs.",
+    "Do not inspect repo source, docs, plans, or tests to discover the JSON contract; use the contract artifact.",
+    "Do not run broad repository searches. Use the input packet plus bounded target-repo orientation files as the evidence boundary.",
+    "Evidence refs must use IDs that appear in the input packet exactly; project_state refs are only `bootstrap_state`, `project_memory`, `freshness`, or `pages_manifest`.",
+    "For lookup_result evidence, prefer short aliases `lookup:0`, `lookup:1`, etc. using the zero-based input_packet.lookup.results order instead of copying long lookup IDs.",
+    "Validator-only rules: wiki target paths are relative to the project wiki root; use `index.md`, not `wiki/index.md`, and never use paths starting with `/`, `../`, or `wiki/`.",
+    "Validator-only rules: each target path must exactly match its apply payload page_path or target page; every apply payload page or entry with empty repo_citations must include a non-null inference object.",
+    "Only put auto-applyable no-ops in explicit_noop_decisions; unresolved or insufficient-evidence inputs belong in noop_inputs, not explicit_noop_decisions.",
+    "When returning zero write proposals for a non-empty fallback-lookup packet, include explicit_noop_decisions with source_packet_refs and checked_existing_memory_refs only for auto-applyable reasons.",
     "When a maintenance write depends on lookup evidence for dedupe, target selection, or supersession, include evidence_dependencies naming the lookup_result refs.",
-    mode === "create"
-      ? "Create mode: propose the first trusted Project Memory brain draft."
-      : "Maintain mode: propose bounded itemized Project Memory updates only.",
-    curatorContractSummary(mode),
+    ...(mode === "create"
+      ? [
+          "Create mode: read a bounded repo orientation set when present: AGENTS.md, README.md, package.json, Makefile, docs/CLI.md, docs/ROADMAP.md, and src/cli.ts; do not search broadly.",
+          "Create mode: every page draft and apply payload page must include direct repo_citations; packet/session/candidate evidence alone is not enough to mark Project Memory curated.",
+          "Create mode: each page draft's apply_payload.pages must contain exactly one page, and that page_path must equal target.path; create separate page drafts for separate wiki pages.",
+          `Create mode: produce a full Project Memory documentation set: index.md plus at least ${PROJECT_MEMORY_CREATION_MIN_PAGES - 1} non-index pages, all repo-grounded.`,
+          "Create mode: cover at minimum product purpose, runtime/commands, architecture/data flow, and operations/current work; use more pages if the repo requires them.",
+        ]
+      : [
+          "Maintain mode: propose bounded itemized Project Memory updates only.",
+          "Maintain mode: do not propose auto-apply writes when target selection, dedupe, or supersession depends on fallback lookup; use noop_inputs or an auto-applyable explicit_noop_decision instead.",
+        ]),
   ];
 
   if ((options.transport ?? "inline_packet") === "artifact_reference") {
     return [
       ...base,
-      `Read input-packet.json from the current run directory before answering. The repo-root path is ${runDir}/input-packet.json.`,
+      `Read input-packet.json before answering. Absolute path: ${artifactRunDir}/input-packet.json.`,
+      `Read ${PROJECT_MEMORY_CURATOR_OUTPUT_CONTRACT_ARTIFACT} before answering. Absolute path: ${artifactRunDir}/${PROJECT_MEMORY_CURATOR_OUTPUT_CONTRACT_ARTIFACT}.`,
+      `You are running from the target repository cwd${repoContext}; use repo files for repo-bounded curation and artifact paths above for packet/contract.`,
       "Treat the artifact as the authoritative input packet; this prompt intentionally does not inline it.",
     ].join("\n");
   }
 
   return [...base, "", "Input packet JSON:", stableJson(packet)].join("\n");
-}
-
-function curatorContractSummary(mode: ProjectMemoryCuratorMode): string {
-  const common =
-    "Common JSON: schema_version:1, project_key, mode, packet_ref{run_dir,artifact:'input-packet.json',packet_schema_version}, packet_context{degraded,degraded_reasons,budgets}, summary, optional explicit_noop_decisions[].";
-  if (mode === "create") {
-    return [
-      "ProjectMemoryCreationDraft contract summary:",
-      common,
-      "Create fields: brain_intent{name,first_brain_summary,untrusted_existing_markdown_policy}, pages[], state_intent{mark_project_memory_curated,freshness_intent}, evidence_refs[], repo_citations[], risk{level,reasons,requires_quarantine}.",
-      "Page draft: id,target{path,path_kind},title,purpose,content_intent,apply_payload,required_sections[],evidence_refs[],repo_citations[],notes_for_apply[].",
-      "Creation apply_payload: {schema_version:1,pages:[{page_path,title,purpose,body:{paragraphs:[]},evidence_refs,repo_citations,inference?}]} and must include the target page.",
-      "Creation publication requires index.md plus a domain page, unless notes_for_apply includes a no-domain-pages rationale.",
-    ].join("\n");
-  }
-  return [
-    "ProjectMemoryMaintenanceProposal contract summary:",
-    common,
-    "Maintain fields: items[], noop_inputs[], risk{level,reasons,requires_quarantine}.",
-    "Item: id,operation,target_page{path,path_kind:'existing_wiki_page'},target_entry_id?,proposed_entry_id?,content_intent,apply_payload,source_packet_refs[],evidence_refs[],evidence_dependencies?,repo_citations[],inference?,applicability,lifecycle_intent,risk,preconditions[],expected_outcome.",
-    "Maintenance apply_payload: {schema_version:1,entries:[{entry_id,title,body:{paragraphs:[]},lifecycle,evidence_refs,repo_citations,applicability}]} for write operations.",
-  ].join("\n");
 }
 
 export function measureProjectMemoryPromptAttempt(

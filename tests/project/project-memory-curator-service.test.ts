@@ -30,23 +30,30 @@ test("runs project learn in create mode and applies valid low-risk output", asyn
     dryRun: false,
     review: false,
     now: new Date("2026-06-23T10:00:00.000Z"),
-    runner: async () => ({
-      exitCode: 0,
-      stdout: JSON.stringify(creationDraft("projects/demo/runs/project-learn/2026-06-23T10-00-00.000Z-run")),
-      stderr: "",
-    }),
+    runner: async (command, options) => {
+      expect(command).toContain("--output-schema");
+      expect(command).toContain(join(root, "projects", "demo", "runs", "project-learn", "2026-06-23T10-00-00.000Z-run", "curator-output-contract.json"));
+      expect(options?.stdin).toContain("curator-output-contract.json");
+      return {
+        exitCode: 0,
+        stdout: JSON.stringify(creationDraft("projects/demo/runs/project-learn/2026-06-23T10-00-00.000Z-run")),
+        stderr: "",
+      };
+    },
   });
 
   expect(result.status).toBe("completed");
   expect(result.mode).toBe("create");
   expect(result.stopped_before_writes).toBe(false);
   expect(result.artifacts.input_packet).toBe("input-packet.json");
+  expect(result.artifacts.curator_output_contract).toBe("curator-output-contract.json");
   expect(result.artifacts.prompt_budget).toBe("prompt-budget.json");
   expect(result.artifacts.curator_output).toBe("curator-creation-draft.json");
   expect(result.artifacts.apply_journal).toBe("project-memory-apply-journal.json");
   expect(result.artifacts.apply_result).toBe("project-memory-apply-result.json");
   expect(result.artifacts.changeset).toBe("project-memory-changeset.json");
   expect(await Bun.file(join(root, result.run_dir, "curator-validation.json")).exists()).toBe(true);
+  expect(await Bun.file(join(root, result.run_dir, "curator-output-contract.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_dir, "curator-run-result.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_dir, "prompt-budget.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_dir, "summary.md")).exists()).toBe(true);
@@ -201,11 +208,16 @@ test("runs runtime inbox intake before building the curator packet", async () =>
     review: false,
     now: new Date("2026-06-25T11:00:00.000Z"),
     runner: async (_command, options) => {
-      expect(options?.cwd).toBe(join(root, "projects", "demo", "runs", "project-learn", "2026-06-25T11-00-00.000Z-run"));
-      expect(options?.stdin).toContain("Read input-packet.json from the current run directory before answering.");
+      expect(options?.cwd).toBe(join(root, "repos", "demo"));
+      expect(options?.stdin).toContain("Read input-packet.json before answering.");
+      expect(options?.stdin).toContain("Read curator-output-contract.json before answering.");
       expect(options?.stdin).toContain(
-        "repo-root path is projects/demo/runs/project-learn/2026-06-25T11-00-00.000Z-run/input-packet.json",
+        `Absolute path: ${join(root, "projects", "demo", "runs", "project-learn", "2026-06-25T11-00-00.000Z-run", "input-packet.json")}`,
       );
+      expect(options?.stdin).toContain(
+        `Absolute path: ${join(root, "projects", "demo", "runs", "project-learn", "2026-06-25T11-00-00.000Z-run", "curator-output-contract.json")}`,
+      );
+      expect(options?.stdin).toContain("You are running from the target repository cwd");
       expect(options?.stdin).toContain("Do not run broad repository searches.");
       expect(options?.stdin).not.toContain("Runtime inbox intake should enter the Project Memory packet.");
       return {
@@ -218,6 +230,7 @@ test("runs runtime inbox intake before building the curator packet", async () =>
 
   expect(result.status).toBe("completed");
   expect(result.artifacts.runtime_inbox_intake).toBe("runtime-inbox-intake.json");
+  expect(result.artifacts.curator_output_contract).toBe("curator-output-contract.json");
   const packetArtifact = await readFile(join(root, result.run_dir, "input-packet.json"), "utf8");
   expect(packetArtifact).toContain("Runtime inbox intake should enter the Project Memory packet.");
   expect(packetArtifact).toContain("project.inbox");
@@ -381,6 +394,7 @@ test("writes failure artifacts when provider invocation fails after packet creat
   expect(result.artifacts.prompt_budget).toBe("prompt-budget.json");
   expect(await Bun.file(join(root, result.run_dir, "input-packet.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_dir, "prompt-budget.json")).exists()).toBe(true);
+  expect(await Bun.file(join(root, result.run_dir, "curator-output-contract.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_dir, "curator-output-error.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_dir, "curator-validation.json")).exists()).toBe(true);
   const errorArtifact = JSON.parse(await readFile(join(root, result.run_dir, "curator-output-error.json"), "utf8"));
@@ -415,6 +429,39 @@ test("writes failure artifacts when curator output is not valid JSON", async () 
   expect(validation.global_findings[0].code).toBe("curator_output_invalid_json");
   expect(await Bun.file(join(root, result.run_dir, "curator-run-result.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_dir, "summary.md")).exists()).toBe(true);
+});
+
+test("summarizes structured provider errors without collapsing JSON stderr", async () => {
+  await seedProject("curated");
+  await seedSchema();
+  const service = new ProjectMemoryCuratorService(root);
+
+  const result = await service.runProjectLearn({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    now: new Date("2026-06-23T12:45:00.000Z"),
+    runner: async () => ({
+      exitCode: 1,
+      stdout: "",
+      stderr: [
+        "ERROR: {",
+        '  "error": {',
+        '    "message": "Invalid schema for response_format final: every property must be required.",',
+        '    "type": "invalid_request_error",',
+        '    "param": "response_format"',
+        "  }",
+        "}",
+      ].join("\n"),
+    }),
+  });
+
+  expect(result.status).toBe("failed");
+  expect(result.failure_kind).toBe("provider_failed_before_output");
+  expect(result.stopped_reason).toContain("Invalid schema for response_format final");
+  expect(result.stopped_reason).toContain("type=invalid_request_error");
+  expect(result.stopped_reason).toContain("param=response_format");
+  expect(result.stopped_reason).not.toContain("ERROR: {");
 });
 
 test("recovery failure for missing apply artifacts does not advertise them", async () => {
@@ -613,6 +660,8 @@ function creationDraft(runDir: string) {
     pages: [
       creationPage("page_index", "index.md", "Demo", "Project Memory index"),
       creationPage("page_setup", "setup/index.md", "Setup", "Setup workflows"),
+      creationPage("page_architecture", "architecture.md", "Architecture", "Architecture and data flow"),
+      creationPage("page_operations", "operations.md", "Operations", "Operations and current work"),
     ],
     state_intent: { mark_project_memory_curated: true, freshness_intent: "initialize" },
     evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
@@ -637,7 +686,7 @@ function creationPage(id: string, path: string, title: string, purpose: string) 
           purpose,
           body: { paragraphs: [`${title} describes ${purpose}.`] },
           evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
-          repo_citations: [],
+          repo_citations: [repoCitation()],
           inference: {
             label: "initial_project_memory",
             why_direct_repo_evidence_is_unavailable: "Creation summary is based on project state.",
@@ -647,9 +696,13 @@ function creationPage(id: string, path: string, title: string, purpose: string) 
     },
     required_sections: ["Overview"],
     evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
-    repo_citations: [],
+    repo_citations: [repoCitation()],
     notes_for_apply: [],
   };
+}
+
+function repoCitation() {
+  return { path: "README.md", line_start: 1, line_end: 5, reason: "Project overview" };
 }
 
 function maintenanceProposal(runDir: string) {

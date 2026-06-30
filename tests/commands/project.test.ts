@@ -133,6 +133,7 @@ test("project learn routes through curator service and writes curator artifacts"
   expect(response.status).toBe("completed_with_pending_index");
   expect(response.project_key).toBe("active");
   expect(response.artifacts.curator_output).toBe("curator-creation-draft.json");
+  expect(response.artifacts.curator_output_contract).toBe("curator-output-contract.json");
   expect(response.artifacts.apply_journal).toBe("project-memory-apply-journal.json");
   expect(response.artifacts.retrieval_index_result).toBe("project-memory-retrieval-index-result.json");
   expect(response.stopped_before_writes).toBe(false);
@@ -320,6 +321,8 @@ function creationDraft(projectKey: string, runDir: string) {
     pages: [
       creationPage("index", "index.md", projectKey, "Project Memory index"),
       creationPage("setup", "setup/index.md", "Setup", "Setup workflows"),
+      creationPage("architecture", "architecture.md", "Architecture", "Architecture and data flow"),
+      creationPage("operations", "operations.md", "Operations", "Operations and current work"),
     ],
     state_intent: { mark_project_memory_curated: true, freshness_intent: "initialize" },
     evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
@@ -344,7 +347,7 @@ function creationPage(id: string, path: string, title: string, purpose: string) 
           purpose,
           body: { paragraphs: [`${title} describes ${purpose}.`] },
           evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
-          repo_citations: [],
+          repo_citations: [repoCitation()],
           inference: {
             label: "initial_project_memory",
             why_direct_repo_evidence_is_unavailable: "Creation summary is based on project state.",
@@ -354,7 +357,11 @@ function creationPage(id: string, path: string, title: string, purpose: string) 
     },
     required_sections: ["Overview"],
     evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
-    repo_citations: [],
+    repo_citations: [repoCitation()],
     notes_for_apply: [],
   };
+}
+
+function repoCitation() {
+  return { path: "README.md", line_start: 1, line_end: 5, reason: "Project overview" };
 }

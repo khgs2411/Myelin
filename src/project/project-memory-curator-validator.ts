@@ -1,4 +1,5 @@
 import {
+  PROJECT_MEMORY_CREATION_MIN_PAGES,
   PROJECT_MEMORY_LIFECYCLE_INTENTS,
   PROJECT_MEMORY_MAINTENANCE_OPERATIONS,
   type ProjectMemoryCreationDraft,
@@ -122,6 +123,17 @@ export function validateCreationDraft(
         finding("blocker", "provenance", "creation_page_evidence_required", "Every creation page draft needs evidence refs."),
       );
     }
+    if (!Array.isArray(item.repo_citations) || item.repo_citations.length === 0) {
+      globalFindings.push(
+        finding(
+          "blocker",
+          "repo_citation",
+          "creation_page_repo_citation_required",
+          "Creation page drafts require direct repo citations; packet-only inference is not enough to curate initial Project Memory.",
+          typeof item.id === "string" ? item.id : undefined,
+        ),
+      );
+    }
     const payloadFindings = validateApplyPayload(item.apply_payload, {
       mode: "create",
       targetPath: typeof target.path === "string" ? target.path : undefined,
@@ -137,7 +149,7 @@ export function validateCreationDraft(
         "blocker",
         "schema",
         "creation_publication_minimum_not_met",
-        "Creation apply requires index.md plus a domain page or explicit no-domain-pages rationale.",
+        `Creation apply requires index.md plus at least ${PROJECT_MEMORY_CREATION_MIN_PAGES - 1} repo-grounded non-index pages.`,
       ),
     );
   }
@@ -185,12 +197,20 @@ export function validateMaintenanceProposal(
     );
   }
   const hasItems = Array.isArray(proposal.items) && proposal.items.length > 0;
-  const noopValidation = validateExplicitNoopDecisions(packet, proposal.explicit_noop_decisions, hasItems);
+  const noopInputsValidation = validateNoopInputs(packet, proposal.noop_inputs);
+  const noopValidation = validateExplicitNoopDecisions(
+    packet,
+    proposal.explicit_noop_decisions,
+    hasItems,
+    noopInputsValidation.validCount,
+  );
   globalFindings.push(...noopValidation.findings);
-  if (globalFindings.length > 0) return result(packet, "maintain", globalFindings, [], noopValidation.noopRefs);
+  globalFindings.push(...noopInputsValidation.findings);
+  const noopRefs = [...noopValidation.noopRefs, ...noopInputsValidation.noopRefs];
+  if (globalFindings.length > 0) return result(packet, "maintain", globalFindings, [], noopRefs);
 
   const itemResults = proposal.items.map((item) => validateMaintenanceItem(packet, item));
-  return result(packet, "maintain", globalFindings, itemResults, noopValidation.noopRefs);
+  return result(packet, "maintain", globalFindings, itemResults, noopRefs);
 }
 
 export function validateMaintenanceItem(
@@ -346,6 +366,17 @@ function validateApplyPayload(
       findings.push(finding("blocker", "schema", "apply_payload_pages_required", "Creation apply_payload requires page drafts.", input.itemId));
       return findings;
     }
+    if (payload.pages.length !== 1) {
+      findings.push(
+        finding(
+          "blocker",
+          "schema",
+          "apply_payload_page_count_invalid",
+          "Creation apply_payload must contain exactly one page matching the page draft target.",
+          input.itemId,
+        ),
+      );
+    }
     const page = payload.pages.find((candidate) => isRecord(candidate) && candidate.page_path === input.targetPath);
     if (!isRecord(page)) {
       findings.push(finding("blocker", "schema", "apply_payload_page_target_missing", "Creation apply_payload must include the target page.", input.itemId));
@@ -459,18 +490,29 @@ function validateApplyProvenance(
       ),
     );
   }
+  if (itemId && repoCitations.length === 0 && isCreationApplyPayloadPage(value)) {
+    findings.push(
+      finding(
+        "blocker",
+        "repo_citation",
+        "creation_apply_payload_repo_citation_required",
+        "Creation apply payload pages require direct repo citations; packet-only inference is not enough to curate initial Project Memory.",
+        itemId,
+      ),
+    );
+  }
   return findings;
+}
+
+function isCreationApplyPayloadPage(value: Record<string, unknown>): boolean {
+  return typeof value.page_path === "string";
 }
 
 function creationPublicationMinimumMet(pages: unknown[]): boolean {
   const pageRecords = pages.filter(isRecord);
   const hasIndex = pageRecords.some((page) => isRecord(page.target) && page.target.path === "index.md");
-  const hasDomainPage = pageRecords.some((page) => isRecord(page.target) && page.target.path !== "index.md");
-  const hasRationale = pageRecords.some((page) =>
-    Array.isArray(page.notes_for_apply) &&
-      page.notes_for_apply.some((note) => typeof note === "string" && note.includes("no-domain-pages")),
-  );
-  return hasIndex && (hasDomainPage || hasRationale);
+  const nonIndexPages = pageRecords.filter((page) => isRecord(page.target) && page.target.path !== "index.md");
+  return hasIndex && nonIndexPages.length >= PROJECT_MEMORY_CREATION_MIN_PAGES - 1;
 }
 
 function result(
@@ -534,7 +576,13 @@ function isAllowedOperation(operation: unknown): operation is ProjectMemoryMaint
 }
 
 function isSafeWikiTarget(path: unknown): path is string {
-  return typeof path === "string" && path.endsWith(".md") && !path.startsWith("/") && !path.split("/").includes("..");
+  return (
+    typeof path === "string" &&
+    path.endsWith(".md") &&
+    !path.startsWith("/") &&
+    !path.startsWith("wiki/") &&
+    !path.split("/").includes("..")
+  );
 }
 
 function packetHasWikiPage(packet: ProjectMemoryPacket, path: string): boolean {
@@ -608,18 +656,25 @@ function validateExplicitNoopDecisions(
   packet: ProjectMemoryPacket,
   decisions: unknown,
   hasWriteProposals: boolean,
+  documentedNoopInputCount = 0,
 ): { findings: ProjectMemoryValidationFinding[]; noopRefs: string[] } {
   const findings: ProjectMemoryValidationFinding[] = [];
   const noopRefs: string[] = [];
   const values = Array.isArray(decisions) ? decisions : [];
 
-  if (!hasWriteProposals && packetHasInputs(packet) && packetUsedFallbackLookup(packet) && values.length === 0) {
+  if (
+    !hasWriteProposals &&
+    packetHasInputs(packet) &&
+    packetUsedFallbackLookup(packet) &&
+    values.length === 0 &&
+    documentedNoopInputCount === 0
+  ) {
     findings.push(
       finding(
         "blocker",
         "explicit_noop",
         "noop_missing_explicit_decision",
-        "Fallback lookup with zero write proposals requires an explicit no-op decision.",
+        "Fallback lookup with zero write proposals requires an explicit no-op decision or documented noop_inputs.",
       ),
     );
   }
@@ -669,6 +724,38 @@ function validateExplicitNoopDecisions(
   }
 
   return { findings, noopRefs };
+}
+
+function validateNoopInputs(
+  packet: ProjectMemoryPacket,
+  inputs: unknown,
+): { findings: ProjectMemoryValidationFinding[]; validCount: number; noopRefs: string[] } {
+  const findings: ProjectMemoryValidationFinding[] = [];
+  const values = Array.isArray(inputs) ? inputs : [];
+  let validCount = 0;
+  const noopRefs: string[] = [];
+  for (const input of values) {
+    if (!isRecord(input) || !isRecord(input.source_packet_ref) || typeof input.reason !== "string") {
+      findings.push(finding("blocker", "explicit_noop", "noop_input_invalid_shape", "noop_inputs require source_packet_ref and reason."));
+      continue;
+    }
+    if (!validEvidenceRefShape(input.source_packet_ref) || !resolvePacketRef(packet, input.source_packet_ref)) {
+      findings.push(
+        finding(
+          "blocker",
+          "explicit_noop",
+          "noop_input_source_ref_invalid",
+          `Invalid noop_inputs source ref: ${describeRef(input.source_packet_ref)}`,
+          undefined,
+          validEvidenceRefShape(input.source_packet_ref) ? [input.source_packet_ref] : undefined,
+        ),
+      );
+      continue;
+    }
+    validCount += 1;
+    noopRefs.push(`noop_input:${input.source_packet_ref.kind}:${input.source_packet_ref.ref}`);
+  }
+  return { findings, validCount, noopRefs };
 }
 
 function validateEvidenceDependencies(
