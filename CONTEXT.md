@@ -100,8 +100,8 @@ A high-signal memory event that records a corrected or incomplete answer as cont
 _Avoid_: Project Memory repair, gap-note replacement
 
 **Memory Candidate**:
-A proposed update or observation targeted at one memory scope for later curation.
-_Avoid_: Untyped note, generic todo
+A lead for a proposed update or observation targeted at one memory scope for later curation.
+_Avoid_: canonical memory, direct write text, generic todo
 
 **Runtime Durable-Memory Inbox**:
 A source/proposal lane where operators, runtime agents, and future tools explicitly submit durable-memory candidates before curation.
@@ -166,6 +166,18 @@ _Avoid_: maintenance proposal, arbitrary wiki rewrite
 **Project Memory Maintenance Proposal**:
 The structured curator output for bounded updates to existing trusted Project Memory.
 _Avoid_: creation draft, free-form patch
+
+**Project Memory Documentation Contract**:
+The role-based quality contract that defines whether Project Memory creation or maintenance produced trustworthy project documentation.
+_Avoid_: page-count guard, generic wiki minimum
+
+**Project Memory Content Quality State**:
+A run-level classification of whether Project Memory markdown is trusted enough to be curated independent of retrieval/index readiness.
+_Avoid_: retrieval status, schema validity, completed_with_pending_index
+
+**Section-First Project Memory Maintenance**:
+A maintenance policy that updates the smallest owned Project Memory section before creating a new page or rewriting a whole page.
+_Avoid_: page-first rewrite, entry-only maintenance
 
 **Project Memory Apply Payload**:
 A structured curator output fragment that code validates and deterministically renders into canonical Project Memory markdown.
@@ -275,6 +287,7 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - **Personal Memory** is promoted from repeated user corrections, project behavior, or explicit user guidance.
 - **Experience Log** feeds **Session Memory** first as raw evidence; **Project Memory**, **Practice Memory**, and **Personal Memory** work is derived from session-level interpretation.
 - Memory types and storage layers are separate axes: **Experience Log**, **Session Memory**, and candidate/handoff state live in root SQLite; **Project Memory** lives in project wiki/state/sources; **Practice Memory** and **Personal Memory** canonical homes are deferred until promotion designs.
+- A **Memory Candidate** is a lead for curation, not trusted memory and not text that can be copied directly into durable memory without layer-specific evidence checks.
 - Trusted **Session Memory** is stored in root SQLite in a dedicated `session_memories` table; embeddings are retrieval support, not the canonical memory record.
 - A future **Session Memory Query Facade** should hide the SQLite/vector implementation from MCP callers and agents.
 - Early **Experience Log** entries are explicit high-signal records for continuity or later curation, not routine tool-call logging.
@@ -289,6 +302,7 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - A **Memory Candidate** targets exactly one of **Project Memory**, **Session Memory**, **Practice Memory**, or **Personal Memory**.
 - A **Memory Candidate** is a proposed memory output, while a **Layer Handoff Instruction** is downstream agent input; they use separate queues.
 - A **Layer Handoff Instruction** tells a future memory-layer agent what to read, query, fetch, compare, or verify; it includes structured fields plus prompt text, uses separate Project/Practice/Personal queues behind function/facade access, and is not trusted higher-layer memory by itself.
+- Project Memory producers normalize into **Memory Candidate** or **Layer Handoff Instruction** inputs before `project learn`; producer-specific lanes should not survive into Project Memory curation.
 - The **Status Facade** reads state-oriented memory such as latest **Session Memory** and should not be used for general knowledge answers.
 - The **Status Facade** returns structured state first, with a short prose answer only as a convenience.
 - MCP facades require an explicit project key unless the server environment provides `LLM_WIKI_PROJECT`.
@@ -301,6 +315,9 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - A **Bootstrap Command** creates a **Project Memory Shell**, not curated **Project Memory**.
 - **Project Memory Creation Mode** applies until trusted curated **Project Memory** exists.
 - **Project Memory Maintenance Mode** applies after trusted curated **Project Memory** exists.
+- The **Project Memory Documentation Contract** is the publication quality bar for **Project Memory Creation Mode** and the preservation quality bar for **Project Memory Maintenance Mode**.
+- A **Project Memory Content Quality State** must pass before **Project Memory** can be marked curated; **Project Memory Retrieval Index** readiness is a separate derived-state concern.
+- **Section-First Project Memory Maintenance** is the default shape for **Project Memory Maintenance Mode**; whole-page creation or rewrite needs missing ownership or explicit review-worthy justification.
 - **Untrusted Existing Markdown Context** may inform **Project Memory Creation Mode**, but it is not evidence that **Project Memory** is already curated.
 - A **Project Memory Creation Draft** creates the first trusted project brain; a **Project Memory Maintenance Proposal** updates an existing trusted brain.
 - A **Project Memory Apply Payload** is proposed by a curator, validated by Myelin, and rendered by deterministic code into canonical Project Memory markdown.

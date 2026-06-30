@@ -86,7 +86,7 @@ Project Memory is the first durable curation layer. It should capture what the r
 
 Step 3 is complete when `project learn <key>` can safely maintain Project Memory from bounded evidence, with validated curator output and provenance-backed markdown updates.
 
-Step 3 foundation is complete. Step 3.5 completed transport, retrieval-quality, and schema-output hardening. The 2026-06-30 dogfood output proved the mechanics but not the memory-layer quality bar, so Step 4 now owns Project Memory shape, creation, and maintenance redesign before producer routing resumes in Step 4.5.
+Step 3 foundation is complete. Step 3.5 completed transport, retrieval-quality, and schema-output hardening. The 2026-06-30 dogfood output proved the mechanics but not the memory-layer quality bar, so Step 4 now owns Project Memory shape, creation, maintenance, and producer-routing redesign before Current Briefing resumes in Step 4.5.
 
 - [x] `retired` ~~The old Phase-0 `project learn` / `project ingest` runner scaffold has been removed from the active Project Memory command surface.~~
   - Why: `project learn` now owns Project Memory curation through the mode-scoped Project Memory Curator pre-write flow, while top-level `ingest <key>` remains Session Memory / Experience Log ingest.
@@ -194,7 +194,7 @@ Goal: make Project Memory useful as a durable memory layer, not merely valid mar
 
 The 2026-06-30 `llm-wiki` create dogfood proved the transport, schema, validation, and apply mechanics, but the generated pages were too thin to trust as project memory. A valid first layer must document the project deeply enough for future agents to rely on it: repo-bounded, citation-backed, organized by stable project concepts, and maintained with clear quality gates.
 
-Step 4 is complete when create mode can produce a trustworthy first Project Memory layer and maintain mode can update that layer without flattening it into shallow summaries, generic page categories, or unchecked candidate text.
+Step 4 is complete when create mode can produce a trustworthy first Project Memory layer, maintain mode can update that layer without flattening it into shallow summaries, generic page categories, or unchecked candidate text, and Project Memory candidate producers route into that documentation-shaped curation boundary instead of defining a parallel memory path.
 
 - [ ] `next` Redesign the Project Memory wiki shape and creation quality bar.
   - Description: Define the expected first-create documentation shape, page taxonomy, minimum depth, citation density, required repo surfaces, and quality checks for a valid Project Memory layer.
@@ -208,6 +208,9 @@ Step 4 is complete when create mode can produce a trustworthy first Project Memo
 - [ ] `open` Redesign maintain mode around existing Project Memory structure.
   - Description: Make maintenance preserve and improve canonical page structure, update specific sections, attach evidence, mark uncertainty, and identify missing/stale coverage without creating generic duplicates.
   - Why: maintenance should make Project Memory sharper over time, not accumulate shallow fragments.
+- [ ] `open` Route Project Memory producer outputs through the documentation-shaped candidate boundary.
+  - Description: Session Memory handoffs, project gaps, stale findings, runtime inbox items, and future producer outputs should become Project Memory candidates or handoff inputs that the curator treats as leads for repo-grounded documentation updates, not as direct durable memory text.
+  - Why: the user's target shape includes Session Memory curators suggesting higher-layer memory candidates, but Project Memory must still own exploration, evidence checks, page placement, and durable markdown writes.
 - [ ] `open` Define Project Memory quality diagnostics and review artifacts.
   - Description: Add inspectable signals that explain whether a create or maintain run produced reliable coverage, shallow coverage, missing citations, stale areas, or review-only material.
   - Why: operators and agents need to know whether a run produced trusted memory, not just valid JSON and successful file writes.
@@ -215,18 +218,14 @@ Step 4 is complete when create mode can produce a trustworthy first Project Memo
   - Description: Rebootstrap `llm-wiki`, rerun create and maintain, inspect the generated wiki manually, and only mark the step complete if the output is useful as a memory layer.
   - Why: the previous dogfood showed that schema validity is not enough; manual product-quality review is part of the acceptance bar.
 
-## Roadmap Step 4.5: Project Memory Producer Routing And Current Briefing Follow-Up
+## Roadmap Step 4.5: Current Briefing Follow-Up
 
-Goal: continue Project Memory producer integrations and current-state follow-up only after the core Project Memory layer is trustworthy.
+Goal: revisit current-state follow-up only after the core Project Memory layer and its producer intake boundary are trustworthy.
 
-- [ ] `open` Route project gaps and stale findings through the candidate intake boundary.
-  - Description: Gap/stale/finding producers should emit runtime inbox candidate items or normalized candidate drafts through the same intake contract instead of creating a parallel path.
-  - Why: missing or stale knowledge should become structured curator input instead of accumulating in disconnected side channels, but producer-specific routing should follow the intake boundary instead of defining it.
-  - Refs: runtime inbox source creation lives in `src/inbox/runtime-inbox-items.ts`; normalization into `memory_candidates` lives in `src/project/project-memory-candidate-intake-service.ts`; CLI surfaces are in `src/commands/memory.ts`; current candidate packet intake is in `src/project/project-memory-packet.ts`. Earlier gap/stale pseudocode artifacts were intentionally not part of this foundation unless redesigned through the intake boundary.
 - [ ] `open` Decide whether Current Briefing is needed after Project Memory curation and retrieval are stable.
   - Description: Revisit session-start briefing only after Project Memory and Session Memory can prove whether a separate current-state view is still useful.
   - Why: Myelin should not create another current-state surface unless Project Memory and Session Memory still leave a real session-start gap.
-  - Refs: revisit after Step 4 proves Project Memory quality and Step 4.5 producer routing clarifies any remaining retrieval/status gap. Compare against `src/commands/status.ts`, `src/status/status-service.ts`, `src/query/memory-query-service.ts`, and Session Memory query behavior in `src/memory/session-memory-query.ts`.
+  - Refs: revisit after Step 4 proves Project Memory quality and producer routing clarifies any remaining retrieval/status gap. Compare against `src/commands/status.ts`, `src/status/status-service.ts`, `src/query/memory-query-service.ts`, and Session Memory query behavior in `src/memory/session-memory-query.ts`.
 - [ ] `deferred` Resume Current Briefing only if Project Memory curation and retrieval prove it is still needed.
   - Description: Keep Current Briefing out of active work unless the core memory layers still need a derived session-start summary.
   - Why: Current Briefing should be a derived session-start view only if the core memory layers do not already cover that need.
