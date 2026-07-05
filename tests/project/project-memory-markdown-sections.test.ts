@@ -4,8 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   extractProjectMemorySections,
+  extractProjectMemorySectionsFromMarkdown,
   writeProjectMemorySectionManifest,
 } from "../../src/project/project-memory-markdown-sections.ts";
+import { renderPageDraft } from "../../src/project/project-memory-markdown-renderer.ts";
 import { readJsonIfExists } from "../../src/runtime/json.ts";
 
 let root: string;
@@ -70,6 +72,33 @@ test("writes sections.json under project-memory-retrieval state", async () => {
   expect(written).toBe("projects/demo/state/project-memory-retrieval/sections.json");
   const stored = await readJsonIfExists(join(root, written));
   expect(stored).toMatchObject({ schema_version: 1, project_key: "demo" });
+});
+
+test("section extractor sees rendered create page sections", () => {
+  const markdown = renderPageDraft({
+    page_path: "storage-retrieval.md",
+    title: "Storage And Retrieval",
+    purpose: "Documents where Myelin stores memory and how retrieval points back to markdown.",
+    sections: [
+      {
+        heading: "SQLite State",
+        level: 2,
+        body: { paragraphs: ["The root SQLite database lives at state/memory.db."] },
+        evidence_refs: [{ kind: "repo_citation", ref: "src/memory/db.ts" }],
+        repo_citations: [{ path: "src/memory/db.ts", line_start: 11, reason: "memory database path" }],
+      },
+    ],
+    evidence_refs: [{ kind: "repo_citation", ref: "src/memory/db.ts" }],
+    repo_citations: [{ path: "src/memory/db.ts", line_start: 11, reason: "memory database path" }],
+  });
+
+  const sections = extractProjectMemorySectionsFromMarkdown({
+    projectKey: "llm-wiki",
+    wikiPath: "wiki/storage-retrieval.md",
+    text: markdown,
+  });
+
+  expect(sections.map((section) => section.heading_path.join(" > "))).toContain("Storage And Retrieval > SQLite State");
 });
 
 test("missing wiki directory returns empty manifest with warning", async () => {

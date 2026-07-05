@@ -16,6 +16,15 @@ import type {
   ProjectMemoryLookupQualitySummary,
   ProjectMemoryLookupResult,
 } from "./project-memory-retrieval-contracts.ts";
+import {
+  extractProjectMemorySections,
+  type ProjectMemoryMarkdownSection,
+} from "./project-memory-markdown-sections.ts";
+import {
+  priorityForProjectMemoryLead,
+  producerKindForLead,
+  type ProjectMemoryLeadPriority,
+} from "./project-memory-producer-boundary.ts";
 
 export type ProjectMemoryPacket = {
   schema_version: 1;
@@ -36,6 +45,7 @@ export type ProjectMemoryPacket = {
   wiki: {
     page_count: number;
     pages: ProjectMemoryPage[];
+    sections: ProjectMemoryMarkdownSection[];
   };
   pending: {
     project_handoffs: PacketHandoff[];
@@ -68,6 +78,8 @@ export type PacketLookupQuery = {
 export type PacketHandoff = {
   id: string;
   status: string;
+  priority: ProjectMemoryLeadPriority;
+  producer_kind: string;
   objective: string;
   prompt_text: string;
   source_session_memory_ids: string[];
@@ -81,6 +93,8 @@ export type PacketHandoff = {
 export type PacketCandidate = {
   id: string;
   status: string;
+  priority: ProjectMemoryLeadPriority;
+  producer_kind: string;
   candidate_type: string;
   title: string | null;
   summary: string;
@@ -119,6 +133,7 @@ export async function buildProjectMemoryPacket(
     pages_manifest: await readJsonIfExists(projectPath(root, projectKey, "state", "pages.json")),
   };
   const corpus = await loadProjectMemoryCorpus(root, projectKey);
+  const sectionManifest = await extractProjectMemorySections(root, projectKey);
   const pages = corpus.pages;
   const degradedReasons: string[] = [];
   if (pages.length === 0) degradedReasons.push(`projects/${projectKey}/wiki has no markdown pages`);
@@ -161,6 +176,7 @@ export async function buildProjectMemoryPacket(
     wiki: {
       page_count: pages.length,
       pages,
+      sections: sectionManifest.sections,
     },
     pending: {
       project_handoffs: memoryInputs.projectHandoffs,
@@ -267,13 +283,16 @@ function lookupQueries(input: {
 }
 
 function compactHandoff(row: HandoffInstructionRow): PacketHandoff {
+  const sourceEventRefs = jsonStringArray(row.source_event_refs_json);
   return {
     id: row.id,
     status: row.status,
+    priority: priorityForProjectMemoryLead({ source_kind: "project_handoff", confidence: row.confidence, risk: row.risk }),
+    producer_kind: producerKindForLead({ id: row.id, source_event_refs: sourceEventRefs }),
     objective: row.objective,
     prompt_text: row.prompt_text,
     source_session_memory_ids: jsonStringArray(row.source_session_memory_ids_json),
-    source_event_refs: jsonStringArray(row.source_event_refs_json),
+    source_event_refs: sourceEventRefs,
     suggested_actions: jsonStringArray(row.suggested_actions_json),
     confidence: row.confidence,
     risk: row.risk,
@@ -282,13 +301,16 @@ function compactHandoff(row: HandoffInstructionRow): PacketHandoff {
 }
 
 function compactCandidate(row: MemoryCandidateRow): PacketCandidate {
+  const sourceEventRefs = jsonStringArray(row.source_event_refs_json);
   return {
     id: row.id,
     status: row.status,
+    priority: priorityForProjectMemoryLead({ source_kind: "project_candidate", confidence: row.confidence, risk: row.risk }),
+    producer_kind: producerKindForLead({ id: row.id, source_event_refs: sourceEventRefs }),
     candidate_type: row.candidate_type,
     title: row.title,
     summary: row.summary,
-    source_event_refs: jsonStringArray(row.source_event_refs_json),
+    source_event_refs: sourceEventRefs,
     confidence: row.confidence,
     risk: row.risk,
     reason: row.reason,

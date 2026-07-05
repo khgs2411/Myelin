@@ -18,7 +18,9 @@ import type {
   ProjectMemoryMaintenanceProposalItem,
   ProjectMemoryRisk,
 } from "./project-memory-curator-contracts.ts";
+import type { ExplicitNoOpDecision } from "./project-memory-retrieval-contracts.ts";
 import { PROJECT_MEMORY_CREATION_MIN_PAGES } from "./project-memory-curator-contracts.ts";
+import { isTrustedProjectMemoryQuality } from "./project-memory-quality-contract.ts";
 import {
   boundedSnippetForText,
   findEntryBlock,
@@ -27,6 +29,17 @@ import {
   updateEntryLifecycle,
   upsertEntryBlock,
 } from "./project-memory-markdown-renderer.ts";
+import {
+  extractProjectMemorySections,
+  extractProjectMemorySectionsFromMarkdown,
+  type ProjectMemoryMarkdownSection,
+} from "./project-memory-markdown-sections.ts";
+import {
+  insertMarkdownSection,
+  patchMarkdownSection,
+  renderSectionBody,
+} from "./project-memory-section-renderer.ts";
+import { resolveSectionTarget } from "./project-memory-section-targets.ts";
 import { ensureParentDir, resolveInside } from "../runtime/fs.ts";
 import { readJson, readJsonIfExists, writeJson } from "../runtime/json.ts";
 
@@ -155,6 +168,9 @@ export class ProjectMemoryMarkdownApplier {
       resolveInside(this.root, "projects", input.project_key, "state", "project-memory.json"),
     );
     if (existingState?.status === "curated") return skippedResult("creation apply skipped: project memory is already curated");
+    if (!isTrustedProjectMemoryQuality(input.draft.quality_diagnostics)) {
+      return skippedResult("creation apply skipped: Project Memory content quality is not trusted");
+    }
     if (!creationPublicationMinimumMet(input.draft)) return skippedResult("creation apply skipped: publication minimum not met");
     if (!input.draft.state_intent.mark_project_memory_curated) return skippedResult("creation apply skipped: curated state intent missing");
 
@@ -189,6 +205,15 @@ export class ProjectMemoryMarkdownApplier {
           source_run_dir: input.run_dir,
           status: "curated",
           updated_at: new Date().toISOString(),
+          content_quality: {
+            status: "trusted",
+            checked_at: new Date().toISOString(),
+            contract_version: 1,
+          },
+          retrieval_readiness: {
+            status: "pending",
+            checked_at: new Date().toISOString(),
+          },
         },
         null,
         2,
@@ -232,18 +257,19 @@ export class ProjectMemoryMarkdownApplier {
     const sourceConsumptions: ProjectMemorySourceConsumptionRecord[] = [];
     const appliedItemIds: string[] = [];
 
+    sourceConsumptions.push(...sourceConsumptionsForExplicitNoops({
+      projectKey: input.project_key,
+      runDir: input.run_dir,
+      decisions: input.proposal.explicit_noop_decisions ?? [],
+    }));
+
     for (const item of input.proposal.items.filter((candidate) => input.eligible_item_ids.includes(candidate.id))) {
       if (item.operation === "NOOP") continue;
-      const pagePath = item.target_page.path;
-      const absolutePagePath = resolveInside(this.root, "projects", input.project_key, "wiki", pagePath);
-      const pageText = pageUpdates.get(pagePath) ?? (await readFileIfExists(absolutePagePath));
-      if (pageText === null) return skippedResult(`maintenance apply skipped: target page is missing: ${pagePath}`);
-      const entry = item.apply_payload?.entries?.[0];
-      if (!entry) return skippedResult(`maintenance apply skipped: missing entry payload for ${item.id}`);
-      const entryId = item.target_entry_id ?? item.proposed_entry_id ?? entry.entry_id;
-      const beforeSnippet = snippetFromPage(pagePath, entryId, pageText);
-      const nextPage = applyMaintenanceItem(pageText, item, renderEntryBlock(entry), entryId);
-      const afterSnippet = snippetFromPage(pagePath, entryId, nextPage);
+      const applied = isLegacyOperation(item.operation)
+        ? await applyLegacyMaintenanceItem(this.root, input.project_key, item, pageUpdates)
+        : await applySectionMaintenanceItem(this.root, input.project_key, item, pageUpdates);
+      if (applied.status === "skipped") return skippedResult(applied.reason);
+      const { pagePath, nextPage, beforeSnippet, afterSnippet, entryId, inference } = applied;
       pageUpdates.set(pagePath, nextPage);
       itemChanges.push({
         item_id: item.id,
@@ -254,13 +280,15 @@ export class ProjectMemoryMarkdownApplier {
         after_snippet: afterSnippet,
         evidence_refs: item.evidence_refs,
         repo_citations: item.repo_citations,
-        inference: entry.inference,
+        inference,
       });
       sourceConsumptions.push(...sourceConsumptionsForMaintenance({ projectKey: input.project_key, runDir: input.run_dir, item }));
       appliedItemIds.push(item.id);
     }
 
-    if (appliedItemIds.length === 0) return skippedResult("maintenance apply skipped: no eligible mutation items");
+    if (appliedItemIds.length === 0 && sourceConsumptions.length === 0) {
+      return skippedResult("maintenance apply skipped: no eligible mutation items");
+    }
 
     const writes: ProjectMemoryStagedWrite[] = [...pageUpdates.entries()].map(([pagePath, content]) => ({
       canonical_project_path: `projects/${input.project_key}/wiki/${pagePath}`,
@@ -432,6 +460,136 @@ export class ProjectMemoryMarkdownApplier {
   }
 }
 
+type AppliedMaintenancePageUpdate = {
+  status: "applied";
+  pagePath: string;
+  nextPage: string;
+  beforeSnippet?: ProjectMemoryAppliedItemChange["before_snippet"];
+  afterSnippet?: ProjectMemoryAppliedItemChange["after_snippet"];
+  entryId?: string;
+  inference?: ProjectMemoryAppliedItemChange["inference"];
+} | {
+  status: "skipped";
+  reason: string;
+};
+
+async function applyLegacyMaintenanceItem(
+  root: string,
+  projectKey: string,
+  item: ProjectMemoryMaintenanceProposalItem,
+  pageUpdates: Map<string, string>,
+): Promise<AppliedMaintenancePageUpdate> {
+  const pagePath = item.target_page?.path;
+  if (!pagePath) return { status: "skipped", reason: `maintenance apply skipped: missing legacy target page for ${item.id}` };
+  const absolutePagePath = resolveInside(root, "projects", projectKey, "wiki", pagePath);
+  const pageText = pageUpdates.get(pagePath) ?? (await readFileIfExists(absolutePagePath));
+  if (pageText === null) return { status: "skipped", reason: `maintenance apply skipped: target page is missing: ${pagePath}` };
+  const entry = item.apply_payload?.entries?.[0];
+  if (!entry) return { status: "skipped", reason: `maintenance apply skipped: missing entry payload for ${item.id}` };
+  const entryId = item.target_entry_id ?? item.proposed_entry_id ?? entry.entry_id;
+  const beforeSnippet = snippetFromPage(pagePath, entryId, pageText);
+  const nextPage = applyMaintenanceItem(pageText, item, renderEntryBlock(entry), entryId);
+  const afterSnippet = snippetFromPage(pagePath, entryId, nextPage);
+  return { status: "applied", pagePath, nextPage, beforeSnippet, afterSnippet, entryId, inference: entry.inference };
+}
+
+async function applySectionMaintenanceItem(
+  root: string,
+  projectKey: string,
+  item: ProjectMemoryMaintenanceProposalItem,
+  pageUpdates: Map<string, string>,
+): Promise<AppliedMaintenancePageUpdate> {
+  const target = item.target;
+  if (!target) return { status: "skipped", reason: `maintenance apply skipped: missing section target for ${item.id}` };
+  const pagePath = target.wiki_path;
+  const absolutePagePath = resolveInside(root, "projects", projectKey, "wiki", pagePath);
+  if (item.operation === "CREATE_PAGE") {
+    const page = item.apply_payload?.page;
+    if (!page) return { status: "skipped", reason: `maintenance apply skipped: missing page payload for ${item.id}` };
+    const existingPage = pageUpdates.get(pagePath) ?? (await readFileIfExists(absolutePagePath));
+    if (existingPage !== null) return { status: "skipped", reason: `maintenance apply skipped: CREATE_PAGE target already exists: ${pagePath}` };
+    const rendered = renderPageDraft(page);
+    return {
+      status: "applied",
+      pagePath,
+      nextPage: rendered,
+      afterSnippet: boundedSnippetForText(`wiki/${pagePath}`, item.id, rendered),
+      inference: page.inference,
+    };
+  }
+
+  const pageText = pageUpdates.get(pagePath) ?? (await readFileIfExists(absolutePagePath));
+  if (pageText === null) return { status: "skipped", reason: `maintenance apply skipped: target page is missing: ${pagePath}` };
+  const section = item.apply_payload?.section;
+  if (!section) return { status: "skipped", reason: `maintenance apply skipped: missing section payload for ${item.id}` };
+  const renderedBody = renderSectionBody({
+    body: section.body,
+    evidence_refs: section.evidence_refs,
+    repo_citations: section.repo_citations,
+  });
+
+  if (item.operation === "CREATE_SECTION") {
+    const nextPage = insertMarkdownSection(pageText, { heading: section.heading, level: section.level, body: renderedBody });
+    return {
+      status: "applied",
+      pagePath,
+      nextPage,
+      beforeSnippet: boundedSnippetForText(`wiki/${pagePath}`, item.id, ""),
+      afterSnippet: boundedSnippetForText(`wiki/${pagePath}`, item.id, renderedBody),
+      inference: section.inference,
+    };
+  }
+
+  if (!target.expected_section_hash) {
+    return { status: "skipped", reason: `maintenance apply skipped: missing expected section hash for ${item.id}` };
+  }
+  const sectionRef = await resolveCurrentSectionTarget(root, projectKey, pageUpdates, target);
+  if (!sectionRef) return { status: "skipped", reason: `maintenance apply skipped: unresolved section target for ${item.id}` };
+  const beforeSnippet = boundedSnippetForText(`wiki/${pagePath}`, sectionRef.section_id, sectionRef.body_text);
+  const nextPage = patchMarkdownSection(pageText, {
+    section: sectionRef,
+    expected_section_hash: target.expected_section_hash,
+    body: renderedBody,
+  });
+  return {
+    status: "applied",
+    pagePath,
+    nextPage,
+    beforeSnippet,
+    afterSnippet: boundedSnippetForText(`wiki/${pagePath}`, sectionRef.section_id, renderedBody),
+    inference: section.inference,
+  };
+}
+
+async function resolveCurrentSectionTarget(
+  root: string,
+  projectKey: string,
+  pageUpdates: Map<string, string>,
+  target: NonNullable<ProjectMemoryMaintenanceProposalItem["target"]>,
+): Promise<ProjectMemoryMarkdownSection | null> {
+  const manifest = await extractProjectMemorySections(root, projectKey);
+  const sections = [...manifest.sections];
+  for (const [pagePath, updatedText] of pageUpdates) {
+    const wikiPath = `wiki/${pagePath}`;
+    const page = manifest.pages.find((candidate) => candidate.wiki_path === wikiPath);
+    const updatedSections = extractProjectMemorySectionsFromMarkdown({
+      projectKey,
+      wikiPath,
+      text: updatedText,
+      category: page?.category,
+      title: page?.title,
+    });
+    const firstIndex = sections.findIndex((section) => section.wiki_path === wikiPath);
+    sections.splice(firstIndex < 0 ? sections.length : firstIndex, sections.filter((section) => section.wiki_path === wikiPath).length, ...updatedSections);
+  }
+  const resolved = resolveSectionTarget(sections, {
+    wiki_path: `wiki/${target.wiki_path}`,
+    section_id: target.section_id ?? "",
+    expected_section_hash: target.expected_section_hash,
+  });
+  return resolved.status === "resolved" ? resolved.section : null;
+}
+
 function applyMaintenanceItem(pageText: string, item: ProjectMemoryMaintenanceProposalItem, renderedEntry: string, entryId: string): string {
   if (item.operation === "CREATE_ENTRY" || item.operation === "PATCH_ENTRY" || item.operation === "ATTACH_EVIDENCE") {
     return upsertEntryBlock(pageText, entryId, renderedEntry);
@@ -450,6 +608,26 @@ function snippetFromPage(pagePath: string, entryId: string, pageText: string) {
   return block ? boundedSnippetForText(`wiki/${pagePath}`, entryId, block.text) : undefined;
 }
 
+function sourceConsumptionsForExplicitNoops(input: {
+  projectKey: string;
+  runDir: string;
+  decisions: ExplicitNoOpDecision[];
+}): ProjectMemorySourceConsumptionRecord[] {
+  return input.decisions.flatMap((decision) =>
+    decision.source_packet_refs
+      .filter((ref): ref is typeof ref & { kind: "project_candidate" | "project_handoff" } => ref.kind === "project_candidate" || ref.kind === "project_handoff")
+      .map((ref) => ({
+        source_kind: ref.kind,
+        source_ref: ref.ref,
+        project_key: input.projectKey,
+        consumed_by_run: input.runDir,
+        consumed_at: new Date().toISOString(),
+        terminal_decision: decision.reason,
+        output_refs: ["project-memory-changeset.json"],
+      })),
+  );
+}
+
 function sourceConsumptionsForMaintenance(input: {
   projectKey: string;
   runDir: string;
@@ -463,9 +641,13 @@ function sourceConsumptionsForMaintenance(input: {
       project_key: input.projectKey,
       consumed_by_run: input.runDir,
       consumed_at: new Date().toISOString(),
-      terminal_decision: "applied_to_project_memory",
+      terminal_decision: input.item.candidate_disposition ?? "applied_to_project_memory",
       output_refs: ["project-memory-changeset.json"],
     }));
+}
+
+function isLegacyOperation(operation: unknown): boolean {
+  return operation === "CREATE_ENTRY" || operation === "PATCH_ENTRY" || operation === "SUPERSEDE_ENTRY" || operation === "RETRACT_ENTRY";
 }
 
 async function nextSourceConsumptionState(

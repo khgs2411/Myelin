@@ -25,7 +25,36 @@ test("renders page drafts as human-readable markdown", () => {
 
   expect(rendered.startsWith("# Setup\n")).toBe(true);
   expect(rendered).toContain("Setup workflows.");
-  expect(rendered).toContain("Provenance:");
+  expect(rendered).toContain("## Setup Commands");
+  expect(rendered).toContain("Page provenance:");
+});
+
+test("renderPageDraft renders ordered page sections as markdown headings with section provenance", () => {
+  const rendered = renderPageDraft({
+    page_path: "storage-retrieval.md",
+    title: "Storage And Retrieval",
+    purpose: "Documents where Myelin stores memory and how retrieval points back to markdown.",
+    sections: [
+      {
+        heading: "SQLite State",
+        level: 2,
+        body: {
+          paragraphs: ["The root SQLite database lives at state/memory.db."],
+          bullets: ["Session Memory and Project Memory retrieval rows are different tables."],
+          warnings: [],
+        },
+        evidence_refs: [{ kind: "repo_citation", ref: "src/memory/db.ts" }],
+        repo_citations: [{ path: "src/memory/db.ts", line_start: 11, reason: "memory database path" }],
+      },
+    ],
+    evidence_refs: [{ kind: "repo_citation", ref: "src/memory/db.ts" }],
+    repo_citations: [{ path: "src/memory/db.ts", line_start: 11, reason: "memory database path" }],
+  });
+
+  expect(rendered).toContain("# Storage And Retrieval\n");
+  expect(rendered).toContain("## SQLite State\n");
+  expect(rendered).toContain("The root SQLite database lives at state/memory.db.");
+  expect(rendered).toContain("- Repo: src/memory/db.ts:11 - memory database path");
 });
 
 test("upserts entry blocks by exact entry id", () => {
@@ -58,6 +87,13 @@ test("rejects marker-breaking entry content", () => {
   );
 });
 
+test("rejects marker-breaking page section content", () => {
+  const draft = pageDraft();
+  draft.sections[0]?.body.paragraphs.push("<!-- /myelin-entry -->");
+
+  expect(() => renderPageDraft(draft)).toThrow("Entry content cannot contain myelin-entry markers");
+});
+
 test("extracts bounded snippets with truncation signal", () => {
   const snippet = boundedSnippetForText("wiki/setup/index.md", "setup.cli", "x".repeat(600), 120);
 
@@ -85,7 +121,15 @@ function pageDraft(): ProjectMemoryPageDraft {
     page_path: "setup/index.md",
     title: "Setup",
     purpose: "Setup workflows.",
-    body: { paragraphs: ["Setup workflows."] },
+    sections: [
+      {
+        heading: "Setup Commands",
+        level: 2,
+        body: { paragraphs: ["Setup workflows."] },
+        evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
+        repo_citations: [{ path: "src/runtime/project-shell.ts", reason: "Project shell setup" }],
+      },
+    ],
     evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
     repo_citations: [{ path: "src/runtime/project-shell.ts", reason: "Project shell setup" }],
   };

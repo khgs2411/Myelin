@@ -72,6 +72,7 @@ test("artifact-reference transport keeps full packet evidence out of the prompt"
   expect(result.prompt).toContain("unresolved or insufficient-evidence inputs belong in noop_inputs");
   expect(result.prompt).toContain("explicit_noop_decisions with source_packet_refs and checked_existing_memory_refs only for auto-applyable reasons");
   expect(result.prompt).toContain("do not propose auto-apply writes when target selection, dedupe, or supersession depends on fallback lookup");
+  expect(result.prompt).not.toContain("project-memory-evidence-map.json");
   expect(result.prompt).not.toContain("ProjectMemoryMaintenanceProposal contract summary:");
   expect(result.prompt).not.toContain("Evidence refs must be objects, never strings");
   expect(result.prompt).not.toContain("sharedterm project memory context");
@@ -95,20 +96,39 @@ test("creation prompt spells out applyable page targets and evidence ref shapes"
     root,
     projectKey: "demo",
     runDir: "projects/demo/runs/project-learn/run-create",
+    evidenceMapArtifact: "project-memory-evidence-map.json",
     transport: "artifact_reference",
   });
 
   expect(result.status).toBe("ok");
   expect(result.prompt).toContain("Curator output contract artifact: projects/demo/runs/project-learn/run-create/curator-output-contract.json");
   expect(result.prompt).toContain("Your output must match curator-output-contract.json");
-  expect(result.prompt).toContain("read a bounded repo orientation set");
+  expect(result.prompt).toContain("Project Memory is living repo documentation, not a page-count exercise");
+  expect(result.prompt).toContain("inspect the default orientation surfaces when present");
+  expect(result.prompt).toContain("MYELIN.md");
+  expect(result.prompt).toContain("CONTEXT.md");
+  expect(result.prompt).toContain("docs/ROADMAP.md");
+  expect(result.prompt).toContain("src/project/");
+  expect(result.prompt).toContain("src/memory/");
+  expect(result.prompt).toContain("src/runtime/");
+  expect(result.prompt).toContain("candidates, handoffs, and Session Memory are leads only");
+  expect(result.prompt).toContain("project-memory-evidence-map.json");
+  expect(result.prompt).toContain("documentation_contract.inspected_default_surfaces");
+  expect(result.prompt).toContain("including present defaults surfaced by project-memory-evidence-map.json");
+  expect(result.prompt).toContain("do not fill the gap with generic prose");
+  expect(result.prompt).toContain("leads only");
+  expect(result.prompt).toContain("evidence map points to repo-grounded support");
+  expect(result.prompt).toContain("cover all required answer domains");
+  expect(result.prompt).toContain("storage_retrieval");
+  expect(result.prompt).toContain("each page draft must name answer_domains, required_topics, representative_questions");
+  expect(result.prompt).toContain("do not use the old documentation role taxonomy as create-mode authority");
+  expect(result.prompt).not.toContain("cover all required roles");
   expect(result.prompt).toContain("every page draft and apply payload page must include direct repo_citations");
   expect(result.prompt).toContain("packet/session/candidate evidence alone is not enough to mark Project Memory curated");
   expect(result.prompt).toContain("apply_payload.pages must contain exactly one page");
   expect(result.prompt).toContain("create separate page drafts for separate wiki pages");
   expect(result.prompt).toContain("full Project Memory documentation set");
   expect(result.prompt).toContain("index.md plus at least 3 non-index pages");
-  expect(result.prompt).toContain("product purpose, runtime/commands, architecture/data flow, and operations/current work");
   expect(result.prompt).toContain("use `index.md`, not `wiki/index.md`");
   expect(result.prompt).not.toContain("ProjectMemoryCreationDraft contract summary:");
   expect(result.prompt).not.toContain("use target:{\"path\":\"index.md\",\"path_kind\":\"new_wiki_page\"}");
@@ -125,7 +145,7 @@ async function seedLargeLookupProject(): Promise<void> {
   await writeJson(join(root, "projects", "demo", "state", "project-memory.json"), { status: "curated" });
   await mkdir(join(root, "projects", "demo", "wiki"), { recursive: true });
   const body = `${"sharedterm project memory context ".repeat(20)}\n`;
-  for (let index = 0; index < 220; index += 1) {
+  for (let index = 0; index < 30; index += 1) {
     await writeFile(join(root, "projects", "demo", "wiki", `page-${index.toString().padStart(3, "0")}.md`), `# Page ${index}\n\n${body}`, "utf8");
   }
 }

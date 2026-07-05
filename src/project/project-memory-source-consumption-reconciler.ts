@@ -6,6 +6,15 @@ import { projectPath } from "../runtime/fs.ts";
 import { readJsonIfExists } from "../runtime/json.ts";
 import type { ProjectMemorySourceConsumptionRecord } from "./project-memory-apply-contracts.ts";
 
+const TERMINAL_PROJECT_MEMORY_DISPOSITIONS = new Set([
+  "applied_to_project_memory",
+  "already_trusted",
+  "not_durable",
+  "belongs_to_other_layer",
+  "insufficient_evidence",
+  "duplicate_or_superseded",
+]);
+
 export type ProjectMemorySourceConsumptionState = {
   schema_version: 1;
   project_key: string;
@@ -101,7 +110,7 @@ function isSupportedRecord(projectKey: string, record: ProjectMemorySourceConsum
     (record.source_kind === "project_candidate" || record.source_kind === "project_handoff") &&
     typeof record.source_ref === "string" &&
     record.source_ref.length > 0 &&
-    record.terminal_decision === "applied_to_project_memory"
+    TERMINAL_PROJECT_MEMORY_DISPOSITIONS.has(record.terminal_decision)
   );
 }
 

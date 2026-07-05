@@ -152,18 +152,12 @@ Side effects:
 - May write run artifacts under `projects/<project-key>/runs/`.
 - May update project memory outputs unless `--dry-run` stops writes.
 
-### `myelin project ingest <project-key> [--dry-run] [--review] [--provider codex|claude] [--model <model>] [--json]`
+### No Active `myelin project ingest`
 
-Processes queued source/inbox material through the project-memory pipeline. This is distinct from top-level `myelin ingest`, which processes Experience Log rows into Session Memory.
-
-Arguments and options:
-
-- Same parser shape as `project learn`.
-
-Side effects:
-
-- May invoke provider CLIs.
-- May drain queued source/inbox material and write project memory artifacts.
+`myelin project ingest <project-key>` is not part of the active CLI surface.
+Project Memory runtime-inbox intake runs inside `myelin project learn <project-key>`
+before packet construction. Top-level `myelin ingest <project-key>` is separate:
+it processes Experience Log rows into Session Memory and downstream handoff inputs.
 
 ### `myelin project migrate-layout <project-key>`
 
@@ -185,7 +179,7 @@ Examples:
 
 ```bash
 myelin project learn class-kit --dry-run
-myelin project ingest class-kit
+myelin ingest class-kit
 myelin project migrate-layout class-kit
 ```
 

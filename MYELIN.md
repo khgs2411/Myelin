@@ -113,12 +113,12 @@ Codex stages must run `--sandbox read-only` and return JSON on stdout (never wri
 
 ## 8. The Pipeline
 
-Two existing operator verbs refresh Project Memory from evidence (ADR 0017):
+The active operator verbs split Project Memory refresh from Experience Log ingestion:
 
 - **`project learn <key>`** (was `compile`) — broad Project Memory refresh. Stages: `sense → impact → propose → apply → validate`. Routine updates auto-apply with provenance; destructive deletes, decision-record supersession, low-confidence synthesis, conflicting sources, and broad rewrites are forced to review/dry-run (ADR 0019, 0020).
-- **`project ingest <key>`** (was `update`) — process queued source/inbox items. Stages: `ingest → apply → validate`.
+- **Project Memory runtime-inbox intake** happens inside `project learn <key>` before packet construction. Runtime inbox items become Project Memory candidates/leads; there is no active `project ingest <key>` CLI command.
 
-The top-level **`ingest <key>`** command is a separate agentic evidence-processing path introduced by ADR 0056. It starts a detached provider-backed ingest job that turns Experience Log rows into Session Memory and downstream layer handoff inputs. It must not be treated as a synonym for the older source/inbox `project ingest` pipeline.
+The top-level **`ingest <key>`** command is a separate agentic evidence-processing path introduced by ADR 0056. It starts a detached provider-backed ingest job that turns Experience Log rows into Session Memory and downstream layer handoff inputs. It must not be treated as a Project Memory refresh command.
 
 The old root stage-instruction asset tree has been retired. Current Project Memory work is implemented through TypeScript services and command run artifacts; model-backed stages still return JSON and deterministic apply/validation stays in code.
 

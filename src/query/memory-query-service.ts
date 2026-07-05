@@ -5,6 +5,11 @@ import {
   type SessionMemoryQueryMatch,
   type SessionMemoryQueryResult,
 } from "../memory/session-memory-query.ts";
+import {
+  queryProjectMemory,
+  type ProjectMemoryQueryMatch,
+  type ProjectMemoryQueryResult,
+} from "./project-memory-query-service.ts";
 import type { ActiveEmbeddingContract } from "../runtime/config.ts";
 
 export type FacadeResponse = {
@@ -19,7 +24,7 @@ export type FacadeResponse = {
 };
 
 export type QueryLayerDiagnostic = {
-  layer: "session_memory";
+  layer: "session_memory" | "project_memory";
   degraded: boolean;
   degraded_reason: string | null;
   indexed_count: number;
@@ -32,18 +37,23 @@ export type QueryLayerDiagnostic = {
 
 export type QueryResponse = FacadeResponse & {
   matches: SessionMemoryQueryMatch[];
+  project_memory_matches: ProjectMemoryQueryMatch[];
   layers?: QueryLayerDiagnostic[];
 };
 
 export type MemoryQueryInput = {
+  root: string;
   projectKey: string;
   question: string;
   limit?: number;
   includeRoute?: boolean;
   gitBranch?: string;
+  layer?: "session" | "project" | "auto";
+  maxInlineChars?: number;
 };
 
 type SessionMemoryQueryRunner = typeof querySessionMemory;
+type ProjectMemoryQueryRunner = typeof queryProjectMemory;
 
 export class MemoryQueryService {
   constructor(
@@ -53,10 +63,16 @@ export class MemoryQueryService {
       embeddingProvider: EmbeddingProviderClient;
       responseService?: DeterministicMemoryQueryResponseService;
       sessionMemoryQuery?: SessionMemoryQueryRunner;
+      projectMemoryQuery?: ProjectMemoryQueryRunner;
     },
   ) {}
 
   async query(input: MemoryQueryInput): Promise<QueryResponse> {
+    if (input.layer === "project") return await this.queryProject(input);
+    return await this.querySession(input);
+  }
+
+  private async querySession(input: MemoryQueryInput): Promise<QueryResponse> {
     const sessionMemoryQuery = this.deps.sessionMemoryQuery ?? querySessionMemory;
     const responseService = this.deps.responseService ?? new DeterministicMemoryQueryResponseService();
 
@@ -74,6 +90,26 @@ export class MemoryQueryService {
       return responseService.degraded(error instanceof Error ? error.message : String(error));
     }
   }
+
+  private async queryProject(input: MemoryQueryInput): Promise<QueryResponse> {
+    const projectMemoryQuery = this.deps.projectMemoryQuery ?? queryProjectMemory;
+    const responseService = this.deps.responseService ?? new DeterministicMemoryQueryResponseService();
+
+    try {
+      const result = await projectMemoryQuery(this.deps.db, {
+        root: input.root,
+        project_key: input.projectKey,
+        question: input.question,
+        document_contract: this.deps.documentContract,
+        provider: this.deps.embeddingProvider,
+        limit: input.limit ?? 5,
+        max_inline_chars: input.maxInlineChars ?? 4000,
+      });
+      return responseService.fromProjectMemoryResult(result, { includeRoute: input.includeRoute ?? false });
+    } catch (error) {
+      return responseService.degraded(error instanceof Error ? error.message : String(error), "project_memory");
+    }
+  }
 }
 
 export class DeterministicMemoryQueryResponseService {
@@ -88,12 +124,30 @@ export class DeterministicMemoryQueryResponseService {
       degraded_reason: result.degraded_reason ?? null,
       source_tools: result.source_tools,
       matches: result.matches,
+      project_memory_matches: [],
     };
     if (input.includeRoute) response.layers = [this.sessionMemoryDiagnostic(result)];
     return response;
   }
 
-  degraded(reason: string): QueryResponse {
+  fromProjectMemoryResult(result: ProjectMemoryQueryResult, input: { includeRoute: boolean }): QueryResponse {
+    const response: QueryResponse = {
+      answer: this.answerFromProjectMemoryMatches(result.matches),
+      confidence: this.confidenceFromProjectMemoryMatches(result.matches, result.degraded),
+      memory_scope: result.degraded ? "project_memory_degraded" : "project_memory",
+      citations: result.matches.map((match) => match.citation),
+      candidate_ids: [],
+      degraded: result.degraded,
+      degraded_reason: result.degraded_reason ?? null,
+      source_tools: result.source_tools,
+      matches: [],
+      project_memory_matches: result.matches,
+    };
+    if (input.includeRoute) response.layers = [this.projectMemoryDiagnostic(result)];
+    return response;
+  }
+
+  degraded(reason: string, layer: "session_memory" | "project_memory" = "session_memory"): QueryResponse {
     return {
       answer: reason,
       confidence: 0,
@@ -102,8 +156,9 @@ export class DeterministicMemoryQueryResponseService {
       candidate_ids: [],
       degraded: true,
       degraded_reason: reason,
-      source_tools: ["session-memory-vector-index"],
+      source_tools: [layer === "project_memory" ? "project-memory-vector-index" : "session-memory-vector-index"],
       matches: [],
+      project_memory_matches: [],
     };
   }
 
@@ -124,9 +179,42 @@ export class DeterministicMemoryQueryResponseService {
     return Number(Math.max(0.1, Math.min(0.95, 1 - distance)).toFixed(3));
   }
 
+  private answerFromProjectMemoryMatches(matches: ProjectMemoryQueryMatch[]): string {
+    if (matches.length === 0) return "No Project Memory matches found.";
+    return matches
+      .map((match) => {
+        const ref = `${match.wiki_path}#${match.section_id}`;
+        if (match.return_kind === "inline_content") return `${ref}\n${match.content ?? ""}`;
+        return `${ref} (${match.reference_reason ?? "degraded"})`;
+      })
+      .join("\n\n");
+  }
+
+  private confidenceFromProjectMemoryMatches(matches: ProjectMemoryQueryMatch[], degraded: boolean): number {
+    if (matches.length === 0) return 0;
+    if (degraded && matches.every((match) => match.return_kind !== "inline_content")) return 0;
+    const distance = matches[0].distance;
+    if (!Number.isFinite(distance)) return degraded ? 0.5 : 0.75;
+    return Number(Math.max(0.1, Math.min(degraded ? 0.7 : 0.95, 1 - distance)).toFixed(3));
+  }
+
   private sessionMemoryDiagnostic(result: SessionMemoryQueryResult): QueryLayerDiagnostic {
     return {
       layer: "session_memory",
+      degraded: result.degraded,
+      degraded_reason: result.degraded_reason ?? null,
+      indexed_count: result.indexed_count,
+      pending_count: result.pending_count,
+      match_count: result.matches.length,
+      query_embedding_cache_hit: result.query_embedding_cache_hit ?? null,
+      query_embedding_cache_id: result.query_embedding_cache_id ?? null,
+      normalized_question: result.normalized_question ?? null,
+    };
+  }
+
+  private projectMemoryDiagnostic(result: ProjectMemoryQueryResult): QueryLayerDiagnostic {
+    return {
+      layer: "project_memory",
       degraded: result.degraded,
       degraded_reason: result.degraded_reason ?? null,
       indexed_count: result.indexed_count,

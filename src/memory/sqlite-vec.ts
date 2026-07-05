@@ -233,11 +233,26 @@ export function searchProjectMemoryRetrievalVectors(
          AND embedding_dimensions = ?
          AND embedding_purpose = ?
          AND format_version = ?
+         AND retrieval_row_id IN (
+           SELECT id
+           FROM project_memory_retrieval_embeddings
+           WHERE project_key = ?
+             AND embedding_model = ?
+             AND embedding_dimensions = ?
+             AND embedding_purpose = ?
+             AND format_version = ?
+             AND status = 'indexed'
+         )
        ORDER BY distance ASC`,
     )
     .all(
       toFloat32Vector(input.embedding),
       input.limit,
+      input.project_key,
+      input.embedding_model,
+      input.embedding_dimensions,
+      input.embedding_purpose,
+      input.format_version,
       input.project_key,
       input.embedding_model,
       input.embedding_dimensions,

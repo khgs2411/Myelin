@@ -13,6 +13,8 @@ export async function queryMemory(options: {
   limit?: number;
   includeRoute?: boolean;
   branch?: string | "current";
+  layer?: "session" | "project" | "auto";
+  maxInlineChars?: number;
 }): Promise<QueryResponse> {
   let db: ReturnType<typeof openMemoryDb> | undefined;
   try {
@@ -27,11 +29,14 @@ export async function queryMemory(options: {
       embeddingProvider: provider,
     });
     return await service.query({
+      root: options.root,
       projectKey: options.projectKey,
       question: options.question,
       limit: options.limit,
       includeRoute: options.includeRoute,
       gitBranch,
+      layer: options.layer,
+      maxInlineChars: options.maxInlineChars,
     });
   } catch (error) {
     return degradedResponse(error instanceof Error ? error.message : String(error));
@@ -59,5 +64,6 @@ function degradedResponse(reason: string): QueryResponse {
     degraded_reason: reason,
     source_tools: ["session-memory-vector-index"],
     matches: [],
+    project_memory_matches: [],
   };
 }

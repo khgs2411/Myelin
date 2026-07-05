@@ -37,7 +37,7 @@ export async function generateProjectMemoryHints(input: {
   category: string | null;
   manifest: ProjectMemorySectionManifest;
   sections: ProjectMemoryMarkdownSection[];
-  provider: Provider;
+  provider?: Provider;
   model?: string;
   required?: boolean;
   refresh?: boolean;
@@ -150,7 +150,7 @@ function hintPrompt(projectKey: string, category: string | null, sections: Proje
 }
 
 function normalizeHintFile(
-  input: { projectKey: string; category: string | null; provider: Provider; model?: string },
+  input: { projectKey: string; category: string | null; provider?: Provider; model?: string },
   response: unknown,
   runRef: string,
 ): ProjectMemoryHintFile | null {
@@ -168,7 +168,7 @@ function normalizeHintFile(
     category: input.category,
     generated_by: {
       flow: "project_memory_hint_generation",
-      provider: input.provider,
+      provider: input.provider ?? "default",
       model: input.model ?? "default",
       run_ref: runRef,
     },

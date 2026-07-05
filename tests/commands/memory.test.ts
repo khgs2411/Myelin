@@ -13,7 +13,17 @@ import { openMemoryDb } from "../../src/memory/db.ts";
 import { stubEmbeddingFilename, type EmbeddingRequest } from "../../src/memory/embedding-provider.ts";
 import { markSessionMemoryEmbeddingIndexed } from "../../src/memory/session-memory-embeddings.ts";
 import { ensureSessionMemoryVectorStorage } from "../../src/memory/session-memory-embeddings.ts";
-import { createSqliteVecAdapter, upsertSessionMemoryVector } from "../../src/memory/sqlite-vec.ts";
+import {
+  createSqliteVecAdapter,
+  ensureProjectMemoryRetrievalVectorTable,
+  upsertProjectMemoryRetrievalVector,
+  upsertSessionMemoryVector,
+} from "../../src/memory/sqlite-vec.ts";
+import {
+  ensurePendingProjectMemoryRetrievalEmbedding,
+  markProjectMemoryRetrievalEmbeddingIndexed,
+} from "../../src/memory/project-memory-retrieval-storage.ts";
+import { extractProjectMemorySections } from "../../src/project/project-memory-markdown-sections.ts";
 import { DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT } from "../../src/runtime/config.ts";
 import { writeJson } from "../../src/runtime/json.ts";
 
@@ -134,6 +144,39 @@ test("memory query can filter session memory by captured git branch", async () =
   expect(result.exitCode).toBe(0);
   expect(response.matches.map((match: { id: string }) => match.id)).toEqual(["mem_query_1"]);
   expect(response.matches[0].contexts[0].git_branch).toBe("feature/sqlite-vec");
+});
+
+test("memory query project layer returns approved Project Memory JSON shape", async () => {
+  await seedProjectMemoryQueryFixture("How is setup documented?");
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+
+  const result = await cli.run([
+    "memory",
+    "query",
+    "demo",
+    "How is setup documented?",
+    "--layer",
+    "project",
+    "--json",
+    "--debug",
+  ]);
+  const response = JSON.parse(result.message);
+
+  expect(result.exitCode).toBe(0);
+  expect(response.matches).toEqual([]);
+  expect(response.project_memory_matches[0]).toMatchObject({
+    wiki_path: "wiki/setup/index.md",
+    section_id: "setup",
+    return_kind: "inline_content",
+    content: "Setup is documented in canonical Project Memory.",
+    citation: "project_memory:wiki/setup/index.md#setup",
+  });
+  expect(response.project_memory_matches[0].reference_reason).toBeUndefined();
+  expect(response.layers[0]).toMatchObject({
+    layer: "project_memory",
+    match_count: 1,
+  });
 });
 
 test("memory session list filters lifecycle status", async () => {
@@ -626,6 +669,71 @@ async function seedQueryMemoryFixture(question: string): Promise<void> {
       embedding_purpose: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT.purpose,
       format_version: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT.formatVersion,
       embedding: unitVector(1),
+    });
+  } finally {
+    db.close();
+  }
+}
+
+async function seedProjectMemoryQueryFixture(question: string): Promise<void> {
+  const stubDir = join(root, "embedding-stubs");
+  await mkdir(stubDir, { recursive: true });
+  await writeFile(join(root, "myelin.config"), `EMBEDDING_STUB_RESPONSES_DIR=${stubDir}\n`, "utf8");
+  const queryContract = { ...DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT, purpose: "retrieval_query" as const };
+  const request: EmbeddingRequest = {
+    contract: queryContract,
+    text: question,
+  };
+  await writeFile(
+    join(stubDir, stubEmbeddingFilename(request)),
+    JSON.stringify({
+      embedding: unitVector(0),
+      model: queryContract.model,
+      dimensions: queryContract.dimensions,
+    }),
+    "utf8",
+  );
+  await mkdir(join(root, "projects", "demo", "wiki", "setup"), { recursive: true });
+  await writeFile(
+    join(root, "projects", "demo", "wiki", "setup", "index.md"),
+    "# Setup\n\nSetup is documented in canonical Project Memory.\n",
+    "utf8",
+  );
+  const manifest = await extractProjectMemorySections(root, "demo");
+  const section = manifest.sections.find((item) => item.wiki_path === "wiki/setup/index.md" && item.section_id === "setup");
+  if (!section) throw new Error("missing setup section fixture");
+
+  const db = openMemoryDb(root);
+  try {
+    const available = ensureProjectMemoryRetrievalVectorTable(db, {
+      dimensions: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT.dimensions,
+      adapter: createSqliteVecAdapter(),
+    });
+    if (!available.available) throw new Error(`sqlite-vec unavailable in test: ${available.reason}`);
+    const row = ensurePendingProjectMemoryRetrievalEmbedding(db, {
+      project_key: "demo",
+      wiki_path: section.wiki_path,
+      section_id: section.section_id,
+      section_hash: section.section_hash,
+      hint_hash: null,
+      contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+      now: "2026-06-30T10:00:00.000Z",
+    });
+    markProjectMemoryRetrievalEmbeddingIndexed(db, {
+      id: row.id,
+      normalized_text_hash: "sha256:text",
+      now: "2026-06-30T10:01:00.000Z",
+    });
+    upsertProjectMemoryRetrievalVector(db, {
+      retrieval_row_id: row.id,
+      project_key: "demo",
+      wiki_path: section.wiki_path,
+      section_id: section.section_id,
+      embedding_model: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT.model,
+      embedding_dimensions: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT.dimensions,
+      embedding_purpose: "retrieval_document",
+      format_version: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT.formatVersion,
+      embedding: unitVector(0),
     });
   } finally {
     db.close();

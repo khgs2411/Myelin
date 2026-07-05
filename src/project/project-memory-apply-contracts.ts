@@ -12,6 +12,8 @@ export type ProjectMemoryApplyPayload = {
   schema_version: 1;
   entries?: ProjectMemoryEntryDraft[];
   pages?: ProjectMemoryPageDraft[];
+  section?: ProjectMemorySectionDraft | null;
+  page?: ProjectMemoryPageDraft | null;
 };
 
 export type ProjectMemoryEntryDraft = {
@@ -29,6 +31,15 @@ export type ProjectMemoryPageDraft = {
   page_path: string;
   title: string;
   purpose: string;
+  sections: ProjectMemorySectionDraft[];
+  evidence_refs: ProjectMemoryEvidenceRef[];
+  repo_citations: ProjectMemoryRepoCitation[];
+  inference?: ProjectMemoryInferenceLabel;
+};
+
+export type ProjectMemorySectionDraft = {
+  heading: string;
+  level: number;
   body: ProjectMemoryMarkdownLines;
   evidence_refs: ProjectMemoryEvidenceRef[];
   repo_citations: ProjectMemoryRepoCitation[];
@@ -205,6 +216,14 @@ export type ProjectMemorySourceConsumptionRecord = {
   project_key: string;
   consumed_by_run: string;
   consumed_at: string;
-  terminal_decision: "applied_to_project_memory";
+  terminal_decision:
+    | "applied_to_project_memory"
+    | "already_trusted"
+    | "not_durable"
+    | "belongs_to_other_layer"
+    | "insufficient_evidence"
+    | "duplicate_or_superseded"
+    | "missing_coverage_no_grounded_write"
+    | "blocked_by_quality";
   output_refs: string[];
 };

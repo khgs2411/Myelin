@@ -48,6 +48,46 @@ test("marks consumed project candidates and handoffs processed", async () => {
   }
 });
 
+test("marks supported terminal no-op dispositions processed", async () => {
+  await seedSourceConsumptionState([
+    sourceRecord("project_candidate", "cand_1", "already_trusted"),
+    sourceRecord("project_handoff", "handoff_1", "not_durable"),
+    sourceRecord("project_candidate", "cand_2", "duplicate_or_superseded"),
+  ]);
+  seedMemoryDb();
+
+  const result = await new ProjectMemorySourceConsumptionReconciler(root).reconcileProject("demo", {
+    now: new Date("2026-06-25T09:00:00.000Z"),
+  });
+
+  expect(result.processed_candidates).toEqual(["cand_1", "cand_2"]);
+  expect(result.processed_project_handoffs).toEqual(["handoff_1"]);
+});
+
+test("does not retire missing coverage or blocked-by-quality dispositions", async () => {
+  await seedSourceConsumptionState([
+    sourceRecord("project_candidate", "cand_1", "missing_coverage_no_grounded_write"),
+    sourceRecord("project_handoff", "handoff_1", "blocked_by_quality"),
+  ]);
+  seedMemoryDb();
+
+  const result = await new ProjectMemorySourceConsumptionReconciler(root).reconcileProject("demo", {
+    now: new Date("2026-06-25T09:00:00.000Z"),
+  });
+
+  expect(result.processed_candidates).toEqual([]);
+  expect(result.processed_project_handoffs).toEqual([]);
+  const db = openMemoryDb(root);
+  try {
+    expect(getMemoryCandidate(db, "cand_1")?.status).toBe("pending");
+    expect(listHandoffInstructions(db, { target_scope: "project", project_key: "demo", status: "needs_review" })[0]?.id).toBe(
+      "handoff_1",
+    );
+  } finally {
+    db.close();
+  }
+});
+
 test("does nothing when source-consumption state is absent", async () => {
   const result = await new ProjectMemorySourceConsumptionReconciler(root).reconcileProject("demo");
 
@@ -94,6 +134,21 @@ function seedMemoryDb(): void {
       reason: "Durable fact",
       now: "2026-06-25T08:00:00.000Z",
     });
+    createMemoryCandidate(db, {
+      id: "cand_2",
+      project_key: "demo",
+      scope: "project",
+      status: "pending",
+      candidate_type: "project.fact",
+      summary: "Duplicate project fact.",
+      source_event_refs: ["tomb_2"],
+      evidence: {},
+      proposed_payload: {},
+      confidence: "medium",
+      risk: "low",
+      reason: "Duplicate fact",
+      now: "2026-06-25T08:00:00.000Z",
+    });
     createHandoffInstruction(db, {
       id: "handoff_1",
       target_scope: "project",
@@ -122,14 +177,18 @@ async function seedSourceConsumptionState(records: ReturnType<typeof sourceRecor
   });
 }
 
-function sourceRecord(source_kind: "project_candidate" | "project_handoff", source_ref: string) {
+function sourceRecord(
+  source_kind: "project_candidate" | "project_handoff",
+  source_ref: string,
+  terminal_decision = "applied_to_project_memory",
+) {
   return {
     source_kind,
     source_ref,
     project_key: "demo",
     consumed_by_run: "projects/demo/runs/project-learn/run-1",
     consumed_at: "2026-06-25T08:30:00.000Z",
-    terminal_decision: "applied_to_project_memory" as const,
+    terminal_decision,
     output_refs: ["project-memory-changeset.json"],
   };
 }

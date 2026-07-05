@@ -82,7 +82,11 @@ export async function indexProjectMemoryRetrieval(
   const batchSize = input.batch_size ?? input.limit;
   if (!Number.isInteger(batchSize) || batchSize <= 0) throw new Error(`Invalid embedding batch size: ${batchSize}`);
 
-  const manifest = await extractProjectMemorySections(input.root, input.project_key, { now: new Date(now()) });
+  const extractedManifest = await extractProjectMemorySections(input.root, input.project_key, { now: new Date(now()) });
+  const manifest = {
+    ...extractedManifest,
+    sections: extractedManifest.sections.filter(isIndexableProjectMemorySection),
+  };
   await writeProjectMemorySectionManifest(input.root, manifest);
   const hintValidation = await validateProjectMemoryHintsForManifest(input.root, manifest);
 
@@ -368,6 +372,10 @@ function findSectionForRow(
         section.section_hash === row.section_hash,
     ) ?? null
   );
+}
+
+function isIndexableProjectMemorySection(section: ProjectMemoryMarkdownSection): boolean {
+  return section.heading_level > 1;
 }
 
 function chunks<T>(values: T[], size: number): T[][] {

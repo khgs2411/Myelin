@@ -41,6 +41,7 @@ test("MemoryQueryService delegates retrieval and builds deterministic query resp
     });
 
     const response = await service.query({
+      root: "/repo",
       projectKey: "demo",
       question: "What changed?",
       includeRoute: true,
@@ -53,6 +54,7 @@ test("MemoryQueryService delegates retrieval and builds deterministic query resp
       citations: ["session_memory:mem_1"],
       degraded: false,
       source_tools: ["query-embedding-cache", "session-memory-vector-index"],
+      project_memory_matches: [],
     });
     expect(response.layers?.[0]).toMatchObject({
       layer: "session_memory",
@@ -61,6 +63,71 @@ test("MemoryQueryService delegates retrieval and builds deterministic query resp
       query_embedding_cache_hit: true,
       query_embedding_cache_id: "qemb_1",
       normalized_question: "what changed?",
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test("MemoryQueryService keeps project memory results separate from session matches", async () => {
+  const db = openMemoryDbAt(":memory:");
+  try {
+    const service = new MemoryQueryService({
+      db,
+      documentContract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+      embeddingProvider: fixedProvider(),
+      async projectMemoryQuery(_db, input) {
+        return {
+          project_key: input.project_key,
+          question: input.question,
+          degraded: false,
+          indexed_count: 1,
+          pending_count: 0,
+          match_count: 1,
+          query_embedding_cache_hit: true,
+          query_embedding_cache_id: "qemb_project",
+          normalized_question: "setup?",
+          source_tools: ["query-embedding-cache", "project-memory-vector-index", "project-memory-markdown-sections"],
+          matches: [
+            {
+              retrieval_row_id: "pmr_1",
+              wiki_path: "wiki/setup/index.md",
+              section_id: "setup",
+              section_hash: "sha256:setup",
+              heading_path: ["Setup"],
+              page_title: "Setup",
+              distance: 0.1,
+              return_kind: "inline_content",
+              content: "Setup guidance.",
+              citation: "project_memory:wiki/setup/index.md#setup",
+            },
+          ],
+        };
+      },
+    });
+
+    const response = await service.query({
+      root: "/repo",
+      projectKey: "demo",
+      question: "Setup?",
+      layer: "project",
+      includeRoute: true,
+    });
+
+    expect(response.matches).toEqual([]);
+    expect(response.project_memory_matches).toHaveLength(1);
+    expect(response.project_memory_matches[0]).toMatchObject({
+      wiki_path: "wiki/setup/index.md",
+      section_id: "setup",
+      return_kind: "inline_content",
+      content: "Setup guidance.",
+      citation: "project_memory:wiki/setup/index.md#setup",
+    });
+    expect(response.layers?.[0]).toMatchObject({
+      layer: "project_memory",
+      indexed_count: 1,
+      match_count: 1,
+      query_embedding_cache_id: "qemb_project",
     });
   } finally {
     db.close();
@@ -79,7 +146,7 @@ test("MemoryQueryService turns retrieval exceptions into degraded responses", as
       },
     });
 
-    const response = await service.query({ projectKey: "demo", question: "What changed?" });
+    const response = await service.query({ root: "/repo", projectKey: "demo", question: "What changed?" });
 
     expect(response).toMatchObject({
       answer: "retrieval failed",
@@ -88,6 +155,7 @@ test("MemoryQueryService turns retrieval exceptions into degraded responses", as
       degraded: true,
       degraded_reason: "retrieval failed",
       matches: [],
+      project_memory_matches: [],
     });
   } finally {
     db.close();

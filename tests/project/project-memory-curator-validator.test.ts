@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { ProjectMemoryEvidenceMap } from "../../src/project/project-memory-evidence-map.ts";
 import type { ProjectMemoryPacket } from "../../src/project/project-memory-packet.ts";
+import type { ProjectMemoryAnswerDomain } from "../../src/project/project-memory-quality-contract.ts";
 import { validateCuratorOutput } from "../../src/project/project-memory-curator-validator.ts";
 
 test("rejects wrong project key as a global hard error", () => {
@@ -10,6 +15,7 @@ test("rejects wrong project key as a global hard error", () => {
     packet_ref: packetRef(),
     packet_context: packetContext(),
     summary: "wrong project",
+    quality_diagnostics: qualityDiagnostics("maintain"),
     items: [],
     noop_inputs: [],
     risk: lowRisk(),
@@ -27,6 +33,7 @@ test("eligible maintenance item requires packet refs, evidence, and safe wiki pa
     packet_ref: packetRef(),
     packet_context: packetContext(),
     summary: "one update",
+    quality_diagnostics: qualityDiagnostics("maintain"),
     items: [maintenanceItem()],
     noop_inputs: [],
     risk: lowRisk(),
@@ -45,6 +52,7 @@ test("rejects maintenance items with unknown packet references or out-of-wiki pa
     packet_ref: packetRef(),
     packet_context: packetContext(),
     summary: "bad item",
+    quality_diagnostics: qualityDiagnostics("maintain"),
     items: [
       maintenanceItem({
         id: "item_bad",
@@ -78,6 +86,7 @@ test("quarantines high-risk maintenance items instead of marking them eligible",
     packet_ref: packetRef(),
     packet_context: packetContext(),
     summary: "risky item",
+    quality_diagnostics: qualityDiagnostics("maintain"),
     items: [
       maintenanceItem({
         id: "item_risky",
@@ -86,6 +95,10 @@ test("quarantines high-risk maintenance items instead of marking them eligible",
         proposed_entry_id: undefined,
         content_intent: "Mark disputed due to conflicting evidence.",
         repo_citations: [],
+        inference: {
+          label: "conflicting_source_evidence",
+          why_direct_repo_evidence_is_unavailable: "The dispute is about packet evidence rather than a repo claim.",
+        },
         applicability: {},
         lifecycle_intent: "disputed",
         risk: { level: "high", reasons: ["conflicting evidence"], requires_quarantine: true },
@@ -108,6 +121,8 @@ test("rejects creation drafts with unsafe page targets or protected state assign
     packet_ref: packetRef(),
     packet_context: packetContext(),
     summary: "unsafe draft",
+    quality_diagnostics: qualityDiagnostics("create"),
+    documentation_contract: documentationContract(),
     brain_intent: {
       name: "Demo",
       first_brain_summary: "Create first brain",
@@ -119,6 +134,9 @@ test("rejects creation drafts with unsafe page targets or protected state assign
         target: { path: "../state/project.json", path_kind: "project_state" },
         title: "Unsafe",
         purpose: "Unsafe",
+        answer_domains: ["product_memory_model"],
+        required_topics: ["Overview", "Details"],
+        representative_questions: ["What is Project Memory in Myelin?"],
         content_intent: "Write state",
         apply_payload: {
           schema_version: 1,
@@ -127,9 +145,9 @@ test("rejects creation drafts with unsafe page targets or protected state assign
               page_path: "../state/project.json",
               title: "Unsafe",
               purpose: "Unsafe",
-              body: { paragraphs: ["Unsafe."] },
+              sections: pageSections("product_memory_model"),
               evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
-              repo_citations: [],
+              repo_citations: [repoCitation()],
               inference: {
                 label: "unsafe",
                 why_direct_repo_evidence_is_unavailable: "Unsafe test fixture.",
@@ -137,9 +155,9 @@ test("rejects creation drafts with unsafe page targets or protected state assign
             },
           ],
         },
-        required_sections: [],
+        inspected_surface_refs: ["README.md"],
         evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
-        repo_citations: [],
+        repo_citations: [repoCitation()],
         notes_for_apply: [],
       },
     ],
@@ -156,10 +174,67 @@ test("rejects creation drafts with unsafe page targets or protected state assign
 });
 
 test("accepts creation drafts with a full repo-grounded page set", () => {
-  const result = validateCuratorOutput(packet("create"), creationProposalWithPages(fullCreationPages()));
+  const pages = fullCreationPages();
+  const result = validateCuratorOutput(packet("create"), creationProposalWithPages(pages), {
+    evidenceMap: evidenceMapForPages(pages),
+  });
 
   expect(result.ok).toBe(true);
   expect(result.global_findings).toEqual([]);
+});
+
+test("rejects creation drafts that declare answer domains without evidence-map support", () => {
+  const pages = fullCreationPages();
+  const result = validateCuratorOutput(packet("create"), creationProposalWithPages(pages), {
+    evidenceMap: evidenceMapForPages(pages, { missingDomain: "storage_retrieval" }),
+  });
+
+  expect(result.ok).toBe(false);
+  expect(result.global_findings.map((finding) => finding.code)).toContain(
+    "creation_page_answer_domain_missing_evidence_map_support",
+  );
+  expect(result.quality_diagnostics?.content_quality.status).toBe("shallow");
+});
+
+test("rejects old role-shaped creation drafts without answer domains or rendered sections", () => {
+  const page = {
+    id: "legacy",
+    target: { path: "index.md", path_kind: "new_wiki_page" },
+    title: "Legacy",
+    purpose: "Legacy role-shaped page",
+    role: "orientation_index",
+    content_intent: "Create legacy page",
+    apply_payload: {
+      schema_version: 1,
+      pages: [
+        {
+          page_path: "index.md",
+          title: "Legacy",
+          purpose: "Legacy role-shaped page",
+          body: { paragraphs: ["Legacy body-shaped content. ".repeat(20)] },
+          evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
+          repo_citations: [repoCitation()],
+          inference: {
+            label: "legacy",
+            why_direct_repo_evidence_is_unavailable: "Legacy fixture.",
+          },
+        },
+      ],
+    },
+    required_sections: ["Overview", "Details"],
+    inspected_surface_refs: ["README.md"],
+    evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
+    repo_citations: [repoCitation()],
+    notes_for_apply: [],
+  };
+
+  const result = validateCuratorOutput(packet("create"), creationProposalWithPages([page]));
+
+  expect(result.ok).toBe(false);
+  expect(result.global_findings.map((finding) => finding.code)).toEqual(
+    expect.arrayContaining(["creation_page_answer_domains_required", "apply_payload_page_sections_required"]),
+  );
+  expect(result.quality_diagnostics?.content_quality.status).toBe("shallow");
 });
 
 test("rejects creation draft targets prefixed with the wiki directory", () => {
@@ -204,6 +279,71 @@ test("rejects creation drafts with fewer than the required non-index pages", () 
   expect(result.global_findings.map((finding) => finding.code)).toContain("creation_publication_minimum_not_met");
 });
 
+test("rejects creation drafts missing a required answer domain", () => {
+  const pages = fullCreationPages().filter((page) => !page.answer_domains.includes("evidence_provenance_candidates"));
+
+  const result = validateCuratorOutput(packet("create"), creationProposalWithPages(pages));
+
+  expect(result.ok).toBe(false);
+  expect(result.quality_diagnostics?.content_quality.status).toBe("shallow");
+  expect(result.quality_diagnostics?.content_quality.reasons).toContain(
+    "answer domain has no rendered sections: evidence_provenance_candidates",
+  );
+});
+
+test("rejects creation drafts that do not inspect present default orientation surfaces", async () => {
+  const repoRoot = await mkdtemp(join(tmpdir(), "myelin-validator-orientation-"));
+  try {
+    await mkdir(join(repoRoot, "docs"), { recursive: true });
+    await writeFile(join(repoRoot, "AGENTS.md"), "agents\n", "utf8");
+    await writeFile(join(repoRoot, "docs", "ROADMAP.md"), "roadmap\n", "utf8");
+    const input = packet("create");
+    input.project.repo_paths = [repoRoot];
+
+    const result = validateCuratorOutput(
+      input,
+      creationProposalWithPages(fullCreationPages(), {
+        documentation_contract: documentationContract({ inspected_default_surfaces: ["AGENTS.md"] }),
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.quality_diagnostics?.content_quality.status).toBe("shallow");
+    expect(result.quality_diagnostics?.content_quality.reasons).toContain(
+      "required orientation surface not inspected: docs/ROADMAP.md",
+    );
+  } finally {
+    await rm(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test("rejects creation drafts that mark an existing default surface as not present", async () => {
+  const repoRoot = await mkdtemp(join(tmpdir(), "myelin-validator-orientation-"));
+  try {
+    await mkdir(join(repoRoot, "docs"), { recursive: true });
+    await writeFile(join(repoRoot, "docs", "ROADMAP.md"), "roadmap\n", "utf8");
+    const input = packet("create");
+    input.project.repo_paths = [repoRoot];
+
+    const result = validateCuratorOutput(
+      input,
+      creationProposalWithPages(fullCreationPages(), {
+        documentation_contract: documentationContract({
+          missing_orientation_surfaces: [{ path: "docs/ROADMAP.md", reason: "not_present" }],
+        }),
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.quality_diagnostics?.content_quality.status).toBe("shallow");
+    expect(result.quality_diagnostics?.content_quality.reasons).toContain(
+      "required orientation surface not inspected: docs/ROADMAP.md",
+    );
+  } finally {
+    await rm(repoRoot, { recursive: true, force: true });
+  }
+});
+
 test("rejects creation drafts that lack a full documentation page set", () => {
   const result = validateCuratorOutput(packet("create"), {
     schema_version: 1,
@@ -212,6 +352,8 @@ test("rejects creation drafts that lack a full documentation page set", () => {
     packet_ref: packetRef(),
     packet_context: packetContext(),
     summary: "index-only draft",
+    quality_diagnostics: qualityDiagnostics("create"),
+    documentation_contract: documentationContract(),
     brain_intent: {
       name: "Demo",
       first_brain_summary: "Create first brain",
@@ -223,6 +365,9 @@ test("rejects creation drafts that lack a full documentation page set", () => {
         target: { path: "index.md", path_kind: "new_wiki_page" },
         title: "Demo",
         purpose: "Index",
+        answer_domains: ["product_memory_model"],
+        required_topics: ["Overview", "Details"],
+        representative_questions: ["What is Project Memory in Myelin?"],
         content_intent: "Create index",
         apply_payload: {
           schema_version: 1,
@@ -231,7 +376,7 @@ test("rejects creation drafts that lack a full documentation page set", () => {
               page_path: "index.md",
               title: "Demo",
               purpose: "Index",
-              body: { paragraphs: ["Demo index."] },
+              sections: pageSections("product_memory_model"),
               evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
               repo_citations: [repoCitation()],
               inference: {
@@ -241,7 +386,7 @@ test("rejects creation drafts that lack a full documentation page set", () => {
             },
           ],
         },
-        required_sections: ["Overview"],
+        inspected_surface_refs: ["README.md"],
         evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
         repo_citations: [repoCitation()],
         notes_for_apply: [],
@@ -255,6 +400,34 @@ test("rejects creation drafts that lack a full documentation page set", () => {
 
   expect(result.ok).toBe(false);
   expect(result.global_findings.map((finding) => finding.code)).toContain("creation_publication_minimum_not_met");
+});
+
+test("blocks curator output when quality diagnostics are missing", () => {
+  const result = validateCuratorOutput(packet("maintain"), {
+    schema_version: 1,
+    project_key: "demo",
+    mode: "maintain",
+    packet_ref: packetRef(),
+    packet_context: packetContext(),
+    summary: "missing diagnostics",
+    items: [maintenanceItem()],
+    noop_inputs: [],
+    risk: lowRisk(),
+  });
+
+  expect(result.ok).toBe(false);
+  expect(result.global_findings.map((finding) => finding.code)).toContain("quality_diagnostics_invalid");
+});
+
+test("blocks shallow quality even when maintenance item structure is otherwise eligible", () => {
+  const result = validateCuratorOutput(packet("maintain"), {
+    ...proposalWithItem({ id: "shallow_item" }),
+    quality_diagnostics: qualityDiagnostics("maintain", "shallow"),
+  });
+
+  expect(result.ok).toBe(false);
+  expect(result.quality_diagnostics?.content_quality.status).toBe("shallow");
+  expect(result.global_findings.map((finding) => finding.code)).toContain("content_quality_not_trusted");
 });
 
 test("rejects existing-page maintenance operations when the page is absent from the packet", () => {
@@ -290,6 +463,134 @@ test("rejects maintenance items that request a new wiki page target", () => {
       code: "unsupported_maintenance_target_kind",
     }),
   );
+});
+
+test("rejects section-first maintenance items with missing or stale section targets", () => {
+  const missing = validateCuratorOutput(
+    packet("maintain"),
+    proposalWithItem({
+      id: "missing_section",
+      operation: "PATCH_SECTION",
+      target: {
+        target_kind: "existing_section",
+        wiki_path: "setup/index.md",
+        section_id: "missing",
+        expected_section_hash: "sha256:missing",
+        heading_path: ["Missing"],
+        ownership_reason: "Missing section target fixture.",
+      },
+    }),
+  );
+  const stale = validateCuratorOutput(
+    packet("maintain"),
+    proposalWithItem({
+      id: "stale_section",
+      operation: "PATCH_SECTION",
+      target: {
+        target_kind: "existing_section",
+        wiki_path: "setup/index.md",
+        section_id: "setup",
+        expected_section_hash: "sha256:stale",
+        heading_path: ["Setup"],
+        ownership_reason: "Stale section target fixture.",
+      },
+    }),
+  );
+
+  expect(missing.rejected_item_ids).toEqual(["missing_section"]);
+  expect(missing.item_results[0]?.findings.map((finding) => finding.code)).toContain("section_target_missing");
+  expect(stale.rejected_item_ids).toEqual(["stale_section"]);
+  expect(stale.item_results[0]?.findings.map((finding) => finding.code)).toContain("section_target_stale_hash");
+});
+
+test("rejects section mutations without an expected section hash", () => {
+  const missing = validateCuratorOutput(
+    packet("maintain"),
+    proposalWithItem({
+      id: "missing_hash",
+      operation: "PATCH_SECTION",
+      target: {
+        target_kind: "existing_section",
+        wiki_path: "setup/index.md",
+        section_id: "setup",
+        expected_section_hash: undefined,
+        heading_path: ["Setup"],
+        ownership_reason: "Missing hash fixture.",
+      },
+    }),
+  );
+  const nullHash = validateCuratorOutput(
+    packet("maintain"),
+    proposalWithItem({
+      id: "null_hash",
+      operation: "PATCH_SECTION",
+      target: {
+        target_kind: "existing_section",
+        wiki_path: "setup/index.md",
+        section_id: "setup",
+        expected_section_hash: null,
+        heading_path: ["Setup"],
+        ownership_reason: "Null hash fixture.",
+      },
+    }),
+  );
+
+  expect(missing.rejected_item_ids).toEqual(["missing_hash"]);
+  expect(missing.item_results[0]?.findings.map((finding) => finding.code)).toContain("section_target_hash_required");
+  expect(nullHash.rejected_item_ids).toEqual(["null_hash"]);
+  expect(nullHash.item_results[0]?.findings.map((finding) => finding.code)).toContain("section_target_hash_required");
+});
+
+test("rejects section-first operation and target kind mismatches", () => {
+  const patchNewPage = validateCuratorOutput(
+    packet("maintain"),
+    proposalWithItem({
+      id: "patch_new_page",
+      operation: "PATCH_SECTION",
+      target: {
+        target_kind: "new_page",
+        wiki_path: "new-topic/index.md",
+        section_id: "setup",
+        expected_section_hash: "sha256:setup",
+        heading_path: ["Setup"],
+        ownership_reason: "Mismatched target fixture.",
+      },
+      missing_coverage_diagnostic: "No existing page owns this concept.",
+    }),
+  );
+  const createExisting = validateCuratorOutput(
+    packet("maintain"),
+    proposalWithItem({
+      id: "create_existing",
+      operation: "CREATE_SECTION",
+      target: {
+        target_kind: "existing_section",
+        wiki_path: "setup/index.md",
+        section_id: "setup",
+        expected_section_hash: "sha256:setup",
+        heading_path: ["Setup"],
+        ownership_reason: "Mismatched target fixture.",
+      },
+    }),
+  );
+
+  expect(patchNewPage.rejected_item_ids).toEqual(["patch_new_page"]);
+  expect(patchNewPage.item_results[0]?.findings.map((finding) => finding.code)).toContain("section_target_kind_mismatch");
+  expect(createExisting.rejected_item_ids).toEqual(["create_existing"]);
+  expect(createExisting.item_results[0]?.findings.map((finding) => finding.code)).toContain("section_target_kind_mismatch");
+});
+
+test("accepts valid section-first PATCH_SECTION with matching hash", () => {
+  const result = validateCuratorOutput(
+    packet("maintain"),
+    proposalWithItem({
+      id: "valid_patch",
+      operation: "PATCH_SECTION",
+    }),
+  );
+
+  expect(result.ok).toBe(true);
+  expect(result.eligible_item_ids).toEqual(["valid_patch"]);
 });
 
 test("rejects unsupported broad operations and illegal lifecycle transitions", () => {
@@ -344,6 +645,7 @@ test("rejects proposals that exceed item or content budgets", () => {
     packet_ref: packetRef(),
     packet_context: packetContext(),
     summary: "too many",
+    quality_diagnostics: qualityDiagnostics("maintain"),
     items: manyItems,
     noop_inputs: [],
     risk: lowRisk(),
@@ -377,6 +679,7 @@ test("requires explicit no-op decision for non-empty fallback lookup packet with
     packet_ref: packetRef(),
     packet_context: packetContext(),
     summary: "No items",
+    quality_diagnostics: qualityDiagnostics("maintain"),
     items: [],
     noop_inputs: [],
     risk: lowRisk(),
@@ -403,6 +706,7 @@ test("accepts documented noop inputs for fallback lookup packet with zero mainte
     packet_ref: packetRef(),
     packet_context: packetContext(),
     summary: "No auto-applyable items",
+    quality_diagnostics: qualityDiagnostics("maintain"),
     items: [],
     noop_inputs: [
       {
@@ -429,6 +733,7 @@ test("rejects documented noop inputs with unknown source refs", () => {
     packet_ref: packetRef(),
     packet_context: packetContext(),
     summary: "Bad no-op",
+    quality_diagnostics: qualityDiagnostics("maintain"),
     items: [],
     noop_inputs: [
       {
@@ -461,6 +766,8 @@ test("requires explicit no-op decision for non-empty fallback lookup packet with
     packet_ref: packetRef(),
     packet_context: packetContext(),
     summary: "No pages",
+    quality_diagnostics: qualityDiagnostics("create"),
+    documentation_contract: documentationContract(),
     brain_intent: {
       name: "Demo",
       first_brain_summary: "Nothing to write.",
@@ -497,6 +804,7 @@ test("accepts explicit no-op decision under fallback lookup when checked refs ar
     packet_ref: packetRef(),
     packet_context: packetContext(),
     summary: "Already covered",
+    quality_diagnostics: qualityDiagnostics("maintain"),
     items: [],
     noop_inputs: [],
     explicit_noop_decisions: [explicitNoopDecision("noop_1", "lookup:cand_1")],
@@ -505,6 +813,31 @@ test("accepts explicit no-op decision under fallback lookup when checked refs ar
 
   expect(result.ok).toBe(true);
   expect(result.noop_refs).toEqual(["noop_1"]);
+});
+
+test("accepts terminal explicit no-op even when fallback lookup keeps maintain quality shallow", () => {
+  const input = packet("maintain");
+  input.lookup.results = [fallbackLookupResult("lookup:cand_1", "cand_1")];
+  input.degraded = true;
+  input.degraded_reasons = ["fallback lookup cannot support markdown writes"];
+
+  const result = validateCuratorOutput(input, {
+    schema_version: 1,
+    project_key: "demo",
+    mode: "maintain",
+    packet_ref: packetRef(),
+    packet_context: packetContext(),
+    summary: "Already covered",
+    quality_diagnostics: qualityDiagnostics("maintain", "shallow"),
+    items: [],
+    noop_inputs: [],
+    explicit_noop_decisions: [explicitNoopDecision("noop_1", "lookup:cand_1")],
+    risk: lowRisk(),
+  });
+
+  expect(result.ok).toBe(true);
+  expect(result.noop_refs).toEqual(["noop_1"]);
+  expect(result.global_findings.map((finding) => finding.code)).not.toContain("content_quality_not_trusted");
 });
 
 test("accepts explicit creation no-op decision under fallback lookup when checked refs are present", () => {
@@ -518,6 +851,8 @@ test("accepts explicit creation no-op decision under fallback lookup when checke
     packet_ref: packetRef(),
     packet_context: packetContext(),
     summary: "Already covered",
+    quality_diagnostics: qualityDiagnostics("create"),
+    documentation_contract: documentationContract(),
     explicit_noop_decisions: [explicitNoopDecision("noop_create_1", "lookup:cand_1")],
     brain_intent: {
       name: "Demo",
@@ -548,6 +883,7 @@ test("keeps insufficient-evidence explicit no-op reviewable", () => {
     packet_ref: packetRef(),
     packet_context: packetContext(),
     summary: "No items",
+    quality_diagnostics: qualityDiagnostics("maintain"),
     items: [],
     noop_inputs: [],
     explicit_noop_decisions: [{ ...explicitNoopDecision("noop_1", "lookup:cand_1"), reason: "insufficient_evidence" }],
@@ -618,6 +954,23 @@ function packet(mode: "create" | "maintain"): ProjectMemoryPacket {
     wiki: {
       page_count: 1,
       pages: [{ path: "wiki/setup/index.md", title: "Setup", headings: [], snippet: "Setup", size_bytes: 5 }],
+      sections: [
+        {
+          project_key: "demo",
+          wiki_path: "wiki/setup/index.md",
+          category: "setup",
+          page_title: "Setup",
+          section_id: "setup",
+          heading_path: ["Setup"],
+          section_hash: "sha256:setup",
+          heading_level: 1,
+          heading_text: "Setup",
+          body_text: "Setup",
+          snippet: "Setup",
+          start_line: 1,
+          end_line: 3,
+        },
+      ],
     },
     pending: {
       project_handoffs: [],
@@ -625,6 +978,8 @@ function packet(mode: "create" | "maintain"): ProjectMemoryPacket {
         {
           id: "cand_1",
           status: "pending",
+          priority: "normal",
+          producer_kind: "normalized",
           candidate_type: "project.setup",
           title: "Setup",
           summary: "Document setup.",
@@ -670,6 +1025,7 @@ function proposalWithItem(overrides: Record<string, unknown>) {
     packet_ref: packetRef(),
     packet_context: packetContext(),
     summary: "proposal",
+    quality_diagnostics: qualityDiagnostics("maintain"),
     items: [maintenanceItem(overrides)],
     noop_inputs: [],
     risk: lowRisk(),
@@ -684,13 +1040,14 @@ function proposalWithItems(items: unknown[]) {
     packet_ref: packetRef(),
     packet_context: packetContext(),
     summary: "proposal",
+    quality_diagnostics: qualityDiagnostics("maintain"),
     items,
     noop_inputs: [],
     risk: lowRisk(),
   };
 }
 
-function creationProposalWithPages(pages: unknown[]) {
+function creationProposalWithPages(pages: unknown[], overrides: Record<string, unknown> = {}) {
   return {
     schema_version: 1,
     project_key: "demo",
@@ -698,6 +1055,8 @@ function creationProposalWithPages(pages: unknown[]) {
     packet_ref: packetRef(),
     packet_context: packetContext(),
     summary: "creation proposal",
+    quality_diagnostics: qualityDiagnostics("create"),
+    documentation_contract: documentationContract(),
     brain_intent: {
       name: "Demo",
       first_brain_summary: "Create first brain",
@@ -708,24 +1067,129 @@ function creationProposalWithPages(pages: unknown[]) {
     evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
     repo_citations: [],
     risk: lowRisk(),
+    ...overrides,
   };
+}
+
+function documentationContract(overrides: Record<string, unknown> = {}) {
+  return {
+    inspected_default_surfaces: [],
+    curator_added_surfaces: [],
+    missing_orientation_surfaces: [],
+    missing_coverage: [],
+    shallow_summary_findings: [],
+    ...overrides,
+  };
+}
+
+function qualityDiagnostics(mode: "create" | "maintain", status: "trusted" | "review_only" | "shallow" | "blocked" = "trusted") {
+  return {
+    schema_version: 1,
+    content_quality: { status, reasons: status === "trusted" ? [] : [`${status} fixture`] },
+    retrieval_readiness: { status: "not_applicable", reason: null },
+    domain_coverage: answerDomainCoverage(),
+    candidate_dispositions: [],
+    missing_coverage: status === "shallow" ? ["shallow fixture"] : [],
+    shallow_summary_findings: [],
+    answerability_findings: [],
+  };
+}
+
+function answerDomainCoverage() {
+  return [
+    "product_memory_model",
+    "storage_retrieval",
+    "command_workflows",
+    "curation_apply_lifecycle",
+    "evidence_provenance_candidates",
+    "current_work_roadmap_decisions",
+  ].map((domain) => ({
+    domain,
+    page_refs: [`${domain}.md`],
+    section_refs: [`${domain}/overview`],
+    representative_questions: [`How does ${domain} work?`],
+    citations_seen: 1,
+    body_chars_seen: 500,
+    missing_topics: [],
+  }));
+}
+
+function answerDomainForRole(role: string) {
+  const map: Record<string, string> = {
+    orientation_index: "product_memory_model",
+    product_memory_model: "storage_retrieval",
+    runtime_workflows: "command_workflows",
+    architecture_data_flow: "curation_apply_lifecycle",
+    current_work_roadmap: "evidence_provenance_candidates",
+    decisions_terms: "current_work_roadmap_decisions",
+  };
+  return map[role] ?? "product_memory_model";
 }
 
 function fullCreationPages() {
   return [
-    creationPage("index.md", "index"),
-    creationPage("runtime.md", "runtime"),
-    creationPage("architecture.md", "architecture"),
-    creationPage("operations.md", "operations"),
+    creationPage("index.md", "index", "orientation_index"),
+    creationPage("product.md", "product", "product_memory_model"),
+    creationPage("runtime.md", "runtime", "runtime_workflows"),
+    creationPage("architecture.md", "architecture", "architecture_data_flow"),
+    creationPage("roadmap.md", "roadmap", "current_work_roadmap"),
+    creationPage("decisions.md", "decisions", "decisions_terms"),
   ];
 }
 
-function creationPage(path: string, id: string) {
+function evidenceMapForPages(
+  pages: Array<ReturnType<typeof creationPage>>,
+  options: { missingDomain?: ProjectMemoryAnswerDomain } = {},
+): ProjectMemoryEvidenceMap {
+  const domains = answerDomainCoverage().map((coverage) => {
+    const domain = coverage.domain as ProjectMemoryAnswerDomain;
+    const hasSupport = domain !== options.missingDomain && pages.some((page) => page.answer_domains.includes(domain));
+    return {
+      domain,
+      representative_questions: coverage.representative_questions,
+      inspected_paths: hasSupport ? [`src/${domain}.ts`] : [],
+      search_terms: [domain],
+      search_results: hasSupport
+        ? [{ path: `src/${domain}.ts`, line: 1, term: domain, excerpt: `evidence for ${domain}` }]
+        : [],
+      evidence_refs: hasSupport
+        ? [{ kind: "repo_path" as const, ref: `src/${domain}.ts:1`, reason: `evidence for ${domain}` }]
+        : [],
+      missing_evidence: hasSupport ? [] : [`no evidence for ${domain}`],
+    };
+  });
+
+  return {
+    schema_version: 1,
+    project_key: "demo",
+    packet_ref: "input-packet.json",
+    domains,
+    leads_considered: [],
+    discovery_steps: [{ kind: "bounded_repo_search", detail: "fixture evidence map" }],
+    missing_domains: domains.filter((domain) => domain.evidence_refs.length === 0).map((domain) => domain.domain),
+  };
+}
+
+function creationPage(
+  path: string,
+  id: string,
+  role:
+    | "orientation_index"
+    | "product_memory_model"
+    | "runtime_workflows"
+    | "architecture_data_flow"
+    | "current_work_roadmap"
+    | "decisions_terms" = "orientation_index",
+) {
+  const answerDomain = answerDomainForRole(role);
   return {
     id,
     target: { path, path_kind: "new_wiki_page" },
     title: "Demo",
     purpose: "Index",
+    answer_domains: [answerDomain],
+    required_topics: ["Overview", "Details"],
+    representative_questions: ["How does the demo project memory work?"],
     content_intent: "Create index",
     apply_payload: {
       schema_version: 1,
@@ -734,7 +1198,7 @@ function creationPage(path: string, id: string) {
           page_path: path,
           title: "Demo",
           purpose: "Index",
-          body: { paragraphs: ["Demo index."] },
+          sections: pageSections(answerDomain),
           evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
           repo_citations: [repoCitation()],
           inference: {
@@ -744,25 +1208,87 @@ function creationPage(path: string, id: string) {
         },
       ],
     },
-    required_sections: ["Overview"],
+    inspected_surface_refs: ["README.md"],
     evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
     repo_citations: [repoCitation()],
     notes_for_apply: [],
   };
 }
 
+function pageSections(domain: string) {
+  return [
+    {
+      heading: "Overview",
+      level: 2,
+      body: { paragraphs: [domainBody(domain, "Overview")] },
+      evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
+      repo_citations: [repoCitation()],
+      inference: {
+        label: "initial_project_memory",
+        why_direct_repo_evidence_is_unavailable: "Creation summary is based on project state.",
+      },
+    },
+    {
+      heading: "Details",
+      level: 2,
+      body: { paragraphs: [domainBody(domain, "Details")] },
+      evidence_refs: [{ kind: "project_state", ref: "bootstrap_state" }],
+      repo_citations: [repoCitation()],
+      inference: {
+        label: "initial_project_memory",
+        why_direct_repo_evidence_is_unavailable: "Creation summary is based on project state.",
+      },
+    },
+  ];
+}
+
+function domainBody(domain: string, label: "Overview" | "Details"): string {
+  return [
+    `${label} for ${domain} explains how Myelin turns Project Memory into living repo documentation with cited markdown pages.`,
+    `The ${domain} section distinguishes Session Memory continuity from curated Project Memory truth so candidates stay leads until repo evidence supports them.`,
+    `For ${domain}, state/memory.db, sqlite, session_memories, embeddings, and derived markdown retrieval rows are named as separate storage and serving concepts.`,
+    `The ${domain} workflow names project learn, memory query, memory index session, memory index project, memory inbox create, and memory inbox intake as operator surfaces.`,
+    `The ${domain} lifecycle describes curator output, deterministic validation, apply journals, project-memory-changeset.json, retrieval sections, hint generation, and canonical markdown writes.`,
+    `The ${domain} evidence trail points future agents to ROADMAP, ADR decisions, source files, and tests instead of letting generic prose stand in for documentation.`,
+  ].join(" ");
+}
+
 function maintenanceItem(overrides: Record<string, unknown> = {}) {
   const operation = (overrides.operation as string | undefined) ?? "CREATE_ENTRY";
+  const sectionFirst = ["PATCH_SECTION", "CREATE_SECTION", "CREATE_PAGE", "ATTACH_EVIDENCE", "MARK_STALE", "MARK_DISPUTED", "NOOP"].includes(operation);
   const targetEntryId = operation === "CREATE_ENTRY" ? undefined : "setup.cli";
   const proposedEntryId = operation === "CREATE_ENTRY" ? "setup.cli" : undefined;
   return {
     id: "item_1",
     operation,
+    target: {
+      target_kind: "existing_section",
+      wiki_path: "setup/index.md",
+      section_id: "setup",
+      expected_section_hash: "sha256:setup",
+      heading_path: ["Setup"],
+      ownership_reason: "Setup section owns CLI setup memory.",
+    },
+    candidate_priority: "normal",
+    candidate_disposition: "applied_to_project_memory",
     target_page: { path: "setup/index.md", path_kind: "existing_wiki_page" },
     target_entry_id: targetEntryId,
     proposed_entry_id: proposedEntryId,
     content_intent: "Document CLI setup command.",
-    apply_payload: {
+    apply_payload: sectionFirst ? {
+      schema_version: 1,
+      entries: [],
+      section: {
+        heading: "Setup",
+        level: 1,
+        body: { paragraphs: ["Document CLI setup command."] },
+        evidence_refs: [{ kind: "project_candidate", ref: "cand_1" }],
+        repo_citations: [
+          { path: "src/commands/project.ts", line_start: 1, line_end: 20, reason: "CLI command registration" },
+        ],
+      },
+      page: null,
+    } : {
       schema_version: 1,
       entries: [
         {

@@ -8,6 +8,12 @@ import {
   PROJECT_MEMORY_LOOKUP_FRESHNESS_VALUES,
   PROJECT_MEMORY_LOOKUP_QUALITIES,
 } from "./project-memory-retrieval-contracts.ts";
+import {
+  PROJECT_MEMORY_CANDIDATE_DISPOSITIONS,
+  PROJECT_MEMORY_CONTENT_QUALITY_STATUSES,
+  PROJECT_MEMORY_ANSWER_DOMAINS,
+  PROJECT_MEMORY_RETRIEVAL_READINESS_STATUSES,
+} from "./project-memory-quality-contract.ts";
 
 type JsonSchema = Record<string, unknown>;
 
@@ -33,6 +39,8 @@ function creationSchema(input: ProjectMemoryCuratorOutputSchemaInput): JsonSchem
     packet_context: { $ref: "#/$defs/packetContext" },
     summary: stringSchema(),
     explicit_noop_decisions: arrayOf({ $ref: "#/$defs/explicitNoopDecision" }),
+    quality_diagnostics: { $ref: "#/$defs/qualityDiagnostics" },
+    documentation_contract: { $ref: "#/$defs/documentationContract" },
     brain_intent: objectSchema({
       name: stringSchema(),
       first_brain_summary: stringSchema(),
@@ -57,6 +65,8 @@ function creationSchema(input: ProjectMemoryCuratorOutputSchemaInput): JsonSchem
     "packet_context",
     "summary",
     "explicit_noop_decisions",
+    "quality_diagnostics",
+    "documentation_contract",
     "brain_intent",
     "pages",
     "state_intent",
@@ -70,9 +80,12 @@ function creationSchema(input: ProjectMemoryCuratorOutputSchemaInput): JsonSchem
         target: wikiTargetSchema(["new_wiki_page", "existing_wiki_page"]),
         title: stringSchema(),
         purpose: stringSchema(),
+        answer_domains: arrayOf({ type: "string", enum: [...PROJECT_MEMORY_ANSWER_DOMAINS] }, 1),
+        required_topics: stringArraySchema(1),
+        representative_questions: stringArraySchema(1),
         content_intent: stringSchema(),
         apply_payload: applyPayloadSchema("create"),
-        required_sections: stringArraySchema(),
+        inspected_surface_refs: stringArraySchema(1),
         evidence_refs: arrayOf({ $ref: "#/$defs/evidenceRef" }, 1),
         repo_citations: arrayOf({ $ref: "#/$defs/repoCitation" }, 1),
         notes_for_apply: stringArraySchema(),
@@ -81,9 +94,12 @@ function creationSchema(input: ProjectMemoryCuratorOutputSchemaInput): JsonSchem
         "target",
         "title",
         "purpose",
+        "answer_domains",
+        "required_topics",
+        "representative_questions",
         "content_intent",
         "apply_payload",
-        "required_sections",
+        "inspected_surface_refs",
         "evidence_refs",
         "repo_citations",
         "notes_for_apply",
@@ -101,6 +117,7 @@ function maintenanceSchema(input: ProjectMemoryCuratorOutputSchemaInput): JsonSc
     packet_context: { $ref: "#/$defs/packetContext" },
     summary: stringSchema(),
     explicit_noop_decisions: arrayOf({ $ref: "#/$defs/explicitNoopDecision" }),
+    quality_diagnostics: { $ref: "#/$defs/qualityDiagnostics" },
     items: arrayOf({ $ref: "#/$defs/maintenanceItem" }),
     noop_inputs: arrayOf({ $ref: "#/$defs/noopInput" }),
     risk: { $ref: "#/$defs/risk" },
@@ -112,6 +129,7 @@ function maintenanceSchema(input: ProjectMemoryCuratorOutputSchemaInput): JsonSc
     "packet_context",
     "summary",
     "explicit_noop_decisions",
+    "quality_diagnostics",
     "items",
     "noop_inputs",
     "risk",
@@ -120,9 +138,10 @@ function maintenanceSchema(input: ProjectMemoryCuratorOutputSchemaInput): JsonSc
       maintenanceItem: objectSchema({
         id: stringSchema(),
         operation: { type: "string", enum: [...PROJECT_MEMORY_MAINTENANCE_OPERATIONS] },
-        target_page: wikiTargetSchema(["existing_wiki_page"]),
-        target_entry_id: nullable(stringSchema()),
-        proposed_entry_id: nullable(stringSchema()),
+        target: { $ref: "#/$defs/sectionTarget" },
+        candidate_priority: { type: "string", enum: ["high", "normal", "low"] },
+        candidate_disposition: { type: "string", enum: [...PROJECT_MEMORY_CANDIDATE_DISPOSITIONS] },
+        missing_coverage_diagnostic: nullable(stringSchema()),
         content_intent: stringSchema(),
         apply_payload: applyPayloadSchema("maintain"),
         source_packet_refs: arrayOf({ $ref: "#/$defs/evidenceRef" }, 1),
@@ -138,9 +157,10 @@ function maintenanceSchema(input: ProjectMemoryCuratorOutputSchemaInput): JsonSc
       }, [
         "id",
         "operation",
-        "target_page",
-        "target_entry_id",
-        "proposed_entry_id",
+        "target",
+        "candidate_priority",
+        "candidate_disposition",
+        "missing_coverage_diagnostic",
         "content_intent",
         "apply_payload",
         "source_packet_refs",
@@ -154,6 +174,14 @@ function maintenanceSchema(input: ProjectMemoryCuratorOutputSchemaInput): JsonSc
         "preconditions",
         "expected_outcome",
       ]),
+      sectionTarget: objectSchema({
+        target_kind: { type: "string", enum: ["existing_section", "new_section_in_existing_page", "new_page"] },
+        wiki_path: wikiPathSchema(),
+        section_id: nullable(stringSchema()),
+        expected_section_hash: stringSchema(),
+        heading_path: stringArraySchema(),
+        ownership_reason: stringSchema(),
+      }, ["target_kind", "wiki_path", "section_id", "expected_section_hash", "heading_path", "ownership_reason"]),
       noopInput: objectSchema({
         source_packet_ref: { $ref: "#/$defs/evidenceRef" },
         reason: {
@@ -225,6 +253,62 @@ function commonDefs(
       },
       explanation: stringSchema(),
     }, ["id", "source_packet_refs", "checked_existing_memory_refs", "reason", "explanation"]),
+    qualityDiagnostics: objectSchema({
+      schema_version: constNumber(1),
+      content_quality: objectSchema({
+        status: { type: "string", enum: [...PROJECT_MEMORY_CONTENT_QUALITY_STATUSES] },
+        reasons: stringArraySchema(),
+      }, ["status", "reasons"]),
+      retrieval_readiness: objectSchema({
+        status: { type: "string", enum: [...PROJECT_MEMORY_RETRIEVAL_READINESS_STATUSES] },
+        reason: nullable(stringSchema()),
+      }, ["status", "reason"]),
+      domain_coverage: arrayOf(objectSchema({
+        domain: { type: "string", enum: [...PROJECT_MEMORY_ANSWER_DOMAINS] },
+        page_refs: stringArraySchema(),
+        section_refs: stringArraySchema(),
+        representative_questions: stringArraySchema(),
+        citations_seen: { type: "number" },
+        body_chars_seen: { type: "number" },
+        missing_topics: stringArraySchema(),
+      }, ["domain", "page_refs", "section_refs", "representative_questions", "citations_seen", "body_chars_seen", "missing_topics"])),
+      candidate_dispositions: arrayOf(objectSchema({
+        source_ref: stringSchema(),
+        disposition: { type: "string", enum: [...PROJECT_MEMORY_CANDIDATE_DISPOSITIONS] },
+        reason: stringSchema(),
+      }, ["source_ref", "disposition", "reason"])),
+      missing_coverage: stringArraySchema(),
+      shallow_summary_findings: stringArraySchema(),
+      answerability_findings: stringArraySchema(),
+    }, [
+      "schema_version",
+      "content_quality",
+      "retrieval_readiness",
+      "domain_coverage",
+      "candidate_dispositions",
+      "missing_coverage",
+      "shallow_summary_findings",
+      "answerability_findings",
+    ]),
+    documentationContract: objectSchema({
+      inspected_default_surfaces: stringArraySchema(),
+      curator_added_surfaces: arrayOf(objectSchema({
+        path: stringSchema(),
+        reason: stringSchema(),
+      }, ["path", "reason"])),
+      missing_orientation_surfaces: arrayOf(objectSchema({
+        path: stringSchema(),
+        reason: { type: "string", enum: ["not_present", "present_not_inspected"] },
+      }, ["path", "reason"])),
+      missing_coverage: stringArraySchema(),
+      shallow_summary_findings: stringArraySchema(),
+    }, [
+      "inspected_default_surfaces",
+      "curator_added_surfaces",
+      "missing_orientation_surfaces",
+      "missing_coverage",
+      "shallow_summary_findings",
+    ]),
     repoCitation: objectSchema({
       path: stringSchema(),
       line_start: nullable({ type: "number" }),
@@ -256,11 +340,19 @@ function commonDefs(
       page_path: wikiPathSchema(),
       title: stringSchema(),
       purpose: stringSchema(),
-      body: { $ref: "#/$defs/markdownLines" },
+      sections: arrayOf({ $ref: "#/$defs/pageSectionDraft" }, 1),
       evidence_refs: arrayOf({ $ref: "#/$defs/evidenceRef" }, 1),
       repo_citations: arrayOf({ $ref: "#/$defs/repoCitation" }, pageRepoCitationsMinItems),
       inference: nullable({ $ref: "#/$defs/inference" }),
-    }, ["page_path", "title", "purpose", "body", "evidence_refs", "repo_citations", "inference"]),
+    }, ["page_path", "title", "purpose", "sections", "evidence_refs", "repo_citations", "inference"]),
+    pageSectionDraft: objectSchema({
+      heading: stringSchema(),
+      level: { type: "number" },
+      body: { $ref: "#/$defs/markdownLines" },
+      evidence_refs: arrayOf({ $ref: "#/$defs/evidenceRef" }, 1),
+      repo_citations: arrayOf({ $ref: "#/$defs/repoCitation" }, 1),
+      inference: nullable({ $ref: "#/$defs/inference" }),
+    }, ["heading", "level", "body", "evidence_refs", "repo_citations", "inference"]),
     entryDraft: objectSchema({
       entry_id: stringSchema(),
       title: stringSchema(),
@@ -271,6 +363,14 @@ function commonDefs(
       inference: nullable({ $ref: "#/$defs/inference" }),
       applicability: { $ref: "#/$defs/applicability" },
     }, ["entry_id", "title", "body", "lifecycle", "evidence_refs", "repo_citations", "inference", "applicability"]),
+    sectionDraft: objectSchema({
+      heading: stringSchema(),
+      level: { type: "number" },
+      body: { $ref: "#/$defs/markdownLines" },
+      evidence_refs: arrayOf({ $ref: "#/$defs/evidenceRef" }, 1),
+      repo_citations: arrayOf({ $ref: "#/$defs/repoCitation" }),
+      inference: nullable({ $ref: "#/$defs/inference" }),
+    }, ["heading", "level", "body", "evidence_refs", "repo_citations", "inference"]),
     ...extra,
   };
 }
@@ -291,8 +391,8 @@ function applyPayloadSchema(mode: ProjectMemoryCuratorMode): JsonSchema {
     );
   }
   return objectSchema(
-    { schema_version: constNumber(1), entries: arrayOf({ $ref: "#/$defs/entryDraft" }, 1) },
-    ["schema_version", "entries"],
+    { schema_version: constNumber(1), entries: arrayOf({ $ref: "#/$defs/entryDraft" }), section: nullable({ $ref: "#/$defs/sectionDraft" }), page: nullable({ $ref: "#/$defs/pageDraft" }) },
+    ["schema_version", "entries", "section", "page"],
   );
 }
 

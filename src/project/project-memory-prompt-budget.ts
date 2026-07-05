@@ -7,9 +7,11 @@ import {
 } from "./project-memory-packet.ts";
 import type { ProjectMemoryCuratorMode } from "./project-memory-curator-contracts.ts";
 import {
+  PROJECT_MEMORY_ANSWER_DOMAINS,
   PROJECT_MEMORY_CREATION_MIN_PAGES,
   PROJECT_MEMORY_CURATOR_OUTPUT_CONTRACT_ARTIFACT,
 } from "./project-memory-curator-contracts.ts";
+import { PROJECT_MEMORY_DEFAULT_ORIENTATION_SURFACES } from "./project-memory-orientation-contract.ts";
 
 export const PROJECT_MEMORY_PROMPT_SAFETY_MARGIN_CHARS = 5_000;
 export const PROJECT_MEMORY_PROMPT_TARGET_CHARS = PROMPT_SIZE_LIMIT - PROJECT_MEMORY_PROMPT_SAFETY_MARGIN_CHARS;
@@ -93,15 +95,18 @@ export async function buildPromptBudgetedProjectMemoryPacket(input: {
   runDir: string;
   absoluteRunDir?: string;
   repoPath?: string;
+  packet?: ProjectMemoryPacket;
+  evidenceMapArtifact?: "project-memory-evidence-map.json";
   transport?: ProjectMemoryPromptTransport;
 }): Promise<ProjectMemoryPromptBudgetResult> {
   const transport = input.transport ?? "inline_packet";
   if (transport === "artifact_reference") {
-    const packet = await buildProjectMemoryPacket(input.root, input.projectKey);
+    const packet = input.packet ?? (await buildProjectMemoryPacket(input.root, input.projectKey));
     const prompt = buildProjectMemoryCuratorPrompt(packet.mode, input.runDir, packet, {
       transport,
       absoluteRunDir: input.absoluteRunDir,
       repoPath: input.repoPath,
+      evidenceMapArtifact: input.evidenceMapArtifact,
     });
     const attempt = measureProjectMemoryPromptAttempt(packet, prompt, {});
     const artifact = buildArtifact(attempt.fits_hard_limit ? "ok" : "too_large", [attempt], 0, transport);
@@ -167,7 +172,12 @@ export function buildProjectMemoryCuratorPrompt(
   mode: ProjectMemoryCuratorMode,
   runDir: string,
   packet: ProjectMemoryPacket,
-  options: { transport?: ProjectMemoryPromptTransport; absoluteRunDir?: string; repoPath?: string } = {},
+  options: {
+    transport?: ProjectMemoryPromptTransport;
+    absoluteRunDir?: string;
+    repoPath?: string;
+    evidenceMapArtifact?: "project-memory-evidence-map.json";
+  } = {},
 ): string {
   const outputName = mode === "create" ? "ProjectMemoryCreationDraft" : "ProjectMemoryMaintenanceProposal";
   const artifactRunDir = options.absoluteRunDir ?? runDir;
@@ -192,11 +202,25 @@ export function buildProjectMemoryCuratorPrompt(
     "When a maintenance write depends on lookup evidence for dedupe, target selection, or supersession, include evidence_dependencies naming the lookup_result refs.",
     ...(mode === "create"
       ? [
-          "Create mode: read a bounded repo orientation set when present: AGENTS.md, README.md, package.json, Makefile, docs/CLI.md, docs/ROADMAP.md, and src/cli.ts; do not search broadly.",
+          "Create mode: Project Memory is living repo documentation, not a page-count exercise.",
+          `Create mode: inspect the default orientation surfaces when present: ${PROJECT_MEMORY_DEFAULT_ORIENTATION_SURFACES.join(", ")}.`,
+          "Create mode: you may inspect extra target-repo files only when justified in documentation_contract.curator_added_surfaces.",
+          "Create mode: candidates, handoffs, and Session Memory are leads only; cite repo docs/code for durable claims.",
+          `Create mode: cover all required answer domains: ${PROJECT_MEMORY_ANSWER_DOMAINS.join(", ")}.`,
+          "Create mode: each page draft must name answer_domains, required_topics, representative_questions, inspected_surface_refs, direct repo_citations, and one matching sectioned apply_payload page.",
+          "Create mode: do not use the old documentation role taxonomy as create-mode authority.",
+          ...(options.evidenceMapArtifact
+            ? [
+                `Create mode is two-pass: use input-packet.json for bounded context and ${options.evidenceMapArtifact} as the required evidence map.`,
+                `Create mode: documentation_contract.inspected_default_surfaces must include every present default orientation surface you actually inspected, including present defaults surfaced by ${options.evidenceMapArtifact}.`,
+                "Create mode: every page answer_domain, required_topic, representative_question, and section must be supported by evidence_refs or repo_citations from the evidence map.",
+                `Create mode: if an answer domain has missing_evidence in ${options.evidenceMapArtifact}, report it in quality_diagnostics.missing_coverage or shallow_summary_findings; do not fill the gap with generic prose.`,
+                "Create mode: candidates, handoffs, and Session Memory are leads only. Convert them into Project Memory only when the evidence map points to repo-grounded support.",
+              ]
+            : []),
           "Create mode: every page draft and apply payload page must include direct repo_citations; packet/session/candidate evidence alone is not enough to mark Project Memory curated.",
           "Create mode: each page draft's apply_payload.pages must contain exactly one page, and that page_path must equal target.path; create separate page drafts for separate wiki pages.",
           `Create mode: produce a full Project Memory documentation set: index.md plus at least ${PROJECT_MEMORY_CREATION_MIN_PAGES - 1} non-index pages, all repo-grounded.`,
-          "Create mode: cover at minimum product purpose, runtime/commands, architecture/data flow, and operations/current work; use more pages if the repo requires them.",
         ]
       : [
           "Maintain mode: propose bounded itemized Project Memory updates only.",

@@ -201,6 +201,22 @@ export function getProjectMemoryRetrievalEmbedding(db: Database, id: string): Pr
   return row;
 }
 
+export function hydrateProjectMemoryRetrievalRows(
+  db: Database,
+  ids: string[],
+): ProjectMemoryRetrievalEmbeddingRow[] {
+  if (ids.length === 0) return [];
+  const hydrated: ProjectMemoryRetrievalEmbeddingRow[] = [];
+  const seen = new Set<string>();
+  for (const id of ids) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const row = getProjectMemoryRetrievalEmbeddingOrNull(db, id);
+    if (row) hydrated.push(row);
+  }
+  return hydrated;
+}
+
 function getProjectMemoryRetrievalEmbeddingOrNull(db: Database, id: string): ProjectMemoryRetrievalEmbeddingRow | null {
   return db.query("SELECT * FROM project_memory_retrieval_embeddings WHERE id = ?").get(id) as
     | ProjectMemoryRetrievalEmbeddingRow

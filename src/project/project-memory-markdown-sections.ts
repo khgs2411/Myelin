@@ -92,6 +92,25 @@ export async function extractProjectMemorySections(
   };
 }
 
+export function extractProjectMemorySectionsFromMarkdown(input: {
+  projectKey: string;
+  wikiPath: string;
+  text: string;
+  category?: string | null;
+  title?: string;
+  warnings?: string[];
+}): ProjectMemoryMarkdownSection[] {
+  const warnings = input.warnings ?? [];
+  return sectionsForPage({
+    projectKey: input.projectKey,
+    wikiPath: input.wikiPath,
+    category: input.category ?? categoryFor(input.wikiPath),
+    title: input.title ?? titleForMarkdown(input.wikiPath, input.text),
+    text: input.text,
+    warnings,
+  });
+}
+
 export async function writeProjectMemorySectionManifest(
   root: string,
   manifest: ProjectMemorySectionManifest,

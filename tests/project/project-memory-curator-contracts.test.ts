@@ -6,6 +6,7 @@ import {
   PROJECT_MEMORY_RETRIEVAL_METHODS,
 } from "../../src/project/project-memory-retrieval-contracts.ts";
 import {
+  PROJECT_MEMORY_ANSWER_DOMAINS,
   PROJECT_MEMORY_CURATOR_BUDGET_KEYS,
   PROJECT_MEMORY_CURATOR_MODES,
   PROJECT_MEMORY_CURATOR_RUN_STATUSES,
@@ -19,15 +20,25 @@ test("curator modes expose the create and maintain authority profiles", () => {
   expect(PROJECT_MEMORY_CURATOR_MODES).toEqual(["create", "maintain"]);
 });
 
+test("curator contracts expose create-mode answer domains", () => {
+  expect(PROJECT_MEMORY_ANSWER_DOMAINS).toEqual([
+    "product_memory_model",
+    "storage_retrieval",
+    "command_workflows",
+    "curation_apply_lifecycle",
+    "evidence_provenance_candidates",
+    "current_work_roadmap_decisions",
+  ]);
+});
+
 test("curator maintenance operations expose the pre-write operation set", () => {
   expect(PROJECT_MEMORY_MAINTENANCE_OPERATIONS).toEqual([
-    "CREATE_ENTRY",
-    "PATCH_ENTRY",
+    "PATCH_SECTION",
+    "CREATE_SECTION",
+    "CREATE_PAGE",
     "ATTACH_EVIDENCE",
     "MARK_STALE",
     "MARK_DISPUTED",
-    "SUPERSEDE_ENTRY",
-    "RETRACT_ENTRY",
     "NOOP",
   ]);
 });
@@ -54,6 +65,7 @@ test("validator issue categories cover deterministic rejection and quarantine re
     "packet_ref",
     "operation",
     "path",
+    "evidence",
     "provenance",
     "repo_citation",
     "lifecycle",

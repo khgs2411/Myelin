@@ -37,20 +37,41 @@ export function renderPageDraft(page: ProjectMemoryPageDraft): string {
     page.page_path,
     page.title,
     page.purpose,
-    ...page.body.paragraphs,
-    ...(page.body.bullets ?? []),
-    ...(page.body.warnings ?? []),
+    ...page.sections.flatMap((section) => [
+      section.heading,
+      ...section.body.paragraphs,
+      ...(section.body.bullets ?? []),
+      ...(section.body.warnings ?? []),
+    ]),
   ]);
   return normalizeMarkdown([
     `# ${page.title}`,
     "",
     page.purpose,
     "",
-    ...renderMarkdownLines(page.body),
-    "",
-    ...renderProvenance(page.evidence_refs, page.repo_citations, page.inference),
+    ...page.sections.flatMap((section) => renderPageSection(section)),
+    ...renderPageProvenance(page),
     "",
   ].join("\n"));
+}
+
+function renderPageSection(section: ProjectMemoryPageDraft["sections"][number]): string[] {
+  return [
+    `## ${section.heading}`,
+    "",
+    ...renderMarkdownLines(section.body),
+    "",
+    ...renderProvenance(section.evidence_refs, section.repo_citations, section.inference),
+    "",
+  ];
+}
+
+function renderPageProvenance(page: ProjectMemoryPageDraft): string[] {
+  return [
+    "Page provenance:",
+    "",
+    ...renderProvenance(page.evidence_refs, page.repo_citations, page.inference).slice(2),
+  ];
 }
 
 export function upsertEntryBlock(pageText: string, entryId: string, renderedBlock: string): string {

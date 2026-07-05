@@ -14,7 +14,7 @@ let db: MemoryDb;
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "myelin-pm-indexer-"));
   await mkdir(join(root, "projects", "demo", "wiki"), { recursive: true });
-  await writeFile(join(root, "projects", "demo", "wiki", "index.md"), "# Demo\n\nProject memory body.\n", "utf8");
+  await writeFile(join(root, "projects", "demo", "wiki", "index.md"), "# Demo\n\nProject memory body.\n\n## Overview\n\nUseful project memory section.\n", "utf8");
   db = openMemoryDb(root);
 });
 
@@ -49,6 +49,37 @@ test("indexes markdown sections into Project Memory retrieval rows", async () =>
   expect(result.indexed).toBeGreaterThan(0);
   expect(result.degraded).toBe(false);
   expect(vectors.length).toBe(result.indexed);
+  expect(result.structural_sections_seen).toBe(1);
+});
+
+test("does not index top-level page title sections", async () => {
+  const embeddedTexts: string[] = [];
+  const result = await indexProjectMemoryRetrieval(db, {
+    root,
+    project_key: "demo",
+    contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+    provider: {
+      async embed(request) {
+        embeddedTexts.push(request.text);
+        return {
+          embedding: unitVector(request.contract.dimensions),
+          model: request.contract.model,
+          dimensions: request.contract.dimensions,
+        };
+      },
+    },
+    limit: 10,
+    vector_store: {
+      ensure: () => ({ available: true }),
+      upsert: () => undefined,
+    },
+    now: () => "2026-06-28T10:00:00.000Z",
+  });
+
+  expect(result.indexed).toBe(1);
+  expect(embeddedTexts).toHaveLength(1);
+  expect(embeddedTexts[0]).toContain("heading_path: Demo > Overview");
+  expect(embeddedTexts[0]).not.toContain("Project memory body.");
 });
 
 test("marks selected rows failed when vector store is unavailable", async () => {
@@ -76,9 +107,9 @@ test("marks selected rows failed when vector store is unavailable", async () => 
 
 test("indexes only valid matching hints with structural section text", async () => {
   await mkdir(join(root, "projects", "demo", "wiki", "architecture"), { recursive: true });
-  await writeFile(join(root, "projects", "demo", "wiki", "architecture", "ranking.md"), "# Ranking\n\nRanking body.\n", "utf8");
+  await writeFile(join(root, "projects", "demo", "wiki", "architecture", "ranking.md"), "# Ranking\n\nRanking body.\n\n## Proposal Ranking\n\nRanking detail.\n", "utf8");
   const manifest = await extractProjectMemorySections(root, "demo", { now: new Date("2026-06-28T10:00:00.000Z") });
-  const ranking = manifest.sections.find((section) => section.wiki_path === "wiki/architecture/ranking.md");
+  const ranking = manifest.sections.find((section) => section.wiki_path === "wiki/architecture/ranking.md" && section.heading_level > 1);
   if (!ranking) throw new Error("missing ranking section");
   await writeProjectMemoryHintFile(root, {
     schema_version: 1,

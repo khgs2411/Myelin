@@ -3,6 +3,7 @@ import { openMemoryDbAt, type MemoryDb } from "../../src/memory/db.ts";
 import {
   ensurePendingProjectMemoryRetrievalEmbedding,
   getProjectMemoryRetrievalEmbedding,
+  hydrateProjectMemoryRetrievalRows,
   listPendingProjectMemoryRetrievalEmbeddings,
   markProjectMemoryRetrievalEmbeddingFailed,
   markProjectMemoryRetrievalEmbeddingIndexed,
@@ -72,6 +73,32 @@ test("keeps indexed row when section, hint, and embedding contract are unchanged
 
   expect(again.status).toBe("indexed");
   expect(again.normalized_text_hash).toBe("sha256:text");
+});
+
+test("hydrates Project Memory retrieval rows in requested order and skips missing ids", () => {
+  const first = ensurePendingProjectMemoryRetrievalEmbedding(db, {
+    project_key: "demo",
+    wiki_path: "wiki/index.md",
+    section_id: "demo",
+    section_hash: "sha256:first",
+    hint_hash: null,
+    contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+    now: "2026-06-28T10:00:00.000Z",
+  });
+  const second = ensurePendingProjectMemoryRetrievalEmbedding(db, {
+    project_key: "demo",
+    wiki_path: "wiki/setup/index.md",
+    section_id: "setup",
+    section_hash: "sha256:second",
+    hint_hash: null,
+    contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+    now: "2026-06-28T10:00:00.000Z",
+  });
+
+  expect(hydrateProjectMemoryRetrievalRows(db, [second.id, "missing", first.id, second.id]).map((row) => row.id)).toEqual([
+    second.id,
+    first.id,
+  ]);
 });
 
 test("lists failed rows only when retry is requested", () => {

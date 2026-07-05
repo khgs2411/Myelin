@@ -27,7 +27,7 @@ make schema-check PROJECT=<key>
 # Broad project-memory refresh, formerly "compile"
 make learn PROJECT=<key>
 
-# Drain queued inbox/source items, formerly "update"
+# Process queued Experience Log rows into Session Memory
 make ingest PROJECT=<key>
 
 # Index pending Session Memory embeddings
@@ -45,7 +45,7 @@ The Makefile is a thin alias layer. New automation should call `myelin` vocabula
 | Old V1 concept | Myelin V2 command |
 | --- | --- |
 | `compile` | `project learn <key>` |
-| `update` source/inbox processing | `project ingest <key>` |
+| Project Memory source/inbox processing | `project learn <key>` |
 | agentic Experience Log to Session Memory processing | `ingest <key>` |
 | Session Memory embedding backfill/indexing | `memory index session <key>` |
 | `ask` | `memory query <key> "<question>"` |
@@ -55,7 +55,7 @@ The Makefile is a thin alias layer. New automation should call `myelin` vocabula
 
 Do not reintroduce V1-concept Make targets as primary product vocabulary. If a temporary legacy escape hatch is needed, name it explicitly as legacy.
 
-`project ingest <key>` and top-level `ingest <key>` are intentionally different. `project ingest` drains queued source/inbox material through the project-memory pipeline. `ingest` starts a detached provider-backed Experience Log to Session Memory job and returns a durable handle.
+There is no active `project ingest <key>` command. `project learn <key>` runs deterministic Project Memory runtime-inbox intake before packet construction. Top-level `ingest <key>` starts a detached provider-backed Experience Log to Session Memory job and returns a durable handle.
 
 ## Environment And Config
 

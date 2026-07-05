@@ -4,6 +4,7 @@ import { repoRoot } from "../runtime/fs.ts";
 import { stableJson } from "../runtime/json.ts";
 import type { ProcessRunner } from "../runtime/llm-client.ts";
 import { ProjectService } from "../project/project-service.ts";
+import { ProjectResetService } from "../project/project-reset-service.ts";
 
 export type ProjectCommandDeps = {
   now?: () => Date;
@@ -15,6 +16,7 @@ export function registerProjectCommands(cli: Cli, deps: ProjectCommandDeps = {})
   cli.command(["project", "list"], async (args) => listProjectsCommand(args));
   cli.command(["project", "packet"], async (args) => projectPacketCommand(args));
   cli.command(["project", "learn"], async (args) => projectLearnCommand(args, deps));
+  cli.command(["project", "reset"], async (args) => projectResetCommand(args));
   cli.command(["project", "migrate-layout"], async (args) => {
     const projectKey = args[0];
     if (!projectKey || args.length > 1) return fail("Usage: myelin project migrate-layout <project-key>");
@@ -32,6 +34,28 @@ export function registerProjectCommands(cli: Cli, deps: ProjectCommandDeps = {})
       return fail(error instanceof Error ? error.message : String(error));
     }
   });
+}
+
+async function projectResetCommand(args: string[]) {
+  const parsed = parseProjectResetArgs(args);
+  if (parsed.error) return fail(parsed.error);
+
+  try {
+    const result = await new ProjectResetService(repoRoot().root).cleanRebootstrap(parsed.projectKey);
+    if (parsed.json) return ok(stableJson(result));
+
+    return ok(
+      [
+        `Reset project shell for ${result.project_key}.`,
+        `scope: ${result.reset_scope}`,
+        `deleted: ${result.deleted_project_path}`,
+        `preserved memory db: ${result.preserved_memory_db}`,
+        `bootstrap: ${result.bootstrap_status}`,
+      ].join("\n"),
+    );
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error));
+  }
 }
 
 async function projectPacketCommand(args: string[]) {
@@ -155,6 +179,40 @@ function parseProjectListArgs(args: string[]): {
   }
 
   return { includeLegacy, json };
+}
+
+function parseProjectResetArgs(args: string[]): {
+  projectKey: string;
+  clean: boolean;
+  confirm?: string;
+  json: boolean;
+  error?: string;
+} {
+  let projectKey = "";
+  let clean = false;
+  let confirm: string | undefined;
+  let json = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--clean") clean = true;
+    else if (arg === "--json") json = true;
+    else if (arg === "--confirm") confirm = args[++index];
+    else if (arg.startsWith("-")) return { projectKey, clean, confirm, json, error: `Unknown project reset option: ${arg}` };
+    else if (!projectKey) projectKey = arg;
+    else return { projectKey, clean, confirm, json, error: `Unexpected project reset argument: ${arg}` };
+  }
+
+  if (!projectKey || !clean || confirm !== projectKey) {
+    return {
+      projectKey,
+      clean,
+      confirm,
+      json,
+      error: "Usage: myelin project reset <project-key> --clean --confirm <project-key> [--json]",
+    };
+  }
+  return { projectKey, clean, confirm, json };
 }
 
 function parseProjectLearnArgs(args: string[]): {

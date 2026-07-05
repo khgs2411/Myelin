@@ -168,8 +168,24 @@ The structured curator output for bounded updates to existing trusted Project Me
 _Avoid_: creation draft, free-form patch
 
 **Project Memory Documentation Contract**:
-The role-based quality contract that defines whether Project Memory creation or maintenance produced trustworthy project documentation.
+The quality contract that defines whether Project Memory creation or maintenance produced trustworthy project documentation.
 _Avoid_: page-count guard, generic wiki minimum
+
+**Answer-Domain Documentation Map**:
+The Project Memory creation map organized around durable question and workflow domains future agents need to answer.
+_Avoid_: six-role page taxonomy, generic role pages
+
+**Two-Pass Evidence Workflow**:
+The Project Memory creation flow that builds an answer-domain evidence map before writing curated markdown from that map.
+_Avoid_: direct-from-candidate write, unbounded curator exploration
+
+**Independent Usefulness Critique**:
+The first-create Project Memory review gate that judges whether rendered documentation is practically useful after deterministic checks pass.
+_Avoid_: deterministic validator, human dogfood, answer synthesis
+
+**Clean Rebootstrap Reset**:
+An explicit reset that deletes and recreates a project shell while preserving root SQLite memory state for the same project key.
+_Avoid_: implicit project learn cleanup, memory wipe, selective adoption
 
 **Project Memory Content Quality State**:
 A run-level classification of whether Project Memory markdown is trusted enough to be curated independent of retrieval/index readiness.

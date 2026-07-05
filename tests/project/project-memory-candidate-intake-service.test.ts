@@ -66,6 +66,8 @@ test("normalizes a project runtime inbox item into one needs-review project cand
       reason: "Project Memory curator should verify and decide what becomes durable.",
     });
     expect(JSON.parse(candidate?.source_event_refs_json ?? "[]")).toEqual(["inbox:2026-06-25T10-00-00Z_a1b2c3"]);
+    expect(candidate?.scope).toBe("project");
+    expect(candidate?.candidate_type).toBe("project.inbox");
     expect(JSON.parse(candidate?.proposed_payload_json ?? "{}")).toMatchObject({
       body: "Runtime inbox proposals are preserved source material.",
       target_hint: "wiki/architecture/index.md",
