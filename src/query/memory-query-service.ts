@@ -11,6 +11,7 @@ import {
   type ProjectMemoryQueryResult,
 } from "./project-memory-query-service.ts";
 import type { ActiveEmbeddingContract } from "../runtime/config.ts";
+import { attachMemoryQueryLogResponse } from "../memory/query-logs.ts";
 
 export type FacadeResponse = {
   answer: string;
@@ -25,6 +26,7 @@ export type FacadeResponse = {
 
 export type QueryLayerDiagnostic = {
   layer: "session_memory" | "project_memory";
+  query_log_id: string | null;
   degraded: boolean;
   degraded_reason: string | null;
   indexed_count: number;
@@ -85,7 +87,9 @@ export class MemoryQueryService {
         limit: input.limit ?? 5,
         filters: input.gitBranch ? { git_branch: input.gitBranch } : undefined,
       });
-      return responseService.fromSessionMemoryResult(result, { includeRoute: input.includeRoute ?? false });
+      const response = responseService.fromSessionMemoryResult(result, { includeRoute: input.includeRoute ?? false });
+      this.attachResponseLog("session", result.query_log_id, response);
+      return response;
     } catch (error) {
       return responseService.degraded(error instanceof Error ? error.message : String(error));
     }
@@ -105,10 +109,22 @@ export class MemoryQueryService {
         limit: input.limit ?? 5,
         max_inline_chars: input.maxInlineChars ?? 4000,
       });
-      return responseService.fromProjectMemoryResult(result, { includeRoute: input.includeRoute ?? false });
+      const response = responseService.fromProjectMemoryResult(result, { includeRoute: input.includeRoute ?? false });
+      this.attachResponseLog("project", result.query_log_id, response);
+      return response;
     } catch (error) {
       return responseService.degraded(error instanceof Error ? error.message : String(error), "project_memory");
     }
+  }
+
+  private attachResponseLog(layer: "session" | "project", queryLogId: string | undefined, response: QueryResponse): void {
+    if (!queryLogId) return;
+    attachMemoryQueryLogResponse(this.deps.db, {
+      layer,
+      log_id: queryLogId,
+      answer_text: response.answer,
+      response,
+    });
   }
 }
 
@@ -201,6 +217,7 @@ export class DeterministicMemoryQueryResponseService {
   private sessionMemoryDiagnostic(result: SessionMemoryQueryResult): QueryLayerDiagnostic {
     return {
       layer: "session_memory",
+      query_log_id: result.query_log_id ?? null,
       degraded: result.degraded,
       degraded_reason: result.degraded_reason ?? null,
       indexed_count: result.indexed_count,
@@ -215,6 +232,7 @@ export class DeterministicMemoryQueryResponseService {
   private projectMemoryDiagnostic(result: ProjectMemoryQueryResult): QueryLayerDiagnostic {
     return {
       layer: "project_memory",
+      query_log_id: result.query_log_id ?? null,
       degraded: result.degraded,
       degraded_reason: result.degraded_reason ?? null,
       indexed_count: result.indexed_count,

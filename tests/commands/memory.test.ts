@@ -177,6 +177,75 @@ test("memory query project layer returns approved Project Memory JSON shape", as
     layer: "project_memory",
     match_count: 1,
   });
+  const db = openMemoryDb(root);
+  try {
+    const log = db
+      .query("SELECT answer_text, response_json FROM project_memory_query_logs WHERE question = ?")
+      .get("How is setup documented?") as { answer_text: string; response_json: string };
+    expect(log.answer_text).toContain("wiki/setup/index.md#setup");
+    expect(JSON.parse(log.response_json)).toMatchObject({
+      answer: response.answer,
+      project_memory_matches: [{ wiki_path: "wiki/setup/index.md", section_id: "setup" }],
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test("memory eval project logs answer and eval details onto Project Memory query logs", async () => {
+  await seedProjectMemoryQueryFixture("How is setup documented?");
+  const fixturePath = join(root, "eval-fixture.json");
+  await writeFile(
+    fixturePath,
+    JSON.stringify({
+      questions: [
+        {
+          id: "setup-docs",
+          question: "How is setup documented?",
+          expected_primary_refs: ["wiki/setup/index.md#setup"],
+          must_contain_text: ["Setup is documented"],
+        },
+      ],
+    }),
+    "utf8",
+  );
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+
+  const result = await cli.run(["memory", "eval", "project", "demo", "--fixture", fixturePath, "--json"]);
+  const response = JSON.parse(result.message);
+
+  expect(result.exitCode).toBe(0);
+  expect(response).toMatchObject({
+    total: 1,
+    passed: 1,
+    failed: 0,
+    primary_rank_1: 1,
+    acceptable_top_5: 1,
+  });
+  const db = openMemoryDb(root);
+  try {
+    const log = db
+      .query("SELECT answer_text, response_json, eval_run_id, eval_json FROM project_memory_query_logs WHERE question = ? ORDER BY created_at DESC LIMIT 1")
+      .get("How is setup documented?") as {
+        answer_text: string;
+        response_json: string;
+        eval_run_id: string;
+        eval_json: string;
+      };
+    expect(log.answer_text).toContain("Setup is documented in canonical Project Memory.");
+    expect(JSON.parse(log.response_json)).toMatchObject({
+      project_memory_matches: [{ wiki_path: "wiki/setup/index.md", section_id: "setup" }],
+    });
+    expect(log.eval_run_id).toBe(response.run_id);
+    expect(JSON.parse(log.eval_json)).toMatchObject({
+      id: "setup-docs",
+      passed: true,
+      top_ref: "wiki/setup/index.md#setup",
+    });
+  } finally {
+    db.close();
+  }
 });
 
 test("memory session list filters lifecycle status", async () => {

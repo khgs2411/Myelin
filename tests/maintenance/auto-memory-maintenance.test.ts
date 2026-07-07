@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { AutoMemoryMaintenanceService, readState } from "../../src/maintenance/auto-memory-maintenance.ts";
 import { openMemoryDbAt } from "../../src/memory/db.ts";
 import { recordExperienceEvent } from "../../src/memory/experience.ts";
+import { INGEST_COMPLETION_LAYERS, type IngestJobRow } from "../../src/memory/ingest-types.ts";
 import type { DetachedSpawner } from "../../src/ingest/runtime.ts";
 import { bootstrapProject } from "../../src/runtime/bootstrap.ts";
 
@@ -163,6 +164,77 @@ test("auto memory maintenance run records completed state when no work remains",
   await expect(Bun.file(join(root, "projects", "demo", "state", ".auto-memory-maintenance.lock", "owner.json")).exists()).resolves.toBe(false);
 });
 
+test("auto memory maintenance runs one bounded drain window and schedules continuation above threshold", async () => {
+  await writeConfig([
+    "AUTO_MEMORY_MAINTENANCE=1",
+    "AUTO_MEMORY_MIN_CAPTURED_EVENTS=2",
+    "AUTO_MEMORY_DRAIN_POLL_INTERVAL_MS=1",
+    "AUTO_MEMORY_DRAIN_TIMEOUT_MS=1000",
+    "INGEST_BATCH_SIZE=4",
+  ]);
+  seedExperienceEvents(10);
+
+  const starts: Array<{ limit?: number; batchSize?: number }> = [];
+  const indexCalls: Array<{ projectKey: string; limit: number; batchSize: number; retryFailed: boolean }> = [];
+  const spawned: Array<Parameters<DetachedSpawner>[0]> = [];
+  let statusReads = 0;
+
+  const result = await new AutoMemoryMaintenanceService(root, {
+    now: () => new Date("2026-06-17T20:00:00.000Z"),
+    sleep: async () => {},
+    ingestService: {
+      async start(input) {
+        starts.push({ limit: input.limit, batchSize: input.batchSize });
+        return {
+          kind: "started",
+          project_key: input.projectKey,
+          queued_count: 10,
+          selected_count: input.limit ?? 10,
+          batch_size: input.batchSize ?? 4,
+          batch_count: 1,
+          target_branch: "master",
+          job: fakeIngestJob(),
+          jobs: [],
+          launches: [],
+        };
+      },
+      async status() {
+        statusReads += 1;
+        return {
+          kind: "project",
+          status: ingestProjectStatus(statusReads === 1 ? 1 : 0),
+        };
+      },
+    },
+    async indexPending(input) {
+      indexCalls.push(input);
+      return { indexed: 3, failed: 0, pending_remaining: 0 };
+    },
+    spawn: (options) => {
+      spawned.push(options);
+      return { pid: 4321, unref: () => {} };
+    },
+  }).run("demo", "auto_memory_test");
+
+  expect(result).toMatchObject({
+    status: "completed",
+    ingest_started: true,
+    indexed: 3,
+    queued_remaining: 10,
+    rescheduled: true,
+  });
+  expect(starts).toEqual([{ limit: 4, batchSize: 4 }]);
+  expect(indexCalls).toEqual([{ projectKey: "demo", limit: 500, batchSize: 50, retryFailed: false }]);
+  expect(spawned).toHaveLength(1);
+  expect(spawned[0].cmd).toEqual(["bun", join(root, "src", "maintenance", "worker.ts"), "demo"]);
+  await expect(readState(root, "demo")).resolves.toMatchObject({
+    project_key: "demo",
+    last_status: "scheduled",
+    last_pid: 4321,
+    last_counts: { queued_count: 10 },
+  });
+});
+
 async function writeConfig(lines: string[]): Promise<void> {
   await writeFile(join(root, "myelin.config"), `${lines.join("\n")}\n`, "utf8");
 }
@@ -185,4 +257,44 @@ function seedExperienceEvents(count: number, offset = 0): void {
   } finally {
     db.close();
   }
+}
+
+function ingestProjectStatus(runningJobs: number) {
+  return {
+    project_key: "demo",
+    completion_layer: INGEST_COMPLETION_LAYERS.EXPERIENCE_LOG_DRAIN_PENDING,
+    completion_label: runningJobs > 0 ? "Experience Log drain running" : "Experience Log retry pending",
+    counts: {
+      active_events: 10,
+      unleased_events: 10,
+      leased_events: 0,
+      running_jobs: runningJobs,
+      failed_jobs: 0,
+      terminal_tombstones: 0,
+      session_memories: 0,
+      memory_candidates: 0,
+      handoff_instructions: 0,
+      pending_session_memory_embeddings: 0,
+    },
+  };
+}
+
+function fakeIngestJob(): IngestJobRow {
+  return {
+    id: "ingest_test",
+    project_key: "demo",
+    status: "running",
+    provider: "codex",
+    provider_session_id: null,
+    requested_by: null,
+    input_json: "{}",
+    output_counts_json: "{}",
+    terminal_summary: null,
+    error_json: null,
+    followup_state_json: null,
+    started_at: "2026-06-17T20:00:00.000Z",
+    finished_at: null,
+    created_at: "2026-06-17T20:00:00.000Z",
+    updated_at: "2026-06-17T20:00:00.000Z",
+  };
 }

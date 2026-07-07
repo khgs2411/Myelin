@@ -356,8 +356,8 @@ function leaseForPrompt(lease: LeasedExperienceEvent): JsonObject {
     evidence.length <= MAX_PROMPT_RETAINED_EVIDENCE_CHARS
       ? lease.prompt_evidence
       : {
-          raw_text: lease.prompt_evidence.raw_text,
-          raw_payload_json: `${lease.prompt_evidence.raw_payload_json.slice(0, MAX_PROMPT_RETAINED_EVIDENCE_CHARS)}${TRUNCATED_EVIDENCE_SUFFIX}`,
+          raw_text: truncatePromptEvidence(lease.prompt_evidence.raw_text),
+          raw_payload_json: truncatePromptEvidence(lease.prompt_evidence.raw_payload_json),
         };
   return {
     id: lease.id,
@@ -371,6 +371,11 @@ function leaseForPrompt(lease: LeasedExperienceEvent): JsonObject {
     source_metadata_json: lease.source_metadata_json,
     prompt_evidence: promptEvidence,
   };
+}
+
+function truncatePromptEvidence(value: string | null): string | null {
+  if (value === null || value.length <= MAX_PROMPT_RETAINED_EVIDENCE_CHARS) return value;
+  return `${value.slice(0, MAX_PROMPT_RETAINED_EVIDENCE_CHARS)}${TRUNCATED_EVIDENCE_SUFFIX}`;
 }
 
 function validateArray(value: unknown, path: string): unknown[] {

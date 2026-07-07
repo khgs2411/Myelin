@@ -34,7 +34,7 @@ test("opening creates the session schema and records the migration", () => {
   expect(names).toContain("project_memory_section_fts");
   expect(names).toContain("schema_migrations");
   const applied = db.query("SELECT version FROM schema_migrations").all() as { version: number }[];
-  expect(applied.map((r) => r.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+  expect(applied.map((r) => r.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
   db.close();
 });
 
@@ -43,7 +43,7 @@ test("migrations are idempotent across re-opens", () => {
   openMemoryDbAt(path).close();
   const db = openMemoryDbAt(path);
   const count = db.query("SELECT count(*) AS n FROM schema_migrations").get() as { n: number };
-  expect(count.n).toBe(13);
+  expect(count.n).toBe(14);
   db.close();
 });
 
@@ -78,6 +78,10 @@ test("opening creates ingest, session memory, candidate, handoff, and tombstone 
     const sessionMemoryColumns = db.query("PRAGMA table_info(session_memories)").all() as Array<{ name: string }>;
     expect(sessionMemoryColumns.map((column) => column.name)).toContain("status");
     expect(sessionMemoryColumns.map((column) => column.name)).toContain("superseded_by");
+    const projectQueryLogColumns = db.query("PRAGMA table_info(project_memory_query_logs)").all() as Array<{ name: string }>;
+    expect(projectQueryLogColumns.map((column) => column.name)).toContain("answer_text");
+    expect(projectQueryLogColumns.map((column) => column.name)).toContain("response_json");
+    expect(projectQueryLogColumns.map((column) => column.name)).toContain("eval_json");
 
     const tombstoneColumns = db.query("PRAGMA table_info(experience_event_tombstones)").all() as Array<{
       name: string;

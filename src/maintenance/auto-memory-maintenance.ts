@@ -6,7 +6,7 @@ import { EmbeddingProviderFactory } from "../memory/embedding-provider-factory.t
 import { SessionMemoryIndexService } from "../memory/session-memory-index-service.ts";
 import type { DetachedSpawner, ProcessLivenessChecker } from "../ingest/runtime.ts";
 import { isProcessAlive } from "../ingest/runtime.ts";
-import { IngestService, type IngestProvider, type IngestServiceDeps } from "../ingest/ingest-service.ts";
+import { IngestService, type IngestProvider, type IngestServiceDeps, type StartIngestResult } from "../ingest/ingest-service.ts";
 import { loadConfig, selectActiveEmbeddingContract, type AutoMemoryMaintenanceConfig } from "../runtime/config.ts";
 import { projectPath } from "../runtime/fs.ts";
 import { createId } from "../runtime/ids.ts";
@@ -24,6 +24,8 @@ export type AutoMemoryMaintenanceRunResult = {
   indexed: number;
   index_failed: number;
   pending_remaining: number;
+  queued_remaining?: number;
+  rescheduled?: boolean;
   error_message?: string;
 };
 
@@ -42,7 +44,16 @@ export type AutoMemoryMaintenanceState = {
     indexed?: number;
     index_failed?: number;
     pending_remaining?: number;
+    queued_remaining?: number;
+    rescheduled?: boolean;
   };
+};
+
+type AutoMemoryMaintenanceIngestService = Pick<IngestService, "start" | "status">;
+type AutoMemoryMaintenanceIndexResult = {
+  indexed: number;
+  failed: number;
+  pending_remaining: number;
 };
 
 export type AutoMemoryMaintenanceDeps = IngestServiceDeps & {
@@ -50,6 +61,13 @@ export type AutoMemoryMaintenanceDeps = IngestServiceDeps & {
   spawn?: DetachedSpawner;
   isProcessAlive?: ProcessLivenessChecker;
   sleep?: (ms: number) => Promise<void>;
+  ingestService?: AutoMemoryMaintenanceIngestService;
+  indexPending?: (input: {
+    projectKey: string;
+    limit: number;
+    batchSize: number;
+    retryFailed: boolean;
+  }) => Promise<AutoMemoryMaintenanceIndexResult>;
 };
 
 type LockHandle = {
@@ -78,7 +96,9 @@ export class AutoMemoryMaintenanceService {
       const runningJobs = db
         .query("SELECT count(*) AS count FROM ingest_jobs WHERE project_key = ? AND status = 'running'")
         .get(projectKey) as { count: number };
-      if (runningJobs.count > 0) return this.skip(projectKey, "ingest already running", { queuedCount });
+      if (runningJobs.count > 0) {
+        return this.skip(projectKey, "ingest already running", { queuedCount, preserveActiveState: true });
+      }
     } finally {
       db.close();
     }
@@ -90,12 +110,19 @@ export class AutoMemoryMaintenanceService {
       return this.skip(projectKey, "cooldown active", { queuedCount });
     }
 
+    return this.scheduleDetachedWorker(projectKey, queuedCount);
+  }
+
+  private async scheduleDetachedWorker(
+    projectKey: string,
+    queuedCount: number,
+  ): Promise<AutoMemoryMaintenanceScheduleResult> {
     const runId = `auto_memory_${createId()}`;
     let lock = await tryAcquireLock(this.root, projectKey, runId, this.now());
     if (!lock && await this.clearDeadLock(projectKey)) {
       lock = await tryAcquireLock(this.root, projectKey, runId, this.now());
     }
-    if (!lock) return this.skip(projectKey, "maintenance already locked", { queuedCount });
+    if (!lock) return this.skip(projectKey, "maintenance already locked", { queuedCount, preserveActiveState: true });
 
     const logPath = autoMemoryLogPath(this.root, projectKey, runId);
     try {
@@ -165,6 +192,12 @@ export class AutoMemoryMaintenanceService {
         error_message: "maintenance already locked",
       };
     }
+    let lockReleased = false;
+    const releaseLock = async (): Promise<void> => {
+      if (lockReleased) return;
+      lockReleased = true;
+      await lock.release();
+    };
 
     try {
       await writeState(this.root, projectKey, {
@@ -176,51 +209,91 @@ export class AutoMemoryMaintenanceService {
       });
 
       const config = await loadConfig(this.root);
-      const ingestResult = await new IngestService(this.root, this.deps).start({
-        projectKey,
-        provider: config.defaultProvider as IngestProvider,
-      });
-      await this.waitForDrain(projectKey, config.autoMemoryMaintenance);
+      let ingestResult: StartIngestResult | null = null;
+      let drainError: Error | null = null;
+      const queuedBefore = this.countQueued(projectKey);
 
-      const db = openMemoryDb(this.root);
-      try {
-        const contract = selectActiveEmbeddingContract(config, "retrieval_document");
-        const provider = new EmbeddingProviderFactory(config).create();
-        const indexResult = await new SessionMemoryIndexService({
-          db,
-          contract,
-          provider,
-        }).indexPending({
+      if (queuedBefore >= config.autoMemoryMaintenance.minCapturedEvents) {
+        ingestResult = await this.ingestService().start({
           projectKey,
-          limit: config.autoMemoryMaintenance.indexLimit,
-          batchSize: config.embedding.batchSize,
-          retryFailed: false,
+          provider: config.defaultProvider as IngestProvider,
+          limit: config.ingest.batchSize,
+          batchSize: config.ingest.batchSize,
         });
+        try {
+          await this.waitForDrain(projectKey, config.autoMemoryMaintenance);
+        } catch (error) {
+          drainError = error instanceof Error ? error : new Error(String(error));
+        }
+      }
+
+      const indexResult = await this.indexPending(projectKey, config);
+      const queuedRemaining = this.countQueued(projectKey);
+
+      if (drainError) {
         await writeState(this.root, projectKey, {
           ...(await readState(this.root, projectKey)),
           project_key: projectKey,
           last_run_id: runId,
           last_finished_at: this.now(),
-          last_status: "completed",
+          last_status: "failed",
+          last_reason: drainError.message,
           last_counts: {
-            queued_count: ingestResult.queued_count,
+            queued_count: ingestResult?.queued_count ?? queuedBefore,
             indexed: indexResult.indexed,
             index_failed: indexResult.failed,
             pending_remaining: indexResult.pending_remaining,
+            queued_remaining: queuedRemaining,
           },
         });
         return {
-          status: "completed",
+          status: "failed",
           project_key: projectKey,
           run_id: runId,
-          ingest_started: ingestResult.kind === "started",
+          ingest_started: ingestResult?.kind === "started",
           indexed: indexResult.indexed,
           index_failed: indexResult.failed,
           pending_remaining: indexResult.pending_remaining,
+          queued_remaining: queuedRemaining,
+          error_message: drainError.message,
         };
-      } finally {
-        db.close();
       }
+
+      const shouldContinue = queuedRemaining >= config.autoMemoryMaintenance.minCapturedEvents;
+      await writeState(this.root, projectKey, {
+        ...(await readState(this.root, projectKey)),
+        project_key: projectKey,
+        last_run_id: runId,
+        last_finished_at: this.now(),
+        last_status: "completed",
+        last_counts: {
+          queued_count: ingestResult?.queued_count ?? queuedBefore,
+          indexed: indexResult.indexed,
+          index_failed: indexResult.failed,
+          pending_remaining: indexResult.pending_remaining,
+          queued_remaining: queuedRemaining,
+          rescheduled: shouldContinue,
+        },
+      });
+
+      let rescheduled = false;
+      if (shouldContinue) {
+        await releaseLock();
+        const continuation = await this.scheduleDetachedWorker(projectKey, queuedRemaining);
+        rescheduled = continuation.status === "scheduled";
+      }
+
+      return {
+        status: "completed",
+        project_key: projectKey,
+        run_id: runId,
+        ingest_started: ingestResult?.kind === "started",
+        indexed: indexResult.indexed,
+        index_failed: indexResult.failed,
+        pending_remaining: indexResult.pending_remaining,
+        queued_remaining: queuedRemaining,
+        rescheduled,
+      };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       await writeState(this.root, projectKey, {
@@ -242,22 +315,64 @@ export class AutoMemoryMaintenanceService {
         error_message: message,
       };
     } finally {
-      await lock.release();
+      await releaseLock();
     }
   }
 
   private async waitForDrain(projectKey: string, config: AutoMemoryMaintenanceConfig): Promise<void> {
     const started = Date.now();
-    const service = new IngestService(this.root, {
-      ...this.deps,
-      isProcessAlive: this.deps.isProcessAlive ?? isProcessAlive,
-    });
+    const service = this.ingestService();
     while (Date.now() - started <= config.drainTimeoutMs) {
       const result = await service.status({ projectKey });
       if (result.kind === "project" && result.status.counts.running_jobs === 0) return;
       await (this.deps.sleep ?? sleep)(config.drainPollIntervalMs);
     }
     throw new Error(`Auto memory maintenance timed out waiting for ingest drain for ${projectKey}`);
+  }
+
+  private ingestService(): AutoMemoryMaintenanceIngestService {
+    return this.deps.ingestService ?? new IngestService(this.root, {
+      ...this.deps,
+      isProcessAlive: this.deps.isProcessAlive ?? isProcessAlive,
+    });
+  }
+
+  private async indexPending(projectKey: string, config: Awaited<ReturnType<typeof loadConfig>>): Promise<AutoMemoryMaintenanceIndexResult> {
+    if (this.deps.indexPending) {
+      return this.deps.indexPending({
+        projectKey,
+        limit: config.autoMemoryMaintenance.indexLimit,
+        batchSize: config.embedding.batchSize,
+        retryFailed: false,
+      });
+    }
+
+    const db = openMemoryDb(this.root);
+    try {
+      const contract = selectActiveEmbeddingContract(config, "retrieval_document");
+      const provider = new EmbeddingProviderFactory(config).create();
+      return new SessionMemoryIndexService({
+        db,
+        contract,
+        provider,
+      }).indexPending({
+        projectKey,
+        limit: config.autoMemoryMaintenance.indexLimit,
+        batchSize: config.embedding.batchSize,
+        retryFailed: false,
+      });
+    } finally {
+      db.close();
+    }
+  }
+
+  private countQueued(projectKey: string): number {
+    const db = openMemoryDb(this.root);
+    try {
+      return countExperienceEvents(db, projectKey);
+    } finally {
+      db.close();
+    }
   }
 
   private async isInCooldown(projectKey: string, config: AutoMemoryMaintenanceConfig): Promise<boolean> {
@@ -289,12 +404,14 @@ export class AutoMemoryMaintenanceService {
   private async skip(
     projectKey: string,
     reason: string,
-    input: { queuedCount?: number } = {},
+    input: { queuedCount?: number; preserveActiveState?: boolean } = {},
   ): Promise<AutoMemoryMaintenanceScheduleResult> {
+    const state = await readState(this.root, projectKey);
+    const preserveStatus = input.preserveActiveState && (state.last_status === "scheduled" || state.last_status === "running");
     await writeState(this.root, projectKey, {
-      ...(await readState(this.root, projectKey)),
+      ...state,
       project_key: projectKey,
-      last_status: "skipped",
+      last_status: preserveStatus ? state.last_status : "skipped",
       last_reason: reason,
       last_finished_at: this.now(),
       last_counts: { queued_count: input.queuedCount },

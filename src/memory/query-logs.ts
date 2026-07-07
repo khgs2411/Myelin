@@ -33,10 +33,11 @@ export function recordMemoryQueryLog(
     degraded_reason?: string;
     now?: () => string;
   },
-): void {
+): string {
   const table = QUERY_LOG_TABLES[input.layer];
   const embedding = input.query_embedding_cache_id ? readQueryEmbeddingCacheSnapshot(db, input.query_embedding_cache_id) : null;
   const now = input.now ?? (() => new Date().toISOString());
+  const id = randomUUID();
 
   db.query(
     `INSERT INTO ${table}
@@ -46,7 +47,7 @@ export function recordMemoryQueryLog(
        result_json, match_count, degraded, degraded_reason, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
-    randomUUID(),
+    id,
     input.project_key,
     input.question,
     input.normalized_question ?? null,
@@ -63,6 +64,43 @@ export function recordMemoryQueryLog(
     input.degraded_reason ?? null,
     now(),
   );
+  return id;
+}
+
+export function attachMemoryQueryLogResponse(
+  db: Database,
+  input: {
+    layer: MemoryQueryLogLayer;
+    log_id: string;
+    answer_text: string;
+    response: unknown;
+  },
+): void {
+  const table = QUERY_LOG_TABLES[input.layer];
+  db.query(
+    `UPDATE ${table}
+     SET answer_text = ?,
+         response_json = ?
+     WHERE id = ?`,
+  ).run(input.answer_text, JSON.stringify(input.response), input.log_id);
+}
+
+export function attachMemoryQueryLogEval(
+  db: Database,
+  input: {
+    layer: MemoryQueryLogLayer;
+    log_id: string;
+    eval_run_id: string;
+    eval_result: unknown;
+  },
+): void {
+  const table = QUERY_LOG_TABLES[input.layer];
+  db.query(
+    `UPDATE ${table}
+     SET eval_run_id = ?,
+         eval_json = ?
+     WHERE id = ?`,
+  ).run(input.eval_run_id, JSON.stringify(input.eval_result), input.log_id);
 }
 
 function readQueryEmbeddingCacheSnapshot(db: Database, id: string): QueryEmbeddingCacheSnapshot | null {

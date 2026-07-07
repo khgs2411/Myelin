@@ -39,6 +39,7 @@ export type SessionMemoryQueryMatch = {
 export type SessionMemoryQueryResult = {
   project_key: string;
   question: string;
+  query_log_id?: string;
   degraded: boolean;
   degraded_reason?: string;
   indexed_count: number;
@@ -218,7 +219,7 @@ function withSessionQueryLog(
   result: SessionMemoryQueryResult,
   input: { now?: () => string },
 ): SessionMemoryQueryResult {
-  recordMemoryQueryLog(db, {
+  const queryLogId = recordMemoryQueryLog(db, {
     layer: "session",
     project_key: result.project_key,
     question: result.question,
@@ -230,7 +231,7 @@ function withSessionQueryLog(
     degraded_reason: result.degraded_reason,
     now: input.now,
   });
-  return result;
+  return { ...result, query_log_id: queryLogId };
 }
 
 function hydrateMatches(

@@ -47,6 +47,7 @@ export type ProjectMemoryQueryMatch = {
 export type ProjectMemoryQueryResult = {
   project_key: string;
   question: string;
+  query_log_id?: string;
   degraded: boolean;
   degraded_reason?: string;
   indexed_count: number;
@@ -323,7 +324,7 @@ function withProjectQueryLog(
   result: ProjectMemoryQueryResult,
   input: { now?: () => string },
 ): ProjectMemoryQueryResult {
-  recordMemoryQueryLog(db, {
+  const queryLogId = recordMemoryQueryLog(db, {
     layer: "project",
     project_key: result.project_key,
     question: result.question,
@@ -335,7 +336,7 @@ function withProjectQueryLog(
     degraded_reason: result.degraded_reason,
     now: input.now,
   });
-  return result;
+  return { ...result, query_log_id: queryLogId };
 }
 
 function referenceOnlyMatch(

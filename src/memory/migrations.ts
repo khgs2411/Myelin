@@ -461,6 +461,30 @@ const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    version: 14,
+    sql: `
+      ALTER TABLE project_memory_query_logs ADD COLUMN answer_text TEXT;
+      ALTER TABLE project_memory_query_logs ADD COLUMN response_json TEXT;
+      ALTER TABLE project_memory_query_logs ADD COLUMN eval_run_id TEXT;
+      ALTER TABLE project_memory_query_logs ADD COLUMN eval_json TEXT;
+
+      ALTER TABLE session_memory_query_logs ADD COLUMN answer_text TEXT;
+      ALTER TABLE session_memory_query_logs ADD COLUMN response_json TEXT;
+      ALTER TABLE session_memory_query_logs ADD COLUMN eval_run_id TEXT;
+      ALTER TABLE session_memory_query_logs ADD COLUMN eval_json TEXT;
+
+      ALTER TABLE practice_memory_query_logs ADD COLUMN answer_text TEXT;
+      ALTER TABLE practice_memory_query_logs ADD COLUMN response_json TEXT;
+      ALTER TABLE practice_memory_query_logs ADD COLUMN eval_run_id TEXT;
+      ALTER TABLE practice_memory_query_logs ADD COLUMN eval_json TEXT;
+
+      ALTER TABLE personal_memory_query_logs ADD COLUMN answer_text TEXT;
+      ALTER TABLE personal_memory_query_logs ADD COLUMN response_json TEXT;
+      ALTER TABLE personal_memory_query_logs ADD COLUMN eval_run_id TEXT;
+      ALTER TABLE personal_memory_query_logs ADD COLUMN eval_json TEXT;
+    `,
+  },
 ];
 
 export function runMigrations(db: Database, now: Date = new Date()): void {

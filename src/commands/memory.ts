@@ -22,6 +22,10 @@ import { repoRoot } from "../runtime/fs.ts";
 import { stableJson } from "../runtime/json.ts";
 import { DEFAULT_EMBEDDING_BATCH_SIZE, loadConfig, MAX_EMBEDDING_BATCH_SIZE, selectActiveEmbeddingContract } from "../runtime/config.ts";
 import { queryMemory } from "../query/engine.ts";
+import {
+  loadProjectMemoryGoldenQuestions,
+  runProjectMemoryQuestionEval,
+} from "../query/project-memory-question-eval.ts";
 
 export type MemoryCommandDeps = {
   now?: () => Date;
@@ -38,6 +42,7 @@ export function registerMemoryCommands(cli: Cli, deps: MemoryCommandDeps = {}): 
   cli.command(["memory", "session", "links"], (args) => sessionLinks(args));
   cli.command(["memory", "index", "session"], (args) => indexSession(args));
   cli.command(["memory", "index", "project"], (args) => indexProject(args));
+  cli.command(["memory", "eval", "project"], (args) => evalProjectMemory(args));
   cli.command(["memory", "query"], async (args) => {
     const parsed = parseArgs(args);
     if (parsed.error) return fail(parsed.error);
@@ -56,6 +61,34 @@ export function registerMemoryCommands(cli: Cli, deps: MemoryCommandDeps = {}): 
     if (response.degraded) return fail(response.answer);
     return ok(response.answer);
   });
+}
+
+async function evalProjectMemory(args: string[]): Promise<CommandResult> {
+  const parsed = parseEvalProjectMemoryArgs(args);
+  if (parsed.error) return fail(parsed.error);
+
+  try {
+    const root = repoRoot().root;
+    const questions = await loadProjectMemoryGoldenQuestions({
+      project_key: parsed.projectKey,
+      fixture_path: parsed.fixturePath,
+    });
+    const result = await runProjectMemoryQuestionEval({
+      root,
+      project_key: parsed.projectKey,
+      questions,
+      limit: parsed.limit,
+      max_inline_chars: parsed.maxInlineChars,
+    });
+    if (parsed.json) return result.failed === 0 ? ok(stableJson(result)) : fail(stableJson(result));
+    const message =
+      `Project Memory question eval for ${parsed.projectKey}: ` +
+      `${result.passed}/${result.total} passed, ${result.failed} failed, ` +
+      `${result.primary_rank_1}/${result.total} primary rank-1, ${result.acceptable_top_5}/${result.total} acceptable top-5.`;
+    return result.failed === 0 ? ok(message) : fail(message);
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error));
+  }
 }
 
 type ParsedMemoryInboxCreateArgs = {
@@ -870,6 +903,64 @@ function parseArgs(args: string[]): {
     };
   }
   return { projectKey, question, limit, json, debug, branch, layer, maxInlineChars };
+}
+
+function parseEvalProjectMemoryArgs(args: string[]): {
+  projectKey: string;
+  fixturePath?: string;
+  limit: number;
+  maxInlineChars: number;
+  json: boolean;
+  error?: string;
+} {
+  let projectKey = "";
+  let fixturePath: string | undefined;
+  let limit = 5;
+  let maxInlineChars = 4000;
+  let json = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--json") {
+      json = true;
+    } else if (arg === "--fixture") {
+      const value = args[++index];
+      if (!value) return { projectKey, fixturePath, limit, maxInlineChars, json, error: "--fixture requires a value" };
+      fixturePath = value;
+    } else if (arg === "--limit") {
+      const value = args[++index];
+      const parsed = Number(value);
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        return { projectKey, fixturePath, limit, maxInlineChars, json, error: "--limit must be a positive integer" };
+      }
+      limit = parsed;
+    } else if (arg === "--max-inline-chars") {
+      const value = args[++index];
+      const parsed = Number(value);
+      if (!Number.isInteger(parsed) || parsed < 0) {
+        return { projectKey, fixturePath, limit, maxInlineChars, json, error: "--max-inline-chars must be a non-negative integer" };
+      }
+      maxInlineChars = parsed;
+    } else if (arg.startsWith("-")) {
+      return { projectKey, fixturePath, limit, maxInlineChars, json, error: `Unknown memory eval project option: ${arg}` };
+    } else if (!projectKey) {
+      projectKey = arg;
+    } else {
+      return { projectKey, fixturePath, limit, maxInlineChars, json, error: `Unexpected memory eval project argument: ${arg}` };
+    }
+  }
+
+  if (!projectKey) {
+    return {
+      projectKey,
+      fixturePath,
+      limit,
+      maxInlineChars,
+      json,
+      error: "Usage: myelin memory eval project <project-key> [--fixture path] [--limit N] [--max-inline-chars N] [--json]",
+    };
+  }
+  return { projectKey, fixturePath, limit, maxInlineChars, json };
 }
 
 function candidateService(): MemoryCandidateService {

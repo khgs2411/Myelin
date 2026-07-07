@@ -526,6 +526,7 @@ test("parser normalizes non-empty string arrays to singleton arrays", () => {
 });
 
 test("prompt caps oversized retained evidence without mutating the tombstone", () => {
+  const rawText = "y".repeat(80_000);
   const rawPayload = "x".repeat(80_000);
   const prompt = buildIngestPrompt({
     projectKey: "class-kit",
@@ -543,7 +544,7 @@ test("prompt caps oversized retained evidence without mutating the tombstone", (
         source_metadata_json: "{}",
         retained_evidence_json: "{}",
         prompt_evidence: {
-          raw_text: null,
+          raw_text: rawText,
           raw_payload_json: rawPayload,
         },
       },
@@ -552,6 +553,7 @@ test("prompt caps oversized retained evidence without mutating the tombstone", (
 
   expect(prompt.length).toBeLessThan(40_000);
   expect(prompt).toContain("truncated for ingest prompt");
+  expect(rawText.length).toBe(80_000);
   expect(rawPayload.length).toBe(80_000);
 });
 
