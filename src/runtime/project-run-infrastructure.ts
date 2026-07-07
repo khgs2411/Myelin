@@ -6,6 +6,11 @@ import { createRunDir, timestampRunId } from "./artifacts.ts";
 import { ensureParentDir, resolveInside } from "./fs.ts";
 import { readJsonIfExists, stableJson, writeJson } from "./json.ts";
 import { invokeLlm, type LlmResult, type ProcessRunner } from "./llm-client.ts";
+import {
+  runFileAuthoringAgent,
+  type FileAuthoringAgentInput,
+  type FileAuthoringAgentResult,
+} from "./file-authoring-agent.ts";
 import type { Provider } from "./config.ts";
 import { statePath } from "./state.ts";
 
@@ -115,6 +120,12 @@ export async function invokeProjectCurator(input: InvokeProjectCuratorInput): Pr
     cwd: input.cwd ?? input.root,
     runner: input.runner,
   });
+}
+
+export async function invokeFileAuthoringAgent(
+  input: FileAuthoringAgentInput,
+): Promise<FileAuthoringAgentResult> {
+  return await runFileAuthoringAgent(input);
 }
 
 function sha256(text: string): string {

@@ -10,6 +10,7 @@ import {
   type SqliteVecAdapter,
 } from "./sqlite-vec.ts";
 import { getOrCreateQueryEmbedding } from "./query-embedding-cache.ts";
+import { recordMemoryQueryLog } from "./query-logs.ts";
 import {
   listSessionMemoryContexts,
   sessionMemoryHasBranchContext,
@@ -86,7 +87,7 @@ export async function querySessionMemory(
 
   const availability = vectorStore.ensure(db, { contract: input.document_contract });
   if (!availability.available) {
-    return degraded(input, counts, `sqlite-vec unavailable: ${availability.reason ?? "unknown reason"}`);
+    return withSessionQueryLog(db, degraded(input, counts, `sqlite-vec unavailable: ${availability.reason ?? "unknown reason"}`), input);
   }
 
   if (counts.indexed_count === 0) {
@@ -94,7 +95,7 @@ export async function querySessionMemory(
       counts.pending_count > 0
         ? "session memory vector index has pending rows; run myelin memory index session"
         : "session memory vector index has no indexed rows";
-    return degraded(input, counts, reason);
+    return withSessionQueryLog(db, degraded(input, counts, reason), input);
   }
 
   try {
@@ -115,7 +116,7 @@ export async function querySessionMemory(
       embedding: queryEmbedding.embedding,
       limit: searchLimit(input.limit, input.filters),
     });
-    return {
+    return withSessionQueryLog(db, {
       project_key: input.project_key,
       question: input.question,
       degraded: false,
@@ -126,9 +127,9 @@ export async function querySessionMemory(
       normalized_question: queryEmbedding.normalized_question,
       matches: hydrateMatches(db, matches, input.filters).slice(0, input.limit),
       source_tools: ["query-embedding-cache", "session-memory-vector-index"],
-    };
+    }, input);
   } catch (error) {
-    return degraded(input, counts, error instanceof Error ? error.message : String(error));
+    return withSessionQueryLog(db, degraded(input, counts, error instanceof Error ? error.message : String(error)), input);
   }
 }
 
@@ -210,6 +211,26 @@ function degraded(
     matches: [],
     source_tools: ["query-embedding-cache", "session-memory-vector-index"],
   };
+}
+
+function withSessionQueryLog(
+  db: Database,
+  result: SessionMemoryQueryResult,
+  input: { now?: () => string },
+): SessionMemoryQueryResult {
+  recordMemoryQueryLog(db, {
+    layer: "session",
+    project_key: result.project_key,
+    question: result.question,
+    normalized_question: result.normalized_question,
+    query_embedding_cache_id: result.query_embedding_cache_id,
+    result,
+    match_count: result.matches.length,
+    degraded: result.degraded,
+    degraded_reason: result.degraded_reason,
+    now: input.now,
+  });
+  return result;
 }
 
 function hydrateMatches(

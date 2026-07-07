@@ -96,14 +96,14 @@ export type ExplicitNoOpDecision = {
   id: string;
   source_packet_refs: ProjectMemoryEvidenceDependency[];
   checked_existing_memory_refs: ProjectMemoryEvidenceDependency[];
-  reason:
-    | "already_trusted"
-    | "not_durable"
-    | "belongs_to_other_layer"
-    | "insufficient_evidence"
-    | "duplicate_or_superseded";
+  reason: ProjectMemoryExplicitNoOpDisposition;
   explanation: string;
 };
+
+export type ProjectMemoryExplicitNoOpDisposition = Extract<
+  ProjectMemoryAgentCandidateDisposition,
+  "already_covered" | "not_durable" | "belongs_to_other_layer" | "insufficient_evidence"
+>;
 
 export type ProjectMemoryLookupQualitySummary = {
   blocking: boolean;
@@ -111,3 +111,4 @@ export type ProjectMemoryLookupQualitySummary = {
   advisory_reasons: string[];
   proposal_scoped_result_ids: ProjectMemoryLookupResultId[];
 };
+import type { ProjectMemoryAgentCandidateDisposition } from "./project-memory-agent-contracts.ts";

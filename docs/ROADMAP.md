@@ -258,13 +258,33 @@ Creation mode should not be candidate-driven. It should use candidates and Sessi
   - Why: The previous output had the right titles but not enough product value.
   - Progress: implemented in the 2026-07-05 create-contract work. `project learn` now writes `project-memory-evidence-map.json`, requires sectioned create pages, runs deterministic rendered-quality validation, runs independent usefulness critique, and exposes `project reset <key> --clean --confirm <key>` for explicit clean rebootstrap while preserving root SQLite continuity.
 
+## Roadmap Step 6.5: Project Memory Vision-Quality Gate
+
+Goal: prevent a foundation-quality first-create run from being treated as vision-satisfactory Project Memory.
+
+The Step 5/6 implementation is useful plumbing: sectioned pages, answer-domain coverage, evidence maps, deterministic quality checks, independent critique, all-or-nothing promotion, and clean reset. The latest dogfood showed that this is still not enough. Project Memory must behave like living repo documentation: a future agent should be able to ask real product and implementation-orientation questions and get grounded, useful markdown context without rediscovering the repo.
+
+- [ ] `next` Define the vision-quality first-create gate.
+  - Description: Add a product-quality gate that separates "foundation passed" from "Project Memory is good enough to trust." The gate should be driven by representative questions from `MY_VISION.md`, not by page count, section presence, or curator self-report alone.
+  - Why: The current `llm-wiki` output is structured and queryable, but it is still too coarse and acceptance-test-shaped to satisfy the intended Project Memory product.
+  - Shape: The gate should cover question-based usefulness, citation precision for repo-groundable claims, real provider dogfood versus deterministic fixture success, and explicit failure wording when docs are only foundation-valid.
+- [ ] `open` Reject coarse or placeholder citations in trusted create output.
+  - Description: Treat file-level or line-1 citations as insufficient for concrete repo claims when line-precise evidence is available, and preserve explicit inference labels where evidence is incomplete.
+  - Why: Project Memory is supposed to save rediscovery; vague citations push the rediscovery burden back onto the future agent.
+- [ ] `open` Prove first-create with live dogfood before maintenance work resumes.
+  - Description: Rerun `llm-wiki` first-create through the CLI under the vision-quality gate, distinguish deterministic fixture success from live provider quality, and keep the wiki untrusted if it cannot answer the required product questions.
+  - Why: Automatic maintenance should deepen a credible baseline, not grow documentation that already misses the product vision.
+- [ ] `open` Keep candidate-driven maintenance behind the first-create quality gate.
+  - Description: Resume Step 7 only after first-create output is useful enough that candidate maintenance can sharpen existing documentation instead of compensating for a weak baseline.
+  - Why: Candidate-driven growth depends on canonical pages that already have enough ownership, depth, and evidence quality to maintain.
+
 ## Roadmap Step 7: Project Memory Maintenance And Candidate Promotion
 
 Goal: make Project Memory improve over time from Session Memory leads, runtime inbox items, stale/gap findings, and operator hints without copying unverified candidate text into durable markdown.
 
 Maintenance mode should treat candidates more heavily than creation mode because they are created after a repo already has memory, often against existing memory. That weight is a prioritization signal, not write authority.
 
-- [ ] `next` Enforce candidates-as-leads in maintenance.
+- [ ] `open` Enforce candidates-as-leads in maintenance.
   - Description: Require the curator to inspect bounded target-repo evidence before applying a candidate to Project Memory.
   - Why: Session Memory captures what happened; Project Memory documents what is true and useful about the repo.
 - [ ] `open` Make maintenance section-first.

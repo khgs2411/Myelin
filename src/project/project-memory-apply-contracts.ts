@@ -6,6 +6,7 @@ import type {
   ProjectMemoryRepoCitation,
   ProjectMemoryRisk,
 } from "./project-memory-curator-contracts.ts";
+import type { ProjectMemoryAgentCandidateDisposition } from "./project-memory-agent-contracts.ts";
 import type { ProjectMemoryPacket } from "./project-memory-packet.ts";
 
 export type ProjectMemoryApplyPayload = {
@@ -216,14 +217,6 @@ export type ProjectMemorySourceConsumptionRecord = {
   project_key: string;
   consumed_by_run: string;
   consumed_at: string;
-  terminal_decision:
-    | "applied_to_project_memory"
-    | "already_trusted"
-    | "not_durable"
-    | "belongs_to_other_layer"
-    | "insufficient_evidence"
-    | "duplicate_or_superseded"
-    | "missing_coverage_no_grounded_write"
-    | "blocked_by_quality";
+  terminal_decision: ProjectMemoryAgentCandidateDisposition;
   output_refs: string[];
 };

@@ -173,6 +173,15 @@ export function validateCreationDraft(
           typeof item.id === "string" ? item.id : undefined,
         ),
       );
+    } else {
+      globalFindings.push(
+        ...validateLinePreciseRepoCitations(
+          item.repo_citations,
+          "creation_page_repo_citation_line_required",
+          "Creation page repo citations must include line_start for repo-grounded first-create claims.",
+          typeof item.id === "string" ? item.id : undefined,
+        ),
+      );
     }
     const answerDomains = Array.isArray(item.answer_domains) ? item.answer_domains : [];
     if (
@@ -564,7 +573,7 @@ function validateApplyPayload(
       findings.push(finding("blocker", "schema", "apply_payload_page_target_missing", "Creation apply_payload must include the target page.", input.itemId));
       return findings;
     }
-    findings.push(...validatePageDraft(page, input));
+    findings.push(...validatePageDraft(page, { ...input, requireLinePreciseRepoCitations: true }));
     return findings;
   }
 
@@ -605,20 +614,24 @@ function validateApplyPayload(
 
 function validateSectionDraft(
   section: Record<string, unknown>,
-  input: { itemId?: string; packet: ProjectMemoryPacket },
+  input: { itemId?: string; packet: ProjectMemoryPacket; requireLinePreciseRepoCitations?: boolean },
 ): ProjectMemoryValidationFinding[] {
   const findings: ProjectMemoryValidationFinding[] = [];
   if (!nonEmptyString(section.heading) || typeof section.level !== "number") {
     findings.push(finding("blocker", "schema", "apply_payload_section_metadata_required", "Section drafts require heading and level.", input.itemId));
   }
   findings.push(...validateMarkdownLines(section.body, "apply_payload_section_body_invalid", input.itemId));
-  findings.push(...validateApplyProvenance(section, input.packet, input.itemId));
+  findings.push(
+    ...validateApplyProvenance(section, input.packet, input.itemId, {
+      requireLinePreciseRepoCitations: input.requireLinePreciseRepoCitations,
+    }),
+  );
   return findings;
 }
 
 function validatePageDraft(
   page: Record<string, unknown>,
-  input: { targetPath?: string; itemId?: string; packet: ProjectMemoryPacket },
+  input: { targetPath?: string; itemId?: string; packet: ProjectMemoryPacket; requireLinePreciseRepoCitations?: boolean },
 ): ProjectMemoryValidationFinding[] {
   const findings: ProjectMemoryValidationFinding[] = [];
   if (page.page_path !== input.targetPath || !isSafeWikiTarget(page.page_path)) {
@@ -638,7 +651,11 @@ function validatePageDraft(
     }
     findings.push(...validateSectionDraft(section, input));
   }
-  findings.push(...validateApplyProvenance(page, input.packet, input.itemId));
+  findings.push(
+    ...validateApplyProvenance(page, input.packet, input.itemId, {
+      requireLinePreciseRepoCitations: input.requireLinePreciseRepoCitations,
+    }),
+  );
   return findings;
 }
 
@@ -678,6 +695,7 @@ function validateApplyProvenance(
   value: Record<string, unknown>,
   packet: ProjectMemoryPacket,
   itemId?: string,
+  options: { requireLinePreciseRepoCitations?: boolean } = {},
 ): ProjectMemoryValidationFinding[] {
   const findings: ProjectMemoryValidationFinding[] = [];
   const evidenceRefs = Array.isArray(value.evidence_refs) ? value.evidence_refs : [];
@@ -722,7 +740,35 @@ function validateApplyProvenance(
       ),
     );
   }
+  if (options.requireLinePreciseRepoCitations) {
+    findings.push(
+      ...validateLinePreciseRepoCitations(
+        repoCitations,
+        "creation_apply_payload_repo_citation_line_required",
+        "Create-mode apply payload repo citations must include line_start for repo-grounded first-create claims.",
+        itemId,
+      ),
+    );
+  }
   return findings;
+}
+
+function validateLinePreciseRepoCitations(
+  repoCitations: unknown[],
+  code: string,
+  message: string,
+  itemId?: string,
+): ProjectMemoryValidationFinding[] {
+  return repoCitations
+    .filter((citation) => !isLinePreciseRepoCitation(citation))
+    .map(() => finding("blocker", "repo_citation", code, message, itemId));
+}
+
+function isLinePreciseRepoCitation(citation: unknown): boolean {
+  if (!isRecord(citation)) return false;
+  if (typeof citation.line_start !== "number" || !Number.isInteger(citation.line_start) || citation.line_start < 1) return false;
+  if (citation.line_end === undefined || citation.line_end === null) return true;
+  return typeof citation.line_end === "number" && Number.isInteger(citation.line_end) && citation.line_end >= citation.line_start;
 }
 
 function isCreationApplyPayloadPage(value: Record<string, unknown>): boolean {

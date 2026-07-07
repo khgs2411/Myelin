@@ -121,6 +121,7 @@ async function projectLearnCommand(args: string[], deps: ProjectCommandDeps) {
       review: parsed.review,
       provider: parsed.provider,
       modelOverride: parsed.modelOverride,
+      recreate: parsed.recreate,
       env: deps.env,
       runner: deps.runner,
       now: deps.now?.(),
@@ -134,6 +135,7 @@ async function projectLearnCommand(args: string[], deps: ProjectCommandDeps) {
       `validation: ${result.validation_ok ? "passed" : "failed"}`,
       `stopped_before_writes: ${result.stopped_before_writes}`,
     ];
+    if (result.run_kind) lines.push(`run kind: ${result.run_kind}`);
     if (result.applied_page_ids?.length) lines.push(`applied pages: ${result.applied_page_ids.join(", ")}`);
     if (result.applied_item_ids?.length) lines.push(`applied items: ${result.applied_item_ids.join(", ")}`);
     if (result.changed_files?.length) lines.push(`changed files: ${result.changed_files.join(", ")}`);
@@ -222,6 +224,7 @@ function parseProjectLearnArgs(args: string[]): {
   json: boolean;
   provider?: "codex" | "claude";
   modelOverride?: string;
+  recreate: boolean;
   error?: string;
 } {
   let projectKey = "";
@@ -230,25 +233,27 @@ function parseProjectLearnArgs(args: string[]): {
   let json = false;
   let provider: "codex" | "claude" | undefined;
   let modelOverride: string | undefined;
+  let recreate = false;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === "--dry-run") dryRun = true;
     else if (arg === "--review") review = true;
+    else if (arg === "--recreate") recreate = true;
     else if (arg === "--json") json = true;
     else if (arg === "--provider") {
       const value = args[++index];
-      if (value !== "codex" && value !== "claude") return { projectKey, dryRun, review, json, error: "--provider must be codex or claude" };
+      if (value !== "codex" && value !== "claude") return { projectKey, dryRun, review, json, recreate, error: "--provider must be codex or claude" };
       provider = value;
     } else if (arg === "--model") {
       modelOverride = args[++index];
-      if (!modelOverride) return { projectKey, dryRun, review, json, error: "--model requires a value" };
+      if (!modelOverride) return { projectKey, dryRun, review, json, recreate, error: "--model requires a value" };
     } else if (arg.startsWith("-")) {
-      return { projectKey, dryRun, review, json, error: `Unknown project learn option: ${arg}` };
+      return { projectKey, dryRun, review, json, recreate, error: `Unknown project learn option: ${arg}` };
     } else if (!projectKey) {
       projectKey = arg;
     } else {
-      return { projectKey, dryRun, review, json, error: `Unexpected project learn argument: ${arg}` };
+      return { projectKey, dryRun, review, json, recreate, error: `Unexpected project learn argument: ${arg}` };
     }
   }
 
@@ -258,8 +263,9 @@ function parseProjectLearnArgs(args: string[]): {
       dryRun,
       review,
       json,
-      error: "Usage: myelin project learn <project-key> [--dry-run] [--review] [--json]",
+      recreate,
+      error: "Usage: myelin project learn <project-key> [--dry-run] [--review] [--recreate] [--provider <name>] [--model <model>] [--json]",
     };
   }
-  return { projectKey, dryRun, review, json, provider, modelOverride };
+  return { projectKey, dryRun, review, json, provider, modelOverride, recreate };
 }

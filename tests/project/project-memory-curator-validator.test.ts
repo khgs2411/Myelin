@@ -260,6 +260,24 @@ test("rejects inference-only creation drafts without direct repo citations", () 
   );
 });
 
+test("rejects coarse create-mode repo citations without line precision", () => {
+  const page = creationPage("index.md", "index");
+  const coarseCitation = { path: "README.md", reason: "Project overview" } as never;
+  page.repo_citations = [coarseCitation];
+  page.apply_payload.pages[0]!.repo_citations = [coarseCitation];
+  page.apply_payload.pages[0]!.sections[0]!.repo_citations = [coarseCitation];
+
+  const result = validateCuratorOutput(packet("create"), creationProposalWithPages([page]));
+
+  expect(result.ok).toBe(false);
+  expect(result.global_findings.map((finding) => finding.code)).toEqual(
+    expect.arrayContaining([
+      "creation_page_repo_citation_line_required",
+      "creation_apply_payload_repo_citation_line_required",
+    ]),
+  );
+});
+
 test("rejects creation apply payloads that smuggle extra unapplied pages", () => {
   const page = creationPage("index.md", "index");
   page.apply_payload.pages.push({ ...page.apply_payload.pages[0]!, page_path: "runtime.md", title: "Runtime" });
@@ -1247,7 +1265,7 @@ function domainBody(domain: string, label: "Overview" | "Details"): string {
     `${label} for ${domain} explains how Myelin turns Project Memory into living repo documentation with cited markdown pages.`,
     `The ${domain} section distinguishes Session Memory continuity from curated Project Memory truth so candidates stay leads until repo evidence supports them.`,
     `For ${domain}, state/memory.db, sqlite, session_memories, embeddings, and derived markdown retrieval rows are named as separate storage and serving concepts.`,
-    `The ${domain} workflow names project learn, memory query, memory index session, memory index project, memory inbox create, and memory inbox intake as operator surfaces.`,
+    `The ${domain} workflow names project learn, memory query, memory index session, memory index project, memory inbox create, memory inbox intake, and runtime inbox intake as operator surfaces.`,
     `The ${domain} lifecycle describes curator output, deterministic validation, apply journals, project-memory-changeset.json, retrieval sections, hint generation, and canonical markdown writes.`,
     `The ${domain} evidence trail points future agents to ROADMAP, ADR decisions, source files, and tests instead of letting generic prose stand in for documentation.`,
   ].join(" ");

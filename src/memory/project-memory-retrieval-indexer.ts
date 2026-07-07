@@ -21,6 +21,7 @@ import {
   type ProjectMemoryRetrievalEmbeddingRow,
 } from "./project-memory-retrieval-storage.ts";
 import { normalizeProjectMemorySectionForEmbedding } from "./project-memory-retrieval-text.ts";
+import { upsertProjectMemorySectionFtsRow } from "./project-memory-section-fts.ts";
 import {
   createSqliteVecAdapter,
   ensureProjectMemoryRetrievalVectorTable,
@@ -234,6 +235,11 @@ export async function indexProjectMemoryRetrieval(
             id: entry.row.id,
             normalized_text_hash: sha256(entry.normalizedText),
             now: indexedAt,
+          });
+          upsertProjectMemorySectionFtsRow(db, {
+            project_key: input.project_key,
+            retrieval_row_id: entry.row.id,
+            section: entry.section,
           });
         })();
         indexed += 1;

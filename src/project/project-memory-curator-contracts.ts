@@ -6,6 +6,7 @@ import type { ProjectMemoryPacket } from "./project-memory-packet.ts";
 import type {
   ExplicitNoOpDecision,
   ProjectMemoryEvidenceDependency,
+  ProjectMemoryExplicitNoOpDisposition,
 } from "./project-memory-retrieval-contracts.ts";
 import type {
   ProjectMemoryAnswerDomain,
@@ -278,7 +279,7 @@ export type ProjectMemoryMaintenanceProposalItem = {
 
 export type ProjectMemoryNoopInput = {
   source_packet_ref: ProjectMemoryEvidenceRef;
-  reason: "already_trusted" | "not_durable" | "belongs_to_other_layer" | "insufficient_evidence";
+  reason: ProjectMemoryExplicitNoOpDisposition;
   notes: string;
 };
 
@@ -314,6 +315,7 @@ export type RunProjectMemoryCuratorInput = {
   env?: NodeJS.ProcessEnv;
   runner?: ProcessRunner;
   now?: Date;
+  recreate?: boolean;
 };
 
 export type ProjectMemoryCuratorRunStatus = (typeof PROJECT_MEMORY_CURATOR_RUN_STATUSES)[number];
@@ -344,7 +346,15 @@ export type ProjectMemoryCuratorRunResult = {
     hint_generation?: "project-memory-hint-generation-result.json";
     retrieval_index_result?: "project-memory-retrieval-index-result.json";
     usefulness_critique?: "project-memory-usefulness-critique.json";
+    subject_manifest?: "reports/documentation-subject-manifest.json";
+    planner_report?: "reports/documentation-planner-report.json";
+    subject_reports?: string[];
+    maintenance_report?: "reports/documentation-maintenance-report.json";
+    file_authoring_runs?: string[];
+    pre_maintenance_wiki?: "pre-maintenance-wiki";
   };
+  curation_kind?: "agent_authored" | "human_reviewed";
+  run_kind?: "create" | "maintenance" | "create_then_maintenance" | "recreate";
   validation_ok: boolean;
   stopped_before_writes: boolean;
   dry_run: boolean;

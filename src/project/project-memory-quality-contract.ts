@@ -1,4 +1,6 @@
 import type { ProjectMemoryCuratorMode } from "./project-memory-curator-contracts.ts";
+import { PROJECT_MEMORY_AGENT_CANDIDATE_DISPOSITIONS } from "./project-memory-agent-contracts.ts";
+import type { ProjectMemoryAgentCandidateDisposition } from "./project-memory-agent-contracts.ts";
 
 export const PROJECT_MEMORY_DOCUMENTATION_ROLES = [
   "orientation_index",
@@ -20,21 +22,13 @@ export const PROJECT_MEMORY_ANSWER_DOMAINS = [
 
 export const PROJECT_MEMORY_CONTENT_QUALITY_STATUSES = ["trusted", "review_only", "shallow", "blocked"] as const;
 export const PROJECT_MEMORY_RETRIEVAL_READINESS_STATUSES = ["ready", "pending", "degraded", "not_applicable"] as const;
-export const PROJECT_MEMORY_CANDIDATE_DISPOSITIONS = [
-  "applied_to_project_memory",
-  "already_trusted",
-  "not_durable",
-  "belongs_to_other_layer",
-  "insufficient_evidence",
-  "missing_coverage_no_grounded_write",
-  "blocked_by_quality",
-] as const;
+export const PROJECT_MEMORY_CANDIDATE_DISPOSITIONS = PROJECT_MEMORY_AGENT_CANDIDATE_DISPOSITIONS;
 
 export type ProjectMemoryDocumentationRole = (typeof PROJECT_MEMORY_DOCUMENTATION_ROLES)[number];
 export type ProjectMemoryAnswerDomain = (typeof PROJECT_MEMORY_ANSWER_DOMAINS)[number];
 export type ProjectMemoryContentQualityStatus = (typeof PROJECT_MEMORY_CONTENT_QUALITY_STATUSES)[number];
 export type ProjectMemoryRetrievalReadinessStatus = (typeof PROJECT_MEMORY_RETRIEVAL_READINESS_STATUSES)[number];
-export type ProjectMemoryCandidateDisposition = (typeof PROJECT_MEMORY_CANDIDATE_DISPOSITIONS)[number];
+export type ProjectMemoryCandidateDisposition = ProjectMemoryAgentCandidateDisposition;
 
 export type ProjectMemoryRoleCoverage = {
   role: ProjectMemoryDocumentationRole;

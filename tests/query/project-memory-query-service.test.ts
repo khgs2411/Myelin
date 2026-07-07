@@ -54,6 +54,31 @@ test("hydrates vector hits from current canonical markdown sections", async () =
     content: "Project setup uses the myelin CLI.",
     citation: "project_memory:wiki/setup/index.md#setup",
   });
+  const log = db.query("SELECT * FROM project_memory_query_logs").get() as {
+    project_key: string;
+    question: string;
+    normalized_question: string;
+    query_embedding_cache_id: string;
+    query_embedding_json: string;
+    match_count: number;
+    degraded: number;
+    degraded_reason: string | null;
+    result_json: string;
+  };
+  expect(log).toMatchObject({
+    project_key: "demo",
+    question: "How do I set up the project?",
+    normalized_question: "how do i set up the project?",
+    query_embedding_cache_id: result.query_embedding_cache_id,
+    match_count: 1,
+    degraded: 0,
+    degraded_reason: null,
+  });
+  expect(JSON.parse(log.query_embedding_json)).toHaveLength(DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT.dimensions);
+  expect(JSON.parse(log.result_json)).toMatchObject({
+    query_embedding_cache_id: result.query_embedding_cache_id,
+    matches: [{ retrieval_row_id: rowId, rerank_score: result.matches[0].rerank_score }],
+  });
 });
 
 test("hydrates sectioned Project Memory markdown for storage retrieval questions", async () => {
@@ -84,6 +109,155 @@ test("hydrates sectioned Project Memory markdown for storage retrieval questions
     citation: "project_memory:wiki/storage-retrieval.md#storage-retrieval/sqlite-state",
   });
   expect(result.matches[0]?.content ?? "").toContain("state/memory.db");
+});
+
+test("fetches a broader vector recall set before returning the requested limit", async () => {
+  await writeWikiPage("setup.md", "# Setup\n\nProject setup uses the myelin CLI.\n");
+  const rowId = await indexedRetrievalRow("setup.md", "setup");
+  let requestedLimit = 0;
+
+  const result = await queryProjectMemory(db, {
+    root,
+    project_key: "demo",
+    question: "How do I set up the project?",
+    document_contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+    provider: fixedProvider(),
+    limit: 5,
+    max_inline_chars: 4000,
+    vector_store: {
+      ensure() {
+        return { available: true };
+      },
+      search(_db, input) {
+        requestedLimit = input.limit;
+        return [{ retrieval_row_id: rowId, distance: 0.1 }];
+      },
+    },
+    now: () => "2026-06-30T10:00:00.000Z",
+  });
+
+  expect(requestedLimit).toBe(20);
+  expect(result.matches).toHaveLength(1);
+});
+
+test("reranks specific subject sections above navigation sections", async () => {
+  await writeWikiPage(
+    "index.md",
+    "# demo Project Memory Draft Index\n\n## Documentation Subjects\n\n1. [Project Memory Creation](project-memory-creation-and-curation.md) - create-mode documentation subjects.\n2. [Storage](storage.md) - database and retrieval notes.\n",
+  );
+  await writeWikiPage(
+    "project-memory-creation-and-curation.md",
+    "# Project Memory Creation and Curation\n\n## Current creation model\n\nProject Memory create mode uses a planner agent and subject writer agents to create the initial wiki documentation.\n",
+  );
+  const navigationRowId = await indexedRetrievalRow("index.md", "demo-project-memory-draft-index/documentation-subjects");
+  const specificRowId = await indexedRetrievalRow(
+    "project-memory-creation-and-curation.md",
+    "project-memory-creation-and-curation/current-creation-model",
+  );
+
+  const result = await queryProjectMemory(db, {
+    root,
+    project_key: "demo",
+    question: "How does Project Memory create the initial wiki documentation?",
+    document_contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+    provider: fixedProvider(),
+    limit: 2,
+    max_inline_chars: 4000,
+    vector_store: vectorStoreWithDistances([
+      { retrieval_row_id: navigationRowId, distance: 0.1 },
+      { retrieval_row_id: specificRowId, distance: 0.12 },
+    ]),
+    now: () => "2026-06-30T10:00:00.000Z",
+  });
+
+  expect(result.matches.map((match) => match.retrieval_row_id)).toEqual([specificRowId, navigationRowId]);
+  expect(result.matches[0].rerank_reasons).toContain("section_title_match");
+  expect(result.matches[0].rerank_reasons).toContain("page_title_match");
+  expect(result.matches[1].rerank_reasons).toContain("navigation_penalty");
+});
+
+test("uses FTS recall to rescue exact subject sections missing from vector recall", async () => {
+  await writeWikiPage(
+    "product-purpose.md",
+    "# Product Purpose\n\n## Living brain\n\nMyelin is a living project brain for repository documentation.\n",
+  );
+  await writeWikiPage(
+    "quality-bar.md",
+    "# Quality Bar\n\n## Acceptance checks\n\nThe Project Memory quality bar rejects coarse placeholder citations and shallow documentation.\n",
+  );
+  const broadRowId = await indexedRetrievalRow("product-purpose.md", "product-purpose/living-brain");
+  const preciseRowId = await indexedRetrievalRow("quality-bar.md", "quality-bar/acceptance-checks");
+
+  const result = await queryProjectMemory(db, {
+    root,
+    project_key: "demo",
+    question: "What should the Project Memory quality bar reject?",
+    document_contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+    provider: fixedProvider(),
+    limit: 2,
+    max_inline_chars: 4000,
+    vector_store: vectorStoreWithDistances([{ retrieval_row_id: broadRowId, distance: 0.1 }]),
+    now: () => "2026-06-30T10:00:00.000Z",
+  });
+
+  expect(result.matches.map((match) => match.retrieval_row_id)).toEqual([preciseRowId, broadRowId]);
+  expect(result.retrieval_debug).toMatchObject({
+    vector_recall_count: 1,
+    fts_recall_count: 1,
+    fused_candidate_count: 2,
+  });
+  expect(result.matches[0]).toMatchObject({
+    retrieval_row_id: preciseRowId,
+    vector_rank: undefined,
+    fts_rank: 1,
+  });
+  expect(result.matches[0].bm25_score).toBeNumber();
+  expect(result.matches[0].rerank_reasons).toContain("rrf_base");
+  expect(result.matches[0].rerank_reasons).toContain("page_title_match");
+});
+
+test("logs vector, FTS, and RRF rank diagnostics for hybrid Project Memory query", async () => {
+  await writeWikiPage(
+    "storage-retrieval.md",
+    "# Storage Retrieval\n\n## SQLite retrieval index\n\nProject Memory retrieval uses SQLite vector and lexical indexes.\n",
+  );
+  const rowId = await indexedRetrievalRow("storage-retrieval.md", "storage-retrieval/sqlite-retrieval-index");
+
+  const result = await queryProjectMemory(db, {
+    root,
+    project_key: "demo",
+    question: "How does SQLite retrieval indexing work?",
+    document_contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+    provider: fixedProvider(),
+    limit: 1,
+    max_inline_chars: 4000,
+    vector_store: vectorStoreWithDistances([{ retrieval_row_id: rowId, distance: 0.1 }]),
+    now: () => "2026-06-30T10:00:00.000Z",
+  });
+
+  expect(result.matches[0]).toMatchObject({
+    retrieval_row_id: rowId,
+    vector_rank: 1,
+    fts_rank: 1,
+  });
+  expect(result.matches[0].rrf_score).toBeGreaterThan(0.03);
+  const log = db
+    .query("SELECT result_json FROM project_memory_query_logs WHERE question = ?")
+    .get("How does SQLite retrieval indexing work?") as { result_json: string };
+  expect(JSON.parse(log.result_json)).toMatchObject({
+    retrieval_debug: {
+      vector_recall_count: 1,
+      fts_recall_count: 1,
+      fused_candidate_count: 1,
+    },
+    matches: [
+      {
+        retrieval_row_id: rowId,
+        vector_rank: 1,
+        fts_rank: 1,
+      },
+    ],
+  });
 });
 
 test("returns canonical reference instead of inline content when section is too large", async () => {
@@ -198,6 +372,17 @@ function vectorStore(rowIds: string[]): ProjectMemoryQueryVectorStore {
     },
     search() {
       return rowIds.map((retrieval_row_id, index) => ({ retrieval_row_id, distance: 0.1 + index / 10 }));
+    },
+  };
+}
+
+function vectorStoreWithDistances(matches: Array<{ retrieval_row_id: string; distance: number }>): ProjectMemoryQueryVectorStore {
+  return {
+    ensure() {
+      return { available: true };
+    },
+    search() {
+      return matches;
     },
   };
 }

@@ -1,56 +1,50 @@
+import type { ProjectMemoryApplyResult, ProjectMemorySourceConsumptionRecord } from "./project-memory-apply-contracts.ts";
 import {
-  type ProjectMemoryCreationDraft,
   type ProjectMemoryCuratorMode,
   type ProjectMemoryCuratorRunResult,
   type ProjectMemoryCuratorValidationResult,
-  type ProjectMemoryCreateTerminalState,
-  type ProjectMemoryMaintenanceProposal,
-  type ProjectMemoryTrustStatus,
   type RunProjectMemoryCuratorInput,
-  PROJECT_MEMORY_CURATOR_OUTPUT_CONTRACT_ARTIFACT,
 } from "./project-memory-curator-contracts.ts";
-import { validateCuratorOutput } from "./project-memory-curator-validator.ts";
-import type { ProjectMemoryApplyResult } from "./project-memory-apply-contracts.ts";
-import { ProjectMemoryMarkdownApplier } from "./project-memory-markdown-applier.ts";
-import { ProjectMemoryCandidateIntakeService } from "./project-memory-candidate-intake-service.ts";
-import { ProjectMemorySourceConsumptionReconciler } from "./project-memory-source-consumption-reconciler.ts";
-import { buildProjectMemoryPacket, type ProjectMemoryPacket } from "./project-memory-packet.ts";
-import { buildPromptBudgetedProjectMemoryPacket } from "./project-memory-prompt-budget.ts";
-import { buildProjectMemoryCuratorOutputSchema } from "./project-memory-curator-output-schema.ts";
-import { extractProjectMemorySections } from "./project-memory-markdown-sections.ts";
-import { isTrustedProjectMemoryQuality } from "./project-memory-quality-contract.ts";
 import {
-  buildProjectMemoryEvidenceMap,
-  PROJECT_MEMORY_EVIDENCE_MAP_ARTIFACT,
-  type ProjectMemoryEvidenceMap,
-} from "./project-memory-evidence-map.ts";
+  buildProjectMemoryPacket,
+  type PacketCandidate,
+  type PacketHandoff,
+  type ProjectMemoryPacket,
+} from "./project-memory-packet.ts";
+import { ProjectMemoryCandidateIntakeService } from "./project-memory-candidate-intake-service.ts";
+import { ProjectMemoryMarkdownApplier } from "./project-memory-markdown-applier.ts";
+import { ProjectMemorySourceConsumptionReconciler } from "./project-memory-source-consumption-reconciler.ts";
+import { promoteDraftWiki } from "./project-memory-draft-promotion.ts";
+import {
+  runProjectMemoryCreateMode,
+  type ProjectMemoryCreateModeResult,
+} from "./project-memory-agent-create-service.ts";
+import {
+  runProjectMemoryMaintenanceMode,
+  type ProjectMemoryMaintenanceModeResult,
+  type ProjectMemoryMaintenancePendingSource,
+} from "./project-memory-agent-maintenance-service.ts";
+import type {
+  ProjectMemoryAgentProviderMode,
+  ProjectMemoryAgentRunKind,
+  ProjectMemoryAgentStateV2,
+} from "./project-memory-agent-contracts.ts";
 import type { ProjectMemoryRetrievalIndexResult } from "../memory/project-memory-retrieval-indexer.ts";
 import { ProjectMemoryRetrievalIndexService } from "../memory/project-memory-retrieval-index-service.ts";
-import { readFile } from "node:fs/promises";
+import { generateProjectMemoryHints } from "./project-memory-hint-generator.ts";
+import { extractProjectMemorySections } from "./project-memory-markdown-sections.ts";
 import {
   createProjectCuratorRun,
   ensureProjectLearnSchemaContext,
-  invokeProjectCurator,
   type ProjectCuratorRunPaths,
   writeMarkdownArtifact,
   writeRunArtifact,
 } from "../runtime/project-run-infrastructure.ts";
 import { repairProjectShell } from "../runtime/project-shell.ts";
 import { findProject } from "../runtime/projects.ts";
-import { readJsonIfExists, writeJson } from "../runtime/json.ts";
 import { projectPath } from "../runtime/fs.ts";
-import { renderPageDraft } from "./project-memory-markdown-renderer.ts";
-import {
-  buildProjectMemoryUsefulnessCritiquePrompt,
-  parseProjectMemoryUsefulnessCritique,
-  PROJECT_MEMORY_USEFULNESS_CRITIQUE_ARTIFACT,
-  type ProjectMemoryUsefulnessCritique,
-} from "./project-memory-usefulness-critique.ts";
-import {
-  buildProjectMemoryUsefulnessCritiqueSchema,
-  PROJECT_MEMORY_USEFULNESS_CRITIQUE_CONTRACT_ARTIFACT,
-} from "./project-memory-usefulness-critique-schema.ts";
-import { generateProjectMemoryHints } from "./project-memory-hint-generator.ts";
+import { readJsonIfExists, writeJson } from "../runtime/json.ts";
+import { FILE_AUTHORING_STUB_OUTPUTS_DIR } from "../runtime/file-authoring-agent.ts";
 
 export type ProjectMemoryPostApplyRetrievalLifecycleResult = {
   status: "completed" | "pending";
@@ -85,6 +79,7 @@ export class ProjectMemoryCuratorService {
   async runProjectLearn(input: RunProjectMemoryCuratorInput): Promise<ProjectMemoryCuratorRunResult> {
     const now = input.now ?? new Date();
     const project = await findProject(this.root, input.projectKey);
+    const repoPath = project.config.repo_paths?.[0] ?? this.root;
     const applier = new ProjectMemoryMarkdownApplier(this.root);
     const incompleteJournals = await applier.findIncompleteApplyJournals(input.projectKey);
     if (incompleteJournals.length > 0) {
@@ -96,437 +91,311 @@ export class ProjectMemoryCuratorService {
         mode: recoveredRun.mode,
         run_id: recoveredRun.run_id,
         run_dir: recoveredRun.run_dir,
-        artifacts: {
-          input_packet: "input-packet.json",
-          curator_output: recoveredRun.mode === "create" ? "curator-creation-draft.json" : "curator-maintenance-proposal.json",
-          curator_validation: "curator-validation.json",
-          curator_run_result: "curator-run-result.json",
-          summary: "summary.md",
-          apply_journal: recovered.status === "applied" ? "project-memory-apply-journal.json" : undefined,
-          apply_result: recovered.status === "applied" ? "project-memory-apply-result.json" : undefined,
-          changeset: recovered.status === "applied" ? "project-memory-changeset.json" : undefined,
-        },
+        artifacts: baseArtifacts("recovered"),
         validation_ok: recovered.status === "applied",
         stopped_before_writes: recovered.status !== "applied",
         dry_run: input.dryRun,
         review: input.review,
         changed_files: recovered.changed_files.map((file) => file.path),
         stopped_reason: recovered.status === "applied" ? undefined : recovered.reason,
+        curation_kind: "agent_authored",
       };
     }
-    if (!input.dryRun) {
-      await repairProjectShell(this.root, input.projectKey, { repoPath: project.config.repo_paths?.[0] });
-    }
+
+    if (!input.dryRun) await repairProjectShell(this.root, input.projectKey, { repoPath });
 
     const run = await createProjectCuratorRun(this.root, input.projectKey, now);
     await ensureProjectLearnSchemaContext(this.root, input.projectKey, { dryRun: input.dryRun, now });
-    const reconciliation = await new ProjectMemorySourceConsumptionReconciler(this.root).reconcileProject(input.projectKey, {
-      now,
-    });
+
+    const reconciliation = await new ProjectMemorySourceConsumptionReconciler(this.root).reconcileProject(input.projectKey, { now });
+    await writeRunArtifact(run, "source-consumption-reconciliation.json", reconciliation);
     if (reconciliation.blocking) {
-      const mode = await projectLearnModeForState(this.root, input.projectKey);
       const packet = await buildProjectMemoryPacket(this.root, input.projectKey);
       await writeRunArtifact(run, "input-packet.json", packet);
-      const evidenceMap = await this.writeEvidenceMapIfNeeded(input.projectKey, packet, run, project.config.repo_paths?.[0] ?? this.root);
       return await this.writeTerminalArtifacts({
         input,
         run,
-        mode,
+        mode: modeForInput(input, packet),
+        runKind: runKindForInput(input, packet),
         outputArtifact: "source-consumption-reconciliation.json",
-        outputValue: reconciliation,
-        validation: failureValidation(
-          input.projectKey,
-          mode,
-          "source_consumption_reconciliation_failed",
-          reconciliation.degraded_reasons.join("; ") || "source-consumption reconciliation failed",
-        ),
+        validation: failureValidation(input.projectKey, modeForInput(input, packet), "source_consumption_reconciliation_failed", reconciliation.degraded_reasons.join("; ")),
         status: "failed",
-        stoppedReason: reconciliation.degraded_reasons.join("; ") || "source-consumption reconciliation failed",
-        evidenceMap: Boolean(evidenceMap),
+        stoppedReason: reconciliation.degraded_reasons.join("; "),
       });
     }
 
     const runtimeInboxIntake = await new ProjectMemoryCandidateIntakeService(this.root).intakeProjectInbox(input.projectKey, now);
     await writeRunArtifact(run, "runtime-inbox-intake.json", runtimeInboxIntake);
+    const packet = await buildProjectMemoryPacket(this.root, input.projectKey);
+    await writeRunArtifact(run, "input-packet.json", packet);
+    const mode = modeForInput(input, packet);
+    const runKind = runKindForInput(input, packet);
     if (runtimeInboxIntake.blocking) {
-      const mode = await projectLearnModeForState(this.root, input.projectKey);
-      const packet = await buildProjectMemoryPacket(this.root, input.projectKey);
-      await writeRunArtifact(run, "input-packet.json", packet);
-      const evidenceMap = await this.writeEvidenceMapIfNeeded(input.projectKey, packet, run, project.config.repo_paths?.[0] ?? this.root);
       return await this.writeTerminalArtifacts({
         input,
         run,
         mode,
+        runKind,
         outputArtifact: "runtime-inbox-intake.json",
-        validation: failureValidation(
-          input.projectKey,
-          mode,
-          "runtime_inbox_intake_failed",
-          runtimeInboxIntake.degraded_reasons.join("; ") || "runtime inbox intake failed",
-        ),
+        validation: failureValidation(input.projectKey, mode, "runtime_inbox_intake_failed", runtimeInboxIntake.degraded_reasons.join("; ")),
         status: "failed",
-        stoppedReason: runtimeInboxIntake.degraded_reasons.join("; ") || "runtime inbox intake failed",
+        stoppedReason: runtimeInboxIntake.degraded_reasons.join("; "),
         runtimeInboxIntake: true,
-        evidenceMap: Boolean(evidenceMap),
       });
     }
 
-    const packet = await buildProjectMemoryPacket(this.root, input.projectKey);
-    await writeRunArtifact(run, "input-packet.json", packet);
-    const evidenceMap = await this.writeEvidenceMapIfNeeded(input.projectKey, packet, run, project.config.repo_paths?.[0] ?? this.root);
-    const promptBudget = await buildPromptBudgetedProjectMemoryPacket({
-      root: this.root,
-      projectKey: input.projectKey,
-      runDir: run.relative_run_dir,
-      absoluteRunDir: run.absolute_run_dir,
-      repoPath: project.config.repo_paths?.[0] ?? this.root,
-      packet,
-      evidenceMapArtifact: evidenceMap ? PROJECT_MEMORY_EVIDENCE_MAP_ARTIFACT : undefined,
-      transport: "artifact_reference",
-    });
-    await writeRunArtifact(run, "prompt-budget.json", promptBudget.artifact);
-    const outputSchema = buildProjectMemoryCuratorOutputSchema({
-      projectKey: input.projectKey,
-      mode: packet.mode,
-      runDir: run.relative_run_dir,
-      packetSchemaVersion: packet.schema_version,
-    });
-    await writeRunArtifact(run, PROJECT_MEMORY_CURATOR_OUTPUT_CONTRACT_ARTIFACT, outputSchema);
-    if (promptBudget.status === "too_large") {
-      const validation = failureValidation(input.projectKey, packet.mode, "curator_prompt_too_large", promptBudget.reason);
-      return await this.writeTerminalArtifacts({
-        input,
-        run,
-        mode: packet.mode,
-        outputArtifact: "curator-output-error.json",
-        outputValue: { error: promptBudget.reason },
-        validation,
-        status: "failed",
-        stoppedReason: promptBudget.reason,
-        promptBudget: true,
-        evidenceMap: Boolean(evidenceMap),
-        runtimeInboxIntake: true,
-        curatorOutputContract: true,
-      });
-    }
-
-    const stageId = packet.mode === "create" ? "curator-create" : "curator-maintain";
-    let curatorOutput: unknown;
-    try {
-      const curator = await invokeProjectCurator({
-        root: this.root,
-        stageId,
-        prompt: promptBudget.prompt,
-        provider: input.provider,
-        modelOverride: input.modelOverride,
-        env: input.env,
-        cwd: project.config.repo_paths?.[0] ?? this.root,
-        outputSchema: projectPath(this.root, input.projectKey, "runs", "project-learn", run.run_id, PROJECT_MEMORY_CURATOR_OUTPUT_CONTRACT_ARTIFACT),
-        runner: input.runner,
-      });
-      curatorOutput = curator.response;
-    } catch (error) {
-      const failure = classifyCuratorInvocationFailure(error);
-      const validation = failureValidation(
-        input.projectKey,
-        packet.mode,
-        failure.validationCode,
-        failure.stoppedReason,
-        failure.validationCategory,
-      );
-      return await this.writeTerminalArtifacts({
-        input,
-        run,
-        mode: packet.mode,
-        outputArtifact: "curator-output-error.json",
-        outputValue: { error: failure.stoppedReason, failure_kind: failure.kind },
-        validation,
-        status: "failed",
-        stoppedReason: failure.stoppedReason,
-        failureKind: failure.kind,
-        promptBudget: true,
-        evidenceMap: Boolean(evidenceMap),
-        runtimeInboxIntake: true,
-        curatorOutputContract: true,
-      });
-    }
-
-    const outputArtifact = packet.mode === "create" ? "curator-creation-draft.json" : "curator-maintenance-proposal.json";
-    await writeRunArtifact(run, outputArtifact, curatorOutput);
-    const validation = validateCuratorOutput(packet, curatorOutput, { evidenceMap });
-    const applyDecision = canApply({ dryRun: input.dryRun, review: input.review, packet, validation, curatorOutput });
-    if (applyDecision.ok) {
-      const critiqueDecision =
-        packet.mode === "create"
-          ? await this.runUsefulnessCritique({
-              input,
-              run,
-              projectKey: input.projectKey,
-              draft: curatorOutput as ProjectMemoryCreationDraft,
-              repoPath: project.config.repo_paths?.[0] ?? this.root,
-            })
-          : { ok: true as const, usefulnessCritique: false };
-      if (!critiqueDecision.ok) {
-        return await this.writeTerminalArtifacts({
-          input,
-          run,
-          mode: packet.mode,
-          outputArtifact,
-          validation,
-          status: "needs_review",
-          stoppedReason: critiqueDecision.reason,
-          promptBudget: true,
-          evidenceMap: Boolean(evidenceMap),
-          runtimeInboxIntake: true,
-          curatorOutputContract: true,
-          usefulnessCritique: critiqueDecision.usefulnessCritique,
-        });
-      }
-      const applyResult =
-        packet.mode === "create"
-          ? await applier.applyCreationDraft({
-              project_key: input.projectKey,
-              run_dir: run.relative_run_dir,
-              absolute_run_dir: run.absolute_run_dir,
-              draft: curatorOutput as ProjectMemoryCreationDraft,
-            })
-          : await applier.applyMaintenanceProposal({
-              project_key: input.projectKey,
-              run_dir: run.relative_run_dir,
-              absolute_run_dir: run.absolute_run_dir,
-              proposal: curatorOutput as ProjectMemoryMaintenanceProposal,
-              eligible_item_ids: validation.eligible_item_ids,
-            });
-      if (applyResult.status === "applied") {
-        const retrieval = await this.postApplyRetrievalLifecycle({
-          projectKey: input.projectKey,
-          mode: packet.mode,
-          run,
-          apply: applyResult,
-          now,
-          provider: input.provider,
-          modelOverride: input.modelOverride,
-          env: input.env,
-          runner: input.runner,
-        });
-        await this.updateCuratedRetrievalReadiness({
-          projectKey: input.projectKey,
-          status: retrieval.status,
-          reason: retrieval.degraded_reason,
-          now,
-        });
-        return await this.writeTerminalArtifacts({
-          input,
-          run,
-          mode: packet.mode,
-          outputArtifact,
-          validation,
-          status: retrieval.status === "completed" ? "completed" : "completed_with_pending_index",
-          stoppedReason: retrieval.degraded_reason,
-          apply: applyResult,
-          retrievalStatus: retrieval.status,
-          retrievalArtifacts: retrieval.artifacts,
-          promptBudget: true,
-          evidenceMap: Boolean(evidenceMap),
-          runtimeInboxIntake: true,
-          curatorOutputContract: true,
-          usefulnessCritique: critiqueDecision.usefulnessCritique,
-        });
-      }
-      return await this.writeTerminalArtifacts({
-        input,
-        run,
-        mode: packet.mode,
-        outputArtifact,
-        validation,
-        status: "needs_review",
-        stoppedReason: applyResult.reason ?? "project memory apply skipped",
-        promptBudget: true,
-        evidenceMap: Boolean(evidenceMap),
-        runtimeInboxIntake: true,
-        curatorOutputContract: true,
-        usefulnessCritique: critiqueDecision.usefulnessCritique,
-      });
-    }
-
-    return await this.writeTerminalArtifacts({
-      input,
-      run,
-      mode: packet.mode,
-      outputArtifact,
-      validation,
-      status: applyDecision.status,
-      stoppedReason: applyDecision.reason,
-      promptBudget: true,
-      evidenceMap: Boolean(evidenceMap),
-      runtimeInboxIntake: true,
-      curatorOutputContract: true,
-    });
+    return mode === "create"
+      ? await this.runCreateThenMaintenance({ input, run, packet, repoPath, now, runKind })
+      : await this.runMaintenanceOnly({ input, run, packet, repoPath, now, runKind });
   }
 
-  private async writeEvidenceMapIfNeeded(
-    projectKey: string,
-    packet: ProjectMemoryPacket,
-    run: ProjectCuratorRunPaths,
-    repoPath: string,
-  ): Promise<ProjectMemoryEvidenceMap | undefined> {
-    if (packet.mode !== "create") return undefined;
-    const evidenceMap = await buildProjectMemoryEvidenceMap({
-      root: this.root,
-      projectKey,
-      packet,
-      repoPath,
-    });
-    await writeRunArtifact(run, PROJECT_MEMORY_EVIDENCE_MAP_ARTIFACT, evidenceMap);
-    return evidenceMap;
-  }
-
-  private async runUsefulnessCritique(input: {
+  private async runCreateThenMaintenance(input: {
     input: RunProjectMemoryCuratorInput;
     run: ProjectCuratorRunPaths;
-    projectKey: string;
-    draft: ProjectMemoryCreationDraft;
+    packet: ProjectMemoryPacket;
     repoPath: string;
-  }): Promise<{ ok: true; usefulnessCritique: true } | { ok: false; usefulnessCritique: true; reason: string }> {
-    const renderedMarkdown = input.draft.pages.map((page) => {
-      const payloadPage = page.apply_payload?.pages?.find((candidate) => candidate.page_path === page.target.path);
-      if (!payloadPage) throw new Error(`validated creation page is missing rendered payload: ${page.target.path}`);
-      return {
-        page_path: page.target.path,
-        markdown: renderPageDraft(payloadPage),
-      };
+    now: Date;
+    runKind: ProjectMemoryAgentRunKind;
+  }): Promise<ProjectMemoryCuratorRunResult> {
+    const create = await runProjectMemoryCreateMode({
+      root: this.root,
+      projectKey: input.input.projectKey,
+      runDir: input.run.relative_run_dir,
+      absoluteRunDir: input.run.absolute_run_dir,
+      targetRepoDir: input.repoPath,
+      provider: input.input.provider,
+      modelOverride: input.input.modelOverride,
+      env: input.input.env,
+      runner: input.input.runner,
+      now: input.now,
     });
-    const evidenceMapJson = await readFile(
-      projectPath(this.root, input.projectKey, "runs", "project-learn", input.run.run_id, PROJECT_MEMORY_EVIDENCE_MAP_ARTIFACT),
-      "utf8",
-    );
-    const schema = buildProjectMemoryUsefulnessCritiqueSchema({ projectKey: input.projectKey });
-    await writeRunArtifact(input.run, PROJECT_MEMORY_USEFULNESS_CRITIQUE_CONTRACT_ARTIFACT, schema);
-    const prompt = buildProjectMemoryUsefulnessCritiquePrompt({
-      projectKey: input.projectKey,
-      evidenceMapJson,
-      renderedMarkdown,
-    });
-
-    let critique: ProjectMemoryUsefulnessCritique;
-    try {
-      const result = await invokeProjectCurator({
-        root: this.root,
-        stageId: "project-memory-usefulness-critique",
-        prompt,
-        provider: input.input.provider,
-        modelOverride: input.input.modelOverride,
-        env: input.input.env,
-        cwd: input.repoPath,
-        outputSchema: projectPath(
-          this.root,
-          input.projectKey,
-          "runs",
-          "project-learn",
-          input.run.run_id,
-          PROJECT_MEMORY_USEFULNESS_CRITIQUE_CONTRACT_ARTIFACT,
-        ),
-        runner: input.input.runner,
+    await writeRunArtifact(input.run, "documentation-create-result.json", create);
+    if (create.status !== "completed") {
+      return await this.writeTerminalArtifacts({
+        input: input.input,
+        run: input.run,
+        mode: "create",
+        runKind: input.runKind,
+        outputArtifact: "documentation-create-result.json",
+        validation: failureValidation(input.input.projectKey, "create", "project_memory_create_failed", create.error ?? "create mode failed"),
+        status: "failed",
+        stoppedReason: create.error ?? "create mode failed",
+        create,
       });
-      critique =
-        parseProjectMemoryUsefulnessCritique(result.response) ??
-        failedUsefulnessCritique(input.projectKey, renderedMarkdown, "usefulness critique output was invalid");
-    } catch (error) {
-      critique = failedUsefulnessCritique(
-        input.projectKey,
-        renderedMarkdown,
-        `usefulness critique provider failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
     }
 
-    await writeRunArtifact(input.run, PROJECT_MEMORY_USEFULNESS_CRITIQUE_ARTIFACT, critique);
-    if (critique.verdict === "pass") return { ok: true, usefulnessCritique: true };
-    return {
-      ok: false,
-      usefulnessCritique: true,
-      reason: `Project Memory usefulness critique returned ${critique.verdict}: ${critique.reasons.join("; ") || "no reason provided"}`,
-    };
+    const maintenance = await runProjectMemoryMaintenanceMode({
+      root: this.root,
+      projectKey: input.input.projectKey,
+      runDir: input.run.relative_run_dir,
+      absoluteRunDir: input.run.absolute_run_dir,
+      targetRepoDir: input.repoPath,
+      baseWikiDir: create.draft_wiki_dir,
+      pendingSources: pendingSourcesFromPacket(input.packet),
+      provider: input.input.provider,
+      modelOverride: input.input.modelOverride,
+      env: input.input.env,
+      runner: input.input.runner,
+      now: input.now,
+    });
+    await writeRunArtifact(input.run, "documentation-maintenance-result.json", maintenance);
+    if (maintenance.status === "failed") {
+      return await this.writeTerminalArtifacts({
+        input: input.input,
+        run: input.run,
+        mode: "create",
+        runKind: input.runKind,
+        outputArtifact: "documentation-maintenance-result.json",
+        validation: failureValidation(input.input.projectKey, "create", "project_memory_maintenance_failed", maintenance.error ?? "maintenance mode failed"),
+        status: "failed",
+        stoppedReason: maintenance.error ?? "maintenance mode failed",
+        create,
+        maintenance,
+      });
+    }
+
+    return await this.promoteAndFinish({
+      input: input.input,
+      run: input.run,
+      mode: "create",
+      runKind: input.runKind,
+      outputArtifact: "documentation-maintenance-result.json",
+      draftWikiDir: maintenance.draft_wiki_dir,
+      create,
+      maintenance,
+      sourceConsumptions: await this.combinedSourceConsumptions(input.input.projectKey, maintenance.source_consumptions),
+      now: input.now,
+    });
+  }
+
+  private async runMaintenanceOnly(input: {
+    input: RunProjectMemoryCuratorInput;
+    run: ProjectCuratorRunPaths;
+    packet: ProjectMemoryPacket;
+    repoPath: string;
+    now: Date;
+    runKind: ProjectMemoryAgentRunKind;
+  }): Promise<ProjectMemoryCuratorRunResult> {
+    const maintenance = await runProjectMemoryMaintenanceMode({
+      root: this.root,
+      projectKey: input.input.projectKey,
+      runDir: input.run.relative_run_dir,
+      absoluteRunDir: input.run.absolute_run_dir,
+      targetRepoDir: input.repoPath,
+      baseWikiDir: projectPath(this.root, input.input.projectKey, "wiki"),
+      pendingSources: pendingSourcesFromPacket(input.packet),
+      provider: input.input.provider,
+      modelOverride: input.input.modelOverride,
+      env: input.input.env,
+      runner: input.input.runner,
+      now: input.now,
+    });
+    await writeRunArtifact(input.run, "documentation-maintenance-result.json", maintenance);
+    if (maintenance.status === "failed") {
+      return await this.writeTerminalArtifacts({
+        input: input.input,
+        run: input.run,
+        mode: "maintain",
+        runKind: input.runKind,
+        outputArtifact: "documentation-maintenance-result.json",
+        validation: failureValidation(input.input.projectKey, "maintain", "project_memory_maintenance_failed", maintenance.error ?? "maintenance mode failed"),
+        status: "failed",
+        stoppedReason: maintenance.error ?? "maintenance mode failed",
+        maintenance,
+      });
+    }
+
+    return await this.promoteAndFinish({
+      input: input.input,
+      run: input.run,
+      mode: "maintain",
+      runKind: input.runKind,
+      outputArtifact: "documentation-maintenance-result.json",
+      draftWikiDir: maintenance.draft_wiki_dir,
+      maintenance,
+      sourceConsumptions: await this.combinedSourceConsumptions(input.input.projectKey, maintenance.source_consumptions),
+      now: input.now,
+    });
+  }
+
+  private async promoteAndFinish(input: {
+    input: RunProjectMemoryCuratorInput;
+    run: ProjectCuratorRunPaths;
+    mode: ProjectMemoryCuratorMode;
+    runKind: ProjectMemoryAgentRunKind;
+    outputArtifact: string;
+    draftWikiDir: string;
+    create?: ProjectMemoryCreateModeResult;
+    maintenance?: ProjectMemoryMaintenanceModeResult;
+    sourceConsumptions: ProjectMemorySourceConsumptionRecord[];
+    now: Date;
+  }): Promise<ProjectMemoryCuratorRunResult> {
+    const validation = successValidation(input.input.projectKey, input.mode);
+    if (input.input.dryRun || input.input.review) {
+      return await this.writeTerminalArtifacts({
+        input: input.input,
+        run: input.run,
+        mode: input.mode,
+        runKind: input.runKind,
+        outputArtifact: input.outputArtifact,
+        validation,
+        status: input.input.review ? "needs_review" : "completed",
+        stoppedReason: input.input.review ? "review requested" : "dry-run requested",
+        create: input.create,
+        maintenance: input.maintenance,
+      });
+    }
+
+    const apply = await promoteDraftWiki({
+      root: this.root,
+      projectKey: input.input.projectKey,
+      runDir: input.run.relative_run_dir,
+      absoluteRunDir: input.run.absolute_run_dir,
+      mode: input.mode,
+      draftWikiDir: input.draftWikiDir,
+      curatorOutputRef: input.outputArtifact,
+      state: agentState({
+        input: input.input,
+        run: input.run,
+        runKind: input.runKind,
+        create: input.create,
+        maintenance: input.maintenance,
+        now: input.now,
+      }),
+      sourceConsumptions: input.sourceConsumptions,
+    });
+    const sourceReconciliation = await new ProjectMemorySourceConsumptionReconciler(this.root).reconcileProject(input.input.projectKey, {
+      now: input.now,
+    });
+    await writeRunArtifact(input.run, "post-apply-source-consumption-reconciliation.json", sourceReconciliation);
+    const retrieval = await this.postApplyRetrievalLifecycle({
+      projectKey: input.input.projectKey,
+      mode: input.mode,
+      run: input.run,
+      apply,
+      now: input.now,
+      provider: input.input.provider,
+      modelOverride: input.input.modelOverride,
+      env: input.input.env,
+      runner: input.input.runner,
+    });
+    await this.updateCuratedRetrievalReadiness({
+      projectKey: input.input.projectKey,
+      status: retrieval.status,
+      reason: retrieval.degraded_reason,
+      now: input.now,
+    });
+    return await this.writeTerminalArtifacts({
+      input: input.input,
+      run: input.run,
+      mode: input.mode,
+      runKind: input.runKind,
+      outputArtifact: input.outputArtifact,
+      validation,
+      status: retrieval.status === "completed" ? "completed" : "completed_with_pending_index",
+      stoppedReason: retrieval.degraded_reason,
+      apply,
+      retrievalStatus: retrieval.status,
+      retrievalArtifacts: retrieval.artifacts,
+      create: input.create,
+      maintenance: input.maintenance,
+    });
+  }
+
+  private async combinedSourceConsumptions(
+    projectKey: string,
+    next: ProjectMemorySourceConsumptionRecord[],
+  ): Promise<ProjectMemorySourceConsumptionRecord[]> {
+    const existing = await readJsonIfExists<{ records?: ProjectMemorySourceConsumptionRecord[] }>(
+      projectPath(this.root, projectKey, "state", "project-memory-source-consumptions.json"),
+    );
+    const byKey = new Map<string, ProjectMemorySourceConsumptionRecord>();
+    for (const record of existing?.records ?? []) byKey.set(`${record.source_kind}:${record.source_ref}`, record);
+    for (const record of next) byKey.set(`${record.source_kind}:${record.source_ref}`, record);
+    return [...byKey.values()];
   }
 
   private async writeTerminalArtifacts(input: {
     input: RunProjectMemoryCuratorInput;
     run: ProjectCuratorRunPaths;
     mode: ProjectMemoryCuratorMode;
+    runKind: ProjectMemoryAgentRunKind;
     outputArtifact: string;
-    outputValue?: unknown;
     validation: ProjectMemoryCuratorValidationResult;
     status: ProjectMemoryCuratorRunResult["status"];
     stoppedReason?: string;
     apply?: ProjectMemoryApplyResult;
     retrievalStatus?: ProjectMemoryPostApplyRetrievalLifecycleResult["status"];
     retrievalArtifacts?: ProjectMemoryPostApplyRetrievalLifecycleResult["artifacts"];
-    promptBudget?: boolean;
-    evidenceMap?: boolean;
+    create?: ProjectMemoryCreateModeResult;
+    maintenance?: ProjectMemoryMaintenanceModeResult;
     runtimeInboxIntake?: boolean;
-    curatorOutputContract?: boolean;
-    usefulnessCritique?: boolean;
-    failureKind?: ProjectMemoryCuratorRunResult["failure_kind"];
   }): Promise<ProjectMemoryCuratorRunResult> {
-    if (input.outputValue !== undefined) {
-      await writeRunArtifact(input.run, input.outputArtifact, input.outputValue);
-    }
     await writeRunArtifact(input.run, "curator-validation.json", input.validation);
-    if (input.mode === "create" && !input.apply && !input.input.dryRun) {
-      await this.writeCreateTerminalState({
-        projectKey: input.input.projectKey,
-        run: input.run,
-        status: trustStatusForCreateFailure({ validation: input.validation, stoppedReason: input.stoppedReason }),
-        stoppedReason: input.stoppedReason,
-        evidenceMap: input.evidenceMap,
-        usefulnessCritique: input.usefulnessCritique,
-        now: input.input.now ?? new Date(),
-      });
-    }
-    const result = buildResult({
-      input: input.input,
-      mode: input.mode,
-      runId: input.run.run_id,
-      runDir: input.run.relative_run_dir,
-      outputArtifact: input.outputArtifact,
-      validation: input.validation,
-      status: input.status,
-      stoppedReason: input.stoppedReason,
-      apply: input.apply,
-      retrievalStatus: input.retrievalStatus,
-      retrievalArtifacts: input.retrievalArtifacts,
-      promptBudget: input.promptBudget,
-      evidenceMap: input.evidenceMap,
-      runtimeInboxIntake: input.runtimeInboxIntake,
-      curatorOutputContract: input.curatorOutputContract,
-      usefulnessCritique: input.usefulnessCritique,
-      failureKind: input.failureKind,
-    });
+    const result = buildResult(input);
     await writeRunArtifact(input.run, "curator-run-result.json", result);
     await writeMarkdownArtifact(input.run, "summary.md", summaryFor(result));
     return result;
-  }
-
-  private async writeCreateTerminalState(input: {
-    projectKey: string;
-    run: ProjectCuratorRunPaths;
-    status: ProjectMemoryTrustStatus;
-    stoppedReason?: string;
-    evidenceMap?: boolean;
-    usefulnessCritique?: boolean;
-    now: Date;
-  }): Promise<void> {
-    const state: ProjectMemoryCreateTerminalState = {
-      schema_version: 1,
-      status: input.status,
-      quality_contract_version: "answer-domain-v1",
-      latest_create_run_ref: input.run.relative_run_dir,
-      evidence_map_ref: input.evidenceMap ? PROJECT_MEMORY_EVIDENCE_MAP_ARTIFACT : undefined,
-      validation_diagnostics_ref: "curator-validation.json",
-      usefulness_critique_ref: input.usefulnessCritique ? PROJECT_MEMORY_USEFULNESS_CRITIQUE_ARTIFACT : undefined,
-      terminal_reason: input.stoppedReason ?? input.status,
-      updated_at: input.now.toISOString(),
-    };
-    await writeJson(projectPath(this.root, input.projectKey, "state", "project-memory.json"), state);
   }
 
   private async postApplyRetrievalLifecycle(input: {
@@ -567,9 +436,9 @@ export class ProjectMemoryCuratorService {
 
 function buildResult(input: {
   input: RunProjectMemoryCuratorInput;
+  run: ProjectCuratorRunPaths;
   mode: ProjectMemoryCuratorMode;
-  runId: string;
-  runDir: string;
+  runKind: ProjectMemoryAgentRunKind;
   outputArtifact: string;
   validation: ProjectMemoryCuratorValidationResult;
   status: ProjectMemoryCuratorRunResult["status"];
@@ -577,45 +446,42 @@ function buildResult(input: {
   apply?: ProjectMemoryApplyResult;
   retrievalStatus?: ProjectMemoryPostApplyRetrievalLifecycleResult["status"];
   retrievalArtifacts?: ProjectMemoryPostApplyRetrievalLifecycleResult["artifacts"];
-  promptBudget?: boolean;
-  evidenceMap?: boolean;
+  create?: ProjectMemoryCreateModeResult;
+  maintenance?: ProjectMemoryMaintenanceModeResult;
   runtimeInboxIntake?: boolean;
-  curatorOutputContract?: boolean;
-  usefulnessCritique?: boolean;
-  failureKind?: ProjectMemoryCuratorRunResult["failure_kind"];
 }): ProjectMemoryCuratorRunResult {
+  const fileAuthoringRuns = [
+    ...(input.create?.file_authoring_run_refs ?? []),
+    input.maintenance?.file_authoring_run_ref,
+  ].filter((ref): ref is string => Boolean(ref));
   return {
     status: input.status,
     project_key: input.input.projectKey,
     mode: input.mode,
-    run_id: input.runId,
-    run_dir: input.runDir,
+    run_id: input.run.run_id,
+    run_dir: input.run.relative_run_dir,
     artifacts: {
-      input_packet: "input-packet.json",
-      curator_output: input.outputArtifact,
-      curator_output_contract: input.curatorOutputContract ? PROJECT_MEMORY_CURATOR_OUTPUT_CONTRACT_ARTIFACT : undefined,
-      curator_validation: "curator-validation.json",
-      curator_run_result: "curator-run-result.json",
-      summary: "summary.md",
-      prompt_budget: input.promptBudget ? "prompt-budget.json" : undefined,
-      evidence_map: input.evidenceMap ? PROJECT_MEMORY_EVIDENCE_MAP_ARTIFACT : undefined,
-      runtime_inbox_intake: input.runtimeInboxIntake ? "runtime-inbox-intake.json" : undefined,
+      ...baseArtifacts(input.outputArtifact),
+      runtime_inbox_intake: "runtime-inbox-intake.json",
       apply_journal: input.apply ? "project-memory-apply-journal.json" : undefined,
       apply_result: input.apply ? "project-memory-apply-result.json" : undefined,
       changeset: input.apply ? "project-memory-changeset.json" : undefined,
       retrieval_sections: input.retrievalArtifacts?.retrieval_sections,
       hint_generation: input.retrievalArtifacts?.hint_generation,
       retrieval_index_result: input.retrievalArtifacts?.retrieval_index_result,
-      usefulness_critique: input.usefulnessCritique ? PROJECT_MEMORY_USEFULNESS_CRITIQUE_ARTIFACT : undefined,
+      subject_manifest: input.create ? "reports/documentation-subject-manifest.json" : undefined,
+      planner_report: input.create ? "reports/documentation-planner-report.json" : undefined,
+      subject_reports: input.create?.subject_report_refs,
+      maintenance_report: input.maintenance ? "reports/documentation-maintenance-report.json" : undefined,
+      file_authoring_runs: fileAuthoringRuns.length > 0 ? fileAuthoringRuns : undefined,
+      pre_maintenance_wiki: input.create ? "pre-maintenance-wiki" : undefined,
     },
-    content_quality_status: input.validation.quality_diagnostics?.content_quality.status,
+    curation_kind: "agent_authored",
+    run_kind: input.runKind,
+    content_quality_status: "trusted",
     retrieval_readiness_status:
-      input.retrievalStatus === "completed"
-        ? "ready"
-        : input.retrievalStatus === "pending" || input.status === "completed_with_pending_index"
-        ? "pending"
-        : input.validation.quality_diagnostics?.retrieval_readiness.status,
-    quality_diagnostics_ref: input.validation.quality_diagnostics ? "curator-validation.json" : undefined,
+      input.retrievalStatus === "completed" ? "ready" : input.retrievalStatus === "pending" ? "pending" : undefined,
+    quality_diagnostics_ref: undefined,
     validation_ok: input.validation.ok,
     stopped_before_writes: !input.apply,
     dry_run: input.input.dryRun,
@@ -625,104 +491,131 @@ function buildResult(input: {
     changed_files: input.apply?.changed_files.map((file) => file.path),
     source_consumptions: input.apply?.source_consumptions.map((record) => `${record.source_kind}:${record.source_ref}`),
     stopped_reason: input.stoppedReason,
-    failure_kind: input.failureKind,
   };
 }
 
-function failedUsefulnessCritique(
-  projectKey: string,
-  renderedMarkdown: { page_path: string }[],
-  reason: string,
-): ProjectMemoryUsefulnessCritique {
+function baseArtifacts(outputArtifact: string): ProjectMemoryCuratorRunResult["artifacts"] {
   return {
-    schema_version: 1,
-    project_key: projectKey,
-    verdict: "fail",
-    reasons: [reason],
-    weak_sections: [],
-    evidence_map_ref: PROJECT_MEMORY_EVIDENCE_MAP_ARTIFACT,
-    rendered_markdown_refs: renderedMarkdown.map((page) => page.page_path),
+    input_packet: "input-packet.json",
+    curator_output: outputArtifact,
+    curator_validation: "curator-validation.json",
+    curator_run_result: "curator-run-result.json",
+    summary: "summary.md",
   };
 }
 
-function trustStatusForCreateFailure(input: {
-  validation: ProjectMemoryCuratorValidationResult;
-  stoppedReason?: string;
-}): ProjectMemoryTrustStatus {
-  const status = input.validation.quality_diagnostics?.content_quality.status;
-  if (status === "blocked") return "blocked";
-  if (status === "review_only") return "review_only";
-  if (status === "shallow") return "shallow";
-  const reason = input.stoppedReason ?? "";
-  if (reason.includes("review_only") || reason.includes("review requested")) return "review_only";
-  return input.stoppedReason ? "blocked" : "uncurated";
+function agentState(input: {
+  input: RunProjectMemoryCuratorInput;
+  run: ProjectCuratorRunPaths;
+  runKind: ProjectMemoryAgentRunKind;
+  create?: ProjectMemoryCreateModeResult;
+  maintenance?: ProjectMemoryMaintenanceModeResult;
+  now: Date;
+}): ProjectMemoryAgentStateV2 {
+  const maintenance = input.maintenance;
+  const create = input.create;
+  return {
+    schema_version: 2,
+    project_key: input.input.projectKey,
+    status: maintenance?.status === "degraded" ? "degraded" : "curated",
+    source_run_dir: input.run.relative_run_dir,
+    updated_at: input.now.toISOString(),
+    provider_mode: providerModeFor(input.input),
+    curation_kind: "agent_authored",
+    run_kind: input.runKind,
+    create: create
+      ? {
+          status: create.status,
+          planner_status: create.status === "completed" ? "completed" : "failed",
+          subject_writer_status: create.status === "completed" ? "completed" : "failed",
+          subject_count: create.manifest.subjects.length,
+          subject_writer_concurrency_limit: create.concurrency_limit,
+          subject_writer_retry_limit: create.retry_limit,
+          manifest_ref: create.subject_manifest_ref,
+          planner_report_ref: create.planner_report_ref,
+          subject_report_refs: create.subject_report_refs,
+          pre_maintenance_wiki_ref: create.pre_maintenance_wiki_ref,
+        }
+      : {
+          status: "skipped",
+          planner_status: "completed",
+          subject_writer_status: "completed",
+          subject_count: 0,
+          subject_writer_concurrency_limit: 0,
+          subject_writer_retry_limit: 0,
+          subject_report_refs: [],
+        },
+    maintenance: maintenance
+      ? {
+          status: maintenance.status,
+          report_ref: maintenance.report_ref,
+          dispositions_count: maintenance.report.dispositions.length,
+          applied_count: maintenance.report.dispositions.filter((item) => item.disposition === "applied_to_project_memory").length,
+          already_covered_count: maintenance.report.dispositions.filter((item) => item.disposition === "already_covered").length,
+          degraded_reason: maintenance.degraded_reasons[0],
+          degraded_reasons: maintenance.degraded_reasons,
+        }
+      : {
+          status: "skipped",
+          dispositions_count: 0,
+          applied_count: 0,
+          already_covered_count: 0,
+          degraded_reasons: [],
+        },
+    retrieval_readiness: {
+      status: "pending",
+      checked_at: input.now.toISOString(),
+      reason: "retrieval lifecycle has not completed yet",
+    },
+    content_quality: {
+      status: "not_evaluated",
+      reason: "agent_authored_documentation_has_no_schema_quality_gate",
+    },
+  };
 }
 
-function canApply(input: {
-  dryRun: boolean;
-  review: boolean;
-  packet: ProjectMemoryPacket;
-  validation: ProjectMemoryCuratorValidationResult;
-  curatorOutput: unknown;
-}): { ok: true } | { ok: false; status: ProjectMemoryCuratorRunResult["status"]; reason?: string } {
-  if (input.dryRun) return { ok: false, status: "completed", reason: "dry-run requested" };
-  if (input.review) return { ok: false, status: "needs_review", reason: "review requested" };
-  if (input.packet.mode === "maintain" && input.validation.eligible_item_ids.length === 0 && input.validation.noop_refs.length > 0) {
-    if (!input.validation.ok) {
-      return { ok: false, status: "needs_review", reason: "curator validation did not produce eligible output" };
-    }
-    if (input.validation.rejected_item_ids.length > 0 || input.validation.quarantined_item_ids.length > 0) {
-      return { ok: false, status: "needs_review", reason: "curator validation produced rejected or quarantined output" };
-    }
-    if (statusOf(input.packet.state.project_memory) !== "curated") {
-      return { ok: false, status: "needs_review", reason: "trusted Project Memory state is required for maintenance apply" };
-    }
-    if (!hasConsumableProjectMemoryNoop(input.curatorOutput)) {
-      return { ok: false, status: "completed", reason: "explicit no-op decision produced no source-consumption writes" };
-    }
-    return { ok: true };
-  }
-  if (!isTrustedProjectMemoryQuality(input.validation.quality_diagnostics)) {
-    return { ok: false, status: "needs_review", reason: "Project Memory content quality is not trusted" };
-  }
-  if (!input.validation.ok) {
-    return { ok: false, status: "needs_review", reason: "curator validation did not produce eligible output" };
-  }
-  if (input.validation.rejected_item_ids.length > 0 || input.validation.quarantined_item_ids.length > 0) {
-    return { ok: false, status: "needs_review", reason: "curator validation produced rejected or quarantined output" };
-  }
-  if (input.packet.degraded) {
-    return { ok: false, status: "needs_review", reason: "packet has blocking degraded context" };
-  }
-  if (input.packet.mode === "maintain" && statusOf(input.packet.state.project_memory) !== "curated") {
-    return { ok: false, status: "needs_review", reason: "trusted Project Memory state is required for maintenance apply" };
-  }
-  if (input.packet.mode === "maintain" && input.validation.eligible_item_ids.length === 0) {
-    if (input.validation.noop_refs.length > 0) {
-      return { ok: false, status: "completed", reason: "explicit no-op decision produced no writes" };
-    }
-    return { ok: false, status: "completed", reason: "documented no-op inputs produced no writes" };
-  }
-  return { ok: true };
+function providerModeFor(input: RunProjectMemoryCuratorInput): ProjectMemoryAgentProviderMode {
+  if (input.env?.[FILE_AUTHORING_STUB_OUTPUTS_DIR]) return "stub";
+  return input.runner ? "test" : "live";
 }
 
-function hasConsumableProjectMemoryNoop(output: unknown): boolean {
-  if (!output || typeof output !== "object" || Array.isArray(output) || !("explicit_noop_decisions" in output)) return false;
-  const decisions = (output as { explicit_noop_decisions?: unknown }).explicit_noop_decisions;
-  if (!Array.isArray(decisions)) return false;
-  return decisions.some((decision) => {
-    if (!decision || typeof decision !== "object" || Array.isArray(decision) || !("source_packet_refs" in decision)) return false;
-    const refs = (decision as { source_packet_refs?: unknown }).source_packet_refs;
-    return Array.isArray(refs) && refs.some((ref) => {
-      return Boolean(
-        ref &&
-          typeof ref === "object" &&
-          !Array.isArray(ref) &&
-          "kind" in ref &&
-          (ref.kind === "project_candidate" || ref.kind === "project_handoff"),
-      );
-    });
-  });
+function pendingSourcesFromPacket(packet: ProjectMemoryPacket): ProjectMemoryMaintenancePendingSource[] {
+  return [
+    ...packet.pending.project_candidates.map(candidateSource),
+    ...packet.pending.project_handoffs.map(handoffSource),
+  ];
+}
+
+function candidateSource(candidate: PacketCandidate): ProjectMemoryMaintenancePendingSource {
+  return {
+    source_kind: "project_candidate",
+    source_ref: candidate.id,
+    title: candidate.title,
+    summary: candidate.summary,
+    priority: candidate.priority,
+    reason: candidate.reason,
+  };
+}
+
+function handoffSource(handoff: PacketHandoff): ProjectMemoryMaintenancePendingSource {
+  return {
+    source_kind: "project_handoff",
+    source_ref: handoff.id,
+    title: handoff.objective,
+    summary: handoff.prompt_text,
+    priority: handoff.priority,
+    reason: handoff.reason,
+  };
+}
+
+function modeForInput(input: RunProjectMemoryCuratorInput, packet: ProjectMemoryPacket): ProjectMemoryCuratorMode {
+  if (input.recreate) return "create";
+  return statusOf(packet.state.project_memory) === "curated" ? "maintain" : "create";
+}
+
+function runKindForInput(input: RunProjectMemoryCuratorInput, packet: ProjectMemoryPacket): ProjectMemoryAgentRunKind {
+  if (input.recreate) return "recreate";
+  return statusOf(packet.state.project_memory) === "curated" ? "maintenance" : "create_then_maintenance";
 }
 
 function statusOf(value: unknown): string | null {
@@ -731,10 +624,37 @@ function statusOf(value: unknown): string | null {
   return typeof status === "string" ? status : null;
 }
 
-async function projectLearnModeForState(root: string, projectKey: string): Promise<ProjectMemoryCuratorMode> {
-  const projectMemory = await readJsonIfExists(projectPath(root, projectKey, "state", "project-memory.json"));
-  const bootstrapState = await readJsonIfExists(projectPath(root, projectKey, "state", "bootstrap-state.json"));
-  return statusOf(projectMemory) === "curated" || statusOf(bootstrapState) === "curated" ? "maintain" : "create";
+function successValidation(projectKey: string, mode: ProjectMemoryCuratorMode): ProjectMemoryCuratorValidationResult {
+  return {
+    ok: true,
+    mode,
+    project_key: projectKey,
+    global_findings: [],
+    item_results: [],
+    eligible_item_ids: [],
+    rejected_item_ids: [],
+    quarantined_item_ids: [],
+    noop_refs: [],
+  };
+}
+
+function failureValidation(
+  projectKey: string,
+  mode: ProjectMemoryCuratorMode,
+  code: string,
+  message: string,
+): ProjectMemoryCuratorValidationResult {
+  return {
+    ok: false,
+    mode,
+    project_key: projectKey,
+    global_findings: [{ severity: "blocker", category: "provider", code, message }],
+    item_results: [],
+    eligible_item_ids: [],
+    rejected_item_ids: [],
+    quarantined_item_ids: [],
+    noop_refs: [],
+  };
 }
 
 function runInfoFromJournalPath(journalPath: string): {
@@ -751,148 +671,19 @@ function runInfoFromJournalPath(journalPath: string): {
   };
 }
 
-function failureValidation(
-  projectKey: string,
-  mode: ProjectMemoryCuratorMode,
-  code: string,
-  message: string,
-  category: ProjectMemoryCuratorValidationResult["global_findings"][number]["category"] = "schema",
-): ProjectMemoryCuratorValidationResult {
-  return {
-    ok: false,
-    mode,
-    project_key: projectKey,
-    global_findings: [{ severity: "blocker", category, code, message }],
-    item_results: [],
-    eligible_item_ids: [],
-    rejected_item_ids: [],
-    quarantined_item_ids: [],
-    noop_refs: [],
-  };
-}
-
-function classifyCuratorInvocationFailure(error: unknown): {
-  kind: NonNullable<ProjectMemoryCuratorRunResult["failure_kind"]>;
-  validationCode: string;
-  validationCategory: ProjectMemoryCuratorValidationResult["global_findings"][number]["category"];
-  stoppedReason: string;
-} {
-  const message = conciseInvocationMessage(error instanceof Error ? error.message : String(error));
-  if (
-    message.includes("response is not valid JSON") ||
-    message.includes("empty output") ||
-    message.includes("not valid JSON")
-  ) {
-    return {
-      kind: "curator_output_invalid_json",
-      validationCode: "curator_output_invalid_json",
-      validationCategory: "schema",
-      stoppedReason: `curator output was not valid JSON: ${message}`,
-    };
-  }
-  return {
-    kind: "provider_failed_before_output",
-    validationCode: "provider_failed_before_output",
-    validationCategory: "provider",
-    stoppedReason: `provider invocation failed before curator output: ${message}`,
-  };
-}
-
-function conciseInvocationMessage(message: string): string {
-  const structuredError = extractStructuredErrorMessage(message);
-  if (structuredError) return structuredError;
-
-  const errorLines = [...message.matchAll(/^ERROR:\s*(.+)$/gim)]
-    .map((match) => match[1]?.trim())
-    .filter((line): line is string => Boolean(line));
-  const tokensUsed = message.match(/tokens used\s*[\r\n]+\s*([0-9,]+)/i)?.[1];
-  const exitPrefix = message.match(/\b(?:codex|claude) exited \d+/i)?.[0];
-  if (errorLines.length > 0) {
-    return [
-      exitPrefix,
-      ...errorLines.slice(-2).map((line) => `ERROR: ${line}`),
-      tokensUsed ? `tokens used ${tokensUsed}` : "",
-    ].filter(Boolean).join("; ");
-  }
-
-  const maxLength = 1_200;
-  if (message.length <= maxLength) return message;
-  return `${message.slice(0, maxLength)}...[truncated]`;
-}
-
-function extractStructuredErrorMessage(message: string): string | null {
-  const marker = "ERROR:";
-  let searchFrom = 0;
-  while (searchFrom < message.length) {
-    const markerIndex = message.indexOf(marker, searchFrom);
-    if (markerIndex === -1) return null;
-    const jsonStart = message.indexOf("{", markerIndex + marker.length);
-    if (jsonStart === -1) return null;
-    const jsonText = balancedJsonAt(message, jsonStart);
-    if (!jsonText) {
-      searchFrom = markerIndex + marker.length;
-      continue;
-    }
-    try {
-      const parsed = JSON.parse(jsonText) as unknown;
-      const error = isRecord(parsed) ? parsed.error : null;
-      const messageText = isRecord(error) && typeof error.message === "string" ? error.message : null;
-      const type = isRecord(error) && typeof error.type === "string" ? error.type : null;
-      const param = isRecord(error) && typeof error.param === "string" ? error.param : null;
-      return [messageText, type ? `type=${type}` : "", param ? `param=${param}` : ""].filter(Boolean).join("; ");
-    } catch {
-      searchFrom = jsonStart + jsonText.length;
-    }
-  }
-  return null;
-}
-
-function balancedJsonAt(text: string, start: number): string | null {
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-  for (let index = start; index < text.length; index += 1) {
-    const char = text[index];
-    if (inString) {
-      if (escaped) {
-        escaped = false;
-      } else if (char === "\\") {
-        escaped = true;
-      } else if (char === "\"") {
-        inString = false;
-      }
-      continue;
-    }
-    if (char === "\"") {
-      inString = true;
-      continue;
-    }
-    if (char === "{") depth += 1;
-    if (char === "}") {
-      depth -= 1;
-      if (depth === 0) return text.slice(start, index + 1);
-    }
-  }
-  return null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
 function summaryFor(result: ProjectMemoryCuratorRunResult): string {
   return [
     `# Project learn ${result.project_key}`,
     "",
     `mode: ${result.mode}`,
+    result.run_kind ? `run_kind: ${result.run_kind}` : "",
     `status: ${result.status}`,
+    `curation_kind: ${result.curation_kind ?? "unknown"}`,
     `validation_ok: ${result.validation_ok}`,
     `stopped_before_writes: ${result.stopped_before_writes}`,
-    result.failure_kind ? `failure_kind: ${result.failure_kind}` : "",
-    result.failure_kind === "provider_failed_before_output" ? "curator_output_status: not_produced" : "",
-    result.failure_kind === "curator_output_invalid_json" ? "curator_output_status: invalid_json" : "",
-    result.failure_kind ? "apply_stage: not_reached" : "",
     result.stopped_reason ? `stopped_reason: ${result.stopped_reason}` : "",
+    result.artifacts.subject_manifest ? `subject_manifest: ${result.artifacts.subject_manifest}` : "",
+    result.artifacts.maintenance_report ? `maintenance_report: ${result.artifacts.maintenance_report}` : "",
     result.artifacts.retrieval_sections ? `retrieval_sections: ${result.artifacts.retrieval_sections}` : "",
     result.artifacts.hint_generation ? `hint_generation: ${result.artifacts.hint_generation}` : "",
     result.artifacts.retrieval_index_result ? `retrieval_index_result: ${result.artifacts.retrieval_index_result}` : "",
@@ -939,7 +730,7 @@ class DefaultProjectMemoryPostApplyRetrievalLifecycle implements ProjectMemoryPo
           sections: manifest.sections,
           provider: input.provider,
           model: input.modelOverride,
-          required: true,
+          required: false,
           now: input.now,
           runner: input.runner,
           env: input.env,
@@ -974,11 +765,8 @@ class DefaultProjectMemoryPostApplyRetrievalLifecycle implements ProjectMemoryPo
     await writeRunArtifact(input.run, artifacts.retrieval_index_result, indexResult);
 
     const pendingReason = [
-      hintResult.degraded_reason,
       indexResult.degraded_reason,
-      (indexResult.pending_remaining ?? 0) > 0
-        ? `${indexResult.pending_remaining} Project Memory retrieval rows remain pending`
-        : "",
+      (indexResult.pending_remaining ?? 0) > 0 ? `${indexResult.pending_remaining} Project Memory retrieval rows remain pending` : "",
     ].filter(Boolean).join("; ");
     return {
       status: pendingReason ? "pending" : "completed",

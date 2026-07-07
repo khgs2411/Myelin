@@ -315,7 +315,7 @@ test("applies explicit no-op decisions as source-consumption state", async () =>
           id: "noop_setup",
           source_packet_refs: [{ kind: "project_candidate" as const, ref: "cand_1", required_for: "noop_support" as const }],
           checked_existing_memory_refs: [{ kind: "lookup_result" as const, ref: "lookup:0", required_for: "noop_support" as const }],
-          reason: "already_trusted" as const,
+          reason: "already_covered" as const,
           explanation: "Existing setup memory already covers the candidate.",
         },
       ],
@@ -331,7 +331,7 @@ test("applies explicit no-op decisions as source-consumption state", async () =>
     source_kind: "project_candidate",
     source_ref: "cand_1",
     consumed_by_run: "projects/demo/runs/project-learn/run-maintain-noop",
-    terminal_decision: "already_trusted",
+    terminal_decision: "already_covered",
   });
 });
 

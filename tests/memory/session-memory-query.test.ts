@@ -93,6 +93,31 @@ test("embeds the question as retrieval query and hydrates vector matches", async
     summary: "Session memories need vector embeddings before briefing reads.",
     distance: 0.12,
   });
+  const log = db.query("SELECT * FROM session_memory_query_logs").get() as {
+    project_key: string;
+    question: string;
+    normalized_question: string;
+    query_embedding_cache_id: string;
+    query_embedding_json: string;
+    match_count: number;
+    degraded: number;
+    degraded_reason: string | null;
+    result_json: string;
+  };
+  expect(log).toMatchObject({
+    project_key: "class-kit",
+    question: "What did we decide about embeddings?",
+    normalized_question: "what did we decide about embeddings?",
+    query_embedding_cache_id: result.query_embedding_cache_id,
+    match_count: 1,
+    degraded: 0,
+    degraded_reason: null,
+  });
+  expect(JSON.parse(log.query_embedding_json)).toHaveLength(DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT.dimensions);
+  expect(JSON.parse(log.result_json)).toMatchObject({
+    query_embedding_cache_id: result.query_embedding_cache_id,
+    matches: [{ id: "mem_decision" }],
+  });
 });
 
 test("filters hydrated vector matches by git branch context", async () => {
@@ -254,6 +279,7 @@ test("reuses cached question embeddings on repeated queries", async () => {
   expect(first.query_embedding_cache_hit).toBe(false);
   expect(second.query_embedding_cache_hit).toBe(true);
   expect(second.normalized_question).toBe("what did we decide about embeddings?");
+  expect(db.query("SELECT count(*) AS n FROM session_memory_query_logs").get()).toEqual({ n: 2 });
   const cache = db.query("SELECT hit_count, last_used_at FROM query_embedding_cache").get() as {
     hit_count: number;
     last_used_at: string;

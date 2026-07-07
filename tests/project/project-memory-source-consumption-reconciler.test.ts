@@ -52,7 +52,7 @@ test("marks supported terminal no-op dispositions processed", async () => {
   await seedSourceConsumptionState([
     sourceRecord("project_candidate", "cand_1", "already_trusted"),
     sourceRecord("project_handoff", "handoff_1", "not_durable"),
-    sourceRecord("project_candidate", "cand_2", "duplicate_or_superseded"),
+    sourceRecord("project_candidate", "cand_2", "already_covered"),
   ]);
   seedMemoryDb();
 
@@ -68,6 +68,7 @@ test("does not retire missing coverage or blocked-by-quality dispositions", asyn
   await seedSourceConsumptionState([
     sourceRecord("project_candidate", "cand_1", "missing_coverage_no_grounded_write"),
     sourceRecord("project_handoff", "handoff_1", "blocked_by_quality"),
+    sourceRecord("project_candidate", "cand_2", "duplicate_or_superseded"),
   ]);
   seedMemoryDb();
 

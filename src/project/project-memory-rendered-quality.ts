@@ -41,6 +41,11 @@ export const PROJECT_MEMORY_CREATE_ANSWERABILITY_QUESTIONS: ProjectMemoryAnswera
     required_terms: ["candidate", "lead", "evidence"],
   },
   {
+    domain: "evidence_provenance_candidates",
+    question: "How do Session Memory and runtime inbox leads become durable Project Memory?",
+    required_terms: ["session memory", "runtime inbox", "candidate", "project learn", "evidence"],
+  },
+  {
     domain: "current_work_roadmap_decisions",
     question: "Where are roadmap and decisions captured?",
     required_terms: ["ROADMAP", "ADR"],

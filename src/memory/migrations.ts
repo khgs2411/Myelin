@@ -358,6 +358,109 @@ const MIGRATIONS: Migration[] = [
         ON project_memory_hint_jobs(project_key, status, created_at);
     `,
   },
+  {
+    version: 12,
+    sql: `
+      CREATE TABLE project_memory_query_logs (
+        id                             TEXT PRIMARY KEY,
+        project_key                    TEXT NOT NULL,
+        question                       TEXT NOT NULL,
+        normalized_question            TEXT,
+        query_embedding_cache_id       TEXT,
+        query_embedding_provider       TEXT,
+        query_embedding_model          TEXT,
+        query_embedding_dimensions     INTEGER,
+        query_embedding_purpose        TEXT,
+        query_embedding_format_version INTEGER,
+        query_embedding_json           TEXT,
+        result_json                    TEXT NOT NULL,
+        match_count                    INTEGER NOT NULL,
+        degraded                       INTEGER NOT NULL CHECK (degraded IN (0, 1)),
+        degraded_reason                TEXT,
+        created_at                     TEXT NOT NULL
+      );
+      CREATE INDEX project_memory_query_logs_project_created
+        ON project_memory_query_logs(project_key, created_at);
+
+      CREATE TABLE session_memory_query_logs (
+        id                             TEXT PRIMARY KEY,
+        project_key                    TEXT NOT NULL,
+        question                       TEXT NOT NULL,
+        normalized_question            TEXT,
+        query_embedding_cache_id       TEXT,
+        query_embedding_provider       TEXT,
+        query_embedding_model          TEXT,
+        query_embedding_dimensions     INTEGER,
+        query_embedding_purpose        TEXT,
+        query_embedding_format_version INTEGER,
+        query_embedding_json           TEXT,
+        result_json                    TEXT NOT NULL,
+        match_count                    INTEGER NOT NULL,
+        degraded                       INTEGER NOT NULL CHECK (degraded IN (0, 1)),
+        degraded_reason                TEXT,
+        created_at                     TEXT NOT NULL
+      );
+      CREATE INDEX session_memory_query_logs_project_created
+        ON session_memory_query_logs(project_key, created_at);
+
+      CREATE TABLE practice_memory_query_logs (
+        id                             TEXT PRIMARY KEY,
+        project_key                    TEXT NOT NULL,
+        question                       TEXT NOT NULL,
+        normalized_question            TEXT,
+        query_embedding_cache_id       TEXT,
+        query_embedding_provider       TEXT,
+        query_embedding_model          TEXT,
+        query_embedding_dimensions     INTEGER,
+        query_embedding_purpose        TEXT,
+        query_embedding_format_version INTEGER,
+        query_embedding_json           TEXT,
+        result_json                    TEXT NOT NULL,
+        match_count                    INTEGER NOT NULL,
+        degraded                       INTEGER NOT NULL CHECK (degraded IN (0, 1)),
+        degraded_reason                TEXT,
+        created_at                     TEXT NOT NULL
+      );
+      CREATE INDEX practice_memory_query_logs_project_created
+        ON practice_memory_query_logs(project_key, created_at);
+
+      CREATE TABLE personal_memory_query_logs (
+        id                             TEXT PRIMARY KEY,
+        project_key                    TEXT NOT NULL,
+        question                       TEXT NOT NULL,
+        normalized_question            TEXT,
+        query_embedding_cache_id       TEXT,
+        query_embedding_provider       TEXT,
+        query_embedding_model          TEXT,
+        query_embedding_dimensions     INTEGER,
+        query_embedding_purpose        TEXT,
+        query_embedding_format_version INTEGER,
+        query_embedding_json           TEXT,
+        result_json                    TEXT NOT NULL,
+        match_count                    INTEGER NOT NULL,
+        degraded                       INTEGER NOT NULL CHECK (degraded IN (0, 1)),
+        degraded_reason                TEXT,
+        created_at                     TEXT NOT NULL
+      );
+      CREATE INDEX personal_memory_query_logs_project_created
+        ON personal_memory_query_logs(project_key, created_at);
+    `,
+  },
+  {
+    version: 13,
+    sql: `
+      CREATE VIRTUAL TABLE project_memory_section_fts USING fts5(
+        retrieval_row_id UNINDEXED,
+        project_key UNINDEXED,
+        wiki_path,
+        page_title,
+        heading_text,
+        section_id,
+        body_text,
+        tokenize = 'porter unicode61'
+      );
+    `,
+  },
 ];
 
 export function runMigrations(db: Database, now: Date = new Date()): void {

@@ -4,15 +4,15 @@ import { memoryDbPath, openMemoryDb } from "../memory/db.ts";
 import { markProjectHandoffInstructionProcessed } from "../memory/handoffs.ts";
 import { projectPath } from "../runtime/fs.ts";
 import { readJsonIfExists } from "../runtime/json.ts";
+import { normalizeProjectMemoryAgentCandidateDisposition } from "./project-memory-agent-contracts.ts";
 import type { ProjectMemorySourceConsumptionRecord } from "./project-memory-apply-contracts.ts";
 
 const TERMINAL_PROJECT_MEMORY_DISPOSITIONS = new Set([
   "applied_to_project_memory",
-  "already_trusted",
+  "already_covered",
   "not_durable",
   "belongs_to_other_layer",
   "insufficient_evidence",
-  "duplicate_or_superseded",
 ]);
 
 export type ProjectMemorySourceConsumptionState = {
@@ -103,6 +103,7 @@ function normalizeRecords(state: ProjectMemorySourceConsumptionState): ProjectMe
 }
 
 function isSupportedRecord(projectKey: string, record: ProjectMemorySourceConsumptionRecord): boolean {
+  const disposition = normalizeProjectMemoryAgentCandidateDisposition(record?.terminal_decision);
   return (
     record &&
     typeof record === "object" &&
@@ -110,7 +111,8 @@ function isSupportedRecord(projectKey: string, record: ProjectMemorySourceConsum
     (record.source_kind === "project_candidate" || record.source_kind === "project_handoff") &&
     typeof record.source_ref === "string" &&
     record.source_ref.length > 0 &&
-    TERMINAL_PROJECT_MEMORY_DISPOSITIONS.has(record.terminal_decision)
+    disposition !== null &&
+    TERMINAL_PROJECT_MEMORY_DISPOSITIONS.has(disposition)
   );
 }
 
