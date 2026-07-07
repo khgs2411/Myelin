@@ -10,6 +10,7 @@ import {
   type SessionMemoryStatus,
 } from "../memory/ingest-types.ts";
 import { MemoryCandidateService } from "../memory/memory-candidate-service.ts";
+import { MemoryReviewService, type MemoryReviewItem } from "../memory/memory-review-service.ts";
 import { ProjectMemoryRetrievalIndexService } from "../memory/project-memory-retrieval-index-service.ts";
 import { SessionMemoryInspectionService, type SessionMemoryInspectRow } from "../memory/session-memory-inspection-service.ts";
 import type { SessionMemoryLinkRow } from "../memory/session-memory-links.ts";
@@ -18,9 +19,11 @@ import {
   ProjectMemoryCandidateIntakeService,
   type ProjectInboxIntakeSummary,
 } from "../project/project-memory-candidate-intake-service.ts";
+import { ProjectService } from "../project/project-service.ts";
 import { repoRoot } from "../runtime/fs.ts";
 import { stableJson } from "../runtime/json.ts";
 import { DEFAULT_EMBEDDING_BATCH_SIZE, loadConfig, MAX_EMBEDDING_BATCH_SIZE, selectActiveEmbeddingContract } from "../runtime/config.ts";
+import type { ProcessRunner } from "../runtime/llm-client.ts";
 import { queryMemory } from "../query/engine.ts";
 import {
   loadProjectMemoryGoldenQuestions,
@@ -30,6 +33,8 @@ import {
 export type MemoryCommandDeps = {
   now?: () => Date;
   creator?: string;
+  runner?: ProcessRunner;
+  env?: NodeJS.ProcessEnv;
 };
 
 export function registerMemoryCommands(cli: Cli, deps: MemoryCommandDeps = {}): void {
@@ -40,8 +45,10 @@ export function registerMemoryCommands(cli: Cli, deps: MemoryCommandDeps = {}): 
   cli.command(["memory", "session", "list"], (args) => sessionList(args));
   cli.command(["memory", "session", "show"], (args) => sessionShow(args));
   cli.command(["memory", "session", "links"], (args) => sessionLinks(args));
+  cli.command(["memory", "review"], (args) => memoryReview(args));
   cli.command(["memory", "index", "session"], (args) => indexSession(args));
   cli.command(["memory", "index", "project"], (args) => indexProject(args));
+  cli.command(["memory", "maintain", "project"], (args) => maintainProject(args, deps));
   cli.command(["memory", "eval", "project"], (args) => evalProjectMemory(args));
   cli.command(["memory", "query"], async (args) => {
     const parsed = parseArgs(args);
@@ -110,6 +117,172 @@ type ParsedMemoryInboxIntakeArgs = {
   json: boolean;
   error?: string;
 };
+
+type ParsedMaintainProjectArgs = {
+  projectKey: string;
+  dryRun: boolean;
+  review: boolean;
+  json: boolean;
+  provider?: "codex" | "claude";
+  modelOverride?: string;
+  error?: string;
+};
+
+type ParsedMemoryReviewArgs = {
+  projectKey: string;
+  limit: number;
+  status?: string;
+  json: boolean;
+  error?: string;
+};
+
+async function memoryReview(args: string[]): Promise<CommandResult> {
+  const parsed = parseMemoryReviewArgs(args);
+  if (parsed.error) return fail(parsed.error);
+
+  try {
+    const result = await new MemoryReviewService(repoRoot().root).reviewProject({
+      projectKey: parsed.projectKey,
+      limit: parsed.limit,
+      status: parsed.status,
+    });
+    if (parsed.json) return ok(stableJson(result));
+    if (result.items.length === 0) return ok(`No reviewable memory outcomes for ${result.project_key}.`);
+    return ok([
+      `Reviewable memory outcomes for ${result.project_key}: ${result.reviewable_count} (${result.returned_count} shown)`,
+      ...result.items.map(formatMemoryReviewItem),
+    ].join("\n"));
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error));
+  }
+}
+
+function parseMemoryReviewArgs(args: string[]): ParsedMemoryReviewArgs {
+  let projectKey = "";
+  let limit = 100;
+  let status: string | undefined;
+  let json = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--json") json = true;
+    else if (arg === "--status") {
+      status = args[++index];
+      if (!status) return { projectKey, limit, status, json, error: "--status requires a value" };
+    }
+    else if (arg === "--limit") {
+      const parsed = Number(args[++index]);
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        return { projectKey, limit, status, json, error: "--limit must be a positive integer" };
+      }
+      limit = parsed;
+    } else if (arg.startsWith("-")) {
+      return { projectKey, limit, status, json, error: `Unknown memory review option: ${arg}` };
+    } else if (!projectKey) {
+      projectKey = arg;
+    } else {
+      return { projectKey, limit, status, json, error: `Unexpected memory review argument: ${arg}` };
+    }
+  }
+
+  if (!projectKey) return { projectKey, limit, status, json, error: "Usage: myelin memory review <project-key> [--status <status>] [--limit N] [--json]" };
+  return { projectKey, limit, status, json };
+}
+
+function formatMemoryReviewItem(item: MemoryReviewItem): string {
+  if (item.kind === "project_memory_disposition") {
+    return `- project_memory ${item.status} ${item.source_kind}:${item.source_ref} (${item.json_path}) - ${item.reason}`;
+  }
+  if (item.kind === "project_memory_run") {
+    return `- project_memory_run ${item.status} ${item.run_dir} (${item.json_path}) - ${item.reason}`;
+  }
+  if (item.kind === "ingest_job") {
+    return `- ingest_job ${item.status} ${item.id} (${item.sqlite_table})${item.reason ? ` - ${item.reason}` : ""}`;
+  }
+  if (item.kind === "experience_tombstone") {
+    return `- tombstone ${item.status} ${item.id} (${item.sqlite_table}) original=${item.original_event_id}`;
+  }
+  if (item.kind === "memory_candidate") {
+    return `- candidate ${item.status} ${item.scope}:${item.id} (${item.sqlite_table}) - ${item.reason}`;
+  }
+  return `- handoff ${item.status} ${item.scope}:${item.id} (${item.sqlite_table}) - ${item.reason}`;
+}
+
+async function maintainProject(args: string[], deps: MemoryCommandDeps): Promise<CommandResult> {
+  const parsed = parseMaintainProjectArgs(args);
+  if (parsed.error) return fail(parsed.error);
+
+  try {
+    const result = await new ProjectService(repoRoot().root).runProjectMaintenance({
+      projectKey: parsed.projectKey,
+      dryRun: parsed.dryRun,
+      review: parsed.review,
+      provider: parsed.provider,
+      modelOverride: parsed.modelOverride,
+      env: deps.env,
+      runner: deps.runner,
+      now: deps.now?.(),
+    });
+    if (parsed.json) return result.status === "failed" ? fail(stableJson(result)) : ok(stableJson(result));
+
+    const lines = [
+      `Project Memory maintenance ${result.status} for ${result.project_key}.`,
+      `mode: ${result.mode}`,
+      `run: ${result.run_dir}`,
+      `validation: ${result.validation_ok ? "passed" : "failed"}`,
+      `stopped_before_writes: ${result.stopped_before_writes}`,
+    ];
+    if (result.applied_page_ids?.length) lines.push(`applied pages: ${result.applied_page_ids.join(", ")}`);
+    if (result.applied_item_ids?.length) lines.push(`applied items: ${result.applied_item_ids.join(", ")}`);
+    if (result.changed_files?.length) lines.push(`changed files: ${result.changed_files.join(", ")}`);
+    if (result.status === "completed_with_pending_index") lines.push("pending retrieval index: yes");
+    if (result.stopped_reason) lines.push(`stopped: ${result.stopped_reason}`);
+    return result.status === "failed" ? fail(lines.join("\n")) : ok(lines.join("\n"));
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error));
+  }
+}
+
+function parseMaintainProjectArgs(args: string[]): ParsedMaintainProjectArgs {
+  let projectKey = "";
+  let dryRun = false;
+  let review = false;
+  let json = false;
+  let provider: "codex" | "claude" | undefined;
+  let modelOverride: string | undefined;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--dry-run") dryRun = true;
+    else if (arg === "--review") review = true;
+    else if (arg === "--json") json = true;
+    else if (arg === "--provider") {
+      const value = args[++index];
+      if (value !== "codex" && value !== "claude") return { projectKey, dryRun, review, json, error: "--provider must be codex or claude" };
+      provider = value;
+    } else if (arg === "--model") {
+      modelOverride = args[++index];
+      if (!modelOverride) return { projectKey, dryRun, review, json, error: "--model requires a value" };
+    } else if (arg.startsWith("-")) {
+      return { projectKey, dryRun, review, json, error: `Unknown memory maintain project option: ${arg}` };
+    } else if (!projectKey) {
+      projectKey = arg;
+    } else {
+      return { projectKey, dryRun, review, json, error: `Unexpected memory maintain project argument: ${arg}` };
+    }
+  }
+
+  if (!projectKey) {
+    return {
+      projectKey,
+      dryRun,
+      review,
+      json,
+      error: "Usage: myelin memory maintain project <project-key> [--dry-run] [--review] [--provider <name>] [--model <model>] [--json]",
+    };
+  }
+  return { projectKey, dryRun, review, json, provider, modelOverride };
+}
 
 async function memoryInboxCreate(args: string[], deps: MemoryCommandDeps): Promise<CommandResult> {
   const parsed = parseMemoryInboxCreateArgs(args);

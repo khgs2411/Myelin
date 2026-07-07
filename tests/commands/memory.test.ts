@@ -654,6 +654,74 @@ test("memory index project reports Project Memory retrieval indexing as JSON", a
   expect(response).toHaveProperty("degraded");
 });
 
+test("memory maintain project exposes a pure maintenance command", async () => {
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+
+  const missing = await cli.run(["memory", "maintain", "project"]);
+  const recreate = await cli.run(["memory", "maintain", "project", "demo", "--recreate"]);
+
+  expect(missing.exitCode).toBe(1);
+  expect(missing.message).toContain("Usage: myelin memory maintain project <project-key>");
+  expect(recreate.exitCode).toBe(1);
+  expect(recreate.message).toContain("Unknown memory maintain project option: --recreate");
+});
+
+test("memory review reports reviewable maintenance dispositions as JSON", async () => {
+  await mkdir(join(root, "projects", "demo", "runs", "project-learn", "2026-07-07T10-00-00.000Z-run", "reports"), {
+    recursive: true,
+  });
+  await writeJson(
+    join(
+      root,
+      "projects",
+      "demo",
+      "runs",
+      "project-learn",
+      "2026-07-07T10-00-00.000Z-run",
+      "reports",
+      "documentation-maintenance-report.json",
+    ),
+    {
+      schema_version: 1,
+      project_key: "demo",
+      status: "completed",
+      dispositions: [
+        {
+          source_kind: "project_candidate",
+          source_ref: "cand_research",
+          disposition: "insufficient_evidence",
+          reason: "Needs external evidence.",
+          output_refs: [],
+        },
+        {
+          source_kind: "project_handoff",
+          source_ref: "handoff_other",
+          disposition: "not_durable",
+          reason: "Not durable.",
+          output_refs: [],
+        },
+      ],
+      touched_paths: [],
+      evidence_paths: [],
+      known_gaps: [],
+    },
+  );
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+
+  const result = await cli.run(["memory", "review", "demo", "--status", "insufficient_evidence", "--json"]);
+  const response = JSON.parse(result.message);
+
+  expect(result.exitCode).toBe(0);
+  expect(response.reviewable_count).toBe(1);
+  expect(response.items[0]).toMatchObject({
+    kind: "project_memory_disposition",
+    status: "insufficient_evidence",
+    source_ref: "cand_research",
+  });
+});
+
 async function seedProject(): Promise<void> {
   await writeJson(join(root, "projects", "demo", "state", "project.json"), {
     key: "demo",

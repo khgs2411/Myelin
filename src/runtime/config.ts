@@ -39,6 +39,12 @@ export type AutoMemoryMaintenanceConfig = {
   indexLimit: number;
 };
 
+export type AutoProjectMemoryMaintenanceConfig = {
+  enabled: boolean;
+  minPendingItems: number;
+  cooldownMs: number;
+};
+
 export type ActiveEmbeddingContract = {
   provider: EmbeddingProvider;
   model: string;
@@ -53,6 +59,7 @@ export type MyelinConfig = {
   embedding: EmbeddingConfig;
   ingest: IngestConfig;
   autoMemoryMaintenance: AutoMemoryMaintenanceConfig;
+  autoProjectMemoryMaintenance: AutoProjectMemoryMaintenanceConfig;
   values: Record<string, string>;
 };
 
@@ -74,6 +81,8 @@ export const DEFAULT_AUTO_MEMORY_COOLDOWN_MS = 5 * 60 * 1000;
 export const DEFAULT_AUTO_MEMORY_DRAIN_POLL_INTERVAL_MS = 5_000;
 export const DEFAULT_AUTO_MEMORY_DRAIN_TIMEOUT_MS = 10 * 60 * 1000;
 export const DEFAULT_AUTO_MEMORY_INDEX_LIMIT = 500;
+export const DEFAULT_AUTO_PROJECT_MEMORY_MIN_PENDING_ITEMS = 5;
+export const DEFAULT_AUTO_PROJECT_MEMORY_COOLDOWN_MS = 5 * 60 * 1000;
 export const DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT: ActiveEmbeddingContract = {
   provider: DEFAULT_EMBEDDING_PROVIDER,
   model: DEFAULT_GEMINI_EMBEDDING_MODEL,
@@ -123,6 +132,11 @@ const DEFAULT_CONFIG: MyelinConfig = {
     drainTimeoutMs: DEFAULT_AUTO_MEMORY_DRAIN_TIMEOUT_MS,
     indexLimit: DEFAULT_AUTO_MEMORY_INDEX_LIMIT,
   },
+  autoProjectMemoryMaintenance: {
+    enabled: false,
+    minPendingItems: DEFAULT_AUTO_PROJECT_MEMORY_MIN_PENDING_ITEMS,
+    cooldownMs: DEFAULT_AUTO_PROJECT_MEMORY_COOLDOWN_MS,
+  },
   values: {},
 };
 
@@ -153,6 +167,7 @@ export async function loadConfig(root: string, env: NodeJS.ProcessEnv = process.
     embedding: embeddingConfig(merged),
     ingest: ingestConfig(merged),
     autoMemoryMaintenance: autoMemoryMaintenanceConfig(merged),
+    autoProjectMemoryMaintenance: autoProjectMemoryMaintenanceConfig(merged),
     values: merged,
   };
 }
@@ -260,6 +275,20 @@ function autoMemoryMaintenanceConfig(values: Record<string, string>): AutoMemory
     indexLimit: parsePositiveInteger(
       values.AUTO_MEMORY_INDEX_LIMIT ?? String(DEFAULT_AUTO_MEMORY_INDEX_LIMIT),
       "Invalid auto memory index limit",
+    ),
+  };
+}
+
+function autoProjectMemoryMaintenanceConfig(values: Record<string, string>): AutoProjectMemoryMaintenanceConfig {
+  return {
+    enabled: values.AUTO_PROJECT_MEMORY_MAINTENANCE === "1",
+    minPendingItems: parsePositiveInteger(
+      values.AUTO_PROJECT_MEMORY_MIN_PENDING_ITEMS ?? String(DEFAULT_AUTO_PROJECT_MEMORY_MIN_PENDING_ITEMS),
+      "Invalid auto project memory min pending items",
+    ),
+    cooldownMs: parseNonNegativeInteger(
+      values.AUTO_PROJECT_MEMORY_COOLDOWN_MS ?? String(DEFAULT_AUTO_PROJECT_MEMORY_COOLDOWN_MS),
+      "Invalid auto project memory cooldown",
     ),
   };
 }

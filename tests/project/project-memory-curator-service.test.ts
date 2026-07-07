@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createRuntimeInboxItem } from "../../src/inbox/runtime-inbox-items.ts";
 import { createMemoryCandidate, getMemoryCandidate } from "../../src/memory/candidates.ts";
 import { openMemoryDb } from "../../src/memory/db.ts";
 import { ProjectMemoryCuratorService } from "../../src/project/project-memory-curator-service.ts";
@@ -117,6 +118,70 @@ test("maintenance mode updates documentation and marks pending candidates proces
   readDb.close();
 });
 
+test("project maintenance normalizes runtime inbox before agentic curation", async () => {
+  await seedProject("curated");
+  seedMemoryDb();
+  await seedSchema();
+  await writeFile(join(root, "projects", "demo", "wiki", "index.md"), "# Demo\n\nExisting index.\n", "utf8");
+  await writeFile(join(root, "projects", "demo", "wiki", "runtime.md"), "# Runtime\n\nOld runtime.\n", "utf8");
+  const inbox = await createRuntimeInboxItem(root, {
+    projectKey: "demo",
+    targetLayer: "project",
+    title: "Runtime inbox candidate",
+    body: "Runtime documentation should mention the runtime inbox maintenance path.",
+    rationale: "Project maintenance should normalize inbox items before building the packet.",
+    evidenceRefs: [],
+    targetHint: null,
+    confidence: "medium",
+    risk: "low",
+    creator: "operator:test",
+    now: new Date("2026-07-06T09:30:00.000Z"),
+    id: "2026-07-06T09-30-00Z_a1b2c3",
+  });
+  if (inbox.status !== "created") throw new Error("failed to create inbox fixture");
+  const candidateId = "project_inbox:demo:2026-07-06T09-30-00Z_a1b2c3";
+  const stubs = await seedMaintenanceStubs("demo", candidateId);
+  const service = new ProjectMemoryCuratorService(root, completedRetrievalDeps());
+
+  const result = await service.runProjectMaintenance({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    now: new Date("2026-07-06T11:30:00.000Z"),
+    env: { ...process.env, [FILE_AUTHORING_STUB_OUTPUTS_DIR]: stubs },
+  });
+
+  expect(result.status).toBe("completed");
+  expect(result.mode).toBe("maintain");
+  expect(result.run_kind).toBe("maintenance");
+  expect(result.artifacts.runtime_inbox_intake).toBe("runtime-inbox-intake.json");
+  expect(result.source_consumptions).toEqual([`project_candidate:${candidateId}`]);
+  expect(await readFile(join(root, "projects", "demo", "wiki", "runtime.md"), "utf8")).toContain("CLI surface");
+  const readDb = openMemoryDb(root);
+  expect(getMemoryCandidate(readDb, candidateId)?.status).toBe("processed");
+  readDb.close();
+});
+
+test("project maintenance refuses to bootstrap uncurated Project Memory", async () => {
+  await seedProject("uncurated");
+  seedMemoryDb();
+  await seedSchema();
+  const service = new ProjectMemoryCuratorService(root, completedRetrievalDeps());
+
+  const result = await service.runProjectMaintenance({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    now: new Date("2026-07-06T12:30:00.000Z"),
+  });
+
+  expect(result.status).toBe("failed");
+  expect(result.mode).toBe("maintain");
+  expect(result.run_kind).toBe("maintenance");
+  expect(result.stopped_before_writes).toBe(true);
+  expect(result.stopped_reason).toContain("Project Memory is not curated");
+});
+
 test("review mode runs agents but stops before publishing canonical wiki writes", async () => {
   await seedProject("uncurated");
   seedMemoryDb();
@@ -219,7 +284,7 @@ async function seedCreateStubs(projectKey: string): Promise<string> {
   return stubs;
 }
 
-async function seedMaintenanceStubs(projectKey: string): Promise<string> {
+async function seedMaintenanceStubs(projectKey: string, sourceRef = "cand_runtime"): Promise<string> {
   const stubs = await mkdtemp(join(tmpdir(), "myelin-maintenance-stubs-"));
   await mkdir(join(stubs, "maintenance", "draft-wiki"), { recursive: true });
   await mkdir(join(stubs, "maintenance", "reports"), { recursive: true });
@@ -236,7 +301,7 @@ async function seedMaintenanceStubs(projectKey: string): Promise<string> {
     dispositions: [
       {
         source_kind: "project_candidate",
-        source_ref: "cand_runtime",
+        source_ref: sourceRef,
         disposition: "applied_to_project_memory",
         reason: "Runtime page updated from repo evidence.",
         output_refs: ["runtime.md"],

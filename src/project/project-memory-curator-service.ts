@@ -76,6 +76,94 @@ export class ProjectMemoryCuratorService {
     private readonly deps: { retrievalLifecycle?: ProjectMemoryPostApplyRetrievalLifecycle } = {},
   ) {}
 
+  async runProjectMaintenance(input: RunProjectMemoryCuratorInput): Promise<ProjectMemoryCuratorRunResult> {
+    const maintenanceInput = { ...input, recreate: false };
+    const now = maintenanceInput.now ?? new Date();
+    const project = await findProject(this.root, maintenanceInput.projectKey);
+    const repoPath = project.config.repo_paths?.[0] ?? this.root;
+    const applier = new ProjectMemoryMarkdownApplier(this.root);
+    const incompleteJournals = await applier.findIncompleteApplyJournals(maintenanceInput.projectKey);
+    if (incompleteJournals.length > 0) {
+      const recovered = await applier.recoverFromJournal(incompleteJournals[0]);
+      const recoveredRun = runInfoFromJournalPath(incompleteJournals[0]);
+      return {
+        status: recovered.status === "applied" ? "completed" : "failed",
+        project_key: maintenanceInput.projectKey,
+        mode: recoveredRun.mode,
+        run_id: recoveredRun.run_id,
+        run_dir: recoveredRun.run_dir,
+        artifacts: baseArtifacts("recovered"),
+        validation_ok: recovered.status === "applied",
+        stopped_before_writes: recovered.status !== "applied",
+        dry_run: maintenanceInput.dryRun,
+        review: maintenanceInput.review,
+        changed_files: recovered.changed_files.map((file) => file.path),
+        stopped_reason: recovered.status === "applied" ? undefined : recovered.reason,
+        curation_kind: "agent_authored",
+      };
+    }
+
+    const run = await createProjectCuratorRun(this.root, maintenanceInput.projectKey, now);
+    await ensureProjectLearnSchemaContext(this.root, maintenanceInput.projectKey, { dryRun: maintenanceInput.dryRun, now });
+
+    const reconciliation = await new ProjectMemorySourceConsumptionReconciler(this.root).reconcileProject(maintenanceInput.projectKey, { now });
+    await writeRunArtifact(run, "source-consumption-reconciliation.json", reconciliation);
+    if (reconciliation.blocking) {
+      const packet = await buildProjectMemoryPacket(this.root, maintenanceInput.projectKey);
+      await writeRunArtifact(run, "input-packet.json", packet);
+      return await this.writeTerminalArtifacts({
+        input: maintenanceInput,
+        run,
+        mode: "maintain",
+        runKind: "maintenance",
+        outputArtifact: "source-consumption-reconciliation.json",
+        validation: failureValidation(maintenanceInput.projectKey, "maintain", "source_consumption_reconciliation_failed", reconciliation.degraded_reasons.join("; ")),
+        status: "failed",
+        stoppedReason: reconciliation.degraded_reasons.join("; "),
+      });
+    }
+
+    const runtimeInboxIntake = await new ProjectMemoryCandidateIntakeService(this.root).intakeProjectInbox(maintenanceInput.projectKey, now);
+    await writeRunArtifact(run, "runtime-inbox-intake.json", runtimeInboxIntake);
+    const packet = await buildProjectMemoryPacket(this.root, maintenanceInput.projectKey);
+    await writeRunArtifact(run, "input-packet.json", packet);
+    if (runtimeInboxIntake.blocking) {
+      return await this.writeTerminalArtifacts({
+        input: maintenanceInput,
+        run,
+        mode: "maintain",
+        runKind: "maintenance",
+        outputArtifact: "runtime-inbox-intake.json",
+        validation: failureValidation(maintenanceInput.projectKey, "maintain", "runtime_inbox_intake_failed", runtimeInboxIntake.degraded_reasons.join("; ")),
+        status: "failed",
+        stoppedReason: runtimeInboxIntake.degraded_reasons.join("; "),
+        runtimeInboxIntake: true,
+      });
+    }
+
+    if (modeForInput(maintenanceInput, packet) !== "maintain") {
+      return await this.writeTerminalArtifacts({
+        input: maintenanceInput,
+        run,
+        mode: "maintain",
+        runKind: "maintenance",
+        outputArtifact: "input-packet.json",
+        validation: failureValidation(
+          maintenanceInput.projectKey,
+          "maintain",
+          "project_memory_not_curated",
+          `Project Memory is not curated; run myelin project learn ${maintenanceInput.projectKey} first.`,
+        ),
+        status: "failed",
+        stoppedReason: `Project Memory is not curated; run myelin project learn ${maintenanceInput.projectKey} first.`,
+        runtimeInboxIntake: true,
+      });
+    }
+
+    if (!maintenanceInput.dryRun) await repairProjectShell(this.root, maintenanceInput.projectKey, { repoPath });
+    return await this.runMaintenanceOnly({ input: maintenanceInput, run, packet, repoPath, now, runKind: "maintenance" });
+  }
+
   async runProjectLearn(input: RunProjectMemoryCuratorInput): Promise<ProjectMemoryCuratorRunResult> {
     const now = input.now ?? new Date();
     const project = await findProject(this.root, input.projectKey);

@@ -30,6 +30,12 @@ make learn PROJECT=<key>
 # Process queued Experience Log rows into Session Memory
 make ingest PROJECT=<key>
 
+# Maintain already-curated Project Memory from runtime inbox and candidates
+bun src/cli.ts memory maintain project <key>
+
+# Review neutral terminal memory outcomes for operator follow-up
+bun src/cli.ts memory review <key>
+
 # Index pending Session Memory embeddings
 bun src/cli.ts memory index session <key>
 
@@ -45,7 +51,8 @@ The Makefile is a thin alias layer. New automation should call `myelin` vocabula
 | Old V1 concept | Myelin V2 command |
 | --- | --- |
 | `compile` | `project learn <key>` |
-| Project Memory source/inbox processing | `project learn <key>` |
+| Project Memory bootstrap/create-or-maintain | `project learn <key>` |
+| Project Memory post-bootstrap candidate maintenance | `memory maintain project <key>` |
 | agentic Experience Log to Session Memory processing | `ingest <key>` |
 | Session Memory embedding backfill/indexing | `memory index session <key>` |
 | `ask` | `memory query <key> "<question>"` |
@@ -75,6 +82,7 @@ Important runtime variables:
 | `EMBEDDING_STUB_RESPONSES_DIR` | Use canned embedding responses for deterministic embedding/index tests. |
 | `GOOGLE_API_KEY`, `GEMINI_API_KEY` | Gemini embedding credential; `GOOGLE_API_KEY` is preferred, `GEMINI_API_KEY` is accepted as an alias. |
 | `AUTO_MEMORY_MAINTENANCE`, `AUTO_MEMORY_MIN_CAPTURED_EVENTS`, `AUTO_MEMORY_COOLDOWN_MS`, `AUTO_MEMORY_DRAIN_POLL_INTERVAL_MS`, `AUTO_MEMORY_DRAIN_TIMEOUT_MS`, `AUTO_MEMORY_INDEX_LIMIT` | Optional hook-triggered Session Memory maintenance scheduler. When enabled, capture schedules a detached worker that runs Experience Log ingest and Session Memory indexing after enough queued captured events. |
+| `AUTO_PROJECT_MEMORY_MAINTENANCE`, `AUTO_PROJECT_MEMORY_MIN_PENDING_ITEMS`, `AUTO_PROJECT_MEMORY_COOLDOWN_MS` | Optional Project Memory maintenance scheduler. When enabled, runtime inbox writes and Session Memory ingest-created project candidates schedule detached Project Memory maintenance after enough un-intaked inbox items or pending project candidates exist. |
 | `MYELIN_SQLITE_DYLIB_PATH`, `SQLITE_DYLIB_PATH` | Optional SQLite dynamic library path override for extension loading; Myelin uses its vendored runtime when available. |
 | `LLM_STUB_RESPONSES_DIR=<path>` | Use canned LLM responses for deterministic tests. |
 | `UPDATE_PROJECTS_ROOT`, `UPDATE_ARTIFACTS_ROOT`, `UPDATE_STAGES_ROOT` | Test/runtime root overrides. |
@@ -103,6 +111,7 @@ Do not make a local MCP checkout part of the root package graph. Core query beha
 - LLM-stage prompts must require JSON on stdout; do not ask the model to write artifacts directly.
 - Top-level `myelin ingest <key>` counts queued Experience Log rows and launches detached target-repo agents according to the ingest runtime profile. Workers create tombstone-backed lease stubs without deleting raw rows before provider output is accepted; terminal commit finalizes tombstones and archives source rows.
 - Optional auto Session Memory maintenance is scheduled from capture hooks only after the Experience Log row is stored. Hooks do not run ingest or indexing synchronously; they spawn a detached maintenance worker guarded by a project lock and cooldown. Codex `Stop` means assistant turn complete, not session end.
+- Optional auto Project Memory maintenance is scheduled only when runtime inbox items are created or Session Memory ingest creates project-scoped candidates. Project inbox intake itself must not schedule auto maintenance, because inbox intake is the first stage of the Project Memory maintenance job.
 - On macOS, sqlite-vec requires a SQLite build that supports loadable extensions. Myelin prefers its vendored SQLite runtime, falls back to Homebrew SQLite, and can be overridden with `MYELIN_SQLITE_DYLIB_PATH`.
 - Session Memory vector indexing is explicit operator work: use `myelin memory index session <key> [--limit N] [--batch-size N] [--retry-failed] [--json]`.
 - `memory query <key> "<question>"` is the future multi-layer query facade; in the current slice it queries indexed Session Memory vectors only and uses cached query embeddings.

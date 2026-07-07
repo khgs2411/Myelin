@@ -38,6 +38,10 @@ export class ProjectService {
     return await new ProjectMemoryCuratorService(this.root).runProjectLearn(input);
   }
 
+  async runProjectMaintenance(input: RunProjectMemoryCuratorInput): Promise<ProjectMemoryCuratorRunResult> {
+    return await new ProjectMemoryCuratorService(this.root).runProjectMaintenance(input);
+  }
+
   async migrateLayout(projectKey: string): Promise<MigrateProjectLayoutResult> {
     return { projectActions: await migrateProjectLayout(this.root, projectKey) };
   }

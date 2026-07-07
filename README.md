@@ -20,6 +20,7 @@ bun src/cli.ts schema check <project-key>
 bun src/cli.ts schema build <project-key>
 bun src/cli.ts memory query <project-key> "What should I know?"
 bun src/cli.ts memory index session <project-key>
+bun src/cli.ts memory maintain project <project-key>
 bun src/cli.ts project learn <project-key> --dry-run
 bun src/cli.ts ingest <project-key>
 bun src/cli.ts ingest status <ingest-job-id>
@@ -48,6 +49,8 @@ For the exhaustive command reference, including arguments, options, side effects
 | `make update PROJECT=<key>` | `myelin ingest <key>` / `make ingest PROJECT=<key>` |
 | Experience Log to Session Memory ingest | `myelin ingest <key>` / `myelin ingest status <ingest-job-id>` |
 | Session Memory embedding index/backfill | `myelin memory index session <key> [--limit N] [--retry-failed] [--json]` |
+| Project Memory candidate maintenance after bootstrap | `myelin memory maintain project <key> [--json]` |
+| Review neutral terminal memory outcomes | `myelin memory review <key> [--json]` |
 | `ask` / query helpers | `myelin memory query <key> "<question>"` / `make query ...` |
 | `make init PROJECT=<key>` | `myelin project onboard <key>` / `make onboard PROJECT=<key>` |
 | validate schema context | `myelin schema check <key>` / `myelin schema build <key>` |
@@ -55,6 +58,8 @@ For the exhaustive command reference, including arguments, options, side effects
 The old command names are V1 concepts. Keep them out of new docs and scripts unless a legacy escape hatch is explicitly being discussed.
 
 Top-level `ingest <key>` batches queued Experience Log rows by `INGEST_BATCH_SIZE` and launches one detached target-repo agent per batch. The default batch size is `100`; the maximum accepted batch size is `500`.
+
+When `AUTO_PROJECT_MEMORY_MAINTENANCE=1`, runtime inbox writes and Session Memory ingest-created project candidates schedule detached Project Memory maintenance after `AUTO_PROJECT_MEMORY_MIN_PENDING_ITEMS` un-intaked inbox items or pending project candidates exist.
 
 Session Memory vector retrieval is currently an internal facade. MCP exposure, Current Briefing consumption, broader `memory query` changes, and non-Session Memory vectorization are deferred follow-up work.
 

@@ -1,5 +1,9 @@
 import { link, mkdir, unlink, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
+import {
+  AutoProjectMemoryMaintenanceService,
+  type AutoProjectMemoryMaintenanceScheduler,
+} from "../maintenance/auto-project-memory-maintenance.ts";
 import { projectPath } from "../runtime/fs.ts";
 import { createId } from "../runtime/ids.ts";
 import { stableJson } from "../runtime/json.ts";
@@ -44,6 +48,7 @@ export type CreateRuntimeInboxItemInput = {
   tags?: string[];
   now?: Date;
   id?: string;
+  autoProjectMaintenanceScheduler?: AutoProjectMemoryMaintenanceScheduler | false;
 };
 
 export type CreateRuntimeInboxItemResult =
@@ -185,9 +190,23 @@ export async function createRuntimeInboxItem(
   try {
     await ensureRuntimeInboxIndexes(root, input.projectKey);
     await writeNewRuntimeInboxFile(path, `${stableJson(item)}\n`);
+    await scheduleAutoProjectMemoryMaintenance(root, input.projectKey, input.autoProjectMaintenanceScheduler);
     return { status: "created", item, path, source_ref: runtimeInboxSourceRef(item.id) };
   } catch (error) {
     return { status: "write_failed", reason: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+async function scheduleAutoProjectMemoryMaintenance(
+  root: string,
+  projectKey: string,
+  scheduler: AutoProjectMemoryMaintenanceScheduler | false | undefined,
+): Promise<void> {
+  if (scheduler === false) return;
+  try {
+    await (scheduler ?? new AutoProjectMemoryMaintenanceService(root)).maybeSchedule(projectKey, "runtime_inbox_created");
+  } catch {
+    // Inbox writes are source preservation; auto-maintenance state/logs carry operator detail.
   }
 }
 

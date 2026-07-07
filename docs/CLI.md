@@ -388,6 +388,85 @@ Side effects:
 - Does not invoke the Project Memory Curator.
 - Does not rewrite runtime inbox source files.
 
+### `myelin memory review <project-key> [--status <status>] [--limit N] [--json]`
+
+Reports memory-related outcomes that are terminal or near-terminal but not ordinary success or failure.
+
+This command is for operator review, not mutation. It gathers:
+
+- Project Memory maintenance dispositions such as `insufficient_evidence`, `not_durable`, `belongs_to_other_layer`, and `deferred_unsafe_change`.
+- Degraded Project Memory maintenance reports.
+- `ingest_jobs` rows with `needs_followup`.
+- Experience Log tombstones finalized as `no_output`.
+- Rejected memory candidates and rejected layer handoff instructions.
+
+Arguments:
+
+- `project-key`: project to inspect.
+
+Options:
+
+- `--status <status>`: filter by outcome status, such as `insufficient_evidence`, `not_durable`, `belongs_to_other_layer`, `deferred_unsafe_change`, `needs_followup`, `no_output`, `rejected`, or `degraded`.
+- `--limit N`: maximum returned rows. Default `100`.
+- `--json`: emit structured report JSON.
+
+Output:
+
+- Human-readable review list by default.
+- Structured JSON with `reviewable_count`, `returned_count`, and `items` with artifact paths or SQLite table names.
+
+Side effects:
+
+- Read-only.
+- Does not resolve jobs, reopen candidates, alter source-consumption state, or run research.
+
+Examples:
+
+```bash
+myelin memory review class-kit --status insufficient_evidence --json
+myelin memory review class-kit --status no_output --limit 25
+```
+
+### `myelin memory maintain project <project-key> [--dry-run] [--review] [--provider codex|claude] [--model <model>] [--json]`
+
+Maintains already-curated Project Memory from runtime inbox items and pending Project Memory candidates.
+
+This is the post-bootstrap Project Memory maintenance pipeline:
+
+1. Deterministically normalize runtime inbox source JSON into Project Memory candidates.
+2. Invoke the maintenance agent over pending Project Memory candidates and existing wiki docs.
+3. Publish canonical markdown updates and refresh derived Project Memory retrieval indexes.
+
+Arguments:
+
+- `project-key`: project whose already-curated Project Memory should be maintained.
+
+Options:
+
+- `--dry-run`: run without publishing canonical writes.
+- `--review`: run in review-oriented mode and stop before publishing canonical writes.
+- `--provider codex|claude`: provider override.
+- `--model <model>`: model override.
+- `--json`: emit structured run result JSON.
+
+Output:
+
+- Human-readable maintenance run summary by default.
+- Structured curator run result with `--json`.
+
+Side effects:
+
+- Fails without bootstrapping if Project Memory is not already curated. Use `myelin project learn <project-key>` for first-time create mode.
+- May invoke provider CLIs.
+- May update canonical Project Memory markdown and source-consumption state.
+- Marks terminal Project Memory candidates as processed through source-consumption reconciliation.
+- Refreshes Project Memory retrieval sections, hints, vector index, and FTS index after published markdown changes.
+
+Automation:
+
+- When `AUTO_PROJECT_MEMORY_MAINTENANCE=1`, runtime inbox writes and Session Memory ingest-created project candidates schedule this maintenance pipeline in a detached worker after `AUTO_PROJECT_MEMORY_MIN_PENDING_ITEMS` un-intaked inbox items or pending project candidates exist.
+- Deterministic inbox intake inside this command does not schedule another auto-maintenance run.
+
 ### `myelin memory query <project-key> <question> [--limit N] [--branch current|<branch>] [--json] [--debug]`
 
 Queries indexed Session Memory vectors and returns deterministic matches.

@@ -178,6 +178,37 @@ test("auto memory maintenance config is explicit and bounded", async () => {
   await expect(loadConfig(root, { AUTO_MEMORY_COOLDOWN_MS: "-1" })).rejects.toThrow("Invalid auto memory cooldown");
 });
 
+test("auto project memory maintenance config is explicit and bounded", async () => {
+  await expect(loadConfig(root, {})).resolves.toMatchObject({
+    autoProjectMemoryMaintenance: {
+      enabled: false,
+      minPendingItems: 5,
+      cooldownMs: 300000,
+    },
+  });
+
+  await expect(
+    loadConfig(root, {
+      AUTO_PROJECT_MEMORY_MAINTENANCE: "1",
+      AUTO_PROJECT_MEMORY_MIN_PENDING_ITEMS: "7",
+      AUTO_PROJECT_MEMORY_COOLDOWN_MS: "0",
+    }),
+  ).resolves.toMatchObject({
+    autoProjectMemoryMaintenance: {
+      enabled: true,
+      minPendingItems: 7,
+      cooldownMs: 0,
+    },
+  });
+
+  await expect(loadConfig(root, { AUTO_PROJECT_MEMORY_MIN_PENDING_ITEMS: "0" })).rejects.toThrow(
+    "Invalid auto project memory min pending items",
+  );
+  await expect(loadConfig(root, { AUTO_PROJECT_MEMORY_COOLDOWN_MS: "-1" })).rejects.toThrow(
+    "Invalid auto project memory cooldown",
+  );
+});
+
 test("embedding config honors file values and environment precedence", async () => {
   await writeFile(
     join(root, "myelin.config"),

@@ -40,6 +40,10 @@ import {
 } from "./reconciliation-context.ts";
 import { updateIngestJobStatus } from "./jobs.ts";
 import { readIngestProjectStatus, type IngestProjectStatus } from "./status.ts";
+import {
+  AutoProjectMemoryMaintenanceService,
+  type AutoProjectMemoryMaintenanceScheduler,
+} from "../maintenance/auto-project-memory-maintenance.ts";
 
 const MAX_PROMPT_RETAINED_EVIDENCE_CHARS = 6_000;
 const TRUNCATED_EVIDENCE_SUFFIX = "\n...[truncated for ingest prompt; full evidence is preserved in the tombstone audit row]";
@@ -438,10 +442,11 @@ export function applyIngestWorkerOutput(
     finalizedAt: string;
     allowedExistingMemoryIds?: string[];
   },
-): { session_memories: number; memory_candidates: number; handoff_instructions: number } {
+): { session_memories: number; memory_candidates: number; project_memory_candidates: number; handoff_instructions: number } {
   const apply = db.transaction(() => {
     let sessionMemories = 0;
     let memoryCandidates = 0;
+    let projectMemoryCandidates = 0;
     let handoffs = 0;
     const outputRefsByTombstone = new Map<string, string[]>();
     const sessionMemoryIds = new Map<string, string>();
@@ -573,6 +578,7 @@ export function applyIngestWorkerOutput(
         now: input.finalizedAt,
       });
       memoryCandidates += 1;
+      if (candidate.scope === "project") projectMemoryCandidates += 1;
     }
 
     for (const handoff of input.output.handoff_instructions ?? []) {
@@ -626,7 +632,12 @@ export function applyIngestWorkerOutput(
       });
     }
 
-    return { session_memories: sessionMemories, memory_candidates: memoryCandidates, handoff_instructions: handoffs };
+    return {
+      session_memories: sessionMemories,
+      memory_candidates: memoryCandidates,
+      project_memory_candidates: projectMemoryCandidates,
+      handoff_instructions: handoffs,
+    };
   });
 
   return apply();
@@ -702,6 +713,7 @@ export async function runIngestWorker(input: {
   maxPromptChars?: number;
   now?: () => Date;
   runner?: ProcessRunner;
+  projectMemoryMaintenanceScheduler?: AutoProjectMemoryMaintenanceScheduler | false;
 }): Promise<void> {
   const db = openMemoryDb(input.root);
   const config = await loadConfig(input.root);
@@ -711,6 +723,7 @@ export async function runIngestWorker(input: {
   let claimedCount = 0;
   let sessionMemories = 0;
   let memoryCandidates = 0;
+  let projectMemoryCandidates = 0;
   let handoffs = 0;
   let terminalSummary: string | null = null;
 
@@ -789,6 +802,7 @@ export async function runIngestWorker(input: {
       terminalSummary = output.terminal_summary ?? terminalSummary;
       sessionMemories += counts.session_memories;
       memoryCandidates += counts.memory_candidates;
+      projectMemoryCandidates += counts.project_memory_candidates;
       handoffs += counts.handoff_instructions;
     }
 
@@ -808,11 +822,19 @@ export async function runIngestWorker(input: {
         auto_no_output: finalized,
         session_memories: sessionMemories,
         memory_candidates: memoryCandidates,
+        project_memory_candidates: projectMemoryCandidates,
         handoff_instructions: handoffs,
       },
       terminal_summary: terminalSummary,
       error: null,
     });
+    if (projectMemoryCandidates > 0) {
+      await scheduleAutoProjectMemoryMaintenance(
+        input.root,
+        input.projectKey,
+        input.projectMemoryMaintenanceScheduler,
+      );
+    }
   } catch (error) {
     updateIngestJobStatus(db, {
       id: input.jobId,
@@ -824,6 +846,22 @@ export async function runIngestWorker(input: {
     throw error;
   } finally {
     db.close();
+  }
+}
+
+async function scheduleAutoProjectMemoryMaintenance(
+  root: string,
+  projectKey: string,
+  scheduler: AutoProjectMemoryMaintenanceScheduler | false | undefined,
+): Promise<void> {
+  if (scheduler === false) return;
+  try {
+    await (scheduler ?? new AutoProjectMemoryMaintenanceService(root)).maybeSchedule(
+      projectKey,
+      "session_memory_candidate_created",
+    );
+  } catch {
+    // Session ingest output should remain durable even if background project maintenance scheduling fails.
   }
 }
 

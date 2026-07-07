@@ -307,6 +307,62 @@ test("candidate output stores source refs and finalizes the referenced tombstone
   expect(JSON.parse(tombstone.output_references_json)).toEqual(["memory_candidates/cand_1"]);
 });
 
+test("worker schedules project memory auto-maintenance after creating project candidates", async () => {
+  recordExperienceEvent(db, {
+    id: "evt_1",
+    project_key: "class-kit",
+    occurred_at: "2026-06-13T09:59:00.000Z",
+    provider: "codex",
+    raw_payload_json: "{}",
+    source: "codex-hook",
+    status: "valid",
+  });
+  db.close();
+  const scheduled: string[] = [];
+
+  await runIngestWorker({
+    root,
+    projectKey: "class-kit",
+    jobId: "job_1",
+    targetRepo: "/target/repo",
+    provider: "codex",
+    providerSessionId: "sess_1",
+    batchSize: 1,
+    now: fixedNow(),
+    projectMemoryMaintenanceScheduler: {
+      async maybeSchedule(projectKey, trigger) {
+        scheduled.push(`${projectKey}:${trigger}`);
+        return { status: "skipped", reason: "test scheduler" };
+      },
+    },
+    runner: async (): Promise<RunProcessResult> => ({
+      exitCode: 0,
+      stdout: JSON.stringify({
+        memory_candidates: [
+          {
+            id: "cand_project_1",
+            source_event_refs: ["tomb_job_1_evt_1"],
+            scope: "project",
+            status: "needs_review",
+            candidate_type: "project.documentation",
+            summary: "Project documentation should mention auto maintenance.",
+            evidence: { tombstones: ["tomb_job_1_evt_1"] },
+            proposed_payload: { summary: "Project documentation should mention auto maintenance." },
+            confidence: "medium",
+            risk: "low",
+            reason: "Durable project behavior was discussed.",
+          },
+        ],
+      }),
+      stderr: "",
+    }),
+  });
+
+  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  expect(scheduled).toEqual(["class-kit:session_memory_candidate_created"]);
+  expect(db.query("SELECT scope FROM memory_candidates WHERE id = ?").get("cand_project_1")).toEqual({ scope: "project" });
+});
+
 test("handoff output stores source refs and finalizes the referenced tombstone", () => {
   seedClaimedTombstone(db, { id: "tomb_1", ingest_job_id: "job_1", project_key: "class-kit" });
 
