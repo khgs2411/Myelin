@@ -270,6 +270,7 @@ export function defaultProjectMemoryRetrievalVectorStore(
       return ensureProjectMemoryRetrievalVectorTable(db, {
         dimensions: input.contract.dimensions,
         adapter,
+        rebuildOnDimensionMismatch: true,
       });
     },
     upsert(db, input) {

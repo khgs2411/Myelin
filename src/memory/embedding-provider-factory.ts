@@ -24,9 +24,12 @@ export class EmbeddingProviderFactory {
 
   async initialize(purpose: EmbeddingPurpose): Promise<ResolvedEmbeddingClient> {
     if (this.config.embedding.stubResponsesDir) {
+      const provider = this.config.embedding.provider === "auto"
+        ? "ollama_nomic"
+        : this.config.embedding.provider;
       return {
         client: createStubEmbeddingProvider(this.config.embedding.stubResponsesDir),
-        contract: selectEmbeddingContract(this.config, "gemini", purpose),
+        contract: selectEmbeddingContract(this.config, provider, purpose),
       };
     }
 
@@ -47,18 +50,27 @@ export class EmbeddingProviderFactory {
   }
 
   private candidates(): Array<EmbeddingClient & { provider: EmbeddingProvider }> {
-    const ollama = createOllamaEmbeddingClient({
+    const nomic = createOllamaEmbeddingClient({
+      provider: "ollama_nomic",
+      priority: 1,
       baseUrl: this.config.embedding.ollamaUrl,
-      model: this.config.embedding.ollamaModel,
-      dimensions: this.config.embedding.dimensions,
+      ...this.config.embedding.providers.ollama_nomic,
+      fetch: this.fetch,
+    });
+    const qwen = createOllamaEmbeddingClient({
+      provider: "ollama_qwen",
+      priority: 2,
+      baseUrl: this.config.embedding.ollamaUrl,
+      ...this.config.embedding.providers.ollama_qwen,
       fetch: this.fetch,
     });
     const google = createGeminiEmbeddingProvider({
       apiKey: this.config.values.GOOGLE_API_KEY ?? this.config.values.GEMINI_API_KEY,
       fetch: this.fetch,
     });
-    if (this.config.embedding.provider === "ollama") return [ollama];
+    if (this.config.embedding.provider === "ollama_nomic") return [nomic];
+    if (this.config.embedding.provider === "ollama_qwen") return [qwen];
     if (this.config.embedding.provider === "gemini") return [google];
-    return [ollama, google].sort((left, right) => left.priority - right.priority);
+    return [nomic, qwen, google].sort((left, right) => left.priority - right.priority);
   }
 }

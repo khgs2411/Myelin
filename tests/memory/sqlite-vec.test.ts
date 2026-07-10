@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { openMemoryDbAt } from "../../src/memory/db.ts";
+import { createSessionMemory } from "../../src/memory/session-memories.ts";
 import {
   createSqliteVecAdapter,
   ensureProjectMemoryRetrievalVectorTable,
@@ -153,6 +154,113 @@ test("Project Memory vector operations are project and section scoped when sqlit
         limit: 1,
       })[0]?.retrieval_row_id,
     ).toBe("pmr_1");
+  } finally {
+    db.close();
+  }
+});
+
+test("Session Memory indexing rebuilds a dimension-mismatched vector table and requeues metadata", () => {
+  const db = openMemoryDbAt(":memory:");
+  try {
+    const created = ensureSessionMemoryVectorTable(db, { dimensions: 3 });
+    if (!created.available) {
+      console.warn(`sqlite-vec unavailable, skipping Session Memory dimension migration assertion: ${created.reason}`);
+      return;
+    }
+    createSessionMemory(db, {
+      id: "mem_migrate",
+      project_key: "demo",
+      source_event_refs: [],
+      memory_kind: "continuity",
+      summary: "Migrate this vector.",
+      payload: {},
+      confidence: "high",
+      risk: "low",
+      now: "2026-07-10T10:00:00.000Z",
+      embedding_contract: {
+        provider: "ollama_qwen",
+        model: "old-model",
+        dimensions: 3,
+        purpose: "retrieval_document",
+        formatVersion: 1,
+      },
+    });
+    db.query(
+      `UPDATE session_memory_embeddings
+       SET status = 'indexed', normalized_text_hash = 'sha256:old', indexed_at = '2026-07-10T10:01:00.000Z'`,
+    ).run();
+    upsertSessionMemoryVector(db, {
+      memory_id: "mem_migrate",
+      project_key: "demo",
+      embedding_model: "old-model",
+      embedding_dimensions: 3,
+      embedding_purpose: "retrieval_document",
+      format_version: 1,
+      embedding: [0.1, 0.2, 0.3],
+    });
+
+    expect(ensureSessionMemoryVectorTable(db, { dimensions: 2 })).toMatchObject({
+      available: false,
+      created: false,
+    });
+    expect(
+      ensureSessionMemoryVectorTable(db, { dimensions: 2, rebuildOnDimensionMismatch: true }),
+    ).toMatchObject({ available: true, rebuilt: true });
+    expect(
+      db.query("SELECT status, normalized_text_hash, indexed_at FROM session_memory_embeddings").get(),
+    ).toEqual({ status: "pending", normalized_text_hash: null, indexed_at: null });
+    upsertSessionMemoryVector(db, {
+      memory_id: "mem_migrate",
+      project_key: "demo",
+      embedding_model: "new-model",
+      embedding_dimensions: 2,
+      embedding_purpose: "retrieval_document",
+      format_version: 1,
+      embedding: [0.1, 0.2],
+    });
+  } finally {
+    db.close();
+  }
+});
+
+test("Project Memory indexing rebuilds a dimension-mismatched vector table and requeues metadata", () => {
+  const db = openMemoryDbAt(":memory:");
+  try {
+    const created = ensureProjectMemoryRetrievalVectorTable(db, { dimensions: 3 });
+    if (!created.available) {
+      console.warn(`sqlite-vec unavailable, skipping Project Memory dimension migration assertion: ${created.reason}`);
+      return;
+    }
+    insertProjectRetrievalRow(db, "pmr_migrate", "demo", "wiki/index.md", "migrate", "indexed");
+    upsertProjectMemoryRetrievalVector(db, {
+      retrieval_row_id: "pmr_migrate",
+      project_key: "demo",
+      wiki_path: "wiki/index.md",
+      section_id: "migrate",
+      embedding_model: "old-model",
+      embedding_dimensions: 3,
+      embedding_purpose: "retrieval_document",
+      format_version: 1,
+      embedding: [0.1, 0.2, 0.3],
+    });
+
+    expect(
+      ensureProjectMemoryRetrievalVectorTable(db, { dimensions: 2, rebuildOnDimensionMismatch: true }),
+    ).toMatchObject({ available: true, rebuilt: true });
+    expect(
+      db.query("SELECT status, normalized_text_hash, indexed_at FROM project_memory_retrieval_embeddings").get(),
+    ).toEqual({ status: "pending", normalized_text_hash: null, indexed_at: null });
+    upsertProjectMemoryRetrievalVector(db, {
+      retrieval_row_id: "pmr_migrate",
+      project_key: "demo",
+      wiki_path: "wiki/index.md",
+      section_id: "migrate",
+      embedding_model: "new-model",
+      embedding_dimensions: 2,
+      embedding_purpose: "retrieval_document",
+      format_version: 1,
+      embedding: [0.1, 0.2],
+    });
   } finally {
     db.close();
   }

@@ -79,11 +79,15 @@ export function readIngestProjectStatus(db: Database, projectKey: string): Inges
   const pendingEmbeddings = scalarCount(
     db,
     `SELECT count(*) AS count
-     FROM session_memory_embeddings e
-     JOIN session_memories sm ON sm.id = e.session_memory_id
-     WHERE e.project_key = ?
+     FROM session_memories sm
+     WHERE sm.project_key = ?
        AND sm.status = 'active'
-       AND e.status IN ('pending', 'failed')`,
+       AND NOT EXISTS (
+         SELECT 1
+         FROM session_memory_embeddings e
+         WHERE e.session_memory_id = sm.id
+           AND e.status = 'indexed'
+       )`,
     projectKey,
   );
 

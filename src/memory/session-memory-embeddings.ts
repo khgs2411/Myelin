@@ -83,6 +83,54 @@ export function ensurePendingSessionMemoryEmbedding(
   return getSessionMemoryEmbedding(db, id);
 }
 
+export function ensureActiveSessionMemoryEmbeddings(
+  db: Database,
+  input: {
+    project_key: string;
+    contract: ActiveEmbeddingContract;
+    now: string;
+  },
+): number {
+  const rows = db
+    .query(
+      `SELECT sm.id
+       FROM session_memories sm
+       WHERE sm.project_key = ?
+         AND sm.status = 'active'
+         AND NOT EXISTS (
+           SELECT 1
+           FROM session_memory_embeddings e
+           WHERE e.session_memory_id = sm.id
+             AND e.embedding_provider = ?
+             AND e.embedding_model = ?
+             AND e.embedding_dimensions = ?
+             AND e.embedding_purpose = ?
+             AND e.format_version = ?
+         )
+       ORDER BY sm.created_at, sm.id`,
+    )
+    .all(
+      input.project_key,
+      input.contract.provider,
+      input.contract.model,
+      input.contract.dimensions,
+      input.contract.purpose,
+      input.contract.formatVersion,
+    ) as Array<{ id: string }>;
+
+  db.transaction(() => {
+    for (const row of rows) {
+      ensurePendingSessionMemoryEmbedding(db, {
+        session_memory_id: row.id,
+        project_key: input.project_key,
+        contract: input.contract,
+        now: input.now,
+      });
+    }
+  })();
+  return rows.length;
+}
+
 export function listPendingSessionMemoryEmbeddings(
   db: Database,
   input: {
@@ -166,11 +214,13 @@ export function ensureSessionMemoryVectorStorage(
   input: {
     contract: ActiveEmbeddingContract;
     adapter: SqliteVecAdapter;
+    rebuild_on_dimension_mismatch?: boolean;
   },
-): { created: boolean; available: boolean; reason?: string } {
+): { created: boolean; available: boolean; reason?: string; rebuilt?: boolean } {
   return ensureSessionMemoryVectorTable(db, {
     dimensions: input.contract.dimensions,
     adapter: input.adapter,
+    rebuildOnDimensionMismatch: input.rebuild_on_dimension_mismatch,
   });
 }
 

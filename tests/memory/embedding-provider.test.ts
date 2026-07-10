@@ -143,6 +143,8 @@ test("gemini provider requires an api key and validates dimensions", async () =>
 test("Ollama client initializes only an installed, working model and embeds batches", async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   const client = createOllamaEmbeddingClient({
+    provider: "ollama_qwen",
+    priority: 2,
     baseUrl: "http://ollama.local/",
     model: "qwen3-embedding:4b",
     dimensions: 3,
@@ -153,7 +155,7 @@ test("Ollama client initializes only an installed, working model and embeds batc
       return Response.json({ embeddings: [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]] });
     },
   });
-  const request = { ...documentRequest, contract: { ...documentRequest.contract, provider: "ollama" as const, model: "qwen3-embedding:4b" } };
+  const request = { ...documentRequest, contract: { ...documentRequest.contract, provider: "ollama_qwen" as const, model: "qwen3-embedding:4b" } };
 
   await expect(client.initialize()).resolves.toEqual({ available: true });
   await expect(client.embedBatch?.([request, { ...request, text: "second" }])).resolves.toEqual([
@@ -169,11 +171,69 @@ test("Ollama client initializes only an installed, working model and embeds batc
     model: "qwen3-embedding:4b",
     input: ["title: Review\ntext: normalized", "title: Review\ntext: second"],
     dimensions: 3,
+    keep_alive: "0",
   });
+});
+
+test("Ollama Nomic client uses retrieval task prefixes and unloads after each request", async () => {
+  const bodies: unknown[] = [];
+  const client = createOllamaEmbeddingClient({
+    provider: "ollama_nomic",
+    priority: 1,
+    baseUrl: "http://ollama.local",
+    model: "nomic-embed-text:v1.5",
+    dimensions: 3,
+    fetch: async (url, init) => {
+      if (url.endsWith("/api/tags")) return Response.json({ models: [{ name: "nomic-embed-text:v1.5" }] });
+      bodies.push(JSON.parse(String(init?.body)));
+      return Response.json({ embeddings: [[0.1, 0.2, 0.3]] });
+    },
+  });
+  const document = {
+    ...documentRequest,
+    contract: {
+      ...documentRequest.contract,
+      provider: "ollama_nomic" as const,
+      model: "nomic-embed-text:v1.5",
+    },
+  };
+  const query = {
+    ...document,
+    title: null,
+    text: "What changed?",
+    contract: { ...document.contract, purpose: "retrieval_query" as const },
+  };
+
+  await expect(client.initialize()).resolves.toEqual({ available: true });
+  await client.embed(document);
+  await client.embed(query);
+
+  expect(bodies).toEqual([
+    {
+      model: "nomic-embed-text:v1.5",
+      input: "Myelin embedding availability check.",
+      dimensions: 3,
+      keep_alive: "0",
+    },
+    {
+      model: "nomic-embed-text:v1.5",
+      input: ["search_document: title: Review\nnormalized"],
+      dimensions: 3,
+      keep_alive: "0",
+    },
+    {
+      model: "nomic-embed-text:v1.5",
+      input: ["search_query: What changed?"],
+      dimensions: 3,
+      keep_alive: "0",
+    },
+  ]);
 });
 
 test("Ollama client reports a missing model without attempting an embedding", async () => {
   const client = createOllamaEmbeddingClient({
+    provider: "ollama_qwen",
+    priority: 2,
     baseUrl: "http://ollama.local",
     model: "qwen3-embedding:4b",
     dimensions: 3,

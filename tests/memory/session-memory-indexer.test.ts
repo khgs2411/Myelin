@@ -77,8 +77,41 @@ test("indexes pending session memories with normalized text and vector upsert", 
   expect(row.indexed_at).toBe("2026-06-13T10:05:00.000Z");
 });
 
+test("backfills and indexes active memories after the embedding contract changes", async () => {
+  const contract = {
+    ...DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+    provider: "ollama_qwen" as const,
+    model: "qwen3-embedding:4b",
+    dimensions: 3,
+  };
+  const upserts: string[] = [];
+
+  const result = await indexSessionMemories(db, {
+    project_key: "class-kit",
+    contract,
+    provider: {
+      async embed(request) {
+        return { embedding: [0.1, 0.2, 0.3], model: request.contract.model, dimensions: 3 };
+      },
+    },
+    limit: 10,
+    now: () => "2026-06-13T10:05:00.000Z",
+    vector_store: {
+      ensure: () => ({ available: true }),
+      upsert: (_db, input) => upserts.push(input.memory_id),
+    },
+  });
+
+  expect(result).toMatchObject({ selected: 1, indexed: 1, failed: 0, pending_remaining: 0 });
+  expect(upserts).toEqual(["mem_1"]);
+  expect(db.query(
+    "SELECT status FROM session_memory_embeddings WHERE session_memory_id = 'mem_1' AND embedding_provider = 'ollama_qwen'",
+  ).get()).toEqual({ status: "indexed" });
+});
+
 test("indexes session memories in provider batches mapped by row order", async () => {
   const contract = { ...DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT, model: "test-embedding", dimensions: 3 };
+  db.query("UPDATE session_memories SET status = 'retracted' WHERE id = 'mem_1'").run();
   for (let index = 1; index <= 4; index += 1) {
     createSessionMemory(db, {
       id: `batch_mem_${index}`,
@@ -141,6 +174,7 @@ test("indexes session memories in provider batches mapped by row order", async (
 
 test("marks a failed provider batch retryable without deleting pending rows", async () => {
   const contract = { ...DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT, model: "test-embedding", dimensions: 3 };
+  db.query("UPDATE session_memories SET status = 'retracted' WHERE id = 'mem_1'").run();
   for (let index = 1; index <= 2; index += 1) {
     createSessionMemory(db, {
       id: `failed_batch_mem_${index}`,

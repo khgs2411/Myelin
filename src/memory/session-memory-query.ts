@@ -117,6 +117,8 @@ export async function querySessionMemory(
       embedding: queryEmbedding.embedding,
       limit: searchLimit(input.limit, input.filters),
     });
+    const hydrated = hydrateMatches(db, matches, input.filters);
+    const recencyIntent = hasRecencyIntent(input.question);
     return withSessionQueryLog(db, {
       project_key: input.project_key,
       question: input.question,
@@ -126,8 +128,12 @@ export async function querySessionMemory(
       query_embedding_cache_hit: queryEmbedding.cache_hit,
       query_embedding_cache_id: queryEmbedding.cache_id,
       normalized_question: queryEmbedding.normalized_question,
-      matches: hydrateMatches(db, matches, input.filters).slice(0, input.limit),
-      source_tools: ["query-embedding-cache", "session-memory-vector-index"],
+      matches: (recencyIntent ? rerankForRecency(hydrated) : hydrated).slice(0, input.limit),
+      source_tools: [
+        "query-embedding-cache",
+        "session-memory-vector-index",
+        ...(recencyIntent ? ["session-memory-recency-rerank"] : []),
+      ],
     }, input);
   } catch (error) {
     return withSessionQueryLog(db, degraded(input, counts, error instanceof Error ? error.message : String(error)), input);
@@ -271,6 +277,25 @@ function searchLimit(limit: number, filters?: SessionMemoryQueryFilters): number
   return (filters?.memory_kind && filters.memory_kind.length > 0) || filters?.git_branch || (filters?.status ?? ["active"]).length > 0
     ? limit * 10
     : limit;
+}
+
+function hasRecencyIntent(question: string): boolean {
+  return /\b(most recent|recently|recent work|latest|newest|last session|last work)\b/i.test(question);
+}
+
+function rerankForRecency(matches: SessionMemoryQueryMatch[]): SessionMemoryQueryMatch[] {
+  const recencyRank = new Map(
+    [...matches]
+      .sort((left, right) => right.created_at.localeCompare(left.created_at) || left.id.localeCompare(right.id))
+      .map((match, index) => [match.id, index + 1]),
+  );
+  return [...matches]
+    .map((match, index) => ({
+      match,
+      score: 1 / (60 + index + 1) + 2 / (60 + (recencyRank.get(match.id) ?? matches.length)),
+    }))
+    .sort((left, right) => right.score - left.score)
+    .map(({ match }) => match);
 }
 
 function parseJsonObject(text: string): Record<string, unknown> {

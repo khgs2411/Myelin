@@ -78,7 +78,7 @@ Important runtime variables:
 | `PIPELINE_CODEX_MODEL`, `QUERY_CODEX_MODEL` | Workload model profiles. |
 | `PIPELINE_CLAUDE_MODEL`, `QUERY_CLAUDE_MODEL` | Workload model profiles. |
 | `INGEST_BATCH_SIZE` | Experience Log rows assigned to each detached ingest agent; max 500, default 100. |
-| `EMBEDDING_PROVIDER`, `EMBEDDING_GEMINI_MODEL`, `EMBEDDING_OLLAMA_MODEL`, `EMBEDDING_OLLAMA_URL`, `EMBEDDING_DIMENSIONS`, `EMBEDDING_BATCH_SIZE` | Session Memory embedding profile. `auto` prioritizes a working local Ollama model and falls back to Google. |
+| `EMBEDDING_PROVIDER`, `EMBEDDING_NOMIC_MODEL`, `EMBEDDING_NOMIC_DIMENSIONS`, `EMBEDDING_QWEN_MODEL`, `EMBEDDING_QWEN_DIMENSIONS`, `EMBEDDING_GEMINI_MODEL`, `EMBEDDING_GEMINI_DIMENSIONS`, `EMBEDDING_OLLAMA_URL`, `EMBEDDING_BATCH_SIZE` | Embedding profiles. `auto` tries Ollama Nomic, Ollama Qwen, then Google; each provider owns its dimensions. |
 | `EMBEDDING_STUB_RESPONSES_DIR` | Use canned embedding responses for deterministic embedding/index tests. |
 | `GOOGLE_API_KEY`, `GEMINI_API_KEY` | Gemini embedding credential; `GOOGLE_API_KEY` is preferred, `GEMINI_API_KEY` is accepted as an alias. |
 | `AUTO_MEMORY_MAINTENANCE`, `AUTO_MEMORY_MIN_CAPTURED_EVENTS`, `AUTO_MEMORY_COOLDOWN_MS`, `AUTO_MEMORY_DRAIN_POLL_INTERVAL_MS`, `AUTO_MEMORY_DRAIN_TIMEOUT_MS`, `AUTO_MEMORY_INDEX_LIMIT` | Optional hook-triggered Session Memory maintenance scheduler. When enabled, capture schedules a detached worker that runs Experience Log ingest and Session Memory indexing after enough queued captured events. |

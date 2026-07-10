@@ -40,6 +40,12 @@ export type AutoMemoryMaintenanceState = {
   last_reason?: string;
   last_log_path?: string;
   last_pid?: number | null;
+  last_check_at?: string;
+  last_check_status?: "skipped";
+  last_check_reason?: string;
+  last_check_counts?: {
+    queued_count?: number;
+  };
   last_counts?: {
     queued_count?: number;
     indexed?: number;
@@ -260,7 +266,8 @@ export class AutoMemoryMaintenanceService {
         };
       }
 
-      const shouldContinue = queuedRemaining >= config.autoMemoryMaintenance.minCapturedEvents;
+      const shouldContinue =
+        queuedRemaining >= config.autoMemoryMaintenance.minCapturedEvents || indexResult.pending_remaining > 0;
       await writeState(this.root, projectKey, {
         ...(await readState(this.root, projectKey)),
         project_key: projectKey,
@@ -351,7 +358,7 @@ export class AutoMemoryMaintenanceService {
     const db = openMemoryDb(this.root);
     try {
       const selection = await new EmbeddingProviderFactory(config).initialize("retrieval_document");
-      return new SessionMemoryIndexService({
+      return await new SessionMemoryIndexService({
         db,
         contract: selection.contract,
         provider: selection.client,
@@ -407,14 +414,13 @@ export class AutoMemoryMaintenanceService {
     input: { queuedCount?: number; preserveActiveState?: boolean } = {},
   ): Promise<AutoMemoryMaintenanceScheduleResult> {
     const state = await readState(this.root, projectKey);
-    const preserveStatus = input.preserveActiveState && (state.last_status === "scheduled" || state.last_status === "running");
     await writeState(this.root, projectKey, {
       ...state,
       project_key: projectKey,
-      last_status: preserveStatus ? state.last_status : "skipped",
-      last_reason: reason,
-      last_finished_at: this.now(),
-      last_counts: { queued_count: input.queuedCount },
+      last_check_at: this.now(),
+      last_check_status: "skipped",
+      last_check_reason: reason,
+      last_check_counts: { queued_count: input.queuedCount },
     });
     return { status: "skipped", reason, queued_count: input.queuedCount };
   }

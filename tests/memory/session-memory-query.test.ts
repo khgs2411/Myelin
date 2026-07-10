@@ -232,6 +232,58 @@ test("filters superseded memories from default query results", async () => {
   expect(result.matches.map((match) => match.id)).toEqual(["mem_active"]);
 });
 
+test("reranks explicit recency questions without changing semantic distances", async () => {
+  createSessionMemory(db, {
+    id: "mem_recent",
+    project_key: "class-kit",
+    source_event_refs: ["tomb_recent"],
+    memory_kind: "verification",
+    title: "Recent verification",
+    summary: "The newest project work completed.",
+    payload: {},
+    confidence: "high",
+    risk: "low",
+    now: "2026-06-14T10:00:00.000Z",
+  });
+  for (const row of db.query("SELECT id FROM session_memory_embeddings").all() as Array<{ id: string }>) {
+    markSessionMemoryEmbeddingIndexed(db, {
+      id: row.id,
+      normalized_text_hash: `hash_${row.id}`,
+      now: "2026-06-14T10:05:00.000Z",
+    });
+  }
+  const vectorStore: SessionMemoryQueryVectorStore = {
+    ensure: () => ({ available: true }),
+    search: () => [
+      { memory_id: "mem_decision", distance: 0.01 },
+      { memory_id: "mem_recent", distance: 0.2 },
+    ],
+  };
+
+  const recent = await querySessionMemory(db, {
+    project_key: "class-kit",
+    question: "What did we do most recently?",
+    document_contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+    provider: fixedProvider(),
+    limit: 2,
+    vector_store: vectorStore,
+  });
+  const semantic = await querySessionMemory(db, {
+    project_key: "class-kit",
+    question: "What did we decide about embeddings?",
+    document_contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+    provider: fixedProvider(),
+    limit: 2,
+    vector_store: vectorStore,
+  });
+
+  expect(recent.matches.map((match) => match.id)).toEqual(["mem_recent", "mem_decision"]);
+  expect(recent.matches[0].distance).toBe(0.2);
+  expect(recent.source_tools).toContain("session-memory-recency-rerank");
+  expect(semantic.matches.map((match) => match.id)).toEqual(["mem_decision", "mem_recent"]);
+  expect(semantic.source_tools).not.toContain("session-memory-recency-rerank");
+});
+
 
 test("reuses cached question embeddings on repeated queries", async () => {
   const row = db.query("SELECT id FROM session_memory_embeddings").get() as { id: string };

@@ -131,6 +131,26 @@ test("project status reports write complete when output exists with no pending e
   expect(status.counts.pending_session_memory_embeddings).toBe(0);
 });
 
+test("project status treats an active memory as retrievable when any embedding contract is indexed", () => {
+  seedSessionMemoryWithEmbedding("mem_1", "pending");
+  db.query(
+    `INSERT INTO session_memory_embeddings
+      (id, session_memory_id, project_key, embedding_provider, embedding_model, embedding_dimensions,
+       embedding_purpose, format_version, status, retry_count, created_at, updated_at, indexed_at)
+     VALUES ('emb_ollama_mem_1', 'mem_1', 'demo', 'ollama', 'qwen3-embedding:4b', 1536,
+       'retrieval_document', 1, 'indexed', 0, ?, ?, ?)`,
+  ).run(
+    "2026-06-15T10:05:00.000Z",
+    "2026-06-15T10:05:00.000Z",
+    "2026-06-15T10:05:00.000Z",
+  );
+
+  const status = readIngestProjectStatus(db, "demo");
+
+  expect(status.completion_layer).toBe(INGEST_COMPLETION_LAYERS.SESSION_MEMORY_WRITE_COMPLETE);
+  expect(status.counts.pending_session_memory_embeddings).toBe(0);
+});
+
 function seedExperienceEvent(id: string): void {
   recordExperienceEvent(db, {
     id,

@@ -4,7 +4,7 @@ import { resolveInside } from "./fs.ts";
 
 export type Provider = "codex" | "claude";
 export type Workload = "pipeline" | "query" | "ingest";
-export type EmbeddingProvider = "gemini" | "ollama";
+export type EmbeddingProvider = "ollama_nomic" | "ollama_qwen" | "gemini";
 export type EmbeddingProviderMode = EmbeddingProvider | "auto";
 export type EmbeddingPurpose = "retrieval_document" | "retrieval_query";
 
@@ -16,10 +16,11 @@ export type ModelProfile = {
 
 export type EmbeddingConfig = {
   provider: EmbeddingProviderMode;
-  geminiModel: string;
-  ollamaModel: string;
+  providers: Record<EmbeddingProvider, {
+    model: string;
+    dimensions: number;
+  }>;
   ollamaUrl: string;
-  dimensions: number;
   batchSize: number;
   stubResponsesDir?: string;
 };
@@ -69,9 +70,12 @@ export type MyelinConfig = {
 export const EMBEDDING_FORMAT_VERSION = 1;
 export const DEFAULT_EMBEDDING_PROVIDER: EmbeddingProviderMode = "auto";
 export const DEFAULT_GEMINI_EMBEDDING_MODEL = "gemini-embedding-2";
-export const DEFAULT_OLLAMA_EMBEDDING_MODEL = "qwen3-embedding:4b";
+export const DEFAULT_NOMIC_EMBEDDING_MODEL = "nomic-embed-text:v1.5";
+export const DEFAULT_QWEN_EMBEDDING_MODEL = "qwen3-embedding:4b";
 export const DEFAULT_OLLAMA_URL = "http://localhost:11434";
-export const DEFAULT_EMBEDDING_DIMENSIONS = 1536;
+export const DEFAULT_NOMIC_EMBEDDING_DIMENSIONS = 768;
+export const DEFAULT_QWEN_EMBEDDING_DIMENSIONS = 768;
+export const DEFAULT_GEMINI_EMBEDDING_DIMENSIONS = 768;
 export const DEFAULT_EMBEDDING_BATCH_SIZE = 50;
 export const MAX_EMBEDDING_BATCH_SIZE = 500;
 export const DEFAULT_INGEST_BATCH_SIZE = 100;
@@ -89,9 +93,9 @@ export const DEFAULT_AUTO_MEMORY_INDEX_LIMIT = 500;
 export const DEFAULT_AUTO_PROJECT_MEMORY_MIN_PENDING_ITEMS = 5;
 export const DEFAULT_AUTO_PROJECT_MEMORY_COOLDOWN_MS = 5 * 60 * 1000;
 export const DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT: ActiveEmbeddingContract = {
-  provider: "gemini",
-  model: DEFAULT_GEMINI_EMBEDDING_MODEL,
-  dimensions: DEFAULT_EMBEDDING_DIMENSIONS,
+  provider: "ollama_nomic",
+  model: DEFAULT_NOMIC_EMBEDDING_MODEL,
+  dimensions: DEFAULT_NOMIC_EMBEDDING_DIMENSIONS,
   purpose: "retrieval_document",
   formatVersion: EMBEDDING_FORMAT_VERSION,
 };
@@ -114,10 +118,21 @@ const DEFAULT_CONFIG: MyelinConfig = {
   },
   embedding: {
     provider: DEFAULT_EMBEDDING_PROVIDER,
-    geminiModel: DEFAULT_GEMINI_EMBEDDING_MODEL,
-    ollamaModel: DEFAULT_OLLAMA_EMBEDDING_MODEL,
+    providers: {
+      ollama_nomic: {
+        model: DEFAULT_NOMIC_EMBEDDING_MODEL,
+        dimensions: DEFAULT_NOMIC_EMBEDDING_DIMENSIONS,
+      },
+      ollama_qwen: {
+        model: DEFAULT_QWEN_EMBEDDING_MODEL,
+        dimensions: DEFAULT_QWEN_EMBEDDING_DIMENSIONS,
+      },
+      gemini: {
+        model: DEFAULT_GEMINI_EMBEDDING_MODEL,
+        dimensions: DEFAULT_GEMINI_EMBEDDING_DIMENSIONS,
+      },
+    },
     ollamaUrl: DEFAULT_OLLAMA_URL,
-    dimensions: DEFAULT_EMBEDDING_DIMENSIONS,
     batchSize: DEFAULT_EMBEDDING_BATCH_SIZE,
   },
   ingest: {
@@ -194,10 +209,11 @@ export function selectEmbeddingContract(
   provider: EmbeddingProvider,
   purpose: EmbeddingPurpose,
 ): ActiveEmbeddingContract {
+  const selected = config.embedding.providers[provider];
   return {
     provider,
-    model: provider === "ollama" ? config.embedding.ollamaModel : config.embedding.geminiModel,
-    dimensions: config.embedding.dimensions,
+    model: selected.model,
+    dimensions: selected.dimensions,
     purpose,
     formatVersion: EMBEDDING_FORMAT_VERSION,
   };
@@ -227,10 +243,30 @@ function profile(workload: Workload, provider: Provider, values: Record<string, 
 function embeddingConfig(values: Record<string, string>): EmbeddingConfig {
   return {
     provider: parseEmbeddingProvider(values.EMBEDDING_PROVIDER ?? DEFAULT_EMBEDDING_PROVIDER),
-    geminiModel: values.EMBEDDING_GEMINI_MODEL ?? DEFAULT_GEMINI_EMBEDDING_MODEL,
-    ollamaModel: values.EMBEDDING_OLLAMA_MODEL ?? DEFAULT_OLLAMA_EMBEDDING_MODEL,
+    providers: {
+      ollama_nomic: {
+        model: values.EMBEDDING_NOMIC_MODEL ?? DEFAULT_NOMIC_EMBEDDING_MODEL,
+        dimensions: parseEmbeddingDimensions(
+          values.EMBEDDING_NOMIC_DIMENSIONS ?? String(DEFAULT_NOMIC_EMBEDDING_DIMENSIONS),
+          "Nomic",
+        ),
+      },
+      ollama_qwen: {
+        model: values.EMBEDDING_QWEN_MODEL ?? DEFAULT_QWEN_EMBEDDING_MODEL,
+        dimensions: parseEmbeddingDimensions(
+          values.EMBEDDING_QWEN_DIMENSIONS ?? String(DEFAULT_QWEN_EMBEDDING_DIMENSIONS),
+          "Qwen",
+        ),
+      },
+      gemini: {
+        model: values.EMBEDDING_GEMINI_MODEL ?? DEFAULT_GEMINI_EMBEDDING_MODEL,
+        dimensions: parseEmbeddingDimensions(
+          values.EMBEDDING_GEMINI_DIMENSIONS ?? String(DEFAULT_GEMINI_EMBEDDING_DIMENSIONS),
+          "Gemini",
+        ),
+      },
+    },
     ollamaUrl: values.EMBEDDING_OLLAMA_URL ?? DEFAULT_OLLAMA_URL,
-    dimensions: parseEmbeddingDimensions(values.EMBEDDING_DIMENSIONS ?? String(DEFAULT_EMBEDDING_DIMENSIONS)),
     batchSize: parseEmbeddingBatchSize(values.EMBEDDING_BATCH_SIZE ?? String(DEFAULT_EMBEDDING_BATCH_SIZE)),
     stubResponsesDir: values.EMBEDDING_STUB_RESPONSES_DIR,
   };
@@ -343,13 +379,13 @@ function parseProvider(value: string): Provider {
 }
 
 function parseEmbeddingProvider(value: string): EmbeddingProviderMode {
-  if (value === "auto" || value === "gemini" || value === "ollama") return value;
+  if (value === "auto" || value === "ollama_nomic" || value === "ollama_qwen" || value === "gemini") return value;
   throw new Error(`Unsupported embedding provider: ${value}`);
 }
 
-function parseEmbeddingDimensions(value: string): number {
+function parseEmbeddingDimensions(value: string, provider: string): number {
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) throw new Error(`Invalid embedding dimensions: ${value}`);
+  if (!Number.isInteger(parsed) || parsed <= 0) throw new Error(`Invalid ${provider} embedding dimensions: ${value}`);
   return parsed;
 }
 

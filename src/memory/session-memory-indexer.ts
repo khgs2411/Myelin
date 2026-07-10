@@ -4,6 +4,7 @@ import type { ActiveEmbeddingContract } from "../runtime/config.ts";
 import type { EmbeddingProviderClient, EmbeddingResult } from "./embedding-provider.ts";
 import type { SessionMemoryRow } from "./ingest-types.ts";
 import {
+  ensureActiveSessionMemoryEmbeddings,
   ensureSessionMemoryVectorStorage,
   listPendingSessionMemoryEmbeddings,
   markSessionMemoryEmbeddingFailed,
@@ -61,6 +62,11 @@ export async function indexSessionMemories(
   const batchSize = input.batch_size ?? input.limit;
   if (!Number.isInteger(batchSize) || batchSize <= 0) throw new Error(`Invalid embedding batch size: ${batchSize}`);
   const vectorStore = input.vector_store ?? defaultVectorStore(createSqliteVecAdapter());
+  ensureActiveSessionMemoryEmbeddings(db, {
+    project_key: input.project_key,
+    contract: input.contract,
+    now: now(),
+  });
   const rows = listPendingSessionMemoryEmbeddings(db, {
     project_key: input.project_key,
     contract: input.contract,
@@ -198,6 +204,7 @@ export function defaultVectorStore(adapter: SqliteVecAdapter = createSqliteVecAd
       return ensureSessionMemoryVectorStorage(db, {
         contract: input.contract,
         adapter,
+        rebuild_on_dimension_mismatch: true,
       });
     },
     upsert(db, input) {

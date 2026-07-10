@@ -81,24 +81,33 @@ test("config exposes default embedding contract", async () => {
   });
   expect(config.embedding).toEqual({
     provider: "auto",
-    geminiModel: "gemini-embedding-2",
-    ollamaModel: "qwen3-embedding:4b",
+    providers: {
+      ollama_nomic: { model: "nomic-embed-text:v1.5", dimensions: 768 },
+      ollama_qwen: { model: "qwen3-embedding:4b", dimensions: 768 },
+      gemini: { model: "gemini-embedding-2", dimensions: 768 },
+    },
     ollamaUrl: "http://localhost:11434",
-    dimensions: 1536,
     batchSize: 50,
     stubResponsesDir: undefined,
   });
-  expect(selectEmbeddingContract(config, "ollama", "retrieval_document")).toEqual({
-    provider: "ollama",
+  expect(selectEmbeddingContract(config, "ollama_nomic", "retrieval_document")).toEqual({
+    provider: "ollama_nomic",
+    model: "nomic-embed-text:v1.5",
+    dimensions: 768,
+    purpose: "retrieval_document",
+    formatVersion: 1,
+  });
+  expect(selectEmbeddingContract(config, "ollama_qwen", "retrieval_document")).toEqual({
+    provider: "ollama_qwen",
     model: "qwen3-embedding:4b",
-    dimensions: 1536,
+    dimensions: 768,
     purpose: "retrieval_document",
     formatVersion: 1,
   });
   expect(selectEmbeddingContract(config, "gemini", "retrieval_document")).toEqual({
     provider: "gemini",
     model: "gemini-embedding-2",
-    dimensions: 1536,
+    dimensions: 768,
     purpose: "retrieval_document",
     formatVersion: 1,
   });
@@ -224,9 +233,12 @@ test("embedding config honors file values and environment precedence", async () 
     [
       "EMBEDDING_PROVIDER=gemini",
       "EMBEDDING_GEMINI_MODEL=file-model",
-      "EMBEDDING_OLLAMA_MODEL=file-ollama-model",
+      "EMBEDDING_NOMIC_MODEL=file-nomic-model",
+      "EMBEDDING_QWEN_MODEL=file-qwen-model",
       "EMBEDDING_OLLAMA_URL=http://file-host:11434/",
-      "EMBEDDING_DIMENSIONS=768",
+      "EMBEDDING_NOMIC_DIMENSIONS=512",
+      "EMBEDDING_QWEN_DIMENSIONS=1024",
+      "EMBEDDING_GEMINI_DIMENSIONS=1536",
       "EMBEDDING_BATCH_SIZE=250",
       "EMBEDDING_STUB_RESPONSES_DIR=file-stubs",
     ].join("\n"),
@@ -235,16 +247,18 @@ test("embedding config honors file values and environment precedence", async () 
 
   const config = await loadConfig(root, {
     EMBEDDING_GEMINI_MODEL: "env-model",
-    EMBEDDING_OLLAMA_MODEL: "env-ollama-model",
-    EMBEDDING_DIMENSIONS: "1536",
+    EMBEDDING_NOMIC_MODEL: "env-nomic-model",
+    EMBEDDING_NOMIC_DIMENSIONS: "256",
   });
 
   expect(config.embedding).toEqual({
     provider: "gemini",
-    geminiModel: "env-model",
-    ollamaModel: "env-ollama-model",
+    providers: {
+      ollama_nomic: { model: "env-nomic-model", dimensions: 256 },
+      ollama_qwen: { model: "file-qwen-model", dimensions: 1024 },
+      gemini: { model: "env-model", dimensions: 1536 },
+    },
     ollamaUrl: "http://file-host:11434/",
-    dimensions: 1536,
     batchSize: 250,
     stubResponsesDir: "file-stubs",
   });
@@ -264,22 +278,22 @@ test("config loads local dotenv secrets between myelin config and environment", 
 
   const dotenvConfig = await loadConfig(root, {});
   expect(dotenvConfig.values.GOOGLE_API_KEY).toBe("dotenv-key");
-  expect(dotenvConfig.embedding.geminiModel).toBe("dotenv-model");
+  expect(dotenvConfig.embedding.providers.gemini.model).toBe("dotenv-model");
 
   const envConfig = await loadConfig(root, {
     GOOGLE_API_KEY: "env-key",
     EMBEDDING_GEMINI_MODEL: "env-model",
   });
   expect(envConfig.values.GOOGLE_API_KEY).toBe("env-key");
-  expect(envConfig.embedding.geminiModel).toBe("env-model");
+  expect(envConfig.embedding.providers.gemini.model).toBe("env-model");
 });
 
 test("embedding config rejects unsupported providers and invalid dimensions", async () => {
   await expect(loadConfig(root, { EMBEDDING_PROVIDER: "openai" })).rejects.toThrow(
     "Unsupported embedding provider: openai",
   );
-  await expect(loadConfig(root, { EMBEDDING_DIMENSIONS: "zero" })).rejects.toThrow(
-    "Invalid embedding dimensions: zero",
+  await expect(loadConfig(root, { EMBEDDING_NOMIC_DIMENSIONS: "zero" })).rejects.toThrow(
+    "Invalid Nomic embedding dimensions: zero",
   );
   await expect(loadConfig(root, { EMBEDDING_BATCH_SIZE: "501" })).rejects.toThrow("Invalid embedding batch size");
 });

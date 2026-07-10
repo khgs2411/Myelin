@@ -519,6 +519,7 @@ Side effects:
 
 - Calls embedding provider unless a stub provider is configured.
 - Writes `session_memory_embeddings` status and vector table rows.
+- Rebuilds the derived vector table when its dimensions differ from the selected provider contract, then requeues indexed metadata for re-embedding.
 
 Examples:
 

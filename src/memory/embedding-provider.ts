@@ -32,7 +32,7 @@ export type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
 
 export class GoogleEmbeddingClient implements EmbeddingClient {
   readonly provider = "gemini" as const;
-  readonly priority = 2;
+  readonly priority = 3;
 
   constructor(private readonly input: { apiKey?: string; fetch?: FetchLike }) {}
 
@@ -100,10 +100,20 @@ export function createGeminiEmbeddingProvider(input: { apiKey?: string; fetch?: 
 }
 
 export class OllamaEmbeddingClient implements EmbeddingClient {
-  readonly provider = "ollama" as const;
-  readonly priority = 1;
+  readonly provider: "ollama_nomic" | "ollama_qwen";
+  readonly priority: number;
 
-  constructor(private readonly input: { baseUrl: string; model: string; dimensions: number; fetch?: FetchLike }) {}
+  constructor(private readonly input: {
+    provider: "ollama_nomic" | "ollama_qwen";
+    priority: number;
+    baseUrl: string;
+    model: string;
+    dimensions: number;
+    fetch?: FetchLike;
+  }) {
+    this.provider = input.provider;
+    this.priority = input.priority;
+  }
 
   async initialize(): Promise<EmbeddingClientInitialization> {
     try {
@@ -116,7 +126,12 @@ export class OllamaEmbeddingClient implements EmbeddingClient {
       const response = await fetcher(ollamaUrl(this.input.baseUrl, "/api/embed"), {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ model: this.input.model, input: "Myelin embedding availability check.", dimensions: this.input.dimensions }),
+        body: JSON.stringify({
+          model: this.input.model,
+          input: "Myelin embedding availability check.",
+          dimensions: this.input.dimensions,
+          keep_alive: "0",
+        }),
       });
       if (!response.ok) return { available: false, reason: `Ollama embedding availability check failed: HTTP ${response.status}` };
       const embeddings = parseOllamaEmbeddings(await response.json());
@@ -142,8 +157,9 @@ export class OllamaEmbeddingClient implements EmbeddingClient {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         model: contract.model,
-        input: requests.map(formatOllamaEmbeddingText),
+        input: requests.map((request) => formatOllamaEmbeddingText(request, this.provider)),
         dimensions: contract.dimensions,
+        keep_alive: "0",
       }),
     });
     if (!response.ok) throw new Error(await ollamaHttpError("Ollama embedding request failed", response));
@@ -159,6 +175,8 @@ export class OllamaEmbeddingClient implements EmbeddingClient {
 }
 
 export function createOllamaEmbeddingClient(input: {
+  provider: "ollama_nomic" | "ollama_qwen";
+  priority: number;
   baseUrl: string;
   model: string;
   dimensions: number;
@@ -202,7 +220,15 @@ function formatGeminiEmbeddingText(request: EmbeddingRequest): string {
   return `title: ${request.title?.trim() || "none"} | text: ${request.text}`;
 }
 
-function formatOllamaEmbeddingText(request: EmbeddingRequest): string {
+function formatOllamaEmbeddingText(
+  request: EmbeddingRequest,
+  provider: "ollama_nomic" | "ollama_qwen",
+): string {
+  if (provider === "ollama_nomic") {
+    const prefix = request.contract.purpose === "retrieval_query" ? "search_query" : "search_document";
+    const title = request.title?.trim() ? `title: ${request.title.trim()}\n` : "";
+    return `${prefix}: ${title}${request.text}`;
+  }
   if (request.contract.purpose === "retrieval_query") return `query: ${request.text}`;
   return `title: ${request.title?.trim() || "none"}\ntext: ${request.text}`;
 }

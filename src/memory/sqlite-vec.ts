@@ -59,10 +59,22 @@ export function getSqliteVecAvailability(
 
 export function ensureSessionMemoryVectorTable(
   db: Database,
-  input: { dimensions: number; adapter?: SqliteVecAdapter },
-): { created: boolean; available: boolean; reason?: string } {
+  input: { dimensions: number; adapter?: SqliteVecAdapter; rebuildOnDimensionMismatch?: boolean },
+): { created: boolean; available: boolean; reason?: string; rebuilt?: boolean } {
   const availability = getSqliteVecAvailability(db, input.adapter);
   if (!availability.available) return { created: false, available: false, reason: availability.reason };
+
+  const migration = prepareVectorTable(db, {
+    table: "session_memory_vec",
+    dimensions: input.dimensions,
+    rebuild: input.rebuildOnDimensionMismatch ?? false,
+    resetMetadata: () => db.query(
+      `UPDATE session_memory_embeddings
+       SET status = 'pending', normalized_text_hash = NULL, failure_reason = NULL, indexed_at = NULL
+       WHERE status = 'indexed'`,
+    ).run(),
+  });
+  if (!migration.available) return { created: false, available: false, reason: migration.reason };
 
   db.exec(
     `CREATE VIRTUAL TABLE IF NOT EXISTS session_memory_vec USING vec0(
@@ -75,15 +87,27 @@ export function ensureSessionMemoryVectorTable(
       format_version INTEGER
     );`,
   );
-  return { created: true, available: true };
+  return { created: true, available: true, ...(migration.rebuilt ? { rebuilt: true } : {}) };
 }
 
 export function ensureProjectMemoryRetrievalVectorTable(
   db: Database,
-  input: { dimensions: number; adapter?: SqliteVecAdapter },
-): { created: boolean; available: boolean; reason?: string } {
+  input: { dimensions: number; adapter?: SqliteVecAdapter; rebuildOnDimensionMismatch?: boolean },
+): { created: boolean; available: boolean; reason?: string; rebuilt?: boolean } {
   const availability = getSqliteVecAvailability(db, input.adapter);
   if (!availability.available) return { created: false, available: false, reason: availability.reason };
+
+  const migration = prepareVectorTable(db, {
+    table: "project_memory_section_vec",
+    dimensions: input.dimensions,
+    rebuild: input.rebuildOnDimensionMismatch ?? false,
+    resetMetadata: () => db.query(
+      `UPDATE project_memory_retrieval_embeddings
+       SET status = 'pending', normalized_text_hash = NULL, failure_reason = NULL, indexed_at = NULL
+       WHERE status = 'indexed'`,
+    ).run(),
+  });
+  if (!migration.available) return { created: false, available: false, reason: migration.reason };
 
   db.exec(
     `CREATE VIRTUAL TABLE IF NOT EXISTS project_memory_section_vec USING vec0(
@@ -98,7 +122,38 @@ export function ensureProjectMemoryRetrievalVectorTable(
       format_version INTEGER
     );`,
   );
-  return { created: true, available: true };
+  return { created: true, available: true, ...(migration.rebuilt ? { rebuilt: true } : {}) };
+}
+
+function prepareVectorTable(
+  db: Database,
+  input: { table: "session_memory_vec" | "project_memory_section_vec"; dimensions: number; rebuild: boolean; resetMetadata: () => void },
+): { available: true; rebuilt: boolean } | { available: false; reason: string } {
+  const existingDimensions = vectorTableDimensions(db, input.table);
+  if (existingDimensions === null || existingDimensions === input.dimensions) {
+    return { available: true, rebuilt: false };
+  }
+  if (!input.rebuild) {
+    return {
+      available: false,
+      reason: `${input.table} uses ${existingDimensions} dimensions; run the matching memory index command to rebuild it for ${input.dimensions}`,
+    };
+  }
+
+  db.transaction(() => {
+    db.exec(`DROP TABLE ${input.table}`);
+    input.resetMetadata();
+  })();
+  return { available: true, rebuilt: true };
+}
+
+function vectorTableDimensions(db: Database, table: string): number | null {
+  const row = db.query("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?").get(table) as
+    | { sql: string | null }
+    | null;
+  if (!row?.sql) return null;
+  const match = row.sql.match(/embedding\s+float\[(\d+)\]/i);
+  return match ? Number(match[1]) : null;
 }
 
 export function upsertSessionMemoryVector(db: Database, input: SessionMemoryVectorInput): void {

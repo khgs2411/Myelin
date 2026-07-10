@@ -37,20 +37,41 @@ test("EmbeddingProviderFactory prefers configured stub provider", async () => {
   }
 });
 
-test("EmbeddingProviderFactory gives initialized Ollama priority in auto mode", async () => {
+test("EmbeddingProviderFactory gives initialized Ollama Nomic priority in auto mode", async () => {
   const root = await mkdtemp(join(tmpdir(), "myelin-embedding-provider-factory-"));
   try {
-    const config = await loadConfig(root, { EMBEDDING_DIMENSIONS: "3" });
+    const config = await loadConfig(root, { EMBEDDING_NOMIC_DIMENSIONS: "3" });
     const calls: string[] = [];
     const selection = await new EmbeddingProviderFactory(config, async (url) => {
       calls.push(url);
+      if (url.endsWith("/api/tags")) return Response.json({ models: [{ name: "nomic-embed-text:v1.5" }] });
+      return Response.json({ embeddings: [[0.1, 0.2, 0.3]] });
+    }).initialize("retrieval_document");
+
+    expect(selection.client.provider).toBe("ollama_nomic");
+    expect(selection.contract).toMatchObject({
+      provider: "ollama_nomic",
+      model: "nomic-embed-text:v1.5",
+      dimensions: 3,
+    });
+    expect(calls).toEqual(["http://localhost:11434/api/tags", "http://localhost:11434/api/embed"]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("EmbeddingProviderFactory falls back from Ollama Nomic to Ollama Qwen", async () => {
+  const root = await mkdtemp(join(tmpdir(), "myelin-embedding-provider-factory-"));
+  try {
+    const config = await loadConfig(root, { EMBEDDING_QWEN_DIMENSIONS: "3" });
+    const selection = await new EmbeddingProviderFactory(config, async (url) => {
       if (url.endsWith("/api/tags")) return Response.json({ models: [{ name: "qwen3-embedding:4b" }] });
       return Response.json({ embeddings: [[0.1, 0.2, 0.3]] });
     }).initialize("retrieval_document");
 
-    expect(selection.client.provider).toBe("ollama");
-    expect(selection.contract).toMatchObject({ provider: "ollama", model: "qwen3-embedding:4b", dimensions: 3 });
-    expect(calls).toEqual(["http://localhost:11434/api/tags", "http://localhost:11434/api/embed"]);
+    expect(selection.client.provider).toBe("ollama_qwen");
+    expect(selection.contract).toMatchObject({ provider: "ollama_qwen", dimensions: 3 });
+    expect(selection.fallbackReason).toContain("ollama_nomic");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

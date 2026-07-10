@@ -51,9 +51,9 @@ test("worker output writes session memory and finalizes tombstones", () => {
     providerSessionId: "sess_1",
     finalizedAt: "2026-06-13T10:00:00.000Z",
     embeddingContract: {
-      provider: "ollama",
+      provider: "ollama_qwen",
       model: "qwen3-embedding:4b",
-      dimensions: 1536,
+      dimensions: 768,
       purpose: "retrieval_document",
       formatVersion: 1,
     },
@@ -76,7 +76,7 @@ test("worker output writes session memory and finalizes tombstones", () => {
   expect(db.query("SELECT id FROM session_memories WHERE id = ?").get("mem_1")).toEqual({ id: "mem_1" });
   expect(
     db.query("SELECT embedding_provider, embedding_model FROM session_memory_embeddings WHERE session_memory_id = ?").get("mem_1"),
-  ).toEqual({ embedding_provider: "ollama", embedding_model: "qwen3-embedding:4b" });
+  ).toEqual({ embedding_provider: "ollama_qwen", embedding_model: "qwen3-embedding:4b" });
   expect(listSessionMemoryContexts(db, "mem_1")).toMatchObject([
     {
       session_memory_id: "mem_1",

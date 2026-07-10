@@ -4,10 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AutoMemoryMaintenanceService, readState } from "../../src/maintenance/auto-memory-maintenance.ts";
 import { openMemoryDbAt } from "../../src/memory/db.ts";
+import { stubEmbeddingFilename } from "../../src/memory/embedding-provider.ts";
 import { recordExperienceEvent } from "../../src/memory/experience.ts";
 import { INGEST_COMPLETION_LAYERS, type IngestJobRow } from "../../src/memory/ingest-types.ts";
+import { createSessionMemory } from "../../src/memory/session-memories.ts";
+import { normalizeSessionMemoryForEmbedding } from "../../src/memory/session-memory-text.ts";
 import type { DetachedSpawner } from "../../src/ingest/runtime.ts";
 import { bootstrapProject } from "../../src/runtime/bootstrap.ts";
+import { DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT } from "../../src/runtime/config.ts";
 
 let root: string;
 let repo: string;
@@ -162,6 +166,62 @@ test("auto memory maintenance run records completed state when no work remains",
     },
   });
   await expect(Bun.file(join(root, "projects", "demo", "state", ".auto-memory-maintenance.lock", "owner.json")).exists()).resolves.toBe(false);
+
+  await service.maybeSchedule("demo");
+  await expect(readState(root, "demo")).resolves.toMatchObject({
+    last_run_id: "auto_memory_test",
+    last_status: "completed",
+    last_check_status: "skipped",
+    last_check_reason: "below captured event threshold",
+  });
+});
+
+test("auto memory maintenance keeps SQLite open until asynchronous indexing completes", async () => {
+  const stubDir = join(root, "embedding-stubs");
+  await mkdir(stubDir, { recursive: true });
+  await writeConfig([
+    "AUTO_MEMORY_MAINTENANCE=1",
+    "AUTO_MEMORY_MIN_CAPTURED_EVENTS=1",
+    `EMBEDDING_STUB_RESPONSES_DIR=${stubDir}`,
+  ]);
+  const dbPath = join(root, "state", "memory.db");
+  const db = openMemoryDbAt(dbPath);
+  const memory = createSessionMemory(db, {
+    id: "mem_pending",
+    project_key: "demo",
+    source_event_refs: ["tomb_1"],
+    memory_kind: "continuity",
+    title: "Pending memory",
+    summary: "Index this memory after asynchronous provider work.",
+    payload: {},
+    confidence: "high",
+    risk: "low",
+    now: "2026-06-17T20:00:00.000Z",
+  });
+  db.close();
+  const text = normalizeSessionMemoryForEmbedding(memory);
+  await writeFile(
+    join(stubDir, stubEmbeddingFilename({
+      contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+      title: memory.title,
+      text,
+    })),
+    JSON.stringify({
+      embedding: Array(DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT.dimensions).fill(0.01),
+      model: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT.model,
+      dimensions: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT.dimensions,
+    }),
+    "utf8",
+  );
+
+  const result = await new AutoMemoryMaintenanceService(root).run("demo", "auto_memory_async_index");
+
+  expect(result).toMatchObject({ status: "completed", indexed: 1, index_failed: 0, pending_remaining: 0 });
+  const verificationDb = openMemoryDbAt(dbPath);
+  expect(verificationDb.query(
+    "SELECT status FROM session_memory_embeddings WHERE session_memory_id = 'mem_pending'",
+  ).get()).toEqual({ status: "indexed" });
+  verificationDb.close();
 });
 
 test("auto memory maintenance runs one bounded drain window and schedules continuation above threshold", async () => {
@@ -233,6 +293,33 @@ test("auto memory maintenance runs one bounded drain window and schedules contin
     last_pid: 4321,
     last_counts: { queued_count: 10 },
   });
+});
+
+test("auto memory maintenance schedules continuation while active embeddings remain pending", async () => {
+  await writeConfig([
+    "AUTO_MEMORY_MAINTENANCE=1",
+    "AUTO_MEMORY_MIN_CAPTURED_EVENTS=2",
+    "AUTO_MEMORY_COOLDOWN_MS=0",
+  ]);
+  const spawned: Array<Parameters<DetachedSpawner>[0]> = [];
+
+  const result = await new AutoMemoryMaintenanceService(root, {
+    async indexPending() {
+      return { indexed: 500, failed: 0, pending_remaining: 1 };
+    },
+    spawn: (options) => {
+      spawned.push(options);
+      return { pid: 4321, unref: () => {} };
+    },
+  }).run("demo", "auto_memory_pending_index");
+
+  expect(result).toMatchObject({
+    status: "completed",
+    queued_remaining: 0,
+    pending_remaining: 1,
+    rescheduled: true,
+  });
+  expect(spawned).toHaveLength(1);
 });
 
 async function writeConfig(lines: string[]): Promise<void> {
