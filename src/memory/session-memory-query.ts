@@ -284,17 +284,11 @@ function hasRecencyIntent(question: string): boolean {
 }
 
 function rerankForRecency(matches: SessionMemoryQueryMatch[]): SessionMemoryQueryMatch[] {
-  const recencyRank = new Map(
-    [...matches]
-      .sort((left, right) => right.created_at.localeCompare(left.created_at) || left.id.localeCompare(right.id))
-      .map((match, index) => [match.id, index + 1]),
-  );
   return [...matches]
-    .map((match, index) => ({
-      match,
-      score: 1 / (60 + index + 1) + 2 / (60 + (recencyRank.get(match.id) ?? matches.length)),
-    }))
-    .sort((left, right) => right.score - left.score)
+    .map((match, semanticRank) => ({ match, semanticRank }))
+    .sort((left, right) =>
+      right.match.created_at.localeCompare(left.match.created_at) || left.semanticRank - right.semanticRank
+    )
     .map(({ match }) => match);
 }
 

@@ -93,6 +93,28 @@ test("auto memory maintenance skips below threshold without starting cooldown", 
   expect(spawned).toHaveLength(1);
 });
 
+test("SessionStart can force maintenance below the threshold and through cooldown", async () => {
+  await writeConfig([
+    "AUTO_MEMORY_MAINTENANCE=1",
+    "AUTO_MEMORY_MIN_CAPTURED_EVENTS=25",
+    "AUTO_MEMORY_COOLDOWN_MS=300000",
+  ]);
+  seedExperienceEvents(1);
+  const spawned: Array<Parameters<DetachedSpawner>[0]> = [];
+  const service = new AutoMemoryMaintenanceService(root, {
+    now: () => new Date("2026-06-17T20:00:00.000Z"),
+    spawn: (options) => {
+      spawned.push(options);
+      return { pid: 1234, unref: () => {} };
+    },
+  });
+
+  const result = await service.maybeSchedule("demo", { forceIngest: true });
+
+  expect(result).toMatchObject({ status: "scheduled", queued_count: 1 });
+  expect(spawned[0].env.MYELIN_AUTO_MEMORY_FORCE_INGEST).toBe("1");
+});
+
 test("auto memory maintenance lock prevents duplicate scheduling", async () => {
   await writeConfig(["AUTO_MEMORY_MAINTENANCE=1", "AUTO_MEMORY_MIN_CAPTURED_EVENTS=1", "AUTO_MEMORY_COOLDOWN_MS=0"]);
   seedExperienceEvents(1);
@@ -293,6 +315,54 @@ test("auto memory maintenance runs one bounded drain window and schedules contin
     last_pid: 4321,
     last_counts: { queued_count: 10 },
   });
+});
+
+test("forced SessionStart worker ingests a below-threshold queue", async () => {
+  await writeConfig([
+    "AUTO_MEMORY_MAINTENANCE=1",
+    "AUTO_MEMORY_MIN_CAPTURED_EVENTS=25",
+    "AUTO_MEMORY_DRAIN_POLL_INTERVAL_MS=1",
+    "AUTO_MEMORY_DRAIN_TIMEOUT_MS=1000",
+  ]);
+  seedExperienceEvents(1);
+  let starts = 0;
+  process.env.MYELIN_AUTO_MEMORY_FORCE_INGEST = "1";
+  try {
+    const result = await new AutoMemoryMaintenanceService(root, {
+      sleep: async () => {},
+      ingestService: {
+        async start(input) {
+          starts += 1;
+          const db = openMemoryDbAt(join(root, "state", "memory.db"));
+          db.query("DELETE FROM experience_events WHERE project_key = ?").run(input.projectKey);
+          db.close();
+          return {
+            kind: "started",
+            project_key: input.projectKey,
+            queued_count: 1,
+            selected_count: 1,
+            batch_size: input.batchSize ?? 1,
+            batch_count: 1,
+            target_branch: "master",
+            job: fakeIngestJob(),
+            jobs: [],
+            launches: [],
+          };
+        },
+        async status() {
+          return { kind: "project", status: ingestProjectStatus(0) };
+        },
+      },
+      async indexPending() {
+        return { indexed: 0, failed: 0, pending_remaining: 0 };
+      },
+    }).run("demo", "auto_memory_forced_start");
+
+    expect(result).toMatchObject({ status: "completed", ingest_started: true, queued_remaining: 0 });
+    expect(starts).toBe(1);
+  } finally {
+    delete process.env.MYELIN_AUTO_MEMORY_FORCE_INGEST;
+  }
 });
 
 test("auto memory maintenance schedules continuation while active embeddings remain pending", async () => {

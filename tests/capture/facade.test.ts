@@ -102,6 +102,31 @@ test("stored capture events schedule auto memory maintenance through injected sc
   expect(scheduled).toEqual(["class-kit"]);
 });
 
+test("SessionStart capture forces a bounded ingest below the ordinary threshold", async () => {
+  await bootstrapProject(root, "class-kit", repo);
+  const calls: Array<{ projectKey: string; forceIngest?: boolean }> = [];
+
+  await handleCaptureEvent(root, {
+    id: "evt_start",
+    provider: "codex",
+    source: "codex-hook",
+    cwd: repo,
+    hook_event_name: "SessionStart",
+    event_kind: "session.start",
+    raw_payload_json: "{}",
+    status: "valid",
+  }, {
+    maintenanceScheduler: {
+      async maybeSchedule(projectKey, options) {
+        calls.push({ projectKey, forceIngest: options?.forceIngest });
+        return { status: "skipped", reason: "test scheduler" };
+      },
+    },
+  });
+
+  expect(calls).toEqual([{ projectKey: "class-kit", forceIngest: true }]);
+});
+
 test("auto memory maintenance scheduling failures do not break capture", async () => {
   await bootstrapProject(root, "class-kit", repo);
 

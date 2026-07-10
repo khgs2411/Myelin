@@ -88,7 +88,10 @@ export class AutoMemoryMaintenanceService {
     private readonly deps: AutoMemoryMaintenanceDeps = {},
   ) {}
 
-  async maybeSchedule(projectKey: string): Promise<AutoMemoryMaintenanceScheduleResult> {
+  async maybeSchedule(
+    projectKey: string,
+    options: { forceIngest?: boolean } = {},
+  ): Promise<AutoMemoryMaintenanceScheduleResult> {
     const config = await loadConfig(this.root);
     const maintenance = config.autoMemoryMaintenance;
     if (!maintenance.enabled) return { status: "disabled", reason: "AUTO_MEMORY_MAINTENANCE is not enabled" };
@@ -110,19 +113,20 @@ export class AutoMemoryMaintenanceService {
       db.close();
     }
 
-    if (queuedCount < maintenance.minCapturedEvents) {
+    if (!options.forceIngest && queuedCount < maintenance.minCapturedEvents) {
       return this.skip(projectKey, "below captured event threshold", { queuedCount });
     }
-    if (await this.isInCooldown(projectKey, maintenance)) {
+    if (!options.forceIngest && await this.isInCooldown(projectKey, maintenance)) {
       return this.skip(projectKey, "cooldown active", { queuedCount });
     }
 
-    return this.scheduleDetachedWorker(projectKey, queuedCount);
+    return this.scheduleDetachedWorker(projectKey, queuedCount, options.forceIngest ?? false);
   }
 
   private async scheduleDetachedWorker(
     projectKey: string,
     queuedCount: number,
+    forceIngest: boolean,
   ): Promise<AutoMemoryMaintenanceScheduleResult> {
     const runId = `auto_memory_${createId()}`;
     let lock = await tryAcquireLock(this.root, projectKey, runId, this.now());
@@ -148,6 +152,7 @@ export class AutoMemoryMaintenanceService {
           MYELIN_CAPTURE_DISABLED: "1",
           MYELIN_AUTO_MEMORY_MAINTENANCE_WORKER: "1",
           MYELIN_AUTO_MEMORY_RUN_ID: runId,
+          ...(forceIngest ? { MYELIN_AUTO_MEMORY_FORCE_INGEST: "1" } : {}),
         },
       });
       proc.unref();
@@ -220,7 +225,7 @@ export class AutoMemoryMaintenanceService {
       let drainError: Error | null = null;
       const queuedBefore = this.countQueued(projectKey);
 
-      if (queuedBefore >= config.autoMemoryMaintenance.minCapturedEvents) {
+      if (process.env.MYELIN_AUTO_MEMORY_FORCE_INGEST === "1" || queuedBefore >= config.autoMemoryMaintenance.minCapturedEvents) {
         ingestResult = await this.ingestService().start({
           projectKey,
           provider: config.defaultProvider as IngestProvider,
@@ -287,7 +292,7 @@ export class AutoMemoryMaintenanceService {
       let rescheduled = false;
       if (shouldContinue) {
         await releaseLock();
-        const continuation = await this.scheduleDetachedWorker(projectKey, queuedRemaining);
+        const continuation = await this.scheduleDetachedWorker(projectKey, queuedRemaining, false);
         rescheduled = continuation.status === "scheduled";
       }
 

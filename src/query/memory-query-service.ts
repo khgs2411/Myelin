@@ -190,9 +190,11 @@ export class DeterministicMemoryQueryResponseService {
 
   private confidenceFromMatches(matches: SessionMemoryQueryMatch[], degraded: boolean): number {
     if (degraded || matches.length === 0) return 0;
-    const distance = matches[0].distance;
-    if (!Number.isFinite(distance)) return 0.75;
-    return Number(Math.max(0.1, Math.min(0.95, 1 - distance)).toFixed(3));
+    let score = 0.65;
+    if (matches[0].source_event_refs.length > 0) score += 0.05;
+    if (matches.length >= 3) score += 0.05;
+    score += this.relativeSeparationScore(matches.map((match) => match.distance));
+    return Number(Math.min(0.85, score).toFixed(3));
   }
 
   private answerFromProjectMemoryMatches(matches: ProjectMemoryQueryMatch[]): string {
@@ -209,9 +211,22 @@ export class DeterministicMemoryQueryResponseService {
   private confidenceFromProjectMemoryMatches(matches: ProjectMemoryQueryMatch[], degraded: boolean): number {
     if (matches.length === 0) return 0;
     if (degraded && matches.every((match) => match.return_kind !== "inline_content")) return 0;
-    const distance = matches[0].distance;
-    if (!Number.isFinite(distance)) return degraded ? 0.5 : 0.75;
-    return Number(Math.max(0.1, Math.min(degraded ? 0.7 : 0.95, 1 - distance)).toFixed(3));
+    const top = matches[0];
+    let score = 0.65;
+    if (top.return_kind === "inline_content") score += 0.1;
+    if (top.vector_rank !== undefined && top.fts_rank !== undefined) score += 0.1;
+    if (top.rerank_reasons?.some((reason) => reason === "section_title_match" || reason === "section_id_match")) {
+      score += 0.05;
+    }
+    return Number(Math.min(degraded ? 0.55 : 0.9, score).toFixed(3));
+  }
+
+  private relativeSeparationScore(distances: number[]): number {
+    const sorted = distances.filter(Number.isFinite).sort((left, right) => left - right);
+    if (sorted.length < 2) return 0;
+    const range = sorted[sorted.length - 1] - sorted[0];
+    if (range <= 0) return 0;
+    return Math.min(0.1, ((sorted[1] - sorted[0]) / range) * 0.1);
   }
 
   private sessionMemoryDiagnostic(result: SessionMemoryQueryResult): QueryLayerDiagnostic {

@@ -486,7 +486,7 @@ Options:
 Output:
 
 - Human-readable list of matched Session Memory rows by default.
-- JSON response with matches, citations, confidence, degraded reason, and source tools with `--json`.
+- JSON response with matches, citations, confidence, degraded reason, and source tools with `--json`. Confidence is a deterministic retrieval-evidence score, not a probability derived from raw embedding distance.
 
 Side effects:
 

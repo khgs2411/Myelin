@@ -49,7 +49,7 @@ test("MemoryQueryService delegates retrieval and builds deterministic query resp
 
     expect(response).toMatchObject({
       answer: "mem_1 [decision] Boundary: Query logic belongs behind a service boundary.",
-      confidence: 0.8,
+      confidence: 0.7,
       memory_scope: "session_memory",
       citations: ["session_memory:mem_1"],
       degraded: false,
@@ -100,6 +100,9 @@ test("MemoryQueryService keeps project memory results separate from session matc
               return_kind: "inline_content",
               content: "Setup guidance.",
               citation: "project_memory:wiki/setup/index.md#setup",
+              vector_rank: 1,
+              fts_rank: 1,
+              rerank_reasons: ["section_title_match"],
             },
           ],
         };
@@ -123,12 +126,51 @@ test("MemoryQueryService keeps project memory results separate from session matc
       content: "Setup guidance.",
       citation: "project_memory:wiki/setup/index.md#setup",
     });
+    expect(response.confidence).toBe(0.9);
     expect(response.layers?.[0]).toMatchObject({
       layer: "project_memory",
       indexed_count: 1,
       match_count: 1,
       query_embedding_cache_id: "qemb_project",
     });
+  } finally {
+    db.close();
+  }
+});
+
+test("query confidence is evidence-based instead of treating embedding distance as probability", async () => {
+  const db = openMemoryDbAt(":memory:");
+  try {
+    const query = async (distance: number) => await new MemoryQueryService({
+      db,
+      documentContract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+      embeddingProvider: fixedProvider(),
+      async sessionMemoryQuery(_db, input) {
+        return {
+          project_key: input.project_key,
+          question: input.question,
+          degraded: false,
+          indexed_count: 1,
+          pending_count: 0,
+          source_tools: ["session-memory-vector-index"],
+          matches: [{
+            id: "mem_1",
+            memory_kind: "verification" as const,
+            title: "Verified",
+            summary: "The evidence is unchanged.",
+            payload: {},
+            source_event_refs: ["tomb_1"],
+            contexts: [],
+            created_at: "2026-07-10T10:00:00.000Z",
+            updated_at: "2026-07-10T10:00:00.000Z",
+            distance,
+          }],
+        };
+      },
+    }).query({ root: "/repo", projectKey: "demo", question: "What is verified?" });
+
+    expect((await query(0.1)).confidence).toBe(0.7);
+    expect((await query(0.85)).confidence).toBe(0.7);
   } finally {
     db.close();
   }

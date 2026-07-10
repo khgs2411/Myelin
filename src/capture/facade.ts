@@ -26,7 +26,10 @@ export type CaptureResult =
   | { status: "failed-open"; error_message: string };
 
 export type AutoMemoryMaintenanceScheduler = {
-  maybeSchedule: (projectKey: string) => Promise<AutoMemoryMaintenanceScheduleResult>;
+  maybeSchedule: (
+    projectKey: string,
+    options?: { forceIngest?: boolean },
+  ) => Promise<AutoMemoryMaintenanceScheduleResult>;
 };
 
 export async function handleCaptureEvent(
@@ -69,7 +72,7 @@ export async function handleCaptureEvent(
     } finally {
       db.close();
     }
-    await scheduleAutoMemoryMaintenance(root, project.key, deps.maintenanceScheduler);
+    await scheduleAutoMemoryMaintenance(root, project.key, event.event_kind === "session.start", deps.maintenanceScheduler);
     return { status: "stored", project_key: project.key, event_id: storedEventId };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -109,10 +112,11 @@ export async function handleCaptureEvent(
 async function scheduleAutoMemoryMaintenance(
   root: string,
   projectKey: string,
+  forceIngest: boolean,
   scheduler: AutoMemoryMaintenanceScheduler | undefined,
 ): Promise<void> {
   try {
-    await (scheduler ?? new AutoMemoryMaintenanceService(root)).maybeSchedule(projectKey);
+    await (scheduler ?? new AutoMemoryMaintenanceService(root)).maybeSchedule(projectKey, { forceIngest });
   } catch {
     // Capture hooks must remain fail-open; maintenance state/logs carry operator detail.
   }
