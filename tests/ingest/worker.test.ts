@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createIngestJob, getIngestJob } from "../../src/ingest/jobs.ts";
 import { applyIngestWorkerOutput, buildIngestPrompt, parseIngestWorkerOutput, runIngestWorker } from "../../src/ingest/worker.ts";
+import { createMemoryCandidate, markProjectMemoryCandidateProcessed } from "../../src/memory/candidates.ts";
 import { openMemoryDbAt, type MemoryDb } from "../../src/memory/db.ts";
 import { listExperienceEvents, recordExperienceEvent } from "../../src/memory/experience.ts";
 import { listSessionMemoryContexts } from "../../src/memory/session-memory-contexts.ts";
@@ -315,6 +316,121 @@ test("candidate output stores source refs and finalizes the referenced tombstone
   };
   expect(tombstone.state).toBe("output");
   expect(JSON.parse(tombstone.output_references_json)).toEqual(["memory_candidates/cand_1"]);
+});
+
+test("candidate output reuses a stable id and merges source refs", () => {
+  createMemoryCandidate(db, {
+    id: "cand_stable",
+    project_key: "class-kit",
+    scope: "project",
+    status: "needs_review",
+    candidate_type: "project.documentation",
+    summary: "Existing candidate.",
+    source_event_refs: ["tomb_old"],
+    evidence: {},
+    proposed_payload: {},
+    confidence: "medium",
+    risk: "low",
+    reason: "Durable project fact",
+    now: "2026-06-13T09:00:00.000Z",
+  });
+  seedClaimedTombstone(db, { id: "tomb_1", ingest_job_id: "job_1", project_key: "class-kit" });
+
+  const counts = applyIngestWorkerOutput(db, {
+    projectKey: "class-kit",
+    jobId: "job_1",
+    provider: "codex",
+    providerSessionId: null,
+    finalizedAt: "2026-06-13T10:00:00.000Z",
+    output: { memory_candidates: [candidateOutput("cand_stable", "tomb_1", "project")] },
+  });
+
+  expect(counts).toMatchObject({ memory_candidates: 0, project_memory_candidates: 0 });
+  expect(db.query("SELECT id, status, source_event_refs_json FROM memory_candidates").all()).toEqual([
+    {
+      id: "cand_stable",
+      status: "needs_review",
+      source_event_refs_json: JSON.stringify(["tomb_old", "tomb_1"]),
+    },
+  ]);
+  expect(db.query("SELECT output_references_json FROM experience_event_tombstones WHERE id = ?").get("tomb_1")).toEqual({
+    output_references_json: JSON.stringify(["memory_candidates/cand_stable"]),
+  });
+});
+
+test("candidate output does not reopen a terminal stable id", () => {
+  createMemoryCandidate(db, {
+    id: "cand_stable",
+    project_key: "class-kit",
+    scope: "project",
+    status: "needs_review",
+    candidate_type: "project.documentation",
+    summary: "Existing candidate.",
+    source_event_refs: ["tomb_old"],
+    evidence: {},
+    proposed_payload: {},
+    confidence: "medium",
+    risk: "low",
+    reason: "Durable project fact",
+    now: "2026-06-13T09:00:00.000Z",
+  });
+  markProjectMemoryCandidateProcessed(db, {
+    project_key: "class-kit",
+    id: "cand_stable",
+    now: "2026-06-13T09:30:00.000Z",
+  });
+  seedClaimedTombstone(db, { id: "tomb_1", ingest_job_id: "job_1", project_key: "class-kit" });
+
+  const counts = applyIngestWorkerOutput(db, {
+    projectKey: "class-kit",
+    jobId: "job_1",
+    provider: "codex",
+    providerSessionId: null,
+    finalizedAt: "2026-06-13T10:00:00.000Z",
+    output: { memory_candidates: [candidateOutput("cand_stable", "tomb_1", "project")] },
+  });
+
+  expect(counts).toMatchObject({ memory_candidates: 0, project_memory_candidates: 0 });
+  expect(db.query("SELECT id, status, processed_at FROM memory_candidates").all()).toEqual([
+    { id: "cand_stable", status: "processed", processed_at: "2026-06-13T09:30:00.000Z" },
+  ]);
+  expect(db.query("SELECT output_references_json FROM experience_event_tombstones WHERE id = ?").get("tomb_1")).toEqual({
+    output_references_json: JSON.stringify(["memory_candidates/cand_stable"]),
+  });
+});
+
+test("candidate output scopes a stable id collision across projects", () => {
+  createMemoryCandidate(db, {
+    id: "cand_stable",
+    project_key: "other-project",
+    scope: "project",
+    status: "needs_review",
+    candidate_type: "project.documentation",
+    summary: "Other project candidate.",
+    source_event_refs: ["tomb_old"],
+    evidence: {},
+    proposed_payload: {},
+    confidence: "medium",
+    risk: "low",
+    reason: "Durable project fact",
+    now: "2026-06-13T09:00:00.000Z",
+  });
+  seedClaimedTombstone(db, { id: "tomb_1", ingest_job_id: "job_1", project_key: "class-kit" });
+
+  const counts = applyIngestWorkerOutput(db, {
+    projectKey: "class-kit",
+    jobId: "job_1",
+    provider: "codex",
+    providerSessionId: null,
+    finalizedAt: "2026-06-13T10:00:00.000Z",
+    output: { memory_candidates: [candidateOutput("cand_stable", "tomb_1", "project")] },
+  });
+
+  expect(counts).toMatchObject({ memory_candidates: 1, project_memory_candidates: 1 });
+  expect(db.query("SELECT id, project_key FROM memory_candidates ORDER BY id").all()).toEqual([
+    { id: "cand_stable", project_key: "other-project" },
+    { id: "job_1_cand_stable", project_key: "class-kit" },
+  ]);
 });
 
 test("worker schedules project memory auto-maintenance after creating project candidates", async () => {
@@ -1084,6 +1200,26 @@ test("worker rejects invalid provider output before durable memory writes", asyn
   expect(job?.error_json).toContain("memory_kind");
   expect(job?.error_json).not.toContain("NOT NULL constraint failed");
 });
+
+function candidateOutput(
+  id: string,
+  sourceEventRef: string,
+  scope: "session" | "project" | "practice" | "personal",
+) {
+  return {
+    id,
+    source_event_refs: [sourceEventRef],
+    scope,
+    status: "needs_review" as const,
+    candidate_type: `${scope}.documentation`,
+    summary: "Repeated candidate.",
+    evidence: {},
+    proposed_payload: {},
+    confidence: "medium",
+    risk: "low",
+    reason: "Durable evidence was repeated.",
+  };
+}
 
 function seedClaimedTombstone(
   db: MemoryDb,

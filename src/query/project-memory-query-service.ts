@@ -42,6 +42,12 @@ export type ProjectMemoryQueryMatch = {
   rrf_score?: number;
   rerank_score?: number;
   rerank_reasons?: string[];
+  query_token_coverage?: number;
+  query_phrase_coverage?: number;
+};
+
+type HydratedProjectMemoryQueryMatch = ProjectMemoryQueryMatch & {
+  rerank_text?: string;
 };
 
 export type ProjectMemoryQueryResult = {
@@ -226,12 +232,12 @@ async function hydrateProjectMemoryMatches(
   },
   candidates: ProjectMemoryRetrievalCandidate[],
   sections: ProjectMemoryMarkdownSection[],
-): Promise<ProjectMemoryQueryMatch[]> {
+): Promise<HydratedProjectMemoryQueryMatch[]> {
   const rowsById = new Map(
     hydrateProjectMemoryRetrievalRows(db, candidates.map((match) => match.retrieval_row_id)).map((row) => [row.id, row]),
   );
   const sectionByKey = new Map(sections.map((section) => [sectionKey(section), section]));
-  const matches: ProjectMemoryQueryMatch[] = [];
+  const matches: HydratedProjectMemoryQueryMatch[] = [];
 
   for (const candidate of candidates) {
     const row = rowsById.get(candidate.retrieval_row_id);
@@ -249,7 +255,12 @@ async function hydrateProjectMemoryMatches(
       continue;
     }
     if (section.body_text.length > input.max_inline_chars) {
-      matches.push(withCandidateSignals(referenceOnlyMatch(row, distanceForCandidate(candidate), "too_large"), candidate));
+      matches.push(withCandidateSignals({
+        ...referenceOnlyMatch(row, distanceForCandidate(candidate), "too_large"),
+        heading_path: section.heading_path,
+        page_title: section.page_title,
+        rerank_text: section.body_text,
+      }, candidate));
       continue;
     }
     matches.push(withCandidateSignals({
@@ -262,6 +273,7 @@ async function hydrateProjectMemoryMatches(
       distance: distanceForCandidate(candidate),
       return_kind: "inline_content",
       content: section.body_text,
+      rerank_text: section.body_text,
       citation: citationFor(row),
     }, candidate));
   }
@@ -463,17 +475,21 @@ function withCandidateSignals<T extends ProjectMemoryQueryMatch>(
 
 function rerankProjectMemoryMatches(input: {
   question: string;
-  matches: ProjectMemoryQueryMatch[];
+  matches: HydratedProjectMemoryQueryMatch[];
   limit: number;
 }): ProjectMemoryQueryMatch[] {
   const queryTokens = tokenSet(input.question);
+  const coverageTokens = coverageTokenSet(input.question);
+  const queryPhrases = coveragePhrases(input.question);
   return input.matches
     .map((match, originalIndex) => {
-      const rerank = projectMemoryRerankScore(match, queryTokens);
+      const rerank = projectMemoryRerankScore(match, queryTokens, coverageTokens, queryPhrases);
       return {
         ...match,
         rerank_score: rerank.score,
         rerank_reasons: rerank.reasons,
+        query_token_coverage: rerank.queryTokenCoverage,
+        query_phrase_coverage: rerank.queryPhraseCoverage,
         originalIndex,
       };
     })
@@ -482,14 +498,23 @@ function rerankProjectMemoryMatches(input: {
       return left.originalIndex - right.originalIndex;
     })
     .slice(0, input.limit)
-    .map(({ originalIndex: _originalIndex, ...match }) => match);
+    .map(({ originalIndex: _originalIndex, rerank_text: _rerankText, ...match }) => match);
 }
 
 function projectMemoryRerankScore(
-  match: ProjectMemoryQueryMatch,
+  match: HydratedProjectMemoryQueryMatch,
   queryTokens: Set<string>,
-): { score: number; reasons: string[] } {
+  coverageTokens: Set<string>,
+  queryPhrases: string[],
+): { score: number; reasons: string[]; queryTokenCoverage: number; queryPhraseCoverage: number } {
   const reasons: string[] = [];
+  const canonicalText = [
+    match.page_title,
+    match.heading_path.join(" "),
+    match.section_id,
+    match.wiki_path,
+    match.rerank_text ?? match.content ?? "",
+  ].join("\n");
   let score =
     match.rrf_score !== undefined && Number.isFinite(match.rrf_score)
       ? match.rrf_score * RERANK_RRF_SCALE
@@ -510,7 +535,27 @@ function projectMemoryRerankScore(
   score += tokenBoost("page_title_match", queryTokens, tokenSet(match.page_title), 0.025, 0.1, reasons);
   score += tokenBoost("section_id_match", queryTokens, tokenSet(match.section_id), 0.025, 0.1, reasons);
   score += tokenBoost("path_match", queryTokens, tokenSet(match.wiki_path), 0.02, 0.08, reasons);
-  score += tokenBoost("body_match", queryTokens, tokenSet(match.content ?? ""), 0.008, 0.04, reasons);
+  score += tokenBoost("body_match", queryTokens, tokenSet(canonicalText), 0.008, 0.04, reasons);
+
+  const candidateCoverageTokens = coverageTokenSet(canonicalText);
+  const queryTokenCoverage = setCoverage(coverageTokens, candidateCoverageTokens);
+  if (queryTokenCoverage > 0) {
+    score += queryTokenCoverage * 0.24;
+    reasons.push("query_token_coverage");
+    if (queryTokenCoverage === 1) {
+      score += 0.06;
+      reasons.push("complete_query_token_coverage");
+    }
+  }
+  const queryPhraseCoverage = phraseCoverage(queryPhrases, normalizedCoverageText(canonicalText));
+  if (queryPhraseCoverage > 0) {
+    score += queryPhraseCoverage * 0.5;
+    reasons.push("query_phrase_coverage");
+    if (queryPhraseCoverage * coverageTokens.size >= 3) {
+      score += 0.2;
+      reasons.push("long_query_phrase_match");
+    }
+  }
 
   const penalty = navigationPenalty(match);
   if (penalty > 0) {
@@ -518,7 +563,31 @@ function projectMemoryRerankScore(
     reasons.push("navigation_penalty");
   }
 
-  return { score: Number(score.toFixed(6)), reasons };
+  return {
+    score: Number(score.toFixed(6)),
+    reasons,
+    queryTokenCoverage: Number(queryTokenCoverage.toFixed(3)),
+    queryPhraseCoverage: Number(queryPhraseCoverage.toFixed(3)),
+  };
+}
+
+function setCoverage(queryTokens: Set<string>, candidateTokens: Set<string>): number {
+  if (queryTokens.size === 0) return 0;
+  let matches = 0;
+  for (const token of queryTokens) {
+    if (candidateTokens.has(token)) matches += 1;
+  }
+  return matches / queryTokens.size;
+}
+
+function phraseCoverage(queryPhrases: string[], candidateText: string): number {
+  if (queryPhrases.length === 0) return 0;
+  const paddedCandidate = ` ${candidateText} `;
+  const queryTokenCount = queryPhrases[0].split(" ").length;
+  for (const phrase of queryPhrases) {
+    if (paddedCandidate.includes(` ${phrase} `)) return phrase.split(" ").length / queryTokenCount;
+  }
+  return 0;
 }
 
 function tokenBoost(
@@ -538,12 +607,12 @@ function tokenBoost(
   return Math.min(cap, matches * weight);
 }
 
-function navigationPenalty(match: ProjectMemoryQueryMatch): number {
+function navigationPenalty(match: HydratedProjectMemoryQueryMatch): number {
   let penalty = 0;
   const heading = normalizeText(lastHeading(match));
   if (match.wiki_path === "wiki/index.md" || match.wiki_path.endsWith("/index.md")) penalty += 0.08;
   if (heading === "documentation subjects" || heading === "known draft gaps") penalty += 0.08;
-  if (isMostlyNavigationList(match.content ?? "")) penalty += 0.04;
+  if (isMostlyNavigationList(match.rerank_text ?? match.content ?? "")) penalty += 0.04;
   return penalty;
 }
 
@@ -570,6 +639,34 @@ function tokenSet(text: string): Set<string> {
   );
 }
 
+function coverageTokenSet(text: string): Set<string> {
+  return new Set(
+    normalizeText(text)
+      .split(/\s+/)
+      .map(stemToken)
+      .filter((token) => token.length >= 3 && !COVERAGE_STOP_WORDS.has(token)),
+  );
+}
+
+function coveragePhrases(text: string): string[] {
+  const tokens = normalizedCoverageText(text).split(/\s+/).filter(Boolean);
+  const phrases: string[] = [];
+  for (let length = tokens.length; length >= 2; length -= 1) {
+    for (let start = 0; start + length <= tokens.length; start += 1) {
+      phrases.push(tokens.slice(start, start + length).join(" "));
+    }
+  }
+  return phrases;
+}
+
+function normalizedCoverageText(text: string): string {
+  return normalizeText(text)
+    .split(/\s+/)
+    .map(stemToken)
+    .filter((token) => token.length >= 3 && !COVERAGE_STOP_WORDS.has(token))
+    .join(" ");
+}
+
 function normalizeText(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
@@ -591,6 +688,7 @@ const STOP_WORDS = new Set([
   "against",
   "and",
   "are",
+  "but",
   "does",
   "for",
   "from",
@@ -607,5 +705,28 @@ const STOP_WORDS = new Set([
   "where",
   "which",
   "wiki",
+  "with",
+]);
+
+const COVERAGE_STOP_WORDS = new Set([
+  "about",
+  "and",
+  "are",
+  "but",
+  "does",
+  "for",
+  "from",
+  "how",
+  "include",
+  "includ",
+  "into",
+  "show",
+  "the",
+  "this",
+  "that",
+  "what",
+  "when",
+  "where",
+  "which",
   "with",
 ]);

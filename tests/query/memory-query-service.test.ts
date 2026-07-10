@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT } from "../../src/runtime/config.ts";
 import { openMemoryDbAt } from "../../src/memory/db.ts";
 import type { EmbeddingProviderClient } from "../../src/memory/embedding-provider.ts";
-import { MemoryQueryService } from "../../src/query/memory-query-service.ts";
+import { DeterministicMemoryQueryResponseService, MemoryQueryService } from "../../src/query/memory-query-service.ts";
 
 test("MemoryQueryService delegates retrieval and builds deterministic query response", async () => {
   const db = openMemoryDbAt(":memory:");
@@ -103,6 +103,8 @@ test("MemoryQueryService keeps project memory results separate from session matc
               vector_rank: 1,
               fts_rank: 1,
               rerank_reasons: ["section_title_match"],
+              query_token_coverage: 1,
+              query_phrase_coverage: 1,
             },
           ],
         };
@@ -171,6 +173,41 @@ test("query confidence is evidence-based instead of treating embedding distance 
 
     expect((await query(0.1)).confidence).toBe(0.7);
     expect((await query(0.85)).confidence).toBe(0.7);
+  } finally {
+    db.close();
+  }
+});
+
+test("project confidence is capped when the top match has poor query coverage", async () => {
+  const db = openMemoryDbAt(":memory:");
+  try {
+    const response = new DeterministicMemoryQueryResponseService().fromProjectMemoryResult({
+      project_key: "demo",
+      question: "What does memory review show?",
+      degraded: false,
+      indexed_count: 1,
+      pending_count: 0,
+      match_count: 1,
+      source_tools: ["project-memory-vector-index"],
+      matches: [{
+        retrieval_row_id: "pmr_1",
+        wiki_path: "wiki/unrelated.md",
+        section_id: "unrelated",
+        section_hash: "sha256:unrelated",
+        heading_path: ["Unrelated"],
+        page_title: "Unrelated",
+        distance: 0.1,
+        return_kind: "inline_content",
+        content: "General project notes.",
+        citation: "project_memory:wiki/unrelated.md#unrelated",
+        vector_rank: 1,
+        fts_rank: 1,
+        query_token_coverage: 0.25,
+        query_phrase_coverage: 0,
+      }],
+    }, { includeRoute: false });
+
+    expect(response.confidence).toBeLessThanOrEqual(0.55);
   } finally {
     db.close();
   }

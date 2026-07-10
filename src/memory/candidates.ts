@@ -63,6 +63,29 @@ export function getMemoryCandidate(db: Database, id: string): MemoryCandidateRow
   return (db.query("SELECT * FROM memory_candidates WHERE id = ?").get(id) as MemoryCandidateRow | null) ?? null;
 }
 
+export function mergeMemoryCandidateSourceRefs(
+  db: Database,
+  input: {
+    id: string;
+    project_key: string;
+    scope: MemoryScope;
+    source_event_refs: string[];
+    now: string;
+  },
+): MemoryCandidateRow | null {
+  const row = getMemoryCandidate(db, input.id);
+  if (!row || row.project_key !== input.project_key || row.scope !== input.scope) return null;
+
+  const existingRefs = parseSourceEventRefs(row.source_event_refs_json);
+  const sourceEventRefs = [...new Set([...existingRefs, ...input.source_event_refs])];
+  db.query(
+    `UPDATE memory_candidates
+     SET source_event_refs_json = ?, updated_at = ?
+     WHERE id = ? AND project_key = ? AND scope = ?`,
+  ).run(JSON.stringify(sourceEventRefs), input.now, input.id, input.project_key, input.scope);
+  return getMemoryCandidate(db, input.id);
+}
+
 export function listMemoryCandidates(
   db: Database,
   input: { project_key: string; status?: string; scope?: MemoryScope },
@@ -128,4 +151,12 @@ export function markProjectMemoryCandidateProcessed(
     return { status: "already_terminal", id: input.id, current_status: current.status };
   }
   return { status: "skipped", id: input.id, current_status: current.status, reason: "candidate status changed before update" };
+}
+
+function parseSourceEventRefs(value: string): string[] {
+  const parsed = JSON.parse(value) as unknown;
+  if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === "string")) {
+    throw new Error("memory candidate source_event_refs_json must be a string array");
+  }
+  return parsed;
 }

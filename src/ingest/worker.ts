@@ -9,7 +9,7 @@ import {
   leaseExperienceEvents,
 } from "../memory/experience.ts";
 import { openMemoryDb } from "../memory/db.ts";
-import { createMemoryCandidate } from "../memory/candidates.ts";
+import { createMemoryCandidate, getMemoryCandidate, mergeMemoryCandidateSourceRefs } from "../memory/candidates.ts";
 import { createHandoffInstruction } from "../memory/handoffs.ts";
 import {
   HANDOFF_SCOPES,
@@ -560,6 +560,23 @@ export function applyIngestWorkerOutput(
     }
 
     for (const candidate of input.output.memory_candidates ?? []) {
+      const existingCandidate = getMemoryCandidate(db, candidate.id);
+      const reusableCandidate =
+        existingCandidate?.project_key === input.projectKey && existingCandidate.scope === candidate.scope
+          ? existingCandidate
+          : null;
+      if (reusableCandidate) {
+        const sourceEventRefs = addOutputRefs(candidate.source_event_refs, `memory_candidates/${reusableCandidate.id}`);
+        if (sourceEventRefs.length === 0) continue;
+        mergeMemoryCandidateSourceRefs(db, {
+          id: reusableCandidate.id,
+          project_key: input.projectKey,
+          scope: candidate.scope,
+          source_event_refs: sourceEventRefs,
+          now: input.finalizedAt,
+        });
+        continue;
+      }
       const candidateId = uniqueOutputId(db, "memory_candidates", candidate.id, input.jobId);
       const sourceEventRefs = addOutputRefs(candidate.source_event_refs, `memory_candidates/${candidateId}`);
       if (sourceEventRefs.length === 0) continue;

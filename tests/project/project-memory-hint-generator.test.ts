@@ -23,6 +23,13 @@ afterEach(async () => {
 
 test("writes accepted category hint file and preserves raw provider output", async () => {
   const manifest = manifestWithSection("sha256:section");
+  manifest.sections[0].body_text = [
+    ...Array.from({ length: 12 }, (_, index) => `Intro line ${index}. ${"context ".repeat(20)}`),
+    `myelin memory maintain project and myelin memory review ${"details ".repeat(20)}`,
+    ...Array.from({ length: 12 }, (_, index) => `Closing line ${index}. ${"context ".repeat(20)}`),
+  ].join("\n");
+  manifest.sections[0].snippet = "Intro.";
+  const calls: Array<{ command: string[]; stdin?: string }> = [];
   const job = createProjectMemoryHintJob(db, {
     project_key: "demo",
     category: "architecture",
@@ -42,16 +49,19 @@ test("writes accepted category hint file and preserves raw provider output", asy
     required: true,
     db,
     job_id: job.id,
-    runner: async () => ({
-      exitCode: 0,
-      stdout: JSON.stringify({
-        schema_version: 1,
-        project_key: "demo",
-        category: "architecture",
-        entries: [hintEntry()],
-      }),
-      stderr: "",
-    }),
+    runner: async (command, options) => {
+      calls.push({ command, stdin: options?.stdin });
+      return {
+        exitCode: 0,
+        stdout: JSON.stringify({
+          schema_version: 1,
+          project_key: "demo",
+          category: "architecture",
+          entries: [hintEntry()],
+        }),
+        stderr: "",
+      };
+    },
     now: new Date("2026-06-28T10:00:00.000Z"),
   });
 
@@ -62,6 +72,10 @@ test("writes accepted category hint file and preserves raw provider output", asy
   expect(await Bun.file(join(root, result.run_ref, "hint-generation-output.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_ref, "hint-generation-validation.json")).exists()).toBe(true);
   expect(getProjectMemoryHintJob(db, job.id).status).toBe("completed");
+  expect(calls[0].command).toContain("--output-schema");
+  expect(calls[0].command).toContain(join(root, "src", "project", "project-memory-hint-output.schema.json"));
+  expect(calls[0].stdin).toContain("myelin memory maintain project and myelin memory review");
+  expect(calls[0].stdin).toContain('"confidence": "high"');
 });
 
 test("fails required hint generation when provider output has no valid entries", async () => {

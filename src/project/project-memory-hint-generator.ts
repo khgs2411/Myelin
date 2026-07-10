@@ -1,4 +1,4 @@
-import { relative } from "node:path";
+import { join, relative } from "node:path";
 import type { Database } from "bun:sqlite";
 import { createRunDir, timestampRunId } from "../runtime/artifacts.ts";
 import type { Provider } from "../runtime/config.ts";
@@ -30,6 +30,9 @@ export type ProjectMemoryHintGenerationResult = {
   degraded: boolean;
   degraded_reason?: string;
 };
+
+const HINT_CONTEXT_BUDGET_CHARS = 120_000;
+const HINT_CONTEXT_MAX_SECTION_CHARS = 1_500;
 
 export async function generateProjectMemoryHints(input: {
   root: string;
@@ -72,6 +75,7 @@ export async function generateProjectMemoryHints(input: {
       prompt,
       provider: input.provider,
       modelOverride: input.model,
+      outputSchema: join(input.root, "src", "project", "project-memory-hint-output.schema.json"),
       runner: input.runner,
       env: input.env,
       cwd: input.root,
@@ -126,12 +130,34 @@ export async function generateProjectMemoryHints(input: {
 }
 
 function hintPrompt(projectKey: string, category: string | null, sections: ProjectMemoryMarkdownSection[]): string {
+  const contextCharsPerSection = Math.min(
+    HINT_CONTEXT_MAX_SECTION_CHARS,
+    Math.max(1, Math.floor(HINT_CONTEXT_BUDGET_CHARS / Math.max(1, sections.length))),
+  );
   return [
     "You are the Project Memory retrieval hint generator.",
     "Return ONLY strict JSON.",
     "Do not write files. Do not decide canonical memory truth.",
     "Generate semantic retrieval hints for the provided canonical markdown sections.",
-    "Each entry must include wiki_path, section_id, section_hash, keywords, aliases, topics, query_phrases, and confidence.",
+    "Return exactly this envelope: schema_version, project_key, category, entries.",
+    "Confidence must be one of: low, medium, high.",
+    stableJson({
+      schema_version: 1,
+      project_key: projectKey,
+      category,
+      entries: [
+        {
+          wiki_path: "wiki/example.md",
+          section_id: "example-section",
+          section_hash: "sha256:example",
+          keywords: ["example"],
+          aliases: ["example alias"],
+          topics: ["example topic"],
+          query_phrases: ["how does the example work"],
+          confidence: "high",
+        },
+      ],
+    }),
     "",
     stableJson({
       schema_version: 1,
@@ -143,10 +169,25 @@ function hintPrompt(projectKey: string, category: string | null, sections: Proje
         section_hash: section.section_hash,
         page_title: section.page_title,
         heading_path: section.heading_path,
-        snippet: section.snippet,
+        canonical_context: boundedHintContext(section.body_text, contextCharsPerSection),
       })),
     }),
   ].join("\n");
+}
+
+function boundedHintContext(bodyText: string, maxChars: number): string {
+  if (bodyText.length <= maxChars) return bodyText;
+  const lines = bodyText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length === 0) return bodyText.slice(0, maxChars);
+
+  const maxLines = Math.max(1, Math.floor(maxChars / 64));
+  const selectedLines = lines.length <= maxLines
+    ? lines
+    : maxLines === 1
+      ? [lines[0]]
+      : Array.from({ length: maxLines }, (_, index) => lines[Math.round(index * (lines.length - 1) / (maxLines - 1))]);
+  const charsPerLine = Math.max(1, Math.floor((maxChars - selectedLines.length + 1) / selectedLines.length));
+  return selectedLines.map((line) => line.slice(0, charsPerLine)).join("\n").slice(0, maxChars);
 }
 
 function normalizeHintFile(

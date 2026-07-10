@@ -212,12 +212,15 @@ export class DeterministicMemoryQueryResponseService {
     if (matches.length === 0) return 0;
     if (degraded && matches.every((match) => match.return_kind !== "inline_content")) return 0;
     const top = matches[0];
-    let score = 0.65;
-    if (top.return_kind === "inline_content") score += 0.1;
-    if (top.vector_rank !== undefined && top.fts_rank !== undefined) score += 0.1;
+    const tokenCoverage = top.query_token_coverage ?? 0;
+    const phraseCoverage = top.query_phrase_coverage ?? 0;
+    let score = 0.4 + tokenCoverage * 0.25 + phraseCoverage * 0.15;
+    if (top.return_kind === "inline_content") score += 0.05;
+    if (top.vector_rank !== undefined && top.fts_rank !== undefined) score += 0.05;
     if (top.rerank_reasons?.some((reason) => reason === "section_title_match" || reason === "section_id_match")) {
       score += 0.05;
     }
+    if (tokenCoverage < 0.5) score = Math.min(score, 0.55);
     return Number(Math.min(degraded ? 0.55 : 0.9, score).toFixed(3));
   }
 

@@ -284,6 +284,47 @@ test("returns canonical reference instead of inline content when section is too 
   expect(result.matches[0].content).toBeUndefined();
 });
 
+test("reranks oversized exact command sections using canonical text without leaking it", async () => {
+  await writeWikiPage(
+    "product-purpose.md",
+    `# Product Purpose\n\n${"Myelin project memory provides repository context. ".repeat(8)}\n`,
+  );
+  await writeWikiPage(
+    "command-surface.md",
+    `# Command Surface\n\n## Command vocabulary\n\n${"Operator workflow context. ".repeat(8)}myelin memory maintain project refreshes curated Project Memory.\n`,
+  );
+  const broadRowId = await indexedRetrievalRow("product-purpose.md", "product-purpose");
+  const commandRowId = await indexedRetrievalRow("command-surface.md", "command-surface/command-vocabulary");
+
+  const result = await queryProjectMemory(db, {
+    root,
+    project_key: "demo",
+    question: "What does myelin memory maintain project do?",
+    document_contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+    provider: fixedProvider(),
+    limit: 2,
+    max_inline_chars: 10,
+    vector_store: vectorStoreWithDistances([
+      { retrieval_row_id: broadRowId, distance: 0.05 },
+      { retrieval_row_id: commandRowId, distance: 0.2 },
+    ]),
+  });
+
+  expect(result.matches[0]).toMatchObject({
+    retrieval_row_id: commandRowId,
+    heading_path: ["Command Surface", "Command vocabulary"],
+    page_title: "Command Surface",
+    return_kind: "reference",
+    reference_reason: "too_large",
+    query_token_coverage: 1,
+    query_phrase_coverage: 1,
+  });
+  expect(result.matches[0].rerank_reasons).toContain("complete_query_token_coverage");
+  expect(result.matches[0].rerank_reasons).toContain("query_phrase_coverage");
+  expect(result.matches[0].content).toBeUndefined();
+  expect("rerank_text" in result.matches[0]).toBe(false);
+});
+
 test("does not return stale inline content when current markdown hash differs", async () => {
   await writeWikiPage("setup/index.md", "# Setup\n\nOriginal setup guidance.\n");
   const rowId = await indexedRetrievalRow("setup/index.md", "setup");
