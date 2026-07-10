@@ -211,24 +211,8 @@ async function scheduleAutoProjectMemoryMaintenance(
 }
 
 export async function ensureRuntimeInboxIndexes(root: string, projectKey: string): Promise<void> {
-  const sourcesDir = projectPath(root, projectKey, "sources");
   const inboxDir = runtimeInboxDir(root, projectKey);
   await mkdir(inboxDir, { recursive: true });
-  await writeIfMissing(
-    join(sourcesDir, "index.md"),
-    ["# Sources", "", `Preserved source material for \`${projectKey}\`.`, "", "- [Inbox](inbox/index.md)", ""].join("\n"),
-  );
-  await writeIfMissing(
-    join(inboxDir, "index.md"),
-    [
-      "# Runtime Inbox",
-      "",
-      `Runtime durable-memory inbox source proposals for \`${projectKey}\`.`,
-      "",
-      "These JSON files are preserved source material, not canonical memory.",
-      "",
-    ].join("\n"),
-  );
 }
 
 async function writeNewRuntimeInboxFile(path: string, content: string): Promise<void> {
@@ -244,11 +228,6 @@ async function writeNewRuntimeInboxFile(path: string, content: string): Promise<
   } finally {
     await unlink(tmp).catch(() => undefined);
   }
-}
-
-async function writeIfMissing(path: string, content: string): Promise<void> {
-  if (await Bun.file(path).exists()) return;
-  await writeFile(path, content.endsWith("\n") ? content : `${content}\n`, "utf8");
 }
 
 function assertString(value: unknown, field: string): asserts value is string {

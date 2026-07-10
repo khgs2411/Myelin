@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   createGeminiEmbeddingProvider,
+  createOllamaEmbeddingClient,
   createStubEmbeddingProvider,
   stubEmbeddingFilename,
   type EmbeddingRequest,
@@ -137,6 +138,52 @@ test("gemini provider requires an api key and validates dimensions", async () =>
   await expect(provider.embed(documentRequest)).rejects.toThrow(
     "Gemini embedding dimensions mismatch: expected 3, got 1",
   );
+});
+
+test("Ollama client initializes only an installed, working model and embeds batches", async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  const client = createOllamaEmbeddingClient({
+    baseUrl: "http://ollama.local/",
+    model: "qwen3-embedding:4b",
+    dimensions: 3,
+    fetch: async (url, init) => {
+      calls.push({ url, init });
+      if (url.endsWith("/api/tags")) return Response.json({ models: [{ name: "qwen3-embedding:4b" }] });
+      if (calls.length === 2) return Response.json({ embeddings: [[0.1, 0.2, 0.3]] });
+      return Response.json({ embeddings: [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]] });
+    },
+  });
+  const request = { ...documentRequest, contract: { ...documentRequest.contract, provider: "ollama" as const, model: "qwen3-embedding:4b" } };
+
+  await expect(client.initialize()).resolves.toEqual({ available: true });
+  await expect(client.embedBatch?.([request, { ...request, text: "second" }])).resolves.toEqual([
+    { embedding: [0.1, 0.2, 0.3], model: "qwen3-embedding:4b", dimensions: 3 },
+    { embedding: [0.4, 0.5, 0.6], model: "qwen3-embedding:4b", dimensions: 3 },
+  ]);
+  expect(calls.map((call) => call.url)).toEqual([
+    "http://ollama.local/api/tags",
+    "http://ollama.local/api/embed",
+    "http://ollama.local/api/embed",
+  ]);
+  expect(JSON.parse(String(calls[2].init?.body))).toEqual({
+    model: "qwen3-embedding:4b",
+    input: ["title: Review\ntext: normalized", "title: Review\ntext: second"],
+    dimensions: 3,
+  });
+});
+
+test("Ollama client reports a missing model without attempting an embedding", async () => {
+  const client = createOllamaEmbeddingClient({
+    baseUrl: "http://ollama.local",
+    model: "qwen3-embedding:4b",
+    dimensions: 3,
+    fetch: async () => Response.json({ models: [] }),
+  });
+
+  await expect(client.initialize()).resolves.toEqual({
+    available: false,
+    reason: "Ollama model is not installed: qwen3-embedding:4b",
+  });
 });
 
 test("stub provider reads deterministic fixture names", async () => {

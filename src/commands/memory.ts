@@ -22,7 +22,7 @@ import {
 import { ProjectService } from "../project/project-service.ts";
 import { repoRoot } from "../runtime/fs.ts";
 import { stableJson } from "../runtime/json.ts";
-import { DEFAULT_EMBEDDING_BATCH_SIZE, loadConfig, MAX_EMBEDDING_BATCH_SIZE, selectActiveEmbeddingContract } from "../runtime/config.ts";
+import { DEFAULT_EMBEDDING_BATCH_SIZE, loadConfig, MAX_EMBEDDING_BATCH_SIZE } from "../runtime/config.ts";
 import type { ProcessRunner } from "../runtime/llm-client.ts";
 import { queryMemory } from "../query/engine.ts";
 import {
@@ -744,14 +744,13 @@ async function indexSession(args: string[]): Promise<CommandResult> {
 
   const root = repoRoot().root;
   const config = await loadConfig(root);
-  const contract = selectActiveEmbeddingContract(config, "retrieval_document");
-  const provider = new EmbeddingProviderFactory(config).create();
+  const selection = await new EmbeddingProviderFactory(config).initialize("retrieval_document");
   const db = openMemoryDb(root);
   try {
     const service = new SessionMemoryIndexService({
       db,
-      contract,
-      provider,
+      contract: selection.contract,
+      provider: selection.client,
     });
     const response = await service.indexPending({
       projectKey: parsed.projectKey,

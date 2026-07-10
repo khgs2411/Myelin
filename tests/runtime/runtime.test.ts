@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { createRunDir, runDir, timestampRunId } from "../../src/runtime/artifacts.ts";
-import { loadConfig, selectActiveEmbeddingContract, selectModelProfile } from "../../src/runtime/config.ts";
+import { loadConfig, selectEmbeddingContract, selectModelProfile } from "../../src/runtime/config.ts";
 import { resolveInside } from "../../src/runtime/fs.ts";
 import { readJsonIfExists, stableJson, writeJson } from "../../src/runtime/json.ts";
 import { discoverProjects, findProject, projectForRepoPath } from "../../src/runtime/projects.ts";
@@ -80,13 +80,22 @@ test("config exposes default embedding contract", async () => {
     promptCharLimit: 180000,
   });
   expect(config.embedding).toEqual({
-    provider: "gemini",
+    provider: "auto",
     geminiModel: "gemini-embedding-2",
+    ollamaModel: "qwen3-embedding:4b",
+    ollamaUrl: "http://localhost:11434",
     dimensions: 1536,
     batchSize: 50,
     stubResponsesDir: undefined,
   });
-  expect(selectActiveEmbeddingContract(config, "retrieval_document")).toEqual({
+  expect(selectEmbeddingContract(config, "ollama", "retrieval_document")).toEqual({
+    provider: "ollama",
+    model: "qwen3-embedding:4b",
+    dimensions: 1536,
+    purpose: "retrieval_document",
+    formatVersion: 1,
+  });
+  expect(selectEmbeddingContract(config, "gemini", "retrieval_document")).toEqual({
     provider: "gemini",
     model: "gemini-embedding-2",
     dimensions: 1536,
@@ -215,6 +224,8 @@ test("embedding config honors file values and environment precedence", async () 
     [
       "EMBEDDING_PROVIDER=gemini",
       "EMBEDDING_GEMINI_MODEL=file-model",
+      "EMBEDDING_OLLAMA_MODEL=file-ollama-model",
+      "EMBEDDING_OLLAMA_URL=http://file-host:11434/",
       "EMBEDDING_DIMENSIONS=768",
       "EMBEDDING_BATCH_SIZE=250",
       "EMBEDDING_STUB_RESPONSES_DIR=file-stubs",
@@ -224,12 +235,15 @@ test("embedding config honors file values and environment precedence", async () 
 
   const config = await loadConfig(root, {
     EMBEDDING_GEMINI_MODEL: "env-model",
+    EMBEDDING_OLLAMA_MODEL: "env-ollama-model",
     EMBEDDING_DIMENSIONS: "1536",
   });
 
   expect(config.embedding).toEqual({
     provider: "gemini",
     geminiModel: "env-model",
+    ollamaModel: "env-ollama-model",
+    ollamaUrl: "http://file-host:11434/",
     dimensions: 1536,
     batchSize: 250,
     stubResponsesDir: "file-stubs",
@@ -320,12 +334,16 @@ test("artifact paths are deterministic and reject unsafe run ids", async () => {
   expect(id).toBe("2026-06-02T12-34-56.000Z-run");
   expect(runDir(root, "demo", id)).toBe(join(root, "projects", "demo", "runs", id));
   expect(await createRunDir(root, "demo", id)).toBe(join(root, "projects", "demo", "runs", id));
+  expect(await Bun.file(join(root, "projects", "demo", "runs", "index.md")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "projects", "demo", "runs", id, "index.md")).exists()).toBe(false);
   expect(runDir(root, "demo", id, "project-learn")).toBe(
     join(root, "projects", "demo", "runs", "project-learn", id),
   );
   expect(await createRunDir(root, "demo", id, "project-learn")).toBe(
     join(root, "projects", "demo", "runs", "project-learn", id),
   );
+  expect(await Bun.file(join(root, "projects", "demo", "runs", "project-learn", "index.md")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "projects", "demo", "runs", "project-learn", id, "index.md")).exists()).toBe(false);
   expect(() => runDir(root, "demo", "../bad")).toThrow("Invalid run id");
   expect(() => runDir(root, "demo", id, "../bad")).toThrow("Invalid run command");
 });

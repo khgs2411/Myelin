@@ -258,84 +258,123 @@ Creation mode should not be candidate-driven. It should use candidates and Sessi
   - Why: The previous output had the right titles but not enough product value.
   - Progress: implemented in the 2026-07-05 create-contract work. `project learn` now writes `project-memory-evidence-map.json`, requires sectioned create pages, runs deterministic rendered-quality validation, runs independent usefulness critique, and exposes `project reset <key> --clean --confirm <key>` for explicit clean rebootstrap while preserving root SQLite continuity.
 
-## Roadmap Step 6.5: Project Memory Vision-Quality Gate
+## Roadmap Step 6.5: Project Memory Create-Mode Redesign
 
-Goal: prevent a foundation-quality first-create run from being treated as vision-satisfactory Project Memory.
+Goal: make first-create Project Memory behave like agent-authored repo documentation instead of an acceptance-test-shaped wiki generator.
 
-The Step 5/6 implementation is useful plumbing: sectioned pages, answer-domain coverage, evidence maps, deterministic quality checks, independent critique, all-or-nothing promotion, and clean reset. The latest dogfood showed that this is still not enough. Project Memory must behave like living repo documentation: a future agent should be able to ask real product and implementation-orientation questions and get grounded, useful markdown context without rediscovering the repo.
+The product correction was to stop enforcing a fixed page taxonomy and move the documentation shape to agents: one planner agent studies the repo, creates the documentation index and subject manifest, and one subject-writer agent writes each documentation page. Create mode is intentionally the expensive/high-gain path. Maintenance mode then runs immediately over the generated baseline and any candidates that were created during the same run.
 
-- [ ] `next` Define the vision-quality first-create gate.
-  - Description: Add a product-quality gate that separates "foundation passed" from "Project Memory is good enough to trust." The gate should be driven by representative questions from `MY_VISION.md`, not by page count, section presence, or curator self-report alone.
-  - Why: The current `llm-wiki` output is structured and queryable, but it is still too coarse and acceptance-test-shaped to satisfy the intended Project Memory product.
-  - Shape: The gate should cover question-based usefulness, citation precision for repo-groundable claims, real provider dogfood versus deterministic fixture success, and explicit failure wording when docs are only foundation-valid.
-- [ ] `open` Reject coarse or placeholder citations in trusted create output.
-  - Description: Treat file-level or line-1 citations as insufficient for concrete repo claims when line-precise evidence is available, and preserve explicit inference labels where evidence is incomplete.
-  - Why: Project Memory is supposed to save rediscovery; vague citations push the rediscovery burden back onto the future agent.
-- [ ] `open` Prove first-create with live dogfood before maintenance work resumes.
-  - Description: Rerun `llm-wiki` first-create through the CLI under the vision-quality gate, distinguish deterministic fixture success from live provider quality, and keep the wiki untrusted if it cannot answer the required product questions.
-  - Why: Automatic maintenance should deepen a credible baseline, not grow documentation that already misses the product vision.
-- [ ] `open` Keep candidate-driven maintenance behind the first-create quality gate.
-  - Description: Resume Step 7 only after first-create output is useful enough that candidate maintenance can sharpen existing documentation instead of compensating for a weak baseline.
-  - Why: Candidate-driven growth depends on canonical pages that already have enough ownership, depth, and evidence quality to maintain.
+- [x] `done` ~~Retire fixed create-mode file names as product requirements.~~
+  - Description: Create mode no longer requires predetermined files such as `architecture.md`; it asks the planner to decide the documentation subjects and wiki paths, with `index.md` as the only required entry point.
+  - Why: Project Memory should reflect the repo's real documentation shape, not a rigid schema imposed by the harness.
+- [x] `done` ~~Add planner-plus-subject-writer create mode.~~
+  - Description: Create mode invokes a planner file-authoring agent to produce `draft-wiki/index.md`, placeholder subject files, `documentation-subject-manifest.json`, and a planner report; it then invokes a subject writer per manifest entry.
+  - Why: One agent should own the project-level documentation outline, while focused agents own deep documentation for specific subjects.
+- [x] `done` ~~Run first-create as create plus maintenance.~~
+  - Description: `project learn <key>` runs create mode for uncurated projects, promotes the draft wiki, then runs maintenance over pending Project Memory leads before publishing the final canonical wiki.
+  - Why: A first run should produce a full baseline and immediately reconcile the leads created during the run.
+- [x] `done` ~~Keep Project Memory docs as canonical markdown and retrieval/index state as derived.~~
+  - Description: Draft wiki output is promoted into `projects/<key>/wiki/`; section manifests, vector rows, FTS rows, and hint metadata remain rebuildable serving state.
+  - Why: Future agents should trust markdown, not SQLite retrieval rows.
 
-## Roadmap Step 7: Project Memory Maintenance And Candidate Promotion
+Evidence: `src/project/project-memory-agent-create-service.ts`, `src/project/project-memory-agent-maintenance-service.ts`, `src/project/project-memory-curator-service.ts`, `src/runtime/file-authoring-agent.ts`, `tests/project/project-memory-curator-service.test.ts`
 
-Goal: make Project Memory improve over time from Session Memory leads, runtime inbox items, stale/gap findings, and operator hints without copying unverified candidate text into durable markdown.
+## Roadmap Step 7: Memory Query, Logging, And Retrieval Quality
 
-Maintenance mode should treat candidates more heavily than creation mode because they are created after a repo already has memory, often against existing memory. That weight is a prioritization signal, not write authority.
+Goal: make Project Memory and Session Memory queryable through a measurable CLI contract that can be benchmarked over time.
 
-- [ ] `open` Enforce candidates-as-leads in maintenance.
-  - Description: Require the curator to inspect bounded target-repo evidence before applying a candidate to Project Memory.
-  - Why: Session Memory captures what happened; Project Memory documents what is true and useful about the repo.
-- [ ] `open` Make maintenance section-first.
-  - Description: Update existing owned sections when possible, create new sections or pages only when concept ownership is missing, and preserve uncertainty or disputed state instead of flattening contradictions.
-  - Why: Maintenance should sharpen documentation, not accumulate shallow entry fragments.
-- [ ] `open` Strengthen candidate disposition and source-consumption behavior.
-  - Description: Retire candidates only after a grounded write or a grounded terminal no-op, and keep insufficient-evidence leads reviewable.
-  - Why: Candidate lifecycle should reflect documentation work actually done.
-- [ ] `open` Report missing and stale coverage as first-class maintenance output.
-  - Description: When a lead reveals weak existing docs but no grounded write is possible, record a missing-coverage diagnostic instead of producing shallow text.
-  - Why: A useful memory system should identify where documentation is absent instead of pretending it is complete.
+The current query surface is not meant to synthesize final answers. It retrieves relevant memory records or Project Memory markdown sections, logs the full interaction, and gives agents enough context or canonical references to answer from memory instead of rediscovering the whole repo.
 
-## Roadmap Step 8: Project Memory Query And CLI Contract
+- [x] `done` ~~Stabilize Project Memory query as a markdown-backed layer.~~
+  - Description: `myelin memory query <key> "<question>" --layer project` embeds the question, searches Project Memory retrieval state, resolves hits back to canonical markdown sections, and returns inline content or canonical references.
+  - Why: Project Memory retrieval rows are pointers into markdown, not durable truth.
+- [x] `done` ~~Keep Session Memory query separate from Project Memory query.~~
+  - Description: Session Memory returns active trusted SQLite memory rows; Project Memory returns canonical markdown-backed sections or refs.
+  - Why: The layers have different truth sources and lifecycle semantics.
+- [x] `done` ~~Log memory queries per layer.~~
+  - Description: Project, Session, Practice, and Personal Memory each have their own query-log table shape, including question, embedding, full result JSON, answer/eval fields where applicable, and degradation metadata.
+  - Why: Retrieval quality should be compared through persisted evidence, not remembered informally.
+- [x] `done` ~~Add hybrid Project Memory retrieval.~~
+  - Description: Project Memory query combines vector recall with SQLite FTS/BM25 recall through reciprocal-rank fusion, then applies deterministic rerank/penalty rules for navigation sections and exact subject matches.
+  - Why: Dense vector search alone blurred exact phrases and let broad index sections outrank precise documentation sections.
+- [x] `done` ~~Benchmark retrieval with reusable question sets.~~
+  - Description: The first 15 Project Memory questions and 5 Session Memory questions were logged as a baseline, followed by additional Project Memory questions after hybrid retrieval.
+  - Why: Query tuning now has a durable comparison trail in SQLite query logs.
 
-Goal: expose Project Memory as a queryable documentation layer through Myelin's own CLI/script contracts.
+Evidence: `src/query/project-memory-query-service.ts`, `src/query/memory-query-service.ts`, `src/memory/query-logs.ts`, `src/memory/project-memory-section-fts.ts`, `src/memory/migrations.ts`, `tests/query/project-memory-query-service.test.ts`, `tests/memory/session-memory-query.test.ts`, `tests/commands/memory.test.ts`
 
-For the current product slice, Project Memory query should not synthesize final answers. It should embed the user's question, search derived SQLite/vector serving state, resolve hits back to canonical markdown sections or pages, and return inline content under a size threshold or canonical refs when too large. While dogfooding Myelin from inside this repo, agents and operators should use CLI commands and scripts directly; MCP is a later wrapper around working behavior, not a prerequisite for the core product loop.
+## Roadmap Step 8: Session Memory Auto-Maintenance
 
-- [ ] `open` Stabilize the Project Memory query layer contract.
-  - Description: Make the `project` layer query path a documented CLI/product contract rather than hidden service behavior.
-  - Why: Dogfooding and future wrappers need a stable command/result shape.
-- [ ] `open` Return markdown content or canonical refs from Project Memory hits.
-  - Description: Keep Project Memory query markdown-backed: Session Memory can return trusted SQLite rows directly, but Project Memory rows must resolve to canonical wiki markdown.
-  - Why: SQLite/vector rows are derived pointers, not Project Memory truth.
-- [ ] `open` Define size-threshold and degraded-state behavior.
-  - Description: Decide when query returns inline section content, whole page content, or only path/section refs, and make stale/missing index states explicit.
-  - Why: Agents need useful context without hidden token blowups or stale answers.
-- [ ] `open` Add product-query fixture questions.
-  - Description: Cover questions about SQLite storage, Session-to-Project candidate flow, `project learn` write decisions, runtime inbox intake, source consumption, and retrieval/indexing.
-  - Why: The generated docs should be tested against the questions future agents will actually ask.
+Goal: keep Session Memory fresh without manual queue draining.
 
-## Roadmap Step 9: Project Memory CLI Dogfood Acceptance Loop
+Session Memory auto-maintenance now treats capture as evidence append, then schedules bounded detached maintenance after enough Experience Log rows exist. The worker drains manageable ingest batches, waits for the ingest window, indexes Session Memory embeddings, and reschedules itself when the queue remains above threshold.
 
-Goal: prove the redesigned Project Memory layer on `llm-wiki` before expanding to other durable memory layers.
+- [x] `done` ~~Lower the dogfood auto-maintenance threshold.~~
+  - Description: `AUTO_MEMORY_MIN_CAPTURED_EVENTS` is configured to `25` for the dogfood repo.
+  - Why: The previous threshold let the Experience Log queue grow stale before maintenance ran.
+- [x] `done` ~~Make auto Session Memory maintenance a bounded drain loop.~~
+  - Description: The worker runs one bounded ingest window, indexes pending Session Memory embeddings, records state, and schedules a continuation when queued rows remain above threshold.
+  - Why: A single ingest launch with a long wait could leave large queues stale.
+- [x] `done` ~~Keep auto Session Memory maintenance detached and fail-open.~~
+  - Description: Capture hooks append evidence first, then schedule a detached worker guarded by lock, cooldown, and self-capture prevention.
+  - Why: Hooks should never block agent workflow or recursively capture Myelin-owned provider sessions.
 
-Step 9 is complete only when `llm-wiki` Project Memory is useful enough that a future agent can answer product and implementation-orientation questions from the wiki without rediscovering the whole repo. This dogfood loop uses Myelin's CLI commands and repo-local scripts directly; it does not depend on MCP.
+Evidence: `src/maintenance/auto-memory-maintenance.ts`, `src/maintenance/worker.ts`, `src/capture/facade.ts`, `tests/maintenance/auto-memory-maintenance.test.ts`
 
-- [ ] `open` Reset or quarantine the current shallow `llm-wiki` wiki.
-  - Description: Preserve the current output as failed dogfood evidence, then recreate Project Memory under the new quality gates.
-  - Why: The current wiki should not remain the trusted baseline.
-- [ ] `open` Rerun create mode against `llm-wiki` through the CLI.
-  - Description: Generate a new first Project Memory set with repo-local CLI commands only after the rendered documentation contract, create-mode orientation, and quality gates are in place.
-  - Why: Another provider run before the gates are fixed would only repeat the same failure mode.
-- [ ] `open` Insert or surface the product-vision lead through CLI-supported inputs.
-  - Description: Use the available CLI/candidate/inbox path to feed this product vision into Project Memory maintenance, then require repo-grounded documentation before accepting writes.
-  - Why: This is the dogfood behavior the product is meant to support.
-- [ ] `open` Manually review usefulness before marking Project Memory curated.
-  - Description: Accept the dogfood only if the wiki answers representative questions and a future agent can use it as living repo documentation.
-  - Why: Mechanical success is not enough for Project Memory.
+## Roadmap Step 9: Project Memory Maintenance And Review
 
-## Roadmap Step 10: MCP Tool Wrapper For Other Projects
+Goal: let Project Memory improve over time from runtime inbox items and higher-layer candidates without copying unverified candidate text into durable docs.
+
+Project Memory maintenance now mirrors Session Memory's shape: deterministic intake first, agentic curation second, derived retrieval refresh last. Candidates are leads, not truth. Runtime inbox files are preserved source material; inbox intake normalizes them into `memory_candidates`; the maintenance agent reads existing docs and repo evidence before updating canonical markdown.
+
+- [x] `done` ~~Add manual Project Memory maintenance.~~
+  - Description: `myelin memory maintain project <key>` runs deterministic runtime inbox intake, invokes the maintenance file-authoring agent over pending project candidates/handoffs, applies wiki changes, records source-consumption state, and refreshes Project Memory retrieval indexes.
+  - Why: Post-bootstrap Project Memory needs a maintenance command that is smaller and more targeted than full create mode.
+- [x] `done` ~~Keep deterministic inbox intake separate from agentic curation.~~
+  - Description: Inbox intake creates or reuses Project Memory candidates and does not update docs or invoke an agent by itself.
+  - Why: Intake is normalization; curation is documentation authorship.
+- [x] `done` ~~Record terminal-but-reviewable outcomes.~~
+  - Description: `myelin memory review <key>` reports outcomes such as `insufficient_evidence`, `not_durable`, `belongs_to_other_layer`, `deferred_unsafe_change`, `needs_followup`, `no_output`, rejected candidates, and degraded runs.
+  - Why: We can inspect non-success terminal states later without adding another queue.
+- [x] `done` ~~Add Project Memory auto-maintenance.~~
+  - Description: Runtime inbox creation and Session Memory ingest-created project candidates schedule detached Project Memory maintenance after either un-intaked inbox items or pending project candidates reach the configured threshold.
+  - Why: Project Memory should grow naturally from leads without requiring every operator to remember to run maintenance manually.
+- [x] `done` ~~Prevent maintenance recursion.~~
+  - Description: Project inbox intake inside the maintenance job does not schedule another auto-maintenance run; only external inbox creation and Session Memory-created project candidates trigger scheduling.
+  - Why: Inbox intake is already the first stage of the Project Memory maintenance job.
+
+Evidence: `src/project/project-memory-agent-maintenance-service.ts`, `src/project/project-memory-candidate-intake-service.ts`, `src/project/project-memory-curator-service.ts`, `src/commands/memory.ts`, `src/memory/memory-review-service.ts`, `src/maintenance/auto-project-memory-maintenance.ts`, `src/maintenance/project-memory-worker.ts`, `tests/project/project-memory-curator-service.test.ts`, `tests/memory/memory-review-service.test.ts`, `tests/maintenance/auto-project-memory-maintenance.test.ts`
+
+## Roadmap Step 10: Working Skeleton Hardening
+
+Goal: turn the working Myelin skeleton into a reliable operator product before extending new memory layers.
+
+The core loop now exists: capture and inbox create evidence, Session Memory turns experience into continuity and higher-layer leads, Project Memory creates and maintains repo documentation, query retrieves memory context, and review commands expose non-success terminal outcomes. The next work should harden that skeleton in real use rather than adding Practice or Personal Memory prematurely.
+
+- [ ] `next` Run a clean external-project dogfood.
+  - Description: Use the current create/query/maintenance/auto-maintenance pipeline on a non-Myelin repo, then ask real project questions through Project Memory and Session Memory before touching the repo directly.
+  - Why: Myelin-on-Myelin proves the loop exists; another repo will expose install, command, documentation-shape, and retrieval gaps that local dogfood can hide.
+- [ ] `open` Stabilize the installed `myelin` namespace.
+  - Description: Make the operator-facing `myelin` command consistently available instead of relying on `bun src/cli.ts` during development.
+  - Why: External project usage and MCP wrappers should depend on a stable CLI contract.
+- [ ] `open` Add operational status for auto-maintenance.
+  - Description: Surface latest Session and Project auto-maintenance state, locks, queue pressure, and log paths through a CLI/status command.
+  - Why: Background maintenance is useful only if operators can tell whether it is healthy.
+
+## Roadmap Step 11: Extend Practice And Personal Memory Roadmap
+
+Goal: add Practice Memory and Personal Memory work only after Session Memory plus Project Memory prove the core memory loop.
+
+Practice and Personal Memory should reuse the working Project Memory pattern where appropriate: candidates as leads, canonical markdown, provenance, deterministic validation, derived retrieval, and explicit review boundaries. They are intentionally later because they are global layers and simpler than Project Memory's repo-bound documentation problem.
+
+- [ ] `open` Extend the roadmap for Practice Memory.
+  - Description: After Project Memory works, define the roadmap for reusable global practice guidance such as tools, providers, libraries, and workflows.
+  - Why: Practice Memory should inherit proven curation mechanics instead of being designed in parallel with the harder Project Memory layer.
+- [ ] `open` Extend the roadmap for Personal Memory.
+  - Description: After Project Memory works, define the roadmap for durable personal guidance, explicit preferences, and collaboration rules.
+  - Why: Personal Memory needs careful evidence boundaries, but its storage and retrieval shape should build on the proven durable-memory pattern.
+
+## Roadmap Step 12: MCP Tool Wrapper For Other Projects
 
 Goal: expose proven Myelin CLI/script behavior as globally available tools for agents working in other repositories.
 
@@ -353,19 +392,6 @@ MCP is not part of the core dogfood loop for Myelin-on-Myelin work. It is the ex
 - [ ] `open` Preserve detached MCP ownership.
   - Description: Keep core behavior in Myelin CLI/runtime code and keep MCP as a detached consumer of stable command/JSON contracts.
   - Why: The wrapper must not become a second implementation of memory logic.
-
-## Roadmap Step 11: Extend Practice And Personal Memory Roadmap
-
-Goal: add Practice Memory and Personal Memory work only after Session Memory plus Project Memory prove the core memory loop.
-
-Practice and Personal Memory should reuse the working Project Memory pattern where appropriate: candidates as leads, canonical markdown, provenance, deterministic validation, derived retrieval, and explicit review boundaries. They are intentionally later because they are global layers and simpler than Project Memory's repo-bound documentation problem.
-
-- [ ] `open` Extend the roadmap for Practice Memory.
-  - Description: After Project Memory works, define the roadmap for reusable global practice guidance such as tools, providers, libraries, and workflows.
-  - Why: Practice Memory should inherit proven curation mechanics instead of being designed in parallel with the harder Project Memory layer.
-- [ ] `open` Extend the roadmap for Personal Memory.
-  - Description: After Project Memory works, define the roadmap for durable personal guidance, explicit preferences, and collaboration rules.
-  - Why: Personal Memory needs careful evidence boundaries, but its storage and retrieval shape should build on the proven durable-memory pattern.
 
 ## Always-On Guardrails
 

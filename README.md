@@ -100,7 +100,7 @@ make typecheck
 
 Model-backed workflows use the operator's authenticated vendor CLIs through the provider abstraction. Configure defaults in `myelin.config`; environment variables can still override local config for a run.
 
-Embedding-backed Session Memory indexing reads `GOOGLE_API_KEY` from `.env` or the process environment. `GEMINI_API_KEY` is accepted as a compatibility alias.
+Embedding-backed indexing defaults to `EMBEDDING_PROVIDER=auto`: Myelin uses local `qwen3-embedding:4b` through Ollama when its daemon, model, and a 1,536-dimension probe are available, otherwise it falls back to Google. Configure `EMBEDDING_OLLAMA_MODEL` and `EMBEDDING_OLLAMA_URL` to override the local target. Google reads `GOOGLE_API_KEY` from `.env` or the process environment; `GEMINI_API_KEY` is accepted as a compatibility alias. Set `EMBEDDING_PROVIDER=ollama` or `gemini` to disable automatic fallback.
 
 On macOS, SQLite extension loading requires a non-Apple SQLite build. Myelin prefers its vendored SQLite runtime, falls back to Homebrew SQLite at `/opt/homebrew/opt/sqlite/lib/libsqlite3.dylib` or `/usr/local/opt/sqlite/lib/libsqlite3.dylib`, and accepts `MYELIN_SQLITE_DYLIB_PATH` or `SQLITE_DYLIB_PATH` overrides.
 

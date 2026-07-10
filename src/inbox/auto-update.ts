@@ -2,6 +2,7 @@ import { constants } from "node:fs";
 import { mkdir, open, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { projectPath, resolveInside } from "../runtime/fs.ts";
+import { prepareProjectLogFile, projectLogPath } from "../runtime/project-logs.ts";
 
 export type AutoUpdateLock = {
   acquired: boolean;
@@ -22,7 +23,7 @@ export function autoUpdateLockPath(root: string, projectKey: string): string {
 
 export function autoUpdateLogPath(root: string, projectKey: string, now: Date = new Date()): string {
   const timestamp = now.toISOString().replace(/:/g, "-");
-  return projectPath(root, projectKey, "logs", `auto-update-${timestamp}.log`);
+  return projectLogPath(root, projectKey, `auto-update-${timestamp}.log`);
 }
 
 export async function acquireAutoUpdateLock(root: string, projectKey: string, now: Date = new Date()): Promise<AutoUpdateLock> {
@@ -51,7 +52,7 @@ export async function spawnDetachedProjectIngest(root: string, projectKey: strin
   if (!lock.acquired) return { status: "skipped:already-running", lockPath: lock.lockPath };
 
   const logPath = autoUpdateLogPath(root, projectKey, now);
-  await mkdir(join(logPath, ".."), { recursive: true });
+  await prepareProjectLogFile(root, projectKey, logPath);
 
   const proc = Bun.spawn({
     cmd: ["bun", resolveInside(root, "src", "cli.ts"), "ingest", projectKey],

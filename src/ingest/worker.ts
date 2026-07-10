@@ -33,7 +33,7 @@ import {
   createSessionMemoryContexts,
   type SessionMemoryContextInput,
 } from "../memory/session-memory-contexts.ts";
-import { loadConfig, selectActiveEmbeddingContract } from "../runtime/config.ts";
+import { loadConfig, type ActiveEmbeddingContract } from "../runtime/config.ts";
 import {
   selectSessionMemoryReconciliationContext,
   type ReconciliationMemoryContext,
@@ -441,6 +441,7 @@ export function applyIngestWorkerOutput(
     output: IngestWorkerOutput;
     finalizedAt: string;
     allowedExistingMemoryIds?: string[];
+    embeddingContract?: ActiveEmbeddingContract;
   },
 ): { session_memories: number; memory_candidates: number; project_memory_candidates: number; handoff_instructions: number } {
   const apply = db.transaction(() => {
@@ -490,6 +491,7 @@ export function applyIngestWorkerOutput(
         confidence: memory.confidence,
         risk: memory.risk,
         now: input.finalizedAt,
+        embedding_contract: input.embeddingContract,
       });
       createSessionMemoryContexts(db, contextsForSessionMemory(db, {
         sessionMemoryId: memoryId,
@@ -717,8 +719,9 @@ export async function runIngestWorker(input: {
 }): Promise<void> {
   const db = openMemoryDb(input.root);
   const config = await loadConfig(input.root);
-  const embeddingContract = selectActiveEmbeddingContract(config, "retrieval_document");
-  const embeddingProvider = new EmbeddingProviderFactory(config).create();
+  const embeddingSelection = await new EmbeddingProviderFactory(config).initialize("retrieval_document");
+  const embeddingContract = embeddingSelection.contract;
+  const embeddingProvider = embeddingSelection.client;
   const now = input.now ?? (() => new Date());
   let claimedCount = 0;
   let sessionMemories = 0;
@@ -798,6 +801,7 @@ export async function runIngestWorker(input: {
         output,
         finalizedAt: now().toISOString(),
         allowedExistingMemoryIds: boundedPrompt.reconciliationContext.map((memory) => memory.id),
+        embeddingContract: embeddingContract,
       });
       terminalSummary = output.terminal_summary ?? terminalSummary;
       sessionMemories += counts.session_memories;

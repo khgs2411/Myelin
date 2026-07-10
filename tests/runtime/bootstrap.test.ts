@@ -24,12 +24,13 @@ test("bootstrap creates an uncurated project memory shell", async () => {
   expect(result.projectKey).toBe("class-kit");
   expect(result.created).toContain("projects/class-kit/state/project.json");
   expect(result.created).toContain("projects/class-kit/readme.md");
-  expect(result.created).toContain("projects/class-kit/index.md");
   expect(result.created).toContain("projects/class-kit/wiki/index.md");
-  expect(result.created).toContain("projects/class-kit/state/index.md");
-  expect(result.created).toContain("projects/class-kit/log/index.md");
-  expect(result.created).toContain("projects/class-kit/log/changelog.md");
-  expect(result.created).toContain("projects/class-kit/runs/index.md");
+  expect(result.created).not.toContain("projects/class-kit/index.md");
+  expect(result.created).not.toContain("projects/class-kit/state/index.md");
+  expect(result.created).not.toContain("projects/class-kit/log");
+  expect(result.created).not.toContain("projects/class-kit/log/index.md");
+  expect(result.created).not.toContain("projects/class-kit/log/changelog.md");
+  expect(result.created).not.toContain("projects/class-kit/runs/index.md");
 
   const project = await readJson<{ key: string; name: string; repo_paths: string[] }>(
     join(root, "projects", "class-kit", "state", "project.json"),
@@ -40,9 +41,11 @@ test("bootstrap creates an uncurated project memory shell", async () => {
     repo_paths: [resolve(repo)],
   });
 
-  for (const dir of ["wiki", "state", "log", "runs"]) {
+  for (const dir of ["wiki", "state", "runs"]) {
     expect(result.created).toContain(`projects/class-kit/${dir}`);
   }
+  expect(await Bun.file(join(root, "projects", "class-kit", "index.md")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "projects", "class-kit", "log")).exists()).toBe(false);
   expect(result.created).not.toContain("projects/class-kit/schema");
   expect(result.created).not.toContain("projects/class-kit/sources");
   expect(await Bun.file(join(root, "projects", "class-kit", "schema")).exists()).toBe(false);
@@ -83,9 +86,9 @@ test("bootstrap repairs older project shells without deleting preserved material
   });
   expect(result.removed).toContain("projects/class-kit/schema");
   expect(await readFile(join(projectRoot, "wiki", "index.md"), "utf8")).toBe("# Existing project memory\n");
-  expect(await readFile(join(projectRoot, "index.md"), "utf8")).toContain("# class-kit Index");
   expect(await readFile(join(projectRoot, "sources", "source-note.md"), "utf8")).toBe("source material\n");
-  expect(await readFile(join(projectRoot, "sources", "index.md"), "utf8")).toContain("Preserved legacy");
+  expect(await Bun.file(join(projectRoot, "index.md")).exists()).toBe(false);
+  expect(await Bun.file(join(projectRoot, "sources", "index.md")).exists()).toBe(false);
   expect(await Bun.file(join(projectRoot, "schema")).exists()).toBe(false);
 });
 

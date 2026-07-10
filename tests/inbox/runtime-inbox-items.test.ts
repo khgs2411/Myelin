@@ -55,12 +55,8 @@ test("creates a project runtime inbox item as pretty JSON source material", asyn
     risk: "medium",
   });
 
-  expect(await readFile(join(root, "projects", "demo", "sources", "index.md"), "utf8")).toContain(
-    "[Inbox](inbox/index.md)",
-  );
-  expect(await readFile(join(root, "projects", "demo", "sources", "inbox", "index.md"), "utf8")).toContain(
-    "Runtime durable-memory inbox source proposals",
-  );
+  expect(await Bun.file(join(root, "projects", "demo", "sources", "index.md")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "projects", "demo", "sources", "inbox", "index.md")).exists()).toBe(false);
 });
 
 test("duplicate runtime inbox ids fail without overwriting preserved source material", async () => {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openMemoryDbAt, type MemoryDb } from "../../src/memory/db.ts";
@@ -64,6 +64,7 @@ test("detached spawn runs worker from target repo and returns pid plus log path"
   };
 
   const logPath = join(root, "projects", "class-kit", "logs", "ingest-job_1.log");
+  await seedProjectLogs("class-kit", 30);
   const result = await spawnDetachedIngestWorker({
     root,
     projectKey: "class-kit",
@@ -75,6 +76,7 @@ test("detached spawn runs worker from target repo and returns pid plus log path"
   });
 
   expect(result).toEqual({ pid: 4321, logPath });
+  expect((await readdir(join(root, "projects", "class-kit", "logs"))).filter((entry) => entry.endsWith(".log"))).toHaveLength(24);
   expect(unrefCalled).toBe(true);
   expect(calls).toHaveLength(1);
   expect(calls[0]).toMatchObject({
@@ -91,6 +93,17 @@ test("detached spawn runs worker from target repo and returns pid plus log path"
     },
   });
 });
+
+async function seedProjectLogs(projectKey: string, count: number): Promise<void> {
+  const logsDir = join(root, "projects", projectKey, "logs");
+  await mkdir(logsDir, { recursive: true });
+  for (let i = 0; i < count; i += 1) {
+    const path = join(logsDir, `old-${i.toString().padStart(2, "0")}.log`);
+    await writeFile(path, `${i}\n`, "utf8");
+    const time = new Date(Date.UTC(2026, 0, 1, 0, 0, i));
+    await utimes(path, time, time);
+  }
+}
 
 test("launch allows non-master and records branch metadata", async () => {
   const repo = join(root, "repos", "class-kit");

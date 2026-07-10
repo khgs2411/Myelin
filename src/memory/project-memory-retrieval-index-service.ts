@@ -1,5 +1,5 @@
 import type { Database } from "bun:sqlite";
-import { loadConfig, selectActiveEmbeddingContract } from "../runtime/config.ts";
+import { loadConfig } from "../runtime/config.ts";
 import { openMemoryDb } from "./db.ts";
 import { EmbeddingProviderFactory } from "./embedding-provider-factory.ts";
 import {
@@ -26,8 +26,7 @@ export class ProjectMemoryRetrievalIndexService {
 
   async indexProject(input: ProjectMemoryRetrievalIndexInput): Promise<ProjectMemoryRetrievalIndexResult> {
     const config = await loadConfig(this.deps.root);
-    const contract = selectActiveEmbeddingContract(config, "retrieval_document");
-    const provider = new EmbeddingProviderFactory(config).create();
+    const selection = await new EmbeddingProviderFactory(config).initialize("retrieval_document");
     const ownedDb = this.deps.db ? null : openMemoryDb(this.deps.root);
     const db = this.deps.db ?? ownedDb;
     if (!db) throw new Error("Project Memory retrieval index service could not open memory db");
@@ -35,8 +34,8 @@ export class ProjectMemoryRetrievalIndexService {
       return await indexProjectMemoryRetrieval(db, {
         root: this.deps.root,
         project_key: input.projectKey,
-        contract,
-        provider,
+        contract: selection.contract,
+        provider: selection.client,
         limit: input.limit,
         batch_size: input.batchSize,
         retry_failed: input.retryFailed,

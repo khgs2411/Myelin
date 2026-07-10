@@ -7,9 +7,10 @@ import { SessionMemoryIndexService } from "../memory/session-memory-index-servic
 import type { DetachedSpawner, ProcessLivenessChecker } from "../ingest/runtime.ts";
 import { isProcessAlive } from "../ingest/runtime.ts";
 import { IngestService, type IngestProvider, type IngestServiceDeps, type StartIngestResult } from "../ingest/ingest-service.ts";
-import { loadConfig, selectActiveEmbeddingContract, type AutoMemoryMaintenanceConfig } from "../runtime/config.ts";
+import { loadConfig, type AutoMemoryMaintenanceConfig } from "../runtime/config.ts";
 import { projectPath } from "../runtime/fs.ts";
 import { createId } from "../runtime/ids.ts";
+import { prepareProjectLogFile, projectLogPath } from "../runtime/project-logs.ts";
 
 export type AutoMemoryMaintenanceScheduleResult =
   | { status: "disabled"; reason: string }
@@ -126,7 +127,7 @@ export class AutoMemoryMaintenanceService {
 
     const logPath = autoMemoryLogPath(this.root, projectKey, runId);
     try {
-      await mkdir(dirname(logPath), { recursive: true });
+      await prepareProjectLogFile(this.root, projectKey, logPath);
       const spawn = this.deps.spawn ?? ((options) => Bun.spawn(options));
       const proc = spawn({
         cmd: ["bun", join(this.root, "src", "maintenance", "worker.ts"), projectKey],
@@ -349,12 +350,11 @@ export class AutoMemoryMaintenanceService {
 
     const db = openMemoryDb(this.root);
     try {
-      const contract = selectActiveEmbeddingContract(config, "retrieval_document");
-      const provider = new EmbeddingProviderFactory(config).create();
+      const selection = await new EmbeddingProviderFactory(config).initialize("retrieval_document");
       return new SessionMemoryIndexService({
         db,
-        contract,
-        provider,
+        contract: selection.contract,
+        provider: selection.client,
       }).indexPending({
         projectKey,
         limit: config.autoMemoryMaintenance.indexLimit,
@@ -445,7 +445,7 @@ export function statePath(root: string, projectKey: string): string {
 }
 
 export function autoMemoryLogPath(root: string, projectKey: string, runId: string): string {
-  return projectPath(root, projectKey, "logs", `${runId}.log`);
+  return projectLogPath(root, projectKey, `${runId}.log`);
 }
 
 async function tryAcquireLock(root: string, projectKey: string, runId: string, now: string): Promise<LockHandle | null> {

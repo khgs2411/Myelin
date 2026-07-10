@@ -4,7 +4,7 @@ import type { Database } from "bun:sqlite";
 import { openMemoryDb } from "../memory/db.ts";
 import { EmbeddingProviderFactory } from "../memory/embedding-provider-factory.ts";
 import { attachMemoryQueryLogEval } from "../memory/query-logs.ts";
-import { loadConfig, selectActiveEmbeddingContract } from "../runtime/config.ts";
+import { loadConfig } from "../runtime/config.ts";
 import { MemoryQueryService, type QueryResponse } from "./memory-query-service.ts";
 
 export type ProjectMemoryGoldenQuestion = {
@@ -71,8 +71,7 @@ export async function runProjectMemoryQuestionEval(input: {
   const startedAt = input.now?.() ?? new Date().toISOString();
   const runId = `pm_eval_${randomUUID()}`;
   const config = await loadConfig(input.root);
-  const documentContract = selectActiveEmbeddingContract(config, "retrieval_document");
-  const provider = new EmbeddingProviderFactory(config).create();
+  const selection = await new EmbeddingProviderFactory(config).initialize("retrieval_document");
   const ownedDb = input.db ? null : openMemoryDb(input.root);
   const db = input.db ?? ownedDb;
   if (!db) throw new Error("Project Memory eval could not open memory db");
@@ -81,8 +80,8 @@ export async function runProjectMemoryQuestionEval(input: {
   try {
     const service = new MemoryQueryService({
       db,
-      documentContract,
-      embeddingProvider: provider,
+      documentContract: selection.contract,
+      embeddingProvider: selection.client,
     });
 
     for (const question of input.questions) {

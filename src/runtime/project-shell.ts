@@ -21,7 +21,7 @@ export type ProjectShellRepairOptions = {
   curated?: boolean;
 };
 
-const REQUIRED_DIRS = ["wiki", "state", "log", "runs"] as const;
+const REQUIRED_DIRS = ["wiki", "state", "runs"] as const;
 const OPTIONAL_LEGACY_DIRS = ["sources", "schema"] as const;
 
 export async function repairProjectShell(
@@ -38,11 +38,6 @@ export async function repairProjectShell(
   }
 
   await moveFileIfDestinationMissing(rootIndexPath(root, projectKey), projectPath(root, projectKey, "wiki", "index.md"), result);
-  await moveFileIfDestinationMissing(
-    projectPath(root, projectKey, "changelog.md"),
-    projectPath(root, projectKey, "log", "changelog.md"),
-    result,
-  );
 
   await ensureMarkdownFile(
     projectPath(root, projectKey, "readme.md"),
@@ -51,39 +46,9 @@ export async function repairProjectShell(
     result,
   );
   await ensureMarkdownFile(
-    rootIndexPath(root, projectKey),
-    label(projectKey, "index.md"),
-    projectIndex(projectKey),
-    result,
-  );
-  await ensureMarkdownFile(
     projectPath(root, projectKey, "wiki", "index.md"),
     label(projectKey, "wiki", "index.md"),
     wikiIndex(projectKey, curated),
-    result,
-  );
-  await ensureMarkdownFile(
-    projectPath(root, projectKey, "state", "index.md"),
-    label(projectKey, "state", "index.md"),
-    stateIndex(projectKey, curated),
-    result,
-  );
-  await ensureMarkdownFile(
-    projectPath(root, projectKey, "log", "index.md"),
-    label(projectKey, "log", "index.md"),
-    logIndex(projectKey),
-    result,
-  );
-  await ensureMarkdownFile(
-    projectPath(root, projectKey, "log", "changelog.md"),
-    label(projectKey, "log", "changelog.md"),
-    changelog(projectKey),
-    result,
-  );
-  await ensureMarkdownFile(
-    projectPath(root, projectKey, "runs", "index.md"),
-    label(projectKey, "runs", "index.md"),
-    runsIndex(projectKey),
     result,
   );
   await ensureBootstrapState(root, projectKey, result);
@@ -111,19 +76,10 @@ export async function ensureProjectMemoryBrain(
       "",
       "Project Memory is curated for this project.",
       "",
-      "- [Project index](index.md)",
       "- [Wiki](wiki/index.md)",
-      "- [State](state/index.md)",
-      "- [Log](log/index.md)",
-      "- [Runs](runs/index.md)",
       "",
     ].join("\n"),
     ["Project Memory has not been curated yet.", "Project Memory is curated for this project."],
-  );
-  await writeGeneratedMarkdown(
-    join(projectRoot, "index.md"),
-    projectIndex(projectKey),
-    [`# ${projectKey} Index`, "- [Wiki](wiki/index.md)"],
   );
   await writeGeneratedMarkdown(
     join(wikiRoot, "index.md"),
@@ -141,22 +97,6 @@ export async function ensureProjectMemoryBrain(
     ["Project Memory has not been curated yet.", `Curated Project Memory for \`${projectKey}\`.`],
   );
 
-  for (const subject of ["architecture", "setup", "testing", "decisions"]) {
-    await writeMarkdownIfMissing(
-      join(wikiRoot, subject, "index.md"),
-      [
-        `# ${titleCase(subject)}`,
-        "",
-        `Project Memory subject index for \`${subject}\`.`,
-        "",
-      ].join("\n"),
-    );
-  }
-
-  await writeMarkdown(join(projectRoot, "state", "index.md"), stateIndex(projectKey, true));
-  await writeMarkdown(join(projectRoot, "log", "index.md"), logIndex(projectKey));
-  await appendChangelog(join(projectRoot, "log", "changelog.md"), projectKey, now, runDir);
-
   await writeJson(resolveInside(projectRoot, "state", "project-memory.json"), {
     project_key: projectKey,
     source_run_dir: runDir,
@@ -165,15 +105,7 @@ export async function ensureProjectMemoryBrain(
   });
   await writeJson(resolveInside(projectRoot, "state", "pages.json"), {
     project_key: projectKey,
-    pages: [
-      "readme.md",
-      "index.md",
-      "wiki/index.md",
-      "wiki/architecture/index.md",
-      "wiki/setup/index.md",
-      "wiki/testing/index.md",
-      "wiki/decisions/index.md",
-    ],
+    pages: ["readme.md", "wiki/index.md"],
     updated_at: now.toISOString(),
   });
 
@@ -262,7 +194,7 @@ async function repairOptionalLegacyDirectory(
   }
 
   result.kept.push(pathLabel);
-  await ensureMarkdownFile(join(path, "index.md"), label(projectKey, dir, "index.md"), optionalIndex(projectKey, dir), result);
+  result.kept.push(pathLabel);
 }
 
 async function moveFileIfDestinationMissing(
@@ -285,34 +217,9 @@ async function moveFileIfDestinationMissing(
   result.moved.push({ from: relativeProjectLabel(from), to: relativeProjectLabel(to) });
 }
 
-async function appendChangelog(path: string, projectKey: string, now: Date, runDir: string): Promise<void> {
-  const entry = [
-    `## [${now.toISOString()}] project learn`,
-    "",
-    `Initial or refreshed Project Memory brain for \`${projectKey}\`.`,
-    "",
-    `Run: \`${runDir}\``,
-    "",
-  ].join("\n");
-
-  if (!(await exists(path))) {
-    await writeMarkdown(path, ["# Changelog", "", entry].join("\n"));
-    return;
-  }
-
-  const current = await readFile(path, "utf8");
-  if (current.includes(`Run: \`${runDir}\``)) return;
-  await writeMarkdown(path, `${current.trimEnd()}\n\n${entry}`);
-}
-
 async function writeMarkdown(path: string, content: string): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, content.endsWith("\n") ? content : `${content}\n`, "utf8");
-}
-
-async function writeMarkdownIfMissing(path: string, content: string): Promise<void> {
-  if (await exists(path)) return;
-  await writeMarkdown(path, content);
 }
 
 async function writeGeneratedMarkdown(path: string, content: string, generatedNeedles: string[]): Promise<void> {
@@ -349,19 +256,6 @@ function projectReadme(projectKey: string, repoPath: string | undefined, curated
   return lines.join("\n");
 }
 
-function projectIndex(projectKey: string): string {
-  return [
-    `# ${projectKey} Index`,
-    "",
-    "- [Readme](readme.md)",
-    "- [Wiki](wiki/index.md)",
-    "- [State](state/index.md)",
-    "- [Log](log/index.md)",
-    "- [Runs](runs/index.md)",
-    "",
-  ].join("\n");
-}
-
 function wikiIndex(projectKey: string, curated: boolean): string {
   return [
     "# Project Memory",
@@ -369,71 +263,6 @@ function wikiIndex(projectKey: string, curated: boolean): string {
     curated ? `Curated Project Memory for \`${projectKey}\`.` : "Project Memory has not been curated yet.",
     "",
   ].join("\n");
-}
-
-function stateIndex(projectKey: string, curated: boolean): string {
-  const links = ["- [project.json](project.json)", "- [bootstrap-state.json](bootstrap-state.json)"];
-  if (curated) {
-    links.push(
-      "- [project-memory.json](project-memory.json)",
-      "- [schema-context.json](schema-context.json)",
-      "- [pages.json](pages.json)",
-      "- [freshness.json](freshness.json)",
-    );
-  }
-
-  return [
-    "# State",
-    "",
-    `Machine-readable state for \`${projectKey}\`.`,
-    "",
-    ...links,
-    "",
-  ].join("\n");
-}
-
-function logIndex(projectKey: string): string {
-  return [
-    "# Log",
-    "",
-    `Chronological Project Memory log for \`${projectKey}\`.`,
-    "",
-    "- [Changelog](changelog.md)",
-    "",
-  ].join("\n");
-}
-
-function changelog(projectKey: string): string {
-  return [
-    "# Changelog",
-    "",
-    `Project Memory shell created for \`${projectKey}\`.`,
-    "",
-  ].join("\n");
-}
-
-function runsIndex(projectKey: string): string {
-  return [
-    "# Runs",
-    "",
-    `Command run artifacts for \`${projectKey}\`.`,
-    "",
-    "Command-specific run folders live under this directory.",
-    "",
-  ].join("\n");
-}
-
-function optionalIndex(projectKey: string, dir: string): string {
-  return [
-    `# ${titleCase(dir)}`,
-    "",
-    `Preserved legacy \`${dir}\` material for \`${projectKey}\`.`,
-    "",
-  ].join("\n");
-}
-
-function titleCase(value: string): string {
-  return value.slice(0, 1).toUpperCase() + value.slice(1);
 }
 
 function rootIndexPath(root: string, projectKey: string): string {

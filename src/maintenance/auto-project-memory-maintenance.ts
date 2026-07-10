@@ -8,6 +8,7 @@ import { ProjectService } from "../project/project-service.ts";
 import { loadConfig, type AutoProjectMemoryMaintenanceConfig } from "../runtime/config.ts";
 import { projectPath } from "../runtime/fs.ts";
 import { createId } from "../runtime/ids.ts";
+import { prepareProjectLogFile, projectLogPath } from "../runtime/project-logs.ts";
 
 export type AutoProjectMemoryMaintenanceTrigger = "runtime_inbox_created" | "session_memory_candidate_created";
 
@@ -207,7 +208,7 @@ export class AutoProjectMemoryMaintenanceService implements AutoProjectMemoryMai
 
     const logPath = autoProjectMemoryLogPath(this.root, projectKey, runId);
     try {
-      await mkdir(dirname(logPath), { recursive: true });
+      await prepareProjectLogFile(this.root, projectKey, logPath);
       const spawn = this.deps.spawn ?? ((options) => Bun.spawn(options));
       const proc = spawn({
         cmd: ["bun", join(this.root, "src", "maintenance", "project-memory-worker.ts"), projectKey],
@@ -360,7 +361,7 @@ export function statePath(root: string, projectKey: string): string {
 }
 
 export function autoProjectMemoryLogPath(root: string, projectKey: string, runId: string): string {
-  return projectPath(root, projectKey, "logs", `${runId}.log`);
+  return projectLogPath(root, projectKey, `${runId}.log`);
 }
 
 async function countPendingRuntimeInboxItems(root: string, projectKey: string, db: Database): Promise<number> {

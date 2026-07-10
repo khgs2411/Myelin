@@ -1,9 +1,10 @@
 import type { Database } from "bun:sqlite";
-import { appendFile, mkdir } from "node:fs/promises";
+import { appendFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { IngestJobRow } from "../memory/ingest-types.ts";
 import type { RunProcessResult } from "../runtime/process.ts";
 import { runProcess } from "../runtime/process.ts";
+import { prepareProjectLogFile, projectLogPath } from "../runtime/project-logs.ts";
 import { findProject } from "../runtime/projects.ts";
 import { getIngestJob, updateIngestJobStatus } from "./jobs.ts";
 
@@ -53,7 +54,7 @@ export async function readCurrentGitBranch(cwd: string, runner?: RuntimeProcessR
 }
 
 export function ingestJobLogPath(root: string, projectKey: string, jobId: string): string {
-  return join(root, "projects", projectKey, "logs", `ingest-${jobId}.log`);
+  return projectLogPath(root, projectKey, `ingest-${jobId}.log`);
 }
 
 export function isProcessAlive(pid: number): boolean {
@@ -105,7 +106,7 @@ export async function spawnDetachedIngestWorker(input: {
   env?: NodeJS.ProcessEnv;
   spawn?: DetachedSpawner;
 }): Promise<DetachedIngestSpawnResult> {
-  await mkdir(join(input.logPath, ".."), { recursive: true });
+  await prepareProjectLogFile(input.root, input.projectKey, input.logPath);
 
   const spawn = input.spawn ?? ((options) => Bun.spawn(options));
   const proc = spawn({

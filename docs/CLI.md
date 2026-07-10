@@ -361,7 +361,7 @@ Output:
 Side effects:
 
 - Writes immutable preserved source JSON under `projects/<project-key>/sources/inbox/<id>.json`.
-- Creates `projects/<project-key>/sources/index.md` and `projects/<project-key>/sources/inbox/index.md` when needed.
+- Creates `projects/<project-key>/sources/inbox/` when needed.
 - Does not create memory candidate rows. Use `myelin memory inbox intake <project-key>` or `myelin project learn <project-key>` after this command.
 
 ### `myelin memory inbox intake <project-key> [--json]`
