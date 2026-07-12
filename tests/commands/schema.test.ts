@@ -3,12 +3,27 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createCli } from "../../src/commands/registry.ts";
-import { registerSchemaCommands } from "../../src/commands/schema.ts";
+import { registerSchemaCommands as registerSchemaCommandsWithContext } from "../../src/commands/schema.ts";
 import { readJson, writeJson } from "../../src/runtime/json.ts";
 import type { SchemaContext } from "../../src/schema/types.ts";
 
 let root: string;
 let previousCwd: string;
+
+function registerSchemaCommands(cli: ReturnType<typeof createCli>): void {
+  registerSchemaCommandsWithContext(cli, { context: testContext() });
+}
+
+function testContext() {
+  return {
+    myelinRoot: root,
+    callerCwd: join(root, "caller"),
+    invocationKind: "test",
+    rootSource: "test_dependency",
+    launcherPath: null,
+    locatorPath: null,
+  } as const;
+}
 
 beforeEach(async () => {
   previousCwd = process.cwd();

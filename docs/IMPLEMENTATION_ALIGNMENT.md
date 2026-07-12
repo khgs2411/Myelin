@@ -57,7 +57,12 @@ The current codebase has three kinds of layers:
 
 What exists:
 
-- Bun/TypeScript CLI entrypoint and command registry.
+- Bun/TypeScript CLI entrypoint and command registry driven by an explicit
+  launch context that separates the authoritative Myelin checkout from the
+  caller's working directory.
+- A copied machine launcher (normally `~/.local/bin/myelin`) backed by the
+  versioned ownership locator at `~/.myelin/install.json`; installed hooks and
+  detached workers resolve through the same absolute command boundary.
 - Runtime helpers for paths, JSON, project discovery, state, run artifacts, ids, and subprocesses.
 - Provider abstraction for Codex and Claude Code using the operator's authenticated CLI.
 - Stub-response support for deterministic tests.
@@ -67,6 +72,9 @@ Code evidence:
 
 - `src/cli.ts`
 - `src/commands/registry.ts`
+- `src/commands/register.ts`
+- `src/runtime/launch-context.ts`
+- `src/runtime/command-invocation.ts`
 - `src/runtime/*`
 - `src/memory/sqlite-runtime.ts`
 - `vendor/sqlite/README.md`
@@ -78,6 +86,49 @@ This layer matches V2 well. It is the stable foundation created by the Python/Ba
 Verdict:
 
 Keep and build on it.
+
+### Installed Command And Provider Lifecycle
+
+What exists:
+
+- Repo-root `./install` delegates to the same `myelin install` service used by
+  the CLI.
+- Installation is preview-first; `--apply` writes a copied launcher and the
+  single machine ownership locator under `~/.myelin/`.
+- Bare install detects the available supported provider, while explicit
+  `--provider codex` and `--command-only` keep provider selection deliberate.
+- `--rebind` handles a moved checkout explicitly, and `--bin-dir` supports an
+  absolute custom launcher directory without silently moving an existing
+  recorded launcher.
+- Provider-only uninstall preserves the command; full uninstall removes only
+  verified artifacts recorded by Myelin. Both are preview-first and require
+  `--apply` to mutate machine state.
+- A recoverable journal makes launcher, provider, and locator promotion
+  resumable. Ownership or hash mismatches fail closed.
+
+Code evidence:
+
+- `install`
+- `src/commands/install.ts`
+- `src/install/install-service.ts`
+- `src/install/machine-locator.ts`
+- `src/install/install-journal.ts`
+- `src/install/launcher.ts`
+- `src/install/provider-registry.ts`
+- `src/install/codex.ts`
+
+Alignment:
+
+This is the stable local operator boundary needed for external-repository use.
+The checkout remains the update source, the copied launcher is machine access,
+and the locator owns the binding without relying on a symlink or release
+package.
+
+Verdict:
+
+Keep this boundary conservative. Add providers through the same registry and
+ownership lifecycle; do not create provider-specific global commands or infer
+ownership from files that are absent from the locator.
 
 ### Project Data Layout
 
@@ -167,24 +218,45 @@ Keep as a project-wiki query seed. Reframe as one backend for the future `query`
 What exists:
 
 - `myelin status [project-key]`.
-- Reports project identity, stale state, latest run, and latest session pointer.
-- JSON response follows a facade-like envelope.
+- Resolves an omitted project key only from the caller's registered repository;
+  unrelated directories must supply a key.
+- Reports installation, Session Memory capture/ingest/retrieval/maintenance,
+  Project Memory inbox/candidates/curation/retrieval/maintenance, warnings,
+  suggested actions, and evidence paths.
+- `--json` emits the exact versioned `myelin.status.v1` operational contract.
+- Status inspection is read-only. Successfully observed `healthy`, `attention`,
+  and `blocked` states exit zero; failures that prevent contract construction
+  exit nonzero.
 
 Code evidence:
 
 - `src/commands/status.ts`
+- `src/status/contracts.ts`
+- `src/status/installation-inspector.ts`
+- `src/status/session-memory-inspector.ts`
+- `src/status/project-memory-inspector.ts`
+- `src/status/lock-inspector.ts`
+- `src/status/status-service.ts`
+- `src/status/status-v1.ts`
+- `src/status/status-renderer.ts`
 
 Alignment:
 
-Good skeleton. It is the closest existing piece to the future `status` facade.
+Good operational foundation. It exposes machine and memory-pipeline health
+without mutating jobs, locks, SQLite, or project files, and gives automation an
+exact contract.
 
 Mismatch:
 
-Status currently reads latest sessions from `wiki/sessions/*.md` mtime, not from a broader current-state or session-continuity model. It is useful as smoke-test/status output, but it is not yet the agent's full current-state briefing.
+This is operational status, not the later agent-facing Current Briefing. It does
+not compose recent continuity and durable context into a bounded session-start
+brief, and it does not yet route across future Practice or Personal Memory.
 
 Verdict:
 
-Keep. Expand only after deciding what "current state" should mean as a product artifact.
+Keep the `myelin.status.v1` operational contract stable. Build the broader
+agent-facing status and Current Briefing on top of this truth in Roadmap Step 12
+instead of overloading the operational inspector.
 
 ### Pipeline
 

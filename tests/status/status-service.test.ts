@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { openMemoryDbAt } from "../../src/memory/db.ts";
 import { writeJson } from "../../src/runtime/json.ts";
 import { StatusService } from "../../src/status/status-service.ts";
 
@@ -9,53 +11,64 @@ let root: string;
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "myelin-status-service-"));
+  await writeFile(join(root, "myelin.config"), "AUTO_MEMORY_MAINTENANCE=0\nAUTO_PROJECT_MEMORY_MAINTENANCE=0\n");
+  await seedProject("demo", join(root, "repos", "demo"));
 });
 
-afterEach(async () => {
-  await rm(root, { recursive: true, force: true });
+afterEach(async () => { await rm(root, { recursive: true, force: true }); });
+
+test("builds a normalized contract and resolves project provenance", async () => {
+  await seedDb();
+  const service = new StatusService(root, { locatorPath: join(root, "machine", "install.json"), now: () => new Date("2026-07-10T12:00:00.000Z") });
+  const explicit = await service.summary({ projectKey: "demo", cwd: join(root, "unrelated") });
+  const inferred = await service.summary({ cwd: join(root, "repos", "demo", "src") });
+
+  expect(explicit.project.resolved_from).toBe("argument");
+  expect(inferred.project.resolved_from).toBe("cwd");
+  expect(explicit.installation.lifecycle).toBe("not_installed");
+  expect(explicit.session_memory.capture).toEqual({ queued_events: 0, unleased_events: 0, leased_events: 0 });
+  expect(explicit.project_memory.curation.lifecycle).toBe("not_curated");
+  expect(explicit.overall_state).toBe("attention");
+  expect(explicit.generated_at).toBe("2026-07-10T12:00:00.000Z");
 });
 
-test("StatusService builds summary and facade response from project state", async () => {
-  await seedProject();
-  const service = new StatusService(root);
-
-  const summary = await service.summary({ projectKey: "demo" });
-  const facade = service.toFacadeResponse(summary);
-  const human = service.renderHuman(summary);
-
-  expect(summary.project.key).toBe("demo");
-  expect(summary.latest_session?.path).toBe("wiki/sessions/2026-06-02-session.md");
-  expect(summary.latest_run.last_completed_stage).toBe("validate");
-  expect(facade).toMatchObject({
-    answer: expect.stringContaining("Project demo"),
-    memory_scope: "project",
-    degraded: false,
-    source_tools: ["project-state"],
-  });
-  expect(human).toContain("key: demo");
-  expect(human).toContain("status: stale");
+test("missing required SQLite produces a blocked contract without creating the database", async () => {
+  const dbPath = join(root, "state", "memory.db");
+  const result = await new StatusService(root, { locatorPath: join(root, "machine", "install.json") }).summary({ projectKey: "demo" });
+  expect(result.overall_state).toBe("blocked");
+  expect(result.warnings.filter((item) => item.code === "ROOT_SQLITE_UNAVAILABLE")).toHaveLength(2);
+  expect(await Bun.file(dbPath).exists()).toBe(false);
 });
 
-async function seedProject(): Promise<void> {
-  await writeJson(join(root, "projects", "demo", "state", "project.json"), {
-    key: "demo",
-    name: "Demo",
-    repo_paths: [join(root, "repos", "demo")],
-  });
-  await writeJson(join(root, "projects", "demo", "state", "freshness.json"), {
-    status: "stale",
-    changed_paths: ["src/app.ts"],
-    impacted_pages: ["wiki/modules/app.md"],
-    updated_at: "2026-06-02T14:00:00.000Z",
-  });
-  await writeJson(join(root, "projects", "demo", "state", "update-state.json"), {
-    latest_run_dir: "artifacts/demo/runs/2026-06-02T14-00-00.000Z-run",
-    last_completed_stage: "validate",
-    stages: {
-      validate: { status: "completed", last_completed_at: "2026-06-02T14:05:00.000Z" },
-    },
-  });
-  await mkdir(join(root, "projects", "demo", "wiki", "sessions"), { recursive: true });
-  await writeFile(join(root, "projects", "demo", "wiki", "sessions", "2026-06-01-session.md"), "# Old\n", "utf8");
-  await writeFile(join(root, "projects", "demo", "wiki", "sessions", "2026-06-02-session.md"), "# New\n", "utf8");
+test("status leaves database bytes unchanged and creates no SQLite sidecars", async () => {
+  await seedDb();
+  const dbPath = join(root, "state", "memory.db");
+  const before = hash(await readFile(dbPath));
+  const sidecarsBefore = (await readdir(join(root, "state"))).filter(isSidecar).sort();
+  await new StatusService(root, { locatorPath: join(root, "machine", "install.json") }).summary({ projectKey: "demo" });
+  const after = hash(await readFile(dbPath));
+  const sidecarsAfter = (await readdir(join(root, "state"))).filter(isSidecar).sort();
+  expect(after).toBe(before);
+  expect(sidecarsAfter).toEqual(sidecarsBefore);
+});
+
+test("omitted key fails outside registered repos and rejects ambiguous mappings", async () => {
+  await seedDb();
+  const service = new StatusService(root, { locatorPath: join(root, "machine", "install.json") });
+  await expect(service.summary({ cwd: join(root, "unrelated") })).rejects.toThrow("No project found");
+  await seedProject("other", join(root, "repos", "demo"));
+  await expect(service.summary({ cwd: join(root, "repos", "demo") })).rejects.toThrow("Ambiguous project");
+});
+
+async function seedDb(): Promise<void> {
+  const db = openMemoryDbAt(join(root, "state", "memory.db"));
+  db.close();
 }
+
+async function seedProject(key: string, repo: string): Promise<void> {
+  await writeJson(join(root, "projects", key, "state", "project.json"), { key, name: key === "demo" ? "Demo" : "Other", repo_paths: [repo] });
+  await mkdir(repo, { recursive: true });
+}
+
+function hash(value: Uint8Array): string { return createHash("sha256").update(value).digest("hex"); }
+function isSidecar(value: string): boolean { return /memory\.db-(?:wal|shm|journal)$/.test(value); }

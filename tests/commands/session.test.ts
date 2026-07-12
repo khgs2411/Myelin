@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createCli } from "../../src/commands/registry.ts";
-import { registerSessionCommands } from "../../src/commands/session.ts";
+import { registerSessionCommands as registerSessionCommandsWithContext } from "../../src/commands/session.ts";
 import { writeJson } from "../../src/runtime/json.ts";
 
 let root: string;
@@ -16,7 +16,20 @@ beforeEach(async () => {
 });
 afterEach(async () => { process.chdir(prevCwd); await rm(root, { recursive: true, force: true }); });
 
-function cli() { const c = createCli("myelin"); registerSessionCommands(c); return c; }
+function cli() {
+  const c = createCli("myelin");
+  registerSessionCommandsWithContext(c, {
+    context: {
+      myelinRoot: root,
+      callerCwd: join(root, "caller"),
+      invocationKind: "test",
+      rootSource: "test_dependency",
+      launcherPath: null,
+      locatorPath: null,
+    },
+  });
+  return c;
+}
 async function jsonRun(args: string[]) { const r = await cli().run(args); return { code: r.exitCode, body: JSON.parse(r.message) }; }
 
 test("lifecycle: start -> log -> close -> recent emits the json facade", async () => {

@@ -140,8 +140,16 @@ The provider-specific implementation that installs, normalizes, and routes captu
 _Avoid_: hardcoded hook script, core Codex logic
 
 **Install Command**:
-The machine-level setup command that configures selected Capture Providers for Myelin.
+The machine-level lifecycle command that installs or reconciles the global launcher, Myelin Machine Locator, and selected Capture Provider integrations. A repo-root installer entrypoint delegates to the same lifecycle before the global command exists.
 _Avoid_: per-repo onboarding, bootstrap
+
+**Myelin Machine Locator**:
+The versioned per-user installation and ownership record at `~/.myelin/install.json`, read by the copied global `myelin` launcher. It identifies the exact authoritative local Myelin root without treating the caller's working directory as product state or symlinking the command into the checkout.
+_Avoid_: project config, `myelin.config`, command symlink
+
+**Myelin Launch Context**:
+The resolved runtime context that keeps the authoritative Myelin root separate from the caller's working directory and records whether invocation came from the installed launcher, source entrypoint, hook, worker, or tests.
+_Avoid_: cwd as Myelin root, command-local root guessing
 
 **Bootstrap Command**:
 The per-repository command that creates a project memory shell and opts that repo into Myelin capture.
@@ -327,7 +335,7 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - The **Provider Abstraction** lets any wired backend (Codex, Claude Code today) operate Myelin under the user's own subscription; it is provider-pluggable, and a third backend such as Gemini can be added later (not wired today).
 - A **Capture Provider** is not the same as the **Provider Abstraction**: capture observes agent activity, while the provider abstraction runs Myelin workloads.
 - A **Capture Adapter** belongs behind the capture facade so provider-native events become provider-neutral **Experience Log** rows.
-- The **Install Command** configures machine-level **Capture Provider** integrations; the **Bootstrap Command** opts a specific repo into saved capture.
+- The **Install Command** configures the machine-level launcher, locator, and selected **Capture Provider** integrations; the **Bootstrap Command** opts a specific repo into saved capture.
 - A **Bootstrap Command** creates a **Project Memory Shell**, not curated **Project Memory**.
 - **Project Memory Creation Mode** applies until trusted curated **Project Memory** exists.
 - **Project Memory Maintenance Mode** applies after trusted curated **Project Memory** exists.

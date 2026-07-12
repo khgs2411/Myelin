@@ -75,7 +75,7 @@ Goal: accurate, relevant project-scoped continuity from recent work.
 - [x] `done` ~~Auto-maintenance is detached, lock-guarded, cooldown-guarded, and prevents recursive self-capture.~~
 - [x] `done` ~~Auto-maintenance runs ingest, waits for ingest drain, and indexes pending Session Memory embeddings.~~
 
-Evidence: `src/commands/ingest.ts`, `src/ingest/*`, `src/memory/session-memories.ts`, `src/memory/candidates.ts`, `src/memory/handoffs.ts`, `src/memory/session-memory-query.ts`, `src/maintenance/auto-memory-maintenance.ts`, `src/maintenance/worker.ts`
+Evidence: `src/commands/ingest.ts`, `src/ingest/*`, `src/memory/session-memories.ts`, `src/memory/candidates.ts`, `src/memory/handoffs.ts`, `src/memory/session-memory-query.ts`, `src/maintenance/auto-memory-maintenance.ts`, `src/commands/maintenance.ts`
 
 ## Roadmap Step 3: Project Memory Layer
 
@@ -85,7 +85,7 @@ Project Memory is the first durable curation layer. It should capture what the r
 
 Step 3 is complete when `project learn <key>` can safely maintain Project Memory from bounded evidence, with validated curator output and provenance-backed markdown updates.
 
-Step 3 foundation is complete. Step 3.5 completed transport, retrieval-quality, and schema-output hardening. The 2026-06-30 dogfood output proved the mechanics but not the memory-layer quality bar, so Step 4 now owns Project Memory shape, creation, maintenance, and producer-routing redesign before Current Briefing resumes in Step 4.5.
+Step 3 foundation is complete. Step 3.5 completed transport, retrieval-quality, and schema-output hardening. The 2026-06-30 dogfood output proved the mechanics but not the memory-layer quality bar, so Step 4 now owns Project Memory shape, creation, maintenance, and producer-routing redesign before the core agent-facing facades and Current Briefing resume in Step 13.
 
 - [x] `retired` ~~The old Phase-0 `project learn` / `project ingest` runner scaffold has been removed from the active Project Memory command surface.~~
   - Why: `project learn` now owns Project Memory curation through the mode-scoped Project Memory Curator pre-write flow, while top-level `ingest <key>` remains Session Memory / Experience Log ingest.
@@ -319,7 +319,7 @@ Session Memory auto-maintenance now treats capture as evidence append, then sche
   - Description: Capture hooks append evidence first, then schedule a detached worker guarded by lock, cooldown, and self-capture prevention.
   - Why: Hooks should never block agent workflow or recursively capture Myelin-owned provider sessions.
 
-Evidence: `src/maintenance/auto-memory-maintenance.ts`, `src/maintenance/worker.ts`, `src/capture/facade.ts`, `tests/maintenance/auto-memory-maintenance.test.ts`
+Evidence: `src/maintenance/auto-memory-maintenance.ts`, `src/commands/maintenance.ts`, `src/capture/facade.ts`, `tests/maintenance/auto-memory-maintenance.test.ts`
 
 ## Roadmap Step 9: Project Memory Maintenance And Review
 
@@ -343,55 +343,141 @@ Project Memory maintenance now mirrors Session Memory's shape: deterministic int
   - Description: Project inbox intake inside the maintenance job does not schedule another auto-maintenance run; only external inbox creation and Session Memory-created project candidates trigger scheduling.
   - Why: Inbox intake is already the first stage of the Project Memory maintenance job.
 
-Evidence: `src/project/project-memory-agent-maintenance-service.ts`, `src/project/project-memory-candidate-intake-service.ts`, `src/project/project-memory-curator-service.ts`, `src/commands/memory.ts`, `src/memory/memory-review-service.ts`, `src/maintenance/auto-project-memory-maintenance.ts`, `src/maintenance/project-memory-worker.ts`, `tests/project/project-memory-curator-service.test.ts`, `tests/memory/memory-review-service.test.ts`, `tests/maintenance/auto-project-memory-maintenance.test.ts`
+Evidence: `src/project/project-memory-agent-maintenance-service.ts`, `src/project/project-memory-candidate-intake-service.ts`, `src/project/project-memory-curator-service.ts`, `src/commands/memory.ts`, `src/memory/memory-review-service.ts`, `src/maintenance/auto-project-memory-maintenance.ts`, `src/commands/maintenance.ts`, `tests/project/project-memory-curator-service.test.ts`, `tests/memory/memory-review-service.test.ts`, `tests/maintenance/auto-project-memory-maintenance.test.ts`
 
 ## Roadmap Step 10: Working Skeleton Hardening
 
 Goal: turn the working Myelin skeleton into a reliable operator product before extending new memory layers.
 
-The core loop now exists: capture and inbox create evidence, Session Memory turns experience into continuity and higher-layer leads, Project Memory creates and maintains repo documentation, query retrieves memory context, and review commands expose non-success terminal outcomes. The next work should harden that skeleton in real use rather than adding Practice or Personal Memory prematurely.
+The core loop now exists: capture and inbox create evidence, Session Memory turns experience into continuity and higher-layer leads, Project Memory creates and maintains repo documentation, query retrieves memory context, and review commands expose non-success terminal outcomes. The next work should make that loop operable from outside the Myelin checkout, observable without internal state inspection, and repeatably useful on another repository.
 
-- [ ] `next` Run a clean external-project dogfood.
-  - Description: Use the current create/query/maintenance/auto-maintenance pipeline on a non-Myelin repo, then ask real project questions through Project Memory and Session Memory before touching the repo directly.
-  - Why: Myelin-on-Myelin proves the loop exists; another repo will expose install, command, documentation-shape, and retrieval gaps that local dogfood can hide.
-- [ ] `open` Stabilize the installed `myelin` namespace.
+- [x] `done` ~~Stabilize the installed `myelin` namespace.~~
   - Description: Make the operator-facing `myelin` command consistently available instead of relying on `bun src/cli.ts` during development.
-  - Why: External project usage and MCP wrappers should depend on a stable CLI contract.
-- [ ] `open` Add operational status for auto-maintenance.
-  - Description: Surface latest Session and Project auto-maintenance state, locks, queue pressure, and log paths through a CLI/status command.
-  - Why: Background maintenance is useful only if operators can tell whether it is healthy.
+  - Why: External project usage and detached consumers need a stable operator boundary before they can prove the product outside this repository.
+  - Progress: Completed 2026-07-10 with a checkout-backed copied launcher, a machine-owned locator under `~/.myelin`, and a recoverable install, repair, rebind, provider, and uninstall lifecycle.
+- [x] `done` ~~Reconcile operator documentation with the executable surface.~~
+  - Description: Align setup, installation, command, and troubleshooting guidance with the commands and global invocation path operators can actually use.
+  - Why: External dogfood should not depend on stale command vocabulary or knowledge of the Myelin source checkout.
+- [x] `done` ~~Add operational health status.~~
+  - Description: Surface Session and Project auto-maintenance state, ingest jobs and queue pressure, pending candidates and inbox items, locks, log paths, and retrieval readiness through a stable CLI status surface.
+  - Why: Background maintenance is useful only when operators can diagnose it without reading SQLite tables or internal state files directly.
+  - Progress: Completed 2026-07-10 with a read-only operational status contract that is shared by human and JSON output.
 
-## Roadmap Step 11: Extend Practice And Personal Memory Roadmap
+## Roadmap Step 11: Codebase Review And Consolidation
 
-Goal: add Practice Memory and Personal Memory work only after Session Memory plus Project Memory prove the core memory loop.
+Goal: review the working implementation as a whole and consolidate only the structural seams that materially improve maintainability before external dogfooding expands the supported surface.
 
-Practice and Personal Memory should reuse the working Project Memory pattern where appropriate: candidates as leads, canonical markdown, provenance, deterministic validation, derived retrieval, and explicit review boundaries. They are intentionally later because they are global layers and simpler than Project Memory's repo-bound documentation problem.
+- [ ] `next` Review the current implementation for structural debt.
+  - Description: Examine responsibilities, dependency direction, duplication, object lifecycles, test seams, and module boundaries across the working memory, installation, status, query, and maintenance paths, then record a prioritized set of concrete findings.
+  - Why: The core product now works end to end, making this the right point to distinguish real consolidation opportunities from premature abstraction.
+- [ ] `open` Apply approved high-value consolidation.
+  - Description: Implement the review findings that simplify ownership, reduce duplication, or strengthen boundaries without introducing patterns, factories, classes, or extensibility solely for stylistic compliance.
+  - Why: SOLID and common object-oriented patterns are useful only where they make the current contracts clearer and safer.
+- [ ] `open` Re-verify the consolidated product boundary.
+  - Description: Confirm that installation, provider hooks, command invocation, status, query, capture, and maintenance behavior remain intact after consolidation.
+  - Why: Cleanup is complete only when the operator-facing contracts remain stable.
 
-- [ ] `open` Extend the roadmap for Practice Memory.
-  - Description: After Project Memory works, define the roadmap for reusable global practice guidance such as tools, providers, libraries, and workflows.
-  - Why: Practice Memory should inherit proven curation mechanics instead of being designed in parallel with the harder Project Memory layer.
-- [ ] `open` Extend the roadmap for Personal Memory.
-  - Description: After Project Memory works, define the roadmap for durable personal guidance, explicit preferences, and collaboration rules.
-  - Why: Personal Memory needs careful evidence boundaries, but its storage and retrieval shape should build on the proven durable-memory pattern.
+## Roadmap Step 12: External Project Dogfood
 
-## Roadmap Step 12: MCP Tool Wrapper For Other Projects
+Goal: prove the installed operator product on both an established repository with accumulated continuity and a genuinely clean project with no prior Myelin state.
 
-Goal: expose proven Myelin CLI/script behavior as globally available tools for agents working in other repositories.
+Class Kit and Droplet Bot exercise complementary paths. Class Kit already has substantial Session Memory and captured Experience Log evidence, so its rebootstrap should prove that a fresh Project Memory shell can reuse preserved continuity. Droplet Bot is a Wizepal project but should enter Myelin under its own clean project identity, proving the first-run experience without inherited SQLite rows.
 
-MCP is not part of the core dogfood loop for Myelin-on-Myelin work. It is the external agent interface after Project Memory works through local commands. The MCP layer should wrap stable Myelin CLI/script contracts and expose them as tools for agents in other projects, without moving core memory behavior into MCP implementation code.
+- [ ] `open` Rebootstrap Class Kit from preserved continuity.
+  - Description: Re-register and rebuild the Class Kit project shell, then run the product loop from the beginning while preserving its existing Session Memory, captured evidence, and connected hook history in root SQLite.
+  - Why: An established repository should be able to recreate Project Memory without discarding the continuity Myelin has already earned.
+- [ ] `open` Bootstrap Droplet Bot as a clean Wizepal project.
+  - Description: Register Droplet Bot as a new project with no pre-existing project-scoped SQLite memory, then run the same first-create and maintenance path from a genuinely clean state.
+  - Why: A clean initialization exposes first-run assumptions that an established project with accumulated memory can hide.
+  - Shape: Treat Droplet Bot as a distinct Myelin project identity rather than reusing the existing `wizepal` SQLite continuity.
+- [ ] `open` Run the full external-project dogfood across both paths.
+  - Description: Use the installed command and public CLI/JSON contracts to run create, query, maintenance, and auto-maintenance for Class Kit and Droplet Bot, then ask real Project and Session Memory questions before touching either repo directly.
+  - Why: Comparing continuity-rich rebootstrap with clean initialization tests both sides of the operator product boundary.
+- [ ] `open` Close external-dogfood findings and repeat the product loop.
+  - Description: Incorporate material findings from both external runs and repeat the affected workflows until normal use no longer depends on the Myelin checkout or internal serving-state inspection.
+  - Why: External dogfood is a reliability gate, not a one-time demonstration.
 
-- [ ] `open` Define the MCP wrapper boundary after CLI behavior is stable.
-  - Description: Decide which proven CLI/script operations should become tools, what arguments/results they expose, and what remains internal to the Myelin repo.
-  - Why: MCP should be a wrapper over working behavior, not the place where Project Memory semantics are invented.
-- [ ] `open` Wrap Project Memory query for external agents.
-  - Description: Expose the markdown-backed Project Memory query behavior as a tool that agents in other repositories can call.
-  - Why: The user-facing value of MCP is letting other project agents ask Myelin for relevant memory without knowing the repo internals.
-- [ ] `open` Wrap candidate/inbox insertion for external agents.
-  - Description: Expose a controlled way for agents outside this repo to submit Project Memory leads through the same candidate/inbox boundary used by CLI dogfood.
-  - Why: External tools should feed the same lead-to-documentation pipeline, not create a parallel write path.
+## Roadmap Step 13: Core Agent-Facing Facades And Current Briefing
+
+Goal: expose Project Memory, Session Memory, and current project state through stable semantic interfaces before detached consumers wrap them.
+
+The current CLI can retrieve Project and Session Memory explicitly, but the product-level `query`, `how`, and `status` facades remain incomplete. This step should establish one extensible core contract that later Practice and Personal Memory can join without changing the truth or ownership boundaries of existing layers.
+
+- [ ] `open` Define the next query-composition boundary.
+  - Description: Design the intended way to compose or select Project Memory and Session Memory results with explicit precedence, citations, confidence, and degraded behavior, without reviving the removed `--layer auto` facade.
+  - Why: The next query shape should follow an explicit product design rather than preserve an incomplete routing flag.
+- [ ] `open` Restore Current Briefing as a first-class product surface.
+  - Description: Combine recent continuity, durable project context, active work, and operational health into a bounded current-state briefing for a new agent session.
+  - Why: A new agent needs a reliable starting point before deciding which deeper memory questions to ask.
+- [ ] `open` Add the `how` facade.
+  - Description: Provide prescriptive operating guidance from project runbooks and current project constraints through a contract designed to prefer Practice Memory once that layer exists.
+  - Why: Explanatory recall and operating guidance have different precedence and should not be blended implicitly.
+- [ ] `open` Stabilize the agent-facing `status` facade.
+  - Description: Compose project identity, continuity, maintenance health, queue state, and retrieval readiness into a structured current-state response.
+  - Why: Agent status should build on Step 10 operational truth rather than remain a shallow project-file summary.
+- [ ] `open` Stabilize extensible CLI and JSON contracts for detached consumers.
+  - Description: Keep `query`, `how`, and `status` contracts stable for current layers while allowing later Practice and Personal Memory scopes to join without a parallel interface.
+  - Why: MCP should wrap proven semantic contracts instead of freezing an incomplete Project-only surface.
+
+## Roadmap Step 14: Detached MCP Wrapper
+
+Goal: expose proven Myelin semantic and submission contracts as globally available tools for agents working in other repositories.
+
+MCP remains detached from the core package graph. It should consume the stable CLI/JSON behavior proven across Steps 10 through 13, preserve required compatibility contracts, and never become a second implementation of memory semantics.
+
+- [ ] `open` Define the detached MCP wrapper boundary.
+  - Description: Decide which stable CLI/JSON operations become tools, what arguments and results they expose, and what remains internal to the Myelin runtime.
+  - Why: MCP should wrap working behavior, not invent product semantics.
+- [ ] `open` Wrap `query`, `how`, and `status` for external agents.
+  - Description: Expose the core agent-facing facades so agents in other repositories can retrieve memory and current state without knowing Myelin internals.
+  - Why: The main value of MCP is global access to the same semantic behavior proven through the core CLI.
+- [ ] `open` Wrap controlled inbox and candidate submission.
+  - Description: Let external agents submit durable-memory leads through the same preserved-source and candidate boundaries used by CLI dogfood.
+  - Why: External tools should feed the existing lead-to-memory pipeline rather than create a parallel write path.
+- [ ] `open` Preserve legacy MCP compatibility contracts.
+  - Description: Keep required `LLM_WIKI_*` environment and `mcp__llm-wiki__*` namespace compatibility while product naming and behavior remain Myelin-owned.
+  - Why: Compatibility should survive the wrapper transition without allowing legacy concepts to shape new core behavior.
 - [ ] `open` Preserve detached MCP ownership.
-  - Description: Keep core behavior in Myelin CLI/runtime code and keep MCP as a detached consumer of stable command/JSON contracts.
+  - Description: Keep core behavior in Myelin CLI/runtime code and keep MCP as a detached consumer of stable command and JSON contracts.
   - Why: The wrapper must not become a second implementation of memory logic.
+
+## Roadmap Step 15: Practice Memory
+
+Goal: promote reusable cross-project guidance into canonical, human-reviewable memory after the core project loop and external interfaces are stable.
+
+Practice Memory should reuse proven curation and retrieval mechanics where appropriate, but its evidence boundary is cross-project: project references are provenance, not instructions to copy local behavior into global guidance.
+
+- [ ] `open` Define Practice Memory evidence and promotion boundaries.
+  - Description: Establish when repeated or explicitly selected project evidence is sufficient to propose reusable guidance and how conflicting project practices remain visible.
+  - Why: Cross-project recurrence must not automatically become canonical practice.
+- [ ] `open` Add canonical Practice Memory storage and provenance.
+  - Description: Store approved practice guidance as human-reviewable markdown with source-project provenance and derived serving state kept separate.
+  - Why: Practice Memory needs the same canonical-versus-derived boundary that made Project Memory trustworthy.
+- [ ] `open` Add Practice Memory curation, maintenance, and review.
+  - Description: Turn Practice candidates and handoffs into validated global guidance through explicit promotion and terminal review outcomes.
+  - Why: Practice leads are not durable truth and need a dedicated cross-project judgment boundary.
+- [ ] `open` Add Practice Memory retrieval and facade integration.
+  - Description: Make approved guidance available to `query` and preferentially to `how`, then extend the detached wrapper through the stable core contracts.
+  - Why: Practice Memory is useful only when agents can retrieve it without bypassing project-specific overrides.
+
+## Roadmap Step 16: Personal Memory
+
+Goal: maintain durable guidance about user preferences and agent behavior through explicit authority, correction, and privacy boundaries.
+
+Personal Memory is not merely another global Project Memory. Explicit user guidance, repeated corrections, observed behavior, and removal requests carry different authority and risk than cross-project technical evidence.
+
+- [ ] `open` Define Personal Memory authority and evidence boundaries.
+  - Description: Establish how explicit guidance, repeated corrections, inferred preferences, uncertainty, and user-requested removal affect promotion and trust.
+  - Why: Personal guidance should never be promoted or retained through project-evidence rules alone.
+- [ ] `open` Add canonical Personal Memory storage and provenance.
+  - Description: Store approved personal guidance as human-reviewable markdown with clear origin, confidence, and correction history while keeping derived serving state replaceable.
+  - Why: Personal Memory needs transparent authority and provenance because it directly shapes future agent behavior.
+- [ ] `open` Add Personal Memory curation, correction, and review.
+  - Description: Turn Personal candidates and handoffs into validated guidance with explicit support for correction, rejection, and removal.
+  - Why: Preference mistakes must be reversible without obscuring how the guidance was created.
+- [ ] `open` Add Personal Memory retrieval and facade integration.
+  - Description: Integrate approved personal guidance into `query`, `how`, and agent behavior precedence, then extend detached consumers through the stable core contracts.
+  - Why: Personal guidance should influence agents consistently without overriding explicit project truth or current user instructions.
 
 ## Always-On Guardrails
 

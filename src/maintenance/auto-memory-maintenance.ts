@@ -5,12 +5,18 @@ import { countExperienceEvents } from "../memory/experience.ts";
 import { EmbeddingProviderFactory } from "../memory/embedding-provider-factory.ts";
 import { SessionMemoryIndexService } from "../memory/session-memory-index-service.ts";
 import type { DetachedSpawner, ProcessLivenessChecker } from "../ingest/runtime.ts";
-import { isProcessAlive } from "../ingest/runtime.ts";
+import { isProcessAlive, resolveIngestTargetRepo } from "../ingest/runtime.ts";
 import { IngestService, type IngestProvider, type IngestServiceDeps, type StartIngestResult } from "../ingest/ingest-service.ts";
 import { loadConfig, type AutoMemoryMaintenanceConfig } from "../runtime/config.ts";
 import { projectPath } from "../runtime/fs.ts";
 import { createId } from "../runtime/ids.ts";
 import { prepareProjectLogFile, projectLogPath } from "../runtime/project-logs.ts";
+import type { LaunchContext } from "../runtime/launch-context.ts";
+import {
+  backgroundInvocationEnv,
+  backgroundLaunchContext,
+  resolveMyelinCommandInvocation,
+} from "../runtime/command-invocation.ts";
 
 export type AutoMemoryMaintenanceScheduleResult =
   | { status: "disabled"; reason: string }
@@ -75,6 +81,7 @@ export type AutoMemoryMaintenanceDeps = IngestServiceDeps & {
     batchSize: number;
     retryFailed: boolean;
   }) => Promise<AutoMemoryMaintenanceIndexResult>;
+  context?: LaunchContext;
 };
 
 type LockHandle = {
@@ -138,17 +145,23 @@ export class AutoMemoryMaintenanceService {
     const logPath = autoMemoryLogPath(this.root, projectKey, runId);
     try {
       await prepareProjectLogFile(this.root, projectKey, logPath);
+      const targetRepo = await resolveIngestTargetRepo(this.root, projectKey);
+      const context = backgroundLaunchContext({
+        myelinRoot: this.root,
+        callerCwd: targetRepo,
+        context: this.deps.context,
+      });
       const spawn = this.deps.spawn ?? ((options) => Bun.spawn(options));
       const proc = spawn({
-        cmd: ["bun", join(this.root, "src", "maintenance", "worker.ts"), projectKey],
-        cwd: this.root,
+        cmd: resolveMyelinCommandInvocation(context, ["maintenance", "worker", "session", projectKey]),
+        cwd: targetRepo,
         stdout: Bun.file(logPath),
         stderr: Bun.file(logPath),
         stdin: "ignore",
         detached: true,
         env: {
           ...process.env,
-          MYELIN_ROOT: this.root,
+          ...backgroundInvocationEnv(context, "worker"),
           MYELIN_CAPTURE_DISABLED: "1",
           MYELIN_AUTO_MEMORY_MAINTENANCE_WORKER: "1",
           MYELIN_AUTO_MEMORY_RUN_ID: runId,

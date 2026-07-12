@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { applyCodexInstall, planCodexInstall, uninstallCodex } from "../../src/install/codex.ts";
+import { applyCodexInstall, applyCodexProvider, planCodexInstall, uninstallCodex } from "../../src/install/codex.ts";
 
 let root: string;
 let codexRoot: string;
@@ -114,6 +114,47 @@ test("uninstall removes only myelin-owned hook entries", async () => {
   expect(hooksText).toContain("echo grouped unrelated");
   expect(hooksText).not.toContain("codex-hook");
   expect(await Bun.file(join(codexRoot, ".myelin", "shim", "codex-hook")).exists()).toBe(false);
+});
+
+test("provider manifest hashes block changed shim repair and removal", async () => {
+  await applyCodexInstall({ providerRoot: codexRoot, myelinRoot: root, mode: "apply" });
+  const shim = join(codexRoot, ".myelin", "shim", "codex-hook");
+  const manifest = JSON.parse(await readFile(join(codexRoot, ".myelin", "install-manifest.json"), "utf8"));
+  expect(manifest.schema_version).toBe(1);
+  expect(manifest.shim.sha256).toMatch(/^[a-f0-9]{64}$/);
+
+  await writeFile(shim, "changed by user\n", "utf8");
+  await expect(planCodexInstall({ providerRoot: codexRoot, myelinRoot: root, mode: "preview" })).rejects.toThrow(
+    "owned artifact mismatch",
+  );
+  await expect(uninstallCodex({ providerRoot: codexRoot, myelinRoot: root, mode: "uninstall" })).rejects.toThrow(
+    "hash mismatch",
+  );
+  expect(await Bun.file(shim).exists()).toBe(true);
+});
+
+test("exact ownership preserves similar commands and backs up shared hook changes", async () => {
+  const similar = `${join(codexRoot, ".myelin", "shim", "codex-hook")}-other`;
+  await writeFile(
+    join(codexRoot, "hooks.json"),
+    `${JSON.stringify({ hooks: { Stop: [{ hooks: [{ type: "command", command: similar }] }] } }, null, 2)}\n`,
+    "utf8",
+  );
+  await applyCodexInstall({ providerRoot: codexRoot, myelinRoot: root, mode: "apply" });
+  await uninstallCodex({ providerRoot: codexRoot, myelinRoot: root, mode: "uninstall" });
+
+  expect(await readFile(join(codexRoot, "hooks.json"), "utf8")).toContain(similar);
+  expect((await readdir(join(codexRoot, ".myelin", "backups"))).length).toBeGreaterThan(0);
+});
+
+test("installed Codex shim invokes the absolute launcher and forwards hook arguments", async () => {
+  const launcher = join(root, ".local", "bin", "myelin");
+  await applyCodexProvider({ providerRoot: codexRoot, myelinRoot: root, launcherPath: launcher });
+
+  const shim = await readFile(join(codexRoot, ".myelin", "shim", "codex-hook"), "utf8");
+  expect(shim).toContain(`exec ${JSON.stringify(launcher)} capture codex-hook "$@"`);
+  expect(shim).toContain("MYELIN_INTERNAL_INVOCATION_KIND=hook");
+  expect(shim).not.toContain("exec bun");
 });
 
 function myelinHandlers(hooks: { hooks: Record<string, unknown> }, event: string): Array<{ type?: string; command?: string }> {

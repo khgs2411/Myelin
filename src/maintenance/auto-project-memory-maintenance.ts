@@ -2,13 +2,19 @@ import type { Database } from "bun:sqlite";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { DetachedSpawner, ProcessLivenessChecker } from "../ingest/runtime.ts";
-import { isProcessAlive } from "../ingest/runtime.ts";
+import { isProcessAlive, resolveIngestTargetRepo } from "../ingest/runtime.ts";
 import { openMemoryDb } from "../memory/db.ts";
 import { ProjectService } from "../project/project-service.ts";
 import { loadConfig, type AutoProjectMemoryMaintenanceConfig } from "../runtime/config.ts";
 import { projectPath } from "../runtime/fs.ts";
 import { createId } from "../runtime/ids.ts";
 import { prepareProjectLogFile, projectLogPath } from "../runtime/project-logs.ts";
+import type { LaunchContext } from "../runtime/launch-context.ts";
+import {
+  backgroundInvocationEnv,
+  backgroundLaunchContext,
+  resolveMyelinCommandInvocation,
+} from "../runtime/command-invocation.ts";
 
 export type AutoProjectMemoryMaintenanceTrigger = "runtime_inbox_created" | "session_memory_candidate_created";
 
@@ -70,6 +76,7 @@ type AutoProjectMemoryMaintenanceDeps = {
   spawn?: DetachedSpawner;
   isProcessAlive?: ProcessLivenessChecker;
   runMaintenance?: (projectKey: string) => Promise<{ status: string; changed_files?: string[]; stopped_reason?: string }>;
+  context?: LaunchContext;
 };
 
 type LockHandle = {
@@ -209,17 +216,23 @@ export class AutoProjectMemoryMaintenanceService implements AutoProjectMemoryMai
     const logPath = autoProjectMemoryLogPath(this.root, projectKey, runId);
     try {
       await prepareProjectLogFile(this.root, projectKey, logPath);
+      const targetRepo = await resolveIngestTargetRepo(this.root, projectKey);
+      const context = backgroundLaunchContext({
+        myelinRoot: this.root,
+        callerCwd: targetRepo,
+        context: this.deps.context,
+      });
       const spawn = this.deps.spawn ?? ((options) => Bun.spawn(options));
       const proc = spawn({
-        cmd: ["bun", join(this.root, "src", "maintenance", "project-memory-worker.ts"), projectKey],
-        cwd: this.root,
+        cmd: resolveMyelinCommandInvocation(context, ["maintenance", "worker", "project", projectKey]),
+        cwd: targetRepo,
         stdout: Bun.file(logPath),
         stderr: Bun.file(logPath),
         stdin: "ignore",
         detached: true,
         env: {
           ...process.env,
-          MYELIN_ROOT: this.root,
+          ...backgroundInvocationEnv(context, "worker"),
           MYELIN_CAPTURE_DISABLED: "1",
           MYELIN_AUTO_PROJECT_MEMORY_MAINTENANCE_WORKER: "1",
           MYELIN_AUTO_PROJECT_MEMORY_RUN_ID: runId,

@@ -16,6 +16,7 @@ import type { IngestJobRow } from "../memory/ingest-types.ts";
 import { loadConfig } from "../runtime/config.ts";
 import { createId } from "../runtime/ids.ts";
 import { findProject } from "../runtime/projects.ts";
+import type { LaunchContext } from "../runtime/launch-context.ts";
 
 export type IngestProvider = "codex" | "claude";
 
@@ -25,6 +26,7 @@ export type IngestServiceDeps = {
   spawn?: DetachedSpawner;
   isProcessAlive?: ProcessLivenessChecker;
   runWorker?: typeof runIngestWorker;
+  context?: LaunchContext;
 };
 
 export type StartIngestInput = {
@@ -123,6 +125,7 @@ export class IngestService {
           },
           runner: this.deps.runner,
           spawn: this.deps.spawn,
+          context: this.deps.context,
         });
         jobs.push(getIngestJob(db, job.id) ?? job);
         launches.push(launched);

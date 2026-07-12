@@ -210,7 +210,7 @@ One repo-root SQLite DB partitioned by `project_key` (ADR 0001), not one DB per 
 The decisions in `docs/adr/` (`000N-<slug>.md`) are append-only — superseded by newer ADRs, never edited. Thematic guide:
 
 - **Memory & SQLite:** 0001 (root DB), 0002 (session in SQLite), 0003 (PM tools = source evidence), 0004 (auto-mode launches no workers), 0006, 0007, 0021 (markdown curated truth), 0022 (LLM Wiki pattern).
-- **Runtime & boundary:** 0009 (Bun/TS), 0011 (MCP detached), 0012, 0013 (core migration first), 0014, 0047 (quarantine + rewrite), 0048 (core owns query), 0052 (seed core from MCP TS). *(0008 and 0010 are superseded — by 0009 and 0011 respectively — and are not live decisions.)*
+- **Runtime & boundary:** 0009 (Bun/TS), 0011 (MCP detached), 0012, 0013 (core migration first), 0014, 0047 (quarantine + rewrite), 0048 (core owns query), 0052 (seed core from MCP TS), 0068 (checkout-backed launcher and machine locator). *(0008 and 0010 are superseded — by 0009 and 0011 respectively — and are not live decisions.)*
 - **Product direction:** 0015 (V2 over V1), 0016/0017 (V2 CLI vocabulary, learn/ingest/query/session), 0050 (Myelin name), 0051 (BYO multi-provider).
 - **Schema:** 0023–0035 (global+project layers, typed JSON rules, Zod, dedicated schema CLI at 0032), 0040–0046 (candidate storage/IDs/states/apply + V2 project layout), 0049 (thin global-only schema).
 - **Query:** 0005 (query/how/status facades), 0036/0037/0038 (schema-gated, fail-closed, side-effect-light).

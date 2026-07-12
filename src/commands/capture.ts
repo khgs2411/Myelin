@@ -1,14 +1,16 @@
 import { CaptureService } from "../capture/capture-service.ts";
-import { repoRoot } from "../runtime/fs.ts";
+import type { LaunchContext } from "../runtime/launch-context.ts";
 import type { Cli, CommandResult } from "./registry.ts";
 import { ok } from "./registry.ts";
 
-export function registerCaptureCommands(cli: Cli): void {
+export type CaptureCommandDeps = { context: LaunchContext };
+
+export function registerCaptureCommands(cli: Cli, deps: CaptureCommandDeps): void {
   cli.command(["capture", "codex-hook"], async () => {
     try {
       if (isCaptureDisabled()) return ok("");
       const payload = JSON.parse(await Bun.stdin.text());
-      await captureCodexPayload(process.env.MYELIN_ROOT ?? repoRoot().root, payload);
+      await captureCodexPayload(deps.context.myelinRoot, payload);
     } catch {
       // Codex hooks must fail open; capture should never interrupt an agent session.
     }

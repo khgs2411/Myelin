@@ -1,27 +1,28 @@
 import type { Cli } from "./registry.ts";
 import { fail, ok } from "./registry.ts";
-import { repoRoot } from "../runtime/fs.ts";
+import type { LaunchContext } from "../runtime/launch-context.ts";
 import { stableJson } from "../runtime/json.ts";
 import type { ProcessRunner } from "../runtime/llm-client.ts";
 import { ProjectService } from "../project/project-service.ts";
 import { ProjectResetService } from "../project/project-reset-service.ts";
 
 export type ProjectCommandDeps = {
+  context: LaunchContext;
   now?: () => Date;
   runner?: ProcessRunner;
   env?: NodeJS.ProcessEnv;
 };
 
-export function registerProjectCommands(cli: Cli, deps: ProjectCommandDeps = {}): void {
-  cli.command(["project", "list"], async (args) => listProjectsCommand(args));
-  cli.command(["project", "packet"], async (args) => projectPacketCommand(args));
+export function registerProjectCommands(cli: Cli, deps: ProjectCommandDeps): void {
+  cli.command(["project", "list"], async (args) => listProjectsCommand(args, deps.context.myelinRoot));
+  cli.command(["project", "packet"], async (args) => projectPacketCommand(args, deps.context.myelinRoot));
   cli.command(["project", "learn"], async (args) => projectLearnCommand(args, deps));
-  cli.command(["project", "reset"], async (args) => projectResetCommand(args));
+  cli.command(["project", "reset"], async (args) => projectResetCommand(args, deps.context.myelinRoot));
   cli.command(["project", "migrate-layout"], async (args) => {
     const projectKey = args[0];
     if (!projectKey || args.length > 1) return fail("Usage: myelin project migrate-layout <project-key>");
 
-    const root = repoRoot().root;
+    const root = deps.context.myelinRoot;
     try {
       const result = await new ProjectService(root).migrateLayout(projectKey);
       return ok(
@@ -36,12 +37,12 @@ export function registerProjectCommands(cli: Cli, deps: ProjectCommandDeps = {})
   });
 }
 
-async function projectResetCommand(args: string[]) {
+async function projectResetCommand(args: string[], root: string) {
   const parsed = parseProjectResetArgs(args);
   if (parsed.error) return fail(parsed.error);
 
   try {
-    const result = await new ProjectResetService(repoRoot().root).cleanRebootstrap(parsed.projectKey);
+    const result = await new ProjectResetService(root).cleanRebootstrap(parsed.projectKey);
     if (parsed.json) return ok(stableJson(result));
 
     return ok(
@@ -58,12 +59,12 @@ async function projectResetCommand(args: string[]) {
   }
 }
 
-async function projectPacketCommand(args: string[]) {
+async function projectPacketCommand(args: string[], root: string) {
   const parsed = parseProjectPacketArgs(args);
   if (parsed.error) return fail(parsed.error);
 
   try {
-    const packet = await new ProjectService(repoRoot().root).buildMemoryPacket(parsed.projectKey);
+    const packet = await new ProjectService(root).buildMemoryPacket(parsed.projectKey);
     if (parsed.json) return ok(stableJson(packet));
 
     return ok(
@@ -86,12 +87,12 @@ async function projectPacketCommand(args: string[]) {
   }
 }
 
-async function listProjectsCommand(args: string[]) {
+async function listProjectsCommand(args: string[], root: string) {
   const parsed = parseProjectListArgs(args);
   if (parsed.error) return fail(parsed.error);
 
   try {
-    const result = await new ProjectService(repoRoot().root).listProjects({
+    const result = await new ProjectService(root).listProjects({
       includeLegacy: parsed.includeLegacy,
     });
     if (parsed.json) return ok(stableJson(result));
@@ -115,7 +116,7 @@ async function projectLearnCommand(args: string[], deps: ProjectCommandDeps) {
   if (parsed.error) return fail(parsed.error);
 
   try {
-    const result = await new ProjectService(repoRoot().root).runProjectLearn({
+    const result = await new ProjectService(deps.context.myelinRoot).runProjectLearn({
       projectKey: parsed.projectKey,
       dryRun: parsed.dryRun,
       review: parsed.review,

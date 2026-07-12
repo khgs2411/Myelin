@@ -1,12 +1,17 @@
 import type { Database } from "bun:sqlite";
 import { appendFile } from "node:fs/promises";
-import { join } from "node:path";
 import type { IngestJobRow } from "../memory/ingest-types.ts";
 import type { RunProcessResult } from "../runtime/process.ts";
 import { runProcess } from "../runtime/process.ts";
 import { prepareProjectLogFile, projectLogPath } from "../runtime/project-logs.ts";
 import { findProject } from "../runtime/projects.ts";
 import { getIngestJob, updateIngestJobStatus } from "./jobs.ts";
+import type { LaunchContext } from "../runtime/launch-context.ts";
+import {
+  backgroundInvocationEnv,
+  backgroundLaunchContext,
+  resolveMyelinCommandInvocation,
+} from "../runtime/command-invocation.ts";
 
 export type RuntimeProcessRunner = (command: string[], options?: { cwd?: string }) => Promise<RunProcessResult>;
 export type ProcessLivenessChecker = (pid: number) => boolean;
@@ -105,12 +110,19 @@ export async function spawnDetachedIngestWorker(input: {
   logPath: string;
   env?: NodeJS.ProcessEnv;
   spawn?: DetachedSpawner;
+  context?: LaunchContext;
 }): Promise<DetachedIngestSpawnResult> {
   await prepareProjectLogFile(input.root, input.projectKey, input.logPath);
 
   const spawn = input.spawn ?? ((options) => Bun.spawn(options));
+  const context = backgroundLaunchContext({
+    myelinRoot: input.root,
+    callerCwd: input.targetRepo,
+    context: input.context,
+    env: input.env,
+  });
   const proc = spawn({
-    cmd: ["bun", join(input.root, "src", "cli.ts"), "ingest", "worker", input.jobId],
+    cmd: resolveMyelinCommandInvocation(context, ["ingest", "worker", input.jobId]),
     cwd: input.targetRepo,
     stdout: Bun.file(input.logPath),
     stderr: Bun.file(input.logPath),
@@ -118,7 +130,7 @@ export async function spawnDetachedIngestWorker(input: {
     detached: true,
     env: {
       ...(input.env ?? process.env),
-      MYELIN_ROOT: input.root,
+      ...backgroundInvocationEnv(context, "worker"),
       MYELIN_INGEST_JOB_ID: input.jobId,
       MYELIN_INGEST_PROJECT: input.projectKey,
       MYELIN_CAPTURE_DISABLED: "1",
@@ -137,6 +149,7 @@ export async function launchDetachedIngestWorker(input: {
   env?: NodeJS.ProcessEnv;
   runner?: RuntimeProcessRunner;
   spawn?: DetachedSpawner;
+  context?: LaunchContext;
 }): Promise<{ status: "running"; pid: number | null; logPath: string; branch: string | null }> {
   const targetRepo = await resolveIngestTargetRepo(input.root, input.projectKey);
   const branch = await readCurrentGitBranch(targetRepo, input.runner);
@@ -152,6 +165,7 @@ export async function launchDetachedIngestWorker(input: {
       logPath,
       env: input.env,
       spawn: input.spawn,
+      context: input.context,
   });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

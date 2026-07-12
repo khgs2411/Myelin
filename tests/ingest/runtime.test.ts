@@ -80,7 +80,7 @@ test("detached spawn runs worker from target repo and returns pid plus log path"
   expect(unrefCalled).toBe(true);
   expect(calls).toHaveLength(1);
   expect(calls[0]).toMatchObject({
-    cmd: ["bun", join(root, "src", "cli.ts"), "ingest", "worker", "job_1"],
+    cmd: [process.execPath, join(root, "src", "cli.ts"), "ingest", "worker", "job_1"],
     cwd: "/target/repo",
     stdin: "ignore",
     detached: true,
@@ -90,6 +90,7 @@ test("detached spawn runs worker from target repo and returns pid plus log path"
       MYELIN_INGEST_JOB_ID: "job_1",
       MYELIN_INGEST_PROJECT: "class-kit",
       MYELIN_CAPTURE_DISABLED: "1",
+      MYELIN_INTERNAL_INVOCATION_KIND: "worker",
     },
   });
 });

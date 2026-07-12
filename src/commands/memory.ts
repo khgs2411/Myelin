@@ -20,7 +20,7 @@ import {
   type ProjectInboxIntakeSummary,
 } from "../project/project-memory-candidate-intake-service.ts";
 import { ProjectService } from "../project/project-service.ts";
-import { repoRoot } from "../runtime/fs.ts";
+import type { LaunchContext } from "../runtime/launch-context.ts";
 import { stableJson } from "../runtime/json.ts";
 import { DEFAULT_EMBEDDING_BATCH_SIZE, loadConfig, MAX_EMBEDDING_BATCH_SIZE } from "../runtime/config.ts";
 import type { ProcessRunner } from "../runtime/llm-client.ts";
@@ -31,31 +31,33 @@ import {
 } from "../query/project-memory-question-eval.ts";
 
 export type MemoryCommandDeps = {
+  context: LaunchContext;
   now?: () => Date;
   creator?: string;
   runner?: ProcessRunner;
   env?: NodeJS.ProcessEnv;
 };
 
-export function registerMemoryCommands(cli: Cli, deps: MemoryCommandDeps = {}): void {
+export function registerMemoryCommands(cli: Cli, deps: MemoryCommandDeps): void {
+  const root = deps.context.myelinRoot;
   cli.command(["memory", "inbox", "create"], (args) => memoryInboxCreate(args, deps));
   cli.command(["memory", "inbox", "intake"], (args) => memoryInboxIntake(args, deps));
-  cli.command(["memory", "candidates"], (args) => candidates(args));
-  cli.command(["memory", "candidate", "show"], (args) => candidateShow(args));
-  cli.command(["memory", "session", "list"], (args) => sessionList(args));
-  cli.command(["memory", "session", "show"], (args) => sessionShow(args));
-  cli.command(["memory", "session", "links"], (args) => sessionLinks(args));
-  cli.command(["memory", "review"], (args) => memoryReview(args));
-  cli.command(["memory", "index", "session"], (args) => indexSession(args));
-  cli.command(["memory", "index", "project"], (args) => indexProject(args));
+  cli.command(["memory", "candidates"], (args) => candidates(args, root));
+  cli.command(["memory", "candidate", "show"], (args) => candidateShow(args, root));
+  cli.command(["memory", "session", "list"], (args) => sessionList(args, root));
+  cli.command(["memory", "session", "show"], (args) => sessionShow(args, root));
+  cli.command(["memory", "session", "links"], (args) => sessionLinks(args, root));
+  cli.command(["memory", "review"], (args) => memoryReview(args, root));
+  cli.command(["memory", "index", "session"], (args) => indexSession(args, root));
+  cli.command(["memory", "index", "project"], (args) => indexProject(args, root));
   cli.command(["memory", "maintain", "project"], (args) => maintainProject(args, deps));
-  cli.command(["memory", "eval", "project"], (args) => evalProjectMemory(args));
+  cli.command(["memory", "eval", "project"], (args) => evalProjectMemory(args, root));
   cli.command(["memory", "query"], async (args) => {
     const parsed = parseArgs(args);
     if (parsed.error) return fail(parsed.error);
 
     const response = await queryMemory({
-      root: repoRoot().root,
+      root,
       projectKey: parsed.projectKey,
       question: parsed.question,
       limit: parsed.limit,
@@ -70,12 +72,11 @@ export function registerMemoryCommands(cli: Cli, deps: MemoryCommandDeps = {}): 
   });
 }
 
-async function evalProjectMemory(args: string[]): Promise<CommandResult> {
+async function evalProjectMemory(args: string[], root: string): Promise<CommandResult> {
   const parsed = parseEvalProjectMemoryArgs(args);
   if (parsed.error) return fail(parsed.error);
 
   try {
-    const root = repoRoot().root;
     const questions = await loadProjectMemoryGoldenQuestions({
       project_key: parsed.projectKey,
       fixture_path: parsed.fixturePath,
@@ -136,12 +137,12 @@ type ParsedMemoryReviewArgs = {
   error?: string;
 };
 
-async function memoryReview(args: string[]): Promise<CommandResult> {
+async function memoryReview(args: string[], root: string): Promise<CommandResult> {
   const parsed = parseMemoryReviewArgs(args);
   if (parsed.error) return fail(parsed.error);
 
   try {
-    const result = await new MemoryReviewService(repoRoot().root).reviewProject({
+    const result = await new MemoryReviewService(root).reviewProject({
       projectKey: parsed.projectKey,
       limit: parsed.limit,
       status: parsed.status,
@@ -213,7 +214,7 @@ async function maintainProject(args: string[], deps: MemoryCommandDeps): Promise
   if (parsed.error) return fail(parsed.error);
 
   try {
-    const result = await new ProjectService(repoRoot().root).runProjectMaintenance({
+    const result = await new ProjectService(deps.context.myelinRoot).runProjectMaintenance({
       projectKey: parsed.projectKey,
       dryRun: parsed.dryRun,
       review: parsed.review,
@@ -290,7 +291,7 @@ async function memoryInboxCreate(args: string[], deps: MemoryCommandDeps): Promi
   if (!parsed.confidence) return fail("--confidence must be one of: low, medium, high");
   if (!parsed.risk) return fail("--risk must be one of: low, medium, high");
 
-  const result = await createRuntimeInboxItem(repoRoot().root, {
+  const result = await createRuntimeInboxItem(deps.context.myelinRoot, {
     projectKey: parsed.projectKey,
     targetLayer: parsed.layer,
     title: parsed.title,
@@ -509,7 +510,7 @@ async function memoryInboxIntake(args: string[], deps: MemoryCommandDeps): Promi
   const parsed = parseMemoryInboxIntakeArgs(args);
   if (parsed.error) return fail(parsed.error);
 
-  const result = await new ProjectMemoryCandidateIntakeService(repoRoot().root).intakeProjectInbox(
+  const result = await new ProjectMemoryCandidateIntakeService(deps.context.myelinRoot).intakeProjectInbox(
     parsed.projectKey,
     deps.now?.() ?? new Date(),
   );
@@ -549,11 +550,11 @@ function formatMemoryInboxIntakeSummary(result: ProjectInboxIntakeSummary): stri
     .join("\n");
 }
 
-function sessionList(args: string[]): CommandResult {
+function sessionList(args: string[], root: string): CommandResult {
   const parsed = parseSessionListArgs(args);
   if (parsed.error) return fail(parsed.error);
 
-  const result = sessionInspectionService().list({
+  const result = sessionInspectionService(root).list({
     projectKey: parsed.projectKey,
     status: parsed.status,
     limit: parsed.limit,
@@ -563,12 +564,12 @@ function sessionList(args: string[]): CommandResult {
   return ok(result.memories.map(formatSessionMemorySummary).join("\n"));
 }
 
-function sessionShow(args: string[]): CommandResult {
+function sessionShow(args: string[], root: string): CommandResult {
   const parsed = parseSessionShowArgs(args);
   if (parsed.error) return fail(parsed.error);
 
   try {
-    const result = sessionInspectionService().show(parsed.id);
+    const result = sessionInspectionService(root).show(parsed.id);
     if (parsed.json) return ok(JSON.stringify(result, null, 2));
     return ok(formatSessionMemoryDetail(result.memory));
   } catch (error) {
@@ -576,11 +577,11 @@ function sessionShow(args: string[]): CommandResult {
   }
 }
 
-function sessionLinks(args: string[]): CommandResult {
+function sessionLinks(args: string[], root: string): CommandResult {
   const parsed = parseSessionLinksArgs(args);
   if (parsed.error) return fail(parsed.error);
 
-  const result = sessionInspectionService().links({
+  const result = sessionInspectionService(root).links({
     projectKey: parsed.projectKey,
     memoryId: parsed.memoryId,
     limit: parsed.limit,
@@ -738,11 +739,10 @@ function formatSessionMemoryLink(link: SessionMemoryLinkRow): string {
   return `${link.source_memory_id} ${link.relationship} ${link.target_memory_id}: ${link.reason}`;
 }
 
-async function indexSession(args: string[]): Promise<CommandResult> {
+async function indexSession(args: string[], root: string): Promise<CommandResult> {
   const parsed = parseIndexSessionArgs(args);
   if (parsed.error) return fail(parsed.error);
 
-  const root = repoRoot().root;
   const config = await loadConfig(root);
   const selection = await new EmbeddingProviderFactory(config).initialize("retrieval_document");
   const db = openMemoryDb(root);
@@ -768,11 +768,10 @@ async function indexSession(args: string[]): Promise<CommandResult> {
   }
 }
 
-async function indexProject(args: string[]): Promise<CommandResult> {
+async function indexProject(args: string[], root: string): Promise<CommandResult> {
   const parsed = parseIndexProjectArgs(args);
   if (parsed.error) return fail(parsed.error);
 
-  const root = repoRoot().root;
   const config = await loadConfig(root);
   const response = await new ProjectMemoryRetrievalIndexService({ root }).indexProject({
     projectKey: parsed.projectKey,
@@ -787,11 +786,11 @@ async function indexProject(args: string[]): Promise<CommandResult> {
   return response.degraded ? fail(`${message}\n${response.degraded_reason ?? "Indexing degraded."}`) : ok(message);
 }
 
-function candidates(args: string[]): CommandResult {
-  const parsed = parseCandidateListArgs(args);
+function candidates(args: string[], root: string): CommandResult {
+  const parsed = parseCandidateListArgs(args, root);
   if (parsed.error) return fail(parsed.error);
 
-  const result = candidateService().list({
+  const result = candidateService(root).list({
     projectKey: parsed.projectKey,
     status: parsed.status,
     scope: parsed.scope,
@@ -801,12 +800,12 @@ function candidates(args: string[]): CommandResult {
   return ok(result.candidates.map((row) => `${row.id} [${row.status}] ${row.scope}: ${row.summary}`).join("\n"));
 }
 
-function candidateShow(args: string[]): CommandResult {
+function candidateShow(args: string[], root: string): CommandResult {
   const parsed = parseCandidateShowArgs(args);
   if (parsed.error) return fail(parsed.error);
 
   try {
-    const result = candidateService().show(parsed.id);
+    const result = candidateService(root).show(parsed.id);
     const row = result.candidate;
     return parsed.json ? ok(JSON.stringify(result, null, 2)) : ok(`${row.id} [${row.status}] ${row.scope}\n${row.summary}`);
   } catch (error) {
@@ -814,7 +813,7 @@ function candidateShow(args: string[]): CommandResult {
   }
 }
 
-function parseCandidateListArgs(args: string[]): {
+function parseCandidateListArgs(args: string[], root: string): {
   projectKey: string;
   status?: MemoryCandidateStatus;
   scope?: MemoryScope;
@@ -831,7 +830,7 @@ function parseCandidateListArgs(args: string[]): {
     if (arg === "--json") json = true;
     else if (arg === "--status") {
       try {
-        status = candidateService().normalizeStatus(args[++index] ?? "");
+        status = candidateService(root).normalizeStatus(args[++index] ?? "");
       } catch (error) {
         return { projectKey, status, scope, json, error: error instanceof Error ? error.message : String(error) };
       }
@@ -1007,7 +1006,7 @@ function parseArgs(args: string[]): {
   json: boolean;
   debug: boolean;
   branch?: string;
-  layer?: "session" | "project" | "auto";
+  layer?: "session" | "project";
   maxInlineChars: number;
   error?: string;
 } {
@@ -1017,7 +1016,7 @@ function parseArgs(args: string[]): {
   let json = false;
   let debug = false;
   let branch: string | undefined;
-  let layer: "session" | "project" | "auto" | undefined;
+  let layer: "session" | "project" | undefined;
   let maxInlineChars = 4000;
 
   for (let index = 0; index < args.length; index += 1) {
@@ -1032,8 +1031,8 @@ function parseArgs(args: string[]): {
       branch = value;
     } else if (arg === "--layer") {
       const value = args[++index];
-      if (value !== "session" && value !== "project" && value !== "auto") {
-        return { projectKey, question, limit, json, debug, branch, layer, maxInlineChars, error: "--layer must be one of: session, project, auto" };
+      if (value !== "session" && value !== "project") {
+        return { projectKey, question, limit, json, debug, branch, layer, maxInlineChars, error: "--layer must be one of: session, project" };
       }
       layer = value;
     } else if (arg === "--max-inline-chars") {
@@ -1071,7 +1070,7 @@ function parseArgs(args: string[]): {
       branch,
       layer,
       maxInlineChars,
-      error: "Usage: myelin memory query <key> <question> [--limit N] [--layer session|project|auto] [--max-inline-chars N] [--branch current|<name>] [--json] [--debug]",
+      error: "Usage: myelin memory query <key> <question> [--limit N] [--layer session|project] [--max-inline-chars N] [--branch current|<name>] [--json] [--debug]",
     };
   }
   return { projectKey, question, limit, json, debug, branch, layer, maxInlineChars };
@@ -1135,10 +1134,10 @@ function parseEvalProjectMemoryArgs(args: string[]): {
   return { projectKey, fixturePath, limit, maxInlineChars, json };
 }
 
-function candidateService(): MemoryCandidateService {
-  return new MemoryCandidateService(repoRoot().root);
+function candidateService(root: string): MemoryCandidateService {
+  return new MemoryCandidateService(root);
 }
 
-function sessionInspectionService(): SessionMemoryInspectionService {
-  return new SessionMemoryInspectionService(repoRoot().root);
+function sessionInspectionService(root: string): SessionMemoryInspectionService {
+  return new SessionMemoryInspectionService(root);
 }

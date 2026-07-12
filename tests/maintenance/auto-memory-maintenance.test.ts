@@ -55,7 +55,16 @@ test("auto memory maintenance schedules a detached worker when threshold is reac
     queued_count: 2,
   });
   expect(spawned).toHaveLength(1);
-  expect(spawned[0].cmd).toEqual(["bun", join(root, "src", "maintenance", "worker.ts"), "demo"]);
+  expect(spawned[0].cmd).toEqual([
+    process.execPath,
+    join(root, "src", "cli.ts"),
+    "maintenance",
+    "worker",
+    "session",
+    "demo",
+  ]);
+  expect(spawned[0].cwd).toBe(repo);
+  expect(spawned[0].env.MYELIN_INTERNAL_INVOCATION_KIND).toBe("worker");
   expect(spawned[0].env.MYELIN_CAPTURE_DISABLED).toBe("1");
   expect(spawned[0].env.MYELIN_AUTO_MEMORY_MAINTENANCE_WORKER).toBe("1");
   expect(spawned[0].env.MYELIN_AUTO_MEMORY_RUN_ID).toBeString();
@@ -308,7 +317,15 @@ test("auto memory maintenance runs one bounded drain window and schedules contin
   expect(starts).toEqual([{ limit: 4, batchSize: 4 }]);
   expect(indexCalls).toEqual([{ projectKey: "demo", limit: 500, batchSize: 50, retryFailed: false }]);
   expect(spawned).toHaveLength(1);
-  expect(spawned[0].cmd).toEqual(["bun", join(root, "src", "maintenance", "worker.ts"), "demo"]);
+  expect(spawned[0].cmd).toEqual([
+    process.execPath,
+    join(root, "src", "cli.ts"),
+    "maintenance",
+    "worker",
+    "session",
+    "demo",
+  ]);
+  expect(spawned[0].cwd).toBe(repo);
   await expect(readState(root, "demo")).resolves.toMatchObject({
     project_key: "demo",
     last_status: "scheduled",

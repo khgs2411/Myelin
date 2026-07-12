@@ -5,7 +5,7 @@ export type RepoRoot = {
   root: string;
 };
 
-export function repoRoot(root: string = process.cwd()): RepoRoot {
+export function repoRoot(root: string): RepoRoot {
   return { root: resolve(root) };
 }
 

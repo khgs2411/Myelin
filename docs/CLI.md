@@ -2,11 +2,14 @@
 
 This is the canonical reference for Myelin CLI commands.
 
-Use either the installed `myelin` binary or the repo-local form:
+Operator examples use the installed `myelin` command. Contributors working in
+the Myelin checkout can explicitly run the source entrypoint when needed:
 
 ```bash
 bun src/cli.ts <command>
 ```
+
+The source form is contributor guidance, not the public operator boundary.
 
 The sections below document purpose, usage, options, output, and side effects. Commands that mutate SQLite, project files, provider hooks, or launch detached workers call that out explicitly.
 
@@ -22,16 +25,23 @@ Arguments:
 
 Options:
 
-- `--json`: emit the structured status facade response.
+- `--json`: emit the structured `myelin.status.v1` response.
 
 Output:
 
 - Human-readable project summary by default.
-- JSON facade response with `--json`.
+- Human output includes the overall operational state, installation health,
+  Session Memory and Project Memory health, warnings, suggested actions, and
+  evidence paths.
+- JSON output has `contract_version: "myelin.status.v1"` and
+  `kind: "project_operational_status"`.
 
 Side effects:
 
 - Read-only.
+- Successfully observed `healthy`, `attention`, and `blocked` states exit `0`.
+- Project-resolution, invocation, or inspection failures that prevent the
+  contract from being built exit nonzero.
 
 Examples:
 
@@ -467,7 +477,7 @@ Automation:
 - When `AUTO_PROJECT_MEMORY_MAINTENANCE=1`, runtime inbox writes and Session Memory ingest-created project candidates schedule this maintenance pipeline in a detached worker after `AUTO_PROJECT_MEMORY_MIN_PENDING_ITEMS` un-intaked inbox items or pending project candidates exist.
 - Deterministic inbox intake inside this command does not schedule another auto-maintenance run.
 
-### `myelin memory query <project-key> <question> [--limit N] [--branch current|<branch>] [--json] [--debug]`
+### `myelin memory query <project-key> <question> [--limit N] [--layer session|project] [--branch current|<branch>] [--json] [--debug]`
 
 Queries indexed Session Memory vectors and returns deterministic matches.
 
@@ -479,6 +489,8 @@ Arguments:
 Options:
 
 - `--limit N`: number of matches. Default `5`.
+- `--layer session|project`: query indexed Session Memory (the default) or
+  canonical Project Memory through its derived retrieval index.
 - `--branch current|<branch>`: filter matches by captured branch context. `current` resolves the registered repo branch.
 - `--json`: emit structured query response.
 - `--debug`: include diagnostic route/layer information.
@@ -668,32 +680,92 @@ Side effects:
 
 ## install
 
-### `myelin install [--provider <provider>] [--apply]`
+The repo-root `./install` script delegates to this command using that checkout
+as the authoritative Myelin root. Installation is preview-first and manages a
+copied launcher plus its ownership locator; it does not install a symlink.
 
-Previews or applies provider hook installation.
+### `myelin install [--provider codex] [--command-only] [--rebind] [--bin-dir <absolute-path>] [--apply]`
+
+Previews or applies the machine command lifecycle and selected provider
+integration.
 
 Options:
 
-- `--provider <provider>`: provider to install hooks for.
+- `--provider codex`: explicitly install or repair Codex integration. The option
+  is repeatable and duplicate selections converge to one provider.
+- `--command-only`: install or repair only the copied launcher and locator.
+  This cannot be combined with `--provider`.
+- `--rebind`: explicitly approve binding an existing installation to the
+  current checkout after its recorded root changes. Applying a rebind without
+  this option is refused.
+- `--bin-dir <absolute-path>`: use a custom launcher directory instead of
+  `~/.local/bin`. The path must be absolute. An existing locator will not
+  silently change its recorded launcher target.
 - `--apply`: write changes. Without this, the command previews.
+
+Provider selection:
+
+- With no provider option, one detected supported provider is selected.
+- With no detected supported provider, Myelin installs the command only and
+  reports a warning.
+- If several supported providers are detected, installation requires explicit
+  `--provider` selection.
+
+Examples:
+
+```bash
+./install
+./install --apply
+./install --provider codex
+./install --provider codex --apply
+./install --command-only --apply
+./install --bin-dir /absolute/bin --apply
+./install --rebind --apply
+```
 
 Side effects:
 
 - Preview mode is read-only.
-- Apply mode writes provider hook configuration and Myelin shim files.
+- Apply mode writes the copied launcher, `~/.myelin/install.json`, a temporary
+  recoverable journal, and selected Myelin-owned provider files.
+- Reapply repairs missing owned artifacts and updates changed launcher content.
+- Changed or unowned launcher/provider artifacts are refused instead of being
+  overwritten.
+- Existing recorded providers are preserved when a command-only or differently
+  selected repair runs.
+- Shell profiles are never edited. When the bin directory is absent from PATH,
+  the exact warning is `<absolute-bin-dir> is not on PATH. Add it to your shell PATH before invoking myelin globally.`
 
-### `myelin uninstall [--provider <provider>]`
+### `myelin uninstall [--provider codex] [--apply]`
 
-Previews removal of Myelin-owned provider hook entries.
+Previews or applies conservative removal of recorded Myelin-owned artifacts.
 
 Options:
 
-- `--provider <provider>`: provider to uninstall hooks for.
+- `--provider codex`: remove only the recorded Codex integration and retain the
+  copied launcher, locator, and other recorded providers.
+- `--apply`: perform the previewed removal.
+
+Examples:
+
+```bash
+myelin uninstall --provider codex
+myelin uninstall --provider codex --apply
+myelin uninstall
+myelin uninstall --apply
+```
 
 Side effects:
 
-- Removes only Myelin-owned hook entries through the install service.
-- Does not accept `--apply`; uninstall behavior is handled by the service mode.
+- Preview mode is read-only.
+- Provider-only apply removes only verified, recorded Myelin-owned provider
+  artifacts and updates the locator.
+- Full apply removes recorded providers first, then the verified copied launcher
+  and locator.
+- Checkout files, `myelin.config`, `.env`, project memory/state, run/log data,
+  and unrelated provider hooks are preserved.
+- Hash or ownership mismatches fail closed instead of deleting modified or
+  unowned files.
 
 ## capture
 

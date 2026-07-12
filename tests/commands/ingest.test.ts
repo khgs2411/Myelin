@@ -3,7 +3,10 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createCli } from "../../src/commands/registry.ts";
-import { registerIngestCommands } from "../../src/commands/ingest.ts";
+import {
+  registerIngestCommands as registerIngestCommandsWithContext,
+  type IngestCommandDeps,
+} from "../../src/commands/ingest.ts";
 import { createIngestJob, getIngestJob, updateIngestJobStatus } from "../../src/ingest/jobs.ts";
 import type { DetachedSpawner } from "../../src/ingest/runtime.ts";
 import { openMemoryDb } from "../../src/memory/db.ts";
@@ -13,6 +16,21 @@ import { writeJson } from "../../src/runtime/json.ts";
 let root: string;
 let previousCwd: string;
 let previousMyelinRoot: string | undefined;
+
+function registerIngestCommands(cli: ReturnType<typeof createCli>, deps: Omit<IngestCommandDeps, "context"> = {}): void {
+  registerIngestCommandsWithContext(cli, { ...deps, context: testContext() });
+}
+
+function testContext() {
+  return {
+    myelinRoot: root,
+    callerCwd: join(root, "caller"),
+    invocationKind: "test",
+    rootSource: "test_dependency",
+    launcherPath: null,
+    locatorPath: null,
+  } as const;
+}
 
 beforeEach(async () => {
   previousCwd = process.cwd();

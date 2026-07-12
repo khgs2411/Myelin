@@ -1,88 +1,93 @@
-import { InstallService } from "../install/install-service.ts";
-import type { ProviderInstallPlan } from "../install/types.ts";
-import { repoRoot } from "../runtime/fs.ts";
+import { InstallService, type InstallServiceDeps } from "../install/install-service.ts";
+import type { MachineInstallPlan } from "../install/types.ts";
+import type { LaunchContext } from "../runtime/launch-context.ts";
 import type { Cli } from "./registry.ts";
 import { fail, ok } from "./registry.ts";
 
 export type InstallCommandDeps = {
-  myelinRoot?: string;
-  codexRoot?: string;
-  isInteractive?: boolean;
-  detectedProviders?: string[];
+  context: LaunchContext;
+  service?: Omit<InstallServiceDeps, "myelinRoot">;
 };
 
 type ParsedInstallArgs = {
   apply: boolean;
-  provider: string | null;
+  rebind: boolean;
+  binDir: string | null;
+  commandOnly: boolean;
+  providers: string[];
   error?: string;
 };
 
-export function registerInstallCommands(cli: Cli, deps: InstallCommandDeps = {}): void {
+export function registerInstallCommands(cli: Cli, deps: InstallCommandDeps): void {
   cli.command(["install"], async (args) => {
-    const parsed = parseInstallArgs(args);
+    const parsed = parseArgs(args, "install");
     if (parsed.error) return fail(parsed.error);
-
     try {
       const result = await service(deps).install(parsed);
-      return ok(render("install", result.mode, result.plan));
+      return ok(render(result.plan));
     } catch (error) {
       return fail(error instanceof Error ? error.message : String(error));
     }
   });
 
   cli.command(["uninstall"], async (args) => {
-    const parsed = parseInstallArgs(args);
+    const parsed = parseArgs(args, "uninstall");
     if (parsed.error) return fail(parsed.error);
-    if (parsed.apply) return fail("uninstall does not accept --apply");
-
     try {
-      const result = await service(deps).uninstall(parsed.provider);
-      return ok(render("uninstall", result.mode, result.plan));
+      const result = await service(deps).uninstall({ apply: parsed.apply, providers: parsed.providers });
+      return ok(render(result.plan));
     } catch (error) {
       return fail(error instanceof Error ? error.message : String(error));
     }
   });
 }
 
-function parseInstallArgs(args: string[]): ParsedInstallArgs {
-  let apply = false;
-  let provider: string | null = null;
-
+function parseArgs(args: string[], command: "install" | "uninstall"): ParsedInstallArgs {
+  const parsed: ParsedInstallArgs = {
+    apply: false,
+    rebind: false,
+    binDir: null,
+    commandOnly: false,
+    providers: [],
+  };
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
-    if (arg === "--apply") {
-      apply = true;
+    if (arg === "--apply") parsed.apply = true;
+    else if (arg === "--rebind") parsed.rebind = true;
+    else if (arg === "--command-only") parsed.commandOnly = true;
+    else if (arg === "--bin-dir") {
+      const value = args[++index];
+      if (!value || value.startsWith("--")) return { ...parsed, error: "--bin-dir requires a value" };
+      parsed.binDir = value;
     } else if (arg === "--provider") {
-      const value = args[index + 1];
-      if (!value || value.startsWith("--")) return { apply, provider, error: "--provider requires a value" };
-      provider = value;
-      index += 1;
-    } else {
-      return { apply, provider, error: `Unknown install option: ${arg}` };
-    }
+      const value = args[++index];
+      if (!value || value.startsWith("--")) return { ...parsed, error: "--provider requires a value" };
+      parsed.providers.push(value);
+    } else return { ...parsed, error: `Unknown ${command} option: ${arg}` };
   }
-
-  return { apply, provider };
+  if (command === "uninstall" && (parsed.rebind || parsed.commandOnly || parsed.binDir)) {
+    return { ...parsed, error: "uninstall accepts only --apply and --provider <name>" };
+  }
+  if (parsed.commandOnly && parsed.providers.length > 0) {
+    return { ...parsed, error: "--command-only cannot be combined with --provider" };
+  }
+  return parsed;
 }
 
-function render(command: string, mode: string, plan: ProviderInstallPlan): string {
+function render(plan: MachineInstallPlan): string {
   return [
-    `Command: ${command}`,
-    `Provider: ${plan.provider}`,
-    `Mode: ${mode}`,
-    `Detected: ${plan.detected}`,
-    `Provider root: ${plan.provider_root}`,
-    `Hooks path: ${plan.hooks_path}`,
-    ...plan.actions.map((action) => `- ${action}`),
+    `Operation: ${plan.operation}`,
+    `Mode: ${plan.mode}`,
+    `Myelin root: ${plan.myelin_root}`,
+    `Launcher: ${plan.launcher_path}`,
+    `Locator: ${plan.locator_path}`,
+    `PATH active: ${plan.path_active ? "yes" : "no"}`,
+    plan.rebind ? `Rebind: ${plan.current_root} -> ${plan.myelin_root}` : "",
+    ...plan.actions.map((item) => `- ${item.description}: ${item.path}`),
     ...plan.warnings.map((warning) => `Warning: ${warning}`),
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 function service(deps: InstallCommandDeps): InstallService {
-  return new InstallService({
-    myelinRoot: deps.myelinRoot ?? repoRoot().root,
-    codexRoot: deps.codexRoot,
-    isInteractive: deps.isInteractive,
-    detectedProviders: deps.detectedProviders,
-  });
+  return new InstallService({ myelinRoot: deps.context.myelinRoot, ...deps.service });
 }

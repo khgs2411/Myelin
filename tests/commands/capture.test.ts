@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { openMemoryDbAt } from "../../src/memory/db.ts";
 import { listExperienceEvents } from "../../src/memory/experience.ts";
 import { bootstrapProject } from "../../src/runtime/bootstrap.ts";
-import { captureCodexPayload, isCaptureDisabled } from "../../src/commands/capture.ts";
+import { captureCodexPayload, isCaptureDisabled, registerCaptureCommands } from "../../src/commands/capture.ts";
+import { createCli } from "../../src/commands/registry.ts";
 
 let root: string;
 let repo: string;
@@ -45,6 +46,28 @@ test("capture disabled flag is explicit for Myelin-owned provider sessions", () 
   expect(isCaptureDisabled({ MYELIN_CAPTURE_DISABLED: "1" })).toBe(true);
   expect(isCaptureDisabled({ MYELIN_CAPTURE_DISABLED: "true" })).toBe(false);
   expect(isCaptureDisabled({})).toBe(false);
+});
+
+test("capture command receives an explicit launch context", async () => {
+  const cli = createCli("myelin");
+  registerCaptureCommands(cli, {
+    context: {
+      myelinRoot: root,
+      callerCwd: join(root, "other-cwd"),
+      invocationKind: "test",
+      rootSource: "test_dependency",
+      launcherPath: null,
+      locatorPath: null,
+    },
+  });
+  const previous = process.env.MYELIN_CAPTURE_DISABLED;
+  process.env.MYELIN_CAPTURE_DISABLED = "1";
+  try {
+    expect(await cli.run(["capture", "codex-hook"])).toEqual({ exitCode: 0, message: "" });
+  } finally {
+    if (previous === undefined) delete process.env.MYELIN_CAPTURE_DISABLED;
+    else process.env.MYELIN_CAPTURE_DISABLED = previous;
+  }
 });
 
 test("captureCodexPayload stores empty Stop as invalid raw evidence", async () => {

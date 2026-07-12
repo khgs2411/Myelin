@@ -12,11 +12,11 @@ import {
   type IngestJobAdminServiceDeps,
 } from "../ingest/job-admin-service.ts";
 import { INGEST_JOB_STATUSES, type IngestJobRow, type IngestJobStatus } from "../memory/ingest-types.ts";
-import { repoRoot } from "../runtime/fs.ts";
+import type { LaunchContext } from "../runtime/launch-context.ts";
 
-export type IngestCommandDeps = IngestServiceDeps & IngestJobAdminServiceDeps;
+export type IngestCommandDeps = IngestServiceDeps & IngestJobAdminServiceDeps & { context: LaunchContext };
 
-export function registerIngestCommands(cli: Cli, deps: IngestCommandDeps = {}): void {
+export function registerIngestCommands(cli: Cli, deps: IngestCommandDeps): void {
   cli.command(["ingest", "jobs", "resolve"], (args) => resolveJobs(args, deps));
   cli.command(["ingest", "jobs"], (args) => jobs(args, deps));
   cli.command(["ingest", "status"], (args) => status(args, deps));
@@ -28,7 +28,7 @@ function jobs(args: string[], deps: IngestCommandDeps) {
   const parsed = parseJobsArgs(args);
   if (parsed.error) return fail(parsed.error);
 
-  const result = new IngestJobAdminService(repoRoot().root, deps).list({
+  const result = new IngestJobAdminService(deps.context.myelinRoot, deps).list({
     projectKey: parsed.projectKey,
     status: parsed.status,
     limit: parsed.limit,
@@ -42,7 +42,7 @@ function resolveJobs(args: string[], deps: IngestCommandDeps) {
   const parsed = parseResolveJobsArgs(args);
   if (parsed.error) return fail(parsed.error);
 
-  const result = new IngestJobAdminService(repoRoot().root, deps).resolveFailed({
+  const result = new IngestJobAdminService(deps.context.myelinRoot, deps).resolveFailed({
     projectKey: parsed.projectKey,
     ids: parsed.ids,
     errorCode: parsed.errorCode,
@@ -60,7 +60,7 @@ async function start(args: string[], deps: IngestCommandDeps) {
   if (parsed.error) return fail(parsed.error);
 
   try {
-    const result = await new IngestService(repoRoot().root, deps).start({
+    const result = await new IngestService(deps.context.myelinRoot, deps).start({
       projectKey: parsed.projectKey,
       limit: parsed.limit,
       batchSize: parsed.batchSize,
@@ -77,7 +77,7 @@ async function status(args: string[], deps: IngestCommandDeps) {
   if (parsed.error) return fail(parsed.error);
 
   try {
-    const result = await new IngestService(repoRoot().root, deps).status({
+    const result = await new IngestService(deps.context.myelinRoot, deps).status({
       jobId: parsed.jobId,
       projectKey: parsed.projectKey,
     });
@@ -99,9 +99,8 @@ async function worker(args: string[], deps: IngestCommandDeps) {
   const jobId = args[0];
   if (!jobId || args.length > 1) return fail("Usage: myelin ingest worker <ingest-job-id>");
 
-  const root = process.env.MYELIN_ROOT ?? repoRoot().root;
   try {
-    await new IngestService(root, deps).runWorker(jobId);
+    await new IngestService(deps.context.myelinRoot, deps).runWorker(jobId);
     return ok(`Completed ingest worker ${jobId}.`);
   } catch (error) {
     return fail(error instanceof Error ? error.message : String(error));

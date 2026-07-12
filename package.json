@@ -2,9 +2,6 @@
   "name": "myelin",
   "private": true,
   "type": "module",
-  "bin": {
-    "myelin": "src/cli.ts"
-  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "myelin": "bun src/cli.ts"

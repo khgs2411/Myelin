@@ -2,12 +2,27 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { registerBootstrapCommand } from "../../src/commands/bootstrap.ts";
+import { registerBootstrapCommand as registerBootstrapCommandWithContext } from "../../src/commands/bootstrap.ts";
 import { createCli } from "../../src/commands/registry.ts";
 
 let root: string;
 let repo: string;
 let oldCwd: string;
+
+function registerBootstrapCommand(cli: ReturnType<typeof createCli>): void {
+  registerBootstrapCommandWithContext(cli, { context: testContext() });
+}
+
+function testContext() {
+  return {
+    myelinRoot: root,
+    callerCwd: join(root, "caller"),
+    invocationKind: "test",
+    rootSource: "test_dependency",
+    launcherPath: null,
+    locatorPath: null,
+  } as const;
+}
 
 beforeEach(async () => {
   oldCwd = process.cwd();

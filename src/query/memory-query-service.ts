@@ -50,7 +50,7 @@ export type MemoryQueryInput = {
   limit?: number;
   includeRoute?: boolean;
   gitBranch?: string;
-  layer?: "session" | "project" | "auto";
+  layer?: "session" | "project";
   maxInlineChars?: number;
 };
 

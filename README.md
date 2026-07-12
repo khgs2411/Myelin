@@ -6,27 +6,90 @@ It keeps durable project knowledge close to the repo: curated wiki pages, source
 
 ## Quick Start
 
-Install dependencies:
+From a trusted local clone, install dependencies and preview the machine installation:
 
 ```bash
 bun install
+./install
 ```
 
-Run the CLI directly:
+The preview is read-only. Apply it only after reviewing the reported launcher,
+locator, provider, and PATH actions:
+
+```bash
+./install --apply
+```
+
+This copies a launcher to `~/.local/bin/myelin` and records this checkout in
+`~/.myelin/install.json`; it does not create a symlink. A bare install selects
+the sole supported provider detected on the machine. Select Codex explicitly,
+or install only the command, with:
+
+```bash
+./install --provider codex
+./install --provider codex --apply
+./install --command-only --apply
+```
+
+If the launcher directory is unavailable through PATH, the installer reports
+`<absolute-bin-dir> is not on PATH. Add it to your shell PATH before invoking myelin globally.`
+Add the reported absolute directory to your shell PATH. The installer never
+edits shell profiles.
+
+Use the installed command from any working directory:
+
+```bash
+myelin status <project-key>
+myelin schema check <project-key>
+myelin schema build <project-key>
+myelin memory query <project-key> "What should I know?"
+myelin memory index session <project-key>
+myelin memory maintain project <project-key>
+myelin project learn <project-key> --dry-run
+myelin ingest <project-key>
+myelin ingest status <ingest-job-id>
+```
+
+`myelin status --json` emits the stable `myelin.status.v1` operational contract.
+An observed `healthy`, `attention`, or `blocked` state exits zero; invocation or
+identity failures that prevent construction of the contract exit nonzero.
+
+Re-running `./install` previews repair or update work. If the checkout moved,
+preview from the new location and then explicitly rebind it:
+
+```bash
+./install
+./install --rebind --apply
+```
+
+Use `./install --bin-dir /absolute/bin` for a custom launcher directory on the
+initial install. A recorded installation will not silently move its launcher to
+a different bin directory.
+
+Uninstall is also preview-first. Provider-only removal preserves the launcher
+and locator; full removal deletes all recorded Myelin-owned provider artifacts,
+the copied launcher, and the locator while preserving the checkout, config,
+memory, state, and unrelated provider hooks:
+
+```bash
+myelin uninstall --provider codex
+myelin uninstall --provider codex --apply
+myelin uninstall
+myelin uninstall --apply
+```
+
+## Contributor Source Usage
+
+Contributors working inside this checkout may bypass the installed launcher
+explicitly:
 
 ```bash
 bun src/cli.ts status <project-key>
-bun src/cli.ts schema check <project-key>
-bun src/cli.ts schema build <project-key>
 bun src/cli.ts memory query <project-key> "What should I know?"
-bun src/cli.ts memory index session <project-key>
-bun src/cli.ts memory maintain project <project-key>
-bun src/cli.ts project learn <project-key> --dry-run
-bun src/cli.ts ingest <project-key>
-bun src/cli.ts ingest status <ingest-job-id>
 ```
 
-The root `Makefile` is only a thin convenience layer over the same CLI:
+The root `Makefile` remains a checkout-local convenience layer. It uses the
+installed command by default and accepts an explicit source override:
 
 ```bash
 make status PROJECT=<project-key>
@@ -35,6 +98,7 @@ make schema-build PROJECT=<project-key>
 make query PROJECT=<project-key> QUESTION="What should I know?"
 make learn PROJECT=<project-key>
 make ingest PROJECT=<project-key>
+make status PROJECT=<project-key> MYELIN='bun src/cli.ts'
 ```
 
 ## Command Vocabulary

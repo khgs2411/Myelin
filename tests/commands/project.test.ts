@@ -2,7 +2,10 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { registerProjectCommands } from "../../src/commands/project.ts";
+import {
+  registerProjectCommands as registerProjectCommandsWithContext,
+  type ProjectCommandDeps,
+} from "../../src/commands/project.ts";
 import { createCli } from "../../src/commands/registry.ts";
 import { createRuntimeInboxItem } from "../../src/inbox/runtime-inbox-items.ts";
 import { openMemoryDb } from "../../src/memory/db.ts";
@@ -11,6 +14,21 @@ import { writeJson } from "../../src/runtime/json.ts";
 
 let root: string;
 let oldCwd: string;
+
+function registerProjectCommands(cli: ReturnType<typeof createCli>, deps: Omit<ProjectCommandDeps, "context"> = {}): void {
+  registerProjectCommandsWithContext(cli, { ...deps, context: testContext() });
+}
+
+function testContext() {
+  return {
+    myelinRoot: root,
+    callerCwd: join(root, "caller"),
+    invocationKind: "test",
+    rootSource: "test_dependency",
+    launcherPath: null,
+    locatorPath: null,
+  } as const;
+}
 
 beforeEach(async () => {
   oldCwd = process.cwd();

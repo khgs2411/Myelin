@@ -13,7 +13,7 @@ export async function queryMemory(options: {
   limit?: number;
   includeRoute?: boolean;
   branch?: string | "current";
-  layer?: "session" | "project" | "auto";
+  layer?: "session" | "project";
   maxInlineChars?: number;
 }): Promise<QueryResponse> {
   let db: ReturnType<typeof openMemoryDb> | undefined;

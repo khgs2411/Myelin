@@ -66,7 +66,16 @@ test("auto project memory maintenance schedules a detached worker when project c
     counts: { pending_inbox_items: 0, pending_project_candidates: 2 },
   });
   expect(spawned).toHaveLength(1);
-  expect(spawned[0].cmd).toEqual(["bun", join(root, "src", "maintenance", "project-memory-worker.ts"), "demo"]);
+  expect(spawned[0].cmd).toEqual([
+    process.execPath,
+    join(root, "src", "cli.ts"),
+    "maintenance",
+    "worker",
+    "project",
+    "demo",
+  ]);
+  expect(spawned[0].cwd).toBe(repo);
+  expect(spawned[0].env.MYELIN_INTERNAL_INVOCATION_KIND).toBe("worker");
   expect(spawned[0].env.MYELIN_CAPTURE_DISABLED).toBe("1");
   expect(spawned[0].env.MYELIN_AUTO_PROJECT_MEMORY_MAINTENANCE_WORKER).toBe("1");
   expect(spawned[0].env.MYELIN_AUTO_PROJECT_MEMORY_RUN_ID).toBeString();

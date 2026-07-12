@@ -1,0 +1,33 @@
+{
+  "contract_version": "myelin.status.v1",
+  "kind": "project_operational_status",
+  "generated_at": "2026-07-10T12:00:00.000Z",
+  "overall_state": "healthy",
+  "project": { "key": "demo", "name": "Demo", "repo_paths": ["/repos/demo"], "resolved_from": "cwd" },
+  "installation": {
+    "state": "healthy", "lifecycle": "installed", "evidence_ids": ["e1"],
+    "myelin_root": "/repos/myelin", "launcher_path": "/home/me/.local/bin/myelin",
+    "locator_path": "/home/me/.myelin/install.json", "locator_schema_version": 1,
+    "providers": [{ "name": "codex", "lifecycle": "installed", "hooks_path": "/home/me/.codex/hooks.json", "shim_path": "/home/me/.codex/.myelin/shim/codex-hook" }]
+  },
+  "session_memory": {
+    "state": "healthy", "lifecycle": "ready", "evidence_ids": ["e2"],
+    "capture": { "queued_events": 0, "unleased_events": 0, "leased_events": 0 },
+    "ingest": { "running_jobs": 0, "failed_jobs": 0, "terminal_tombstones": 3, "latest_log_path": null },
+    "maintenance": { "enabled": true, "lifecycle": "completed", "lock": { "lifecycle": "absent", "path": "projects/demo/state/.auto-memory-maintenance.lock", "run_id": null, "pid": null }, "last_run_id": "session-run", "last_log_path": "projects/demo/logs/session-run.log" },
+    "retrieval": { "indexed_count": 2, "pending_count": 0, "failed_count": 0 }
+  },
+  "project_memory": {
+    "state": "healthy", "lifecycle": "ready", "evidence_ids": ["e2", "e3"],
+    "inbox": { "pending_items": 0 }, "candidates": { "pending": 0, "needs_review": 0 },
+    "maintenance": { "enabled": true, "lifecycle": "completed", "lock": { "lifecycle": "absent", "path": "projects/demo/state/.auto-project-memory-maintenance.lock", "run_id": null, "pid": null }, "last_run_id": "project-run", "last_log_path": "projects/demo/logs/project-run.log" },
+    "curation": { "lifecycle": "curated", "canonical_wiki_path": "projects/demo/wiki", "latest_run_path": "projects/demo/runs/project-learn/run" },
+    "retrieval": { "indexed_count": 4, "pending_count": 0, "failed_count": 0 }
+  },
+  "warnings": [], "actions": [],
+  "evidence": [
+    { "id": "e1", "kind": "file", "path": "/home/me/.myelin/install.json" },
+    { "id": "e2", "kind": "sqlite", "path": "state/memory.db" },
+    { "id": "e3", "kind": "file", "path": "projects/demo/state/project-memory.json" }
+  ]
+}

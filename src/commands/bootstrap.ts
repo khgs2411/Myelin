@@ -1,15 +1,17 @@
 import type { Cli } from "./registry.ts";
 import { fail, ok } from "./registry.ts";
 import { BootstrapService } from "../bootstrap/bootstrap-service.ts";
-import { repoRoot } from "../runtime/fs.ts";
+import type { LaunchContext } from "../runtime/launch-context.ts";
 
-export function registerBootstrapCommand(cli: Cli): void {
+export type BootstrapCommandDeps = { context: LaunchContext };
+
+export function registerBootstrapCommand(cli: Cli, deps: BootstrapCommandDeps): void {
   cli.command(["bootstrap"], async (args) => {
     const parsed = parseArgs(args);
     if (parsed.error) return fail(parsed.error);
 
     try {
-      const service = new BootstrapService(repoRoot().root);
+      const service = new BootstrapService(deps.context.myelinRoot);
       const result = await service.bootstrap({ projectKey: parsed.projectKey, repoPath: parsed.repoPath });
       return ok(
         [

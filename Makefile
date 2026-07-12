@@ -3,7 +3,9 @@ QUESTION ?=
 REPO ?=
 ARGS ?=
 
-MYELIN := bun src/cli.ts
+# Checkout-local convenience. Operators use the installed command; contributors
+# can opt into the source entrypoint with MYELIN='bun src/cli.ts'.
+MYELIN ?= myelin
 
 .PHONY: status query learn ingest bootstrap schema-check schema-build session-close test typecheck
 

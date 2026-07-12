@@ -3,7 +3,10 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createCli } from "../../src/commands/registry.ts";
-import { registerMemoryCommands } from "../../src/commands/memory.ts";
+import {
+  registerMemoryCommands as registerMemoryCommandsWithContext,
+  type MemoryCommandDeps,
+} from "../../src/commands/memory.ts";
 import { createRuntimeInboxItem } from "../../src/inbox/runtime-inbox-items.ts";
 import { createMemoryCandidate, getMemoryCandidate, listMemoryCandidates } from "../../src/memory/candidates.ts";
 import { createSessionMemoryContexts } from "../../src/memory/session-memory-contexts.ts";
@@ -29,6 +32,21 @@ import { writeJson } from "../../src/runtime/json.ts";
 
 let root: string;
 let previousCwd: string;
+
+function registerMemoryCommands(cli: ReturnType<typeof createCli>, deps: Omit<MemoryCommandDeps, "context"> = {}): void {
+  registerMemoryCommandsWithContext(cli, { ...deps, context: testContext() });
+}
+
+function testContext() {
+  return {
+    myelinRoot: root,
+    callerCwd: join(root, "caller"),
+    invocationKind: "test",
+    rootSource: "test_dependency",
+    launcherPath: null,
+    locatorPath: null,
+  } as const;
+}
 
 beforeEach(async () => {
   previousCwd = process.cwd();
@@ -190,6 +208,23 @@ test("memory query project layer returns approved Project Memory JSON shape", as
   } finally {
     db.close();
   }
+});
+
+test("memory query rejects the removed auto layer", async () => {
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+
+  const result = await cli.run([
+    "memory",
+    "query",
+    "demo",
+    "What changed?",
+    "--layer",
+    "auto",
+  ]);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.message).toBe("--layer must be one of: session, project");
 });
 
 test("memory eval project logs answer and eval details onto Project Memory query logs", async () => {
