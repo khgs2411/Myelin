@@ -3,6 +3,8 @@ import { readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseMachineLocator } from "../runtime/launch-context.ts";
+import { machineLocatorDataRoot } from "../install/machine-locator-contracts.ts";
+import { verifyInstalledVersion } from "../install/version-store.ts";
 import type { EvidenceRegistry, InstallationStatusSection, StatusInspection } from "./contracts.ts";
 import { warning } from "./severity.ts";
 
@@ -21,7 +23,7 @@ export async function inspectInstallation(input: {
       return {
         section: base("attention", "not_installed", input.root, null, locatorPath, null, [], [evidenceId]),
         warnings: [warning("INSTALLATION_NOT_INSTALLED", "attention", "installation", "No machine installation is recorded.", [evidenceId])],
-        actions: [{ command: "./install --apply", reason: "Install the checkout-backed command.", section: "installation" }],
+        actions: [{ command: "./install --apply", reason: "Install the managed Myelin runtime.", section: "installation" }],
       };
     }
     return blocked(input.root, locatorPath, evidenceId, `Cannot read machine locator: ${message(error)}`);
@@ -35,8 +37,36 @@ export async function inspectInstallation(input: {
       hooks_path: provider.hooks_path,
       shim_path: provider.shim_path,
     }));
-    if (resolve(locator.myelin_root) !== resolve(input.root)) {
-      return blocked(input.root, locatorPath, evidenceId, `Machine locator is bound to ${locator.myelin_root}.`, locator.launcher.path, providers);
+    if (resolve(machineLocatorDataRoot(locator)) !== resolve(input.root)) {
+      return blocked(input.root, locatorPath, evidenceId, `Machine locator is bound to ${machineLocatorDataRoot(locator)}.`, locator.launcher.path, providers);
+    }
+    const versionEvidence: string[] = [];
+    let rollbackProblem: { message: string; evidence: string } | null = null;
+    if (locator.schema_version === 2) {
+      const activeEvidence = input.evidence.add("file", locator.active_version.manifest_path, true);
+      versionEvidence.push(activeEvidence);
+      try {
+        await verifyInstalledVersion(locator.active_version);
+      } catch (error) {
+        return blocked(
+          input.root,
+          locatorPath,
+          evidenceId,
+          `Active immutable version is invalid: ${message(error)}`,
+          locator.launcher.path,
+          providers,
+          activeEvidence,
+        );
+      }
+      if (locator.previous_version) {
+        const previousEvidence = input.evidence.add("file", locator.previous_version.manifest_path, true);
+        versionEvidence.push(previousEvidence);
+        try {
+          await verifyInstalledVersion(locator.previous_version);
+        } catch (error) {
+          rollbackProblem = { message: `Previous immutable version is unavailable: ${message(error)}`, evidence: previousEvidence };
+        }
+      }
     }
     for (const [name, provider] of Object.entries(locator.providers)) {
       for (const path of [provider.hooks_path, provider.shim_path, provider.manifest_path]) {
@@ -59,8 +89,22 @@ export async function inspectInstallation(input: {
       return blocked(input.root, locatorPath, evidenceId, "Recorded launcher ownership hash does not match.", locator.launcher.path, providers, launcherEvidence);
     }
     return {
-      section: base("healthy", "installed", input.root, locator.launcher.path, locatorPath, 1, providers, [evidenceId, launcherEvidence]),
-      warnings: [], actions: [],
+      section: base(
+        rollbackProblem ? "attention" : "healthy",
+        locator.schema_version === 2 ? "installed_managed" : "installed_legacy",
+        input.root,
+        locator.launcher.path,
+        locatorPath,
+        locator.schema_version,
+        providers,
+        [evidenceId, launcherEvidence, ...versionEvidence],
+      ),
+      warnings: rollbackProblem
+        ? [warning("INSTALLATION_ROLLBACK_UNAVAILABLE", "attention", "installation", rollbackProblem.message, [rollbackProblem.evidence])]
+        : [],
+      actions: rollbackProblem
+        ? [{ command: "./install --prune --apply", reason: "Discard the unavailable rollback reference.", section: "installation" }]
+        : [],
     };
   } catch (error) {
     return blocked(input.root, locatorPath, evidenceId, `Machine locator is invalid: ${message(error)}`);

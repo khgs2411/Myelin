@@ -14,6 +14,14 @@ Prefer this file over ad hoc phrasing unless the user explicitly overrides it fo
 # Install dependencies
 bun install
 
+# Preview/apply immutable machine runtime installation
+./install
+./install --apply
+
+# Roll back or prune inactive managed runtime versions
+myelin install --rollback --apply
+./install --prune --apply
+
 # Project/runtime status
 make status PROJECT=<key>
 

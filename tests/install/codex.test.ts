@@ -36,9 +36,7 @@ test("apply creates hooks, shim, manifest, and backup directory", async () => {
     expect(handlers[0].command).toContain(".myelin/shim/codex-hook");
   }
   expect(await Bun.file(join(codexRoot, ".myelin", "shim", "codex-hook")).exists()).toBe(true);
-  expect(await readFile(join(codexRoot, ".myelin", "shim", "codex-hook"), "utf8")).toContain(
-    `MYELIN_ROOT=${JSON.stringify(root)}`,
-  );
+  expect(await readFile(join(codexRoot, ".myelin", "shim", "codex-hook"), "utf8")).not.toContain("MYELIN_ROOT=");
   expect(await Bun.file(join(codexRoot, ".myelin", "install-manifest.json")).exists()).toBe(true);
   expect((await stat(join(codexRoot, ".myelin", "backups"))).isDirectory()).toBe(true);
 });
@@ -155,6 +153,19 @@ test("installed Codex shim invokes the absolute launcher and forwards hook argum
   expect(shim).toContain(`exec ${JSON.stringify(launcher)} capture codex-hook "$@"`);
   expect(shim).toContain("MYELIN_INTERNAL_INVOCATION_KIND=hook");
   expect(shim).not.toContain("exec bun");
+});
+
+test("provider apply recovers a desired shim left behind before ownership manifest promotion", async () => {
+  const launcher = join(root, ".local", "bin", "myelin");
+  const manifest = join(codexRoot, ".myelin", "install-manifest.json");
+  await applyCodexProvider({ providerRoot: codexRoot, myelinRoot: root, launcherPath: launcher });
+  await rm(manifest);
+
+  await applyCodexProvider({ providerRoot: codexRoot, myelinRoot: root, launcherPath: launcher });
+
+  expect(await Bun.file(manifest).exists()).toBe(true);
+  expect(await readFile(join(codexRoot, ".myelin", "shim", "codex-hook"), "utf8")).not.toContain("MYELIN_ROOT");
+  expect((await readdir(join(codexRoot, ".myelin", "shim"))).some((name) => name.includes(".tmp-"))).toBe(false);
 });
 
 function myelinHandlers(hooks: { hooks: Record<string, unknown> }, event: string): Array<{ type?: string; command?: string }> {

@@ -93,8 +93,9 @@ What exists:
 
 - Repo-root `./install` delegates to the same `myelin install` service used by
   the CLI.
-- Installation is preview-first; `--apply` writes a copied launcher and the
-  single machine ownership locator under `~/.myelin/`.
+- Installation is preview-first; `--apply` stages an immutable runtime under
+  `~/.local/share/myelin/versions/`, writes a stable copied launcher, and
+  atomically activates the V2 machine locator under `~/.myelin/`.
 - Bare install detects the available supported provider, while explicit
   `--provider codex` and `--command-only` keep provider selection deliberate.
 - `--rebind` handles a moved checkout explicitly, and `--bin-dir` supports an
@@ -105,6 +106,11 @@ What exists:
   `--apply` to mutate machine state.
 - A recoverable journal makes launcher, provider, and locator promotion
   resumable. Ownership or hash mismatches fail closed.
+- Runtime and durable data roots are separate. Activation is verified through
+  the stable launcher, failed activation restores the prior locator, and one
+  previous version is retained for explicit rollback.
+- Provider shims contain no root binding; the locator is the sole active-version
+  authority. `--prune` and full uninstall remove only manifest-owned versions.
 
 Code evidence:
 
@@ -116,19 +122,23 @@ Code evidence:
 - `src/install/launcher.ts`
 - `src/install/provider-registry.ts`
 - `src/install/codex.ts`
+- `src/install/version-store.ts`
+- `src/install/version-contracts.ts`
+- `src/install/machine-locator-contracts.ts`
 
 Alignment:
 
 This is the stable local operator boundary needed for external-repository use.
-The checkout remains the update source, the copied launcher is machine access,
-and the locator owns the binding without relying on a symlink or release
-package.
+The checkout remains the durable data root and update source, immutable managed
+versions own executable bytes, the copied launcher is machine access, and the
+locator atomically owns active-version selection without a symlink.
 
 Verdict:
 
 Keep this boundary conservative. Add providers through the same registry and
-ownership lifecycle; do not create provider-specific global commands or infer
-ownership from files that are absent from the locator.
+ownership lifecycle; do not create provider-specific global commands, bind
+hooks to version paths, or garbage-collect directories without a valid Myelin
+version manifest.
 
 ### Project Data Layout
 

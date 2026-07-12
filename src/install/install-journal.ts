@@ -2,14 +2,19 @@ import { chmod, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/pro
 import { dirname, isAbsolute } from "node:path";
 import type { InstallJournalV1, MachineActionId, MachineInstallAction } from "./types.ts";
 import { parseMachineLocator } from "../runtime/launch-context.ts";
+import { parseInstalledVersionManifest } from "./version-store.ts";
 
 export function createInstallJournal(input: {
   transactionId: string;
   operation: InstallJournalV1["operation"];
   myelinRoot: string;
+  sourceRoot?: string;
   launcherPath: string;
   locatorPath: string;
   desiredManifest: InstallJournalV1["desired_manifest"];
+  previousManifest?: InstallJournalV1["previous_manifest"];
+  versionPlan?: InstallJournalV1["version_plan"];
+  prune?: boolean;
   actions: MachineInstallAction[];
   createdAt: string;
 }): InstallJournalV1 {
@@ -18,9 +23,13 @@ export function createInstallJournal(input: {
     transaction_id: input.transactionId,
     operation: input.operation,
     myelin_root: input.myelinRoot,
+    source_root: input.sourceRoot ?? input.myelinRoot,
     launcher_path: input.launcherPath,
     locator_path: input.locatorPath,
     desired_manifest: input.desiredManifest,
+    previous_manifest: input.previousManifest ?? null,
+    version_plan: input.versionPlan ?? null,
+    prune: input.prune ?? false,
     actions: input.actions.map((action) => ({ ...action, state: "pending" })),
     created_at: input.createdAt,
   };
@@ -48,12 +57,41 @@ export function parseInstallJournal(value: unknown, path = "install journal"): I
   if (value.operation !== "install" && value.operation !== "uninstall") throw invalid(path, "operation is invalid");
   for (const [key, field] of [
     ["myelin_root", value.myelin_root],
+    ["source_root", value.source_root ?? value.myelin_root],
     ["launcher_path", value.launcher_path],
     ["locator_path", value.locator_path],
   ] as const) {
     if (typeof field !== "string" || !isAbsolute(field)) throw invalid(path, `${key} must be absolute`);
   }
+  value.source_root ??= value.myelin_root;
   if (value.desired_manifest !== null) parseMachineLocator(value.desired_manifest, path);
+  value.previous_manifest ??= null;
+  value.version_plan ??= null;
+  value.prune ??= false;
+  if (value.previous_manifest !== null) parseMachineLocator(value.previous_manifest, path);
+  if (value.version_plan !== null) {
+    if (
+      !isRecord(value.version_plan) ||
+      !isRecord(value.version_plan.version) ||
+      !isRecord(value.version_plan.manifest) ||
+      !Array.isArray(value.version_plan.artifacts) ||
+      typeof value.version_plan.already_present !== "boolean"
+    ) {
+      throw invalid(path, "version_plan is invalid");
+    }
+    const manifest = parseInstalledVersionManifest(value.version_plan.manifest, path);
+    if (
+      !isRecord(value.desired_manifest) ||
+      value.desired_manifest.schema_version !== 2 ||
+      JSON.stringify(value.version_plan.version) !== JSON.stringify(value.desired_manifest.active_version) ||
+      JSON.stringify(value.version_plan.artifacts) !== JSON.stringify(manifest.artifacts) ||
+      manifest.version_id !== value.version_plan.version.id ||
+      manifest.content_sha256 !== value.version_plan.version.content_sha256
+    ) {
+      throw invalid(path, "version_plan does not match the desired active version");
+    }
+  }
+  if (typeof value.prune !== "boolean") throw invalid(path, "prune is invalid");
   if (!Array.isArray(value.actions)) throw invalid(path, "actions must be an array");
   for (const action of value.actions) parseAction(action, path);
   if (!isNonEmpty(value.created_at)) throw invalid(path, "created_at is required");
@@ -90,7 +128,16 @@ export async function removeInstallJournal(path: string): Promise<void> {
 function parseAction(value: unknown, path: string): void {
   if (!isRecord(value)) throw invalid(path, "action must be an object");
   const id = String(value.id);
-  const fixedIds = ["promote_launcher", "promote_locator", "remove_launcher", "remove_locator"];
+  const fixedIds = [
+    "promote_launcher",
+    "promote_locator",
+    "promote_version",
+    "verify_activation",
+    "prune_versions",
+    "remove_version_store",
+    "remove_launcher",
+    "remove_locator",
+  ];
   if (!fixedIds.includes(id) && id !== "apply_provider:codex" && id !== "remove_provider:codex") {
     throw invalid(path, "action id is invalid");
   }

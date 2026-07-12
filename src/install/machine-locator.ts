@@ -3,17 +3,17 @@ import { dirname } from "node:path";
 import {
   parseMachineLocator,
   readMachineLocator,
-  type MachineLocatorV1,
+  type MachineLocator,
 } from "../runtime/launch-context.ts";
 
-export { parseMachineLocator, readMachineLocator, type MachineLocatorV1 };
+export { parseMachineLocator, readMachineLocator, type MachineLocator };
 
-export function serializeMachineLocator(locator: MachineLocatorV1): string {
+export function serializeMachineLocator(locator: MachineLocator): string {
   parseMachineLocator(locator);
   return `${JSON.stringify(locator, null, 2)}\n`;
 }
 
-export async function readMachineLocatorIfExists(path: string): Promise<MachineLocatorV1 | null> {
+export async function readMachineLocatorIfExists(path: string): Promise<MachineLocator | null> {
   try {
     await stat(path);
   } catch (error) {
@@ -23,7 +23,7 @@ export async function readMachineLocatorIfExists(path: string): Promise<MachineL
   return await readMachineLocator(path);
 }
 
-export async function promoteMachineLocator(path: string, locator: MachineLocatorV1): Promise<void> {
+export async function promoteMachineLocator(path: string, locator: MachineLocator): Promise<void> {
   const parent = dirname(path);
   await mkdir(parent, { recursive: true, mode: 0o700 });
   await chmod(parent, 0o700);

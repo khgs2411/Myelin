@@ -32,9 +32,7 @@ test("machine locator serializes schema v1 and promotes with private modes", asy
 
 test("machine locator rejects incompatible and relative ownership records", () => {
   const locator = fixture("/tmp/myelin-locator-fixture");
-  expect(() => serializeMachineLocator({ ...locator, schema_version: 2 } as unknown as MachineLocatorV1)).toThrow(
-    "schema",
-  );
+  expect(() => serializeMachineLocator({ ...locator, schema_version: 2 } as unknown as MachineLocatorV1)).toThrow("data_root");
   expect(() => serializeMachineLocator({ ...locator, myelin_root: "relative" })).toThrow("myelin_root");
 });
 

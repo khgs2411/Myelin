@@ -681,10 +681,11 @@ Side effects:
 ## install
 
 The repo-root `./install` script delegates to this command using that checkout
-as the authoritative Myelin root. Installation is preview-first and manages a
-copied launcher plus its ownership locator; it does not install a symlink.
+as the durable data root and runtime snapshot source. Installation is
+preview-first and manages immutable runtime versions, a copied stable launcher,
+and its ownership locator; it does not install a symlink.
 
-### `myelin install [--provider codex] [--command-only] [--rebind] [--bin-dir <absolute-path>] [--apply]`
+### `myelin install [--provider codex] [--command-only] [--rebind] [--rollback] [--prune] [--bin-dir <absolute-path>] [--apply]`
 
 Previews or applies the machine command lifecycle and selected provider
 integration.
@@ -702,6 +703,10 @@ Options:
   `~/.local/bin`. The path must be absolute. An existing locator will not
   silently change its recorded launcher target.
 - `--apply`: write changes. Without this, the command previews.
+- `--rollback`: swap the active and previous immutable versions. It can only be
+  combined with `--apply`.
+- `--prune`: after successful activation verification, remove every inactive
+  manifest-owned version instead of retaining one rollback version.
 
 Provider selection:
 
@@ -721,15 +726,22 @@ Examples:
 ./install --command-only --apply
 ./install --bin-dir /absolute/bin --apply
 ./install --rebind --apply
+myelin install --rollback
+myelin install --rollback --apply
+./install --prune --apply
 ```
 
 Side effects:
 
 - Preview mode is read-only.
-- Apply mode writes the copied launcher, `~/.myelin/install.json`, a temporary
-  recoverable journal, and selected Myelin-owned provider files.
-- Reapply repairs missing owned artifacts and updates changed launcher content.
-- Changed or unowned launcher/provider artifacts are refused instead of being
+- Apply mode stages and atomically promotes a content-addressed runtime under
+  `~/.local/share/myelin/versions/`, writes the copied launcher,
+  `~/.myelin/install.json`, a temporary recoverable journal, and selected
+  Myelin-owned provider files.
+- Reapply repairs missing owned artifacts and activates changed runtime content.
+- Activation is smoke-tested through the stable launcher. Failure restores the
+  previous locator. Successful upgrades retain one rollback version by default.
+- Changed or unowned launcher/provider/version artifacts are refused instead of being
   overwritten.
 - Existing recorded providers are preserved when a command-only or differently
   selected repair runs.
@@ -739,6 +751,9 @@ Side effects:
 ### `myelin uninstall [--provider codex] [--apply]`
 
 Previews or applies conservative removal of recorded Myelin-owned artifacts.
+Full uninstall also removes manifest-owned runtime versions but never removes
+the durable checkout, project memory, SQLite state, configuration, or unknown
+directories in the version store.
 
 Options:
 

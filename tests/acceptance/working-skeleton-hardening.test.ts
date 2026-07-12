@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { chmod, cp, mkdir, mkdtemp, readFile, realpath, rm, symlink } from "node:fs/promises";
+import { chmod, cp, mkdir, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { delimiter, join, resolve } from "node:path";
 import { openMemoryDbAt } from "../../src/memory/db.ts";
@@ -25,8 +25,10 @@ test("installed command works across cwd classes and uninstalls only machine own
       cp(join(sourceRoot, "src"), join(checkout, "src"), { recursive: true }),
       cp(join(sourceRoot, "install"), join(checkout, "install")),
       cp(join(sourceRoot, "package.json"), join(checkout, "package.json")),
+      cp(join(sourceRoot, "bun.lock"), join(checkout, "bun.lock")),
+      cp(join(sourceRoot, "vendor"), join(checkout, "vendor"), { recursive: true }),
       cp(join(sourceRoot, "myelin.config"), join(checkout, "myelin.config")),
-      symlink(join(sourceRoot, "node_modules"), join(checkout, "node_modules")),
+      cp(join(sourceRoot, "node_modules"), join(checkout, "node_modules"), { recursive: true, verbatimSymlinks: true }),
     ]);
     await chmod(join(checkout, "install"), 0o755);
     const checkoutReal = await realpath(checkout);
@@ -47,18 +49,21 @@ test("installed command works across cwd classes and uninstalls only machine own
     expect(await Bun.file(join(home, ".myelin", "install.json")).exists()).toBe(false);
 
     const applied = run([join(checkout, "install"), "--apply", "--command-only"], checkout, env);
+    if (applied.exitCode !== 0) throw new Error(applied.stderr || applied.stdout);
     expect(applied.exitCode).toBe(0);
     const launcher = join(binDir, "myelin");
     const locator = join(home, ".myelin", "install.json");
     expect(await Bun.file(launcher).exists()).toBe(true);
     expect(await Bun.file(locator).exists()).toBe(true);
-    expect(await realpath(JSON.parse(await readFile(locator, "utf8")).myelin_root)).toBe(checkoutReal);
+    expect(await realpath(JSON.parse(await readFile(locator, "utf8")).data_root)).toBe(checkoutReal);
+    const installedVersionId = JSON.parse(await readFile(locator, "utf8")).active_version.id;
 
     const installedEnv = { ...env, PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}` };
     expect(run([launcher, "--help"], checkout, installedEnv).stdout).toContain("myelin status");
 
     const providerInstall = run([launcher, "install", "--apply", "--provider", "codex"], unrelated, installedEnv);
     expect(providerInstall.exitCode).toBe(0);
+    expect(JSON.parse(await readFile(locator, "utf8")).active_version.id).toBe(installedVersionId);
     expect(await Bun.file(join(codexRoot, ".myelin", "shim", "codex-hook")).exists()).toBe(true);
     const providerRemoval = run([launcher, "uninstall", "--apply", "--provider", "codex"], unrelated, installedEnv);
     expect(providerRemoval.exitCode).toBe(0);
@@ -78,7 +83,7 @@ test("installed command works across cwd classes and uninstalls only machine own
     expect(registeredStatus.contract_version).toBe("myelin.status.v1");
     expect(registeredStatus.project).toMatchObject({ key: "demo", resolved_from: "cwd" });
     expect(await realpath(registeredStatus.installation.myelin_root)).toBe(checkoutReal);
-    expect(registeredStatus.installation.lifecycle).toBe("installed");
+    expect(registeredStatus.installation.lifecycle).toBe("installed_managed");
 
     const fromUnrelated = run([launcher, "status", "demo", "--json"], unrelated, installedEnv);
     expect(fromUnrelated.exitCode).toBe(0);
@@ -103,7 +108,7 @@ test("installed command works across cwd classes and uninstalls only machine own
   } finally {
     await rm(sandbox, { recursive: true, force: true });
   }
-}, 30_000);
+}, 60_000);
 
 function run(command: string[], cwd: string, env: Record<string, string | undefined>) {
   const result = Bun.spawnSync(command, { cwd, env, stdout: "pipe", stderr: "pipe" });

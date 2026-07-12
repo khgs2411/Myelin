@@ -22,11 +22,12 @@ export function resolveMyelinCommandInvocation(
 
   const bunExecutable = deps.bunExecutable ?? process.execPath;
   assertAbsolute(bunExecutable, "Bun executable");
-  return [resolve(bunExecutable), join(context.myelinRoot, "src", "cli.ts"), ...args];
+  return [resolve(bunExecutable), join(context.runtimeRoot ?? context.myelinRoot, "src", "cli.ts"), ...args];
 }
 
 export function backgroundLaunchContext(input: {
   myelinRoot: string;
+  runtimeRoot?: string;
   callerCwd: string;
   context?: LaunchContext;
   env?: NodeJS.ProcessEnv;
@@ -37,6 +38,7 @@ export function backgroundLaunchContext(input: {
   const locatorPath = absoluteOrNull(env[INTERNAL_LOCATOR_PATH_ENV]);
   return {
     myelinRoot: resolve(input.myelinRoot),
+    runtimeRoot: resolve(input.runtimeRoot ?? input.myelinRoot),
     callerCwd: resolve(input.callerCwd),
     invocationKind: launcherPath ? "worker" : "source",
     rootSource: launcherPath ? "internal_env" : "source_entrypoint",

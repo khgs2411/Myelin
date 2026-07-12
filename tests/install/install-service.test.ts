@@ -4,6 +4,10 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { InstallService, type InstallFailurePoint } from "../../src/install/install-service.ts";
 import { readMachineLocator } from "../../src/install/machine-locator.ts";
+import { machineLocatorDataRoot } from "../../src/install/machine-locator-contracts.ts";
+import type { MachineLocatorV1 } from "../../src/install/machine-locator-contracts.ts";
+import { launcherSha256, promoteLauncher, renderLauncher } from "../../src/install/launcher.ts";
+import { promoteMachineLocator } from "../../src/install/machine-locator.ts";
 
 let sandbox: string;
 let myelinRoot: string;
@@ -19,7 +23,10 @@ beforeEach(async () => {
   binDir = join(homeDir, ".local", "bin");
   locatorPath = join(homeDir, ".myelin", "install.json");
   journalPath = join(homeDir, ".myelin", "install-journal.json");
-  await mkdir(myelinRoot, { recursive: true });
+  await mkdir(join(myelinRoot, "src"), { recursive: true });
+  await writeFile(join(myelinRoot, "src", "cli.ts"), "console.log('fixture');\n", "utf8");
+  await writeFile(join(myelinRoot, "package.json"), `${JSON.stringify({ name: "myelin", version: "0.1.0", type: "module" })}\n`, "utf8");
+  await writeFile(join(myelinRoot, "myelin.config"), "", "utf8");
 });
 
 afterEach(async () => {
@@ -29,7 +36,12 @@ afterEach(async () => {
 test("command-only install previews, applies, and reapplies without timestamp churn", async () => {
   const instance = service();
   const preview = await instance.install(input(false));
-  expect(preview.plan.actions.map((item) => item.id)).toEqual(["promote_launcher", "promote_locator"]);
+  expect(preview.plan.actions.map((item) => item.id)).toEqual([
+    "promote_version",
+    "promote_launcher",
+    "promote_locator",
+    "verify_activation",
+  ]);
   expect(await Bun.file(locatorPath).exists()).toBe(false);
 
   await instance.install(input(true));
@@ -56,7 +68,10 @@ test("custom bin directory leaves locator and journal at their fixed machine pat
 test("rebind is visible in preview and requires explicit apply consent", async () => {
   await service().install(input(true));
   const otherRoot = join(sandbox, "checkout-b");
-  await mkdir(otherRoot, { recursive: true });
+  await mkdir(join(otherRoot, "src"), { recursive: true });
+  await writeFile(join(otherRoot, "src", "cli.ts"), "console.log('fixture-b');\n", "utf8");
+  await writeFile(join(otherRoot, "package.json"), `${JSON.stringify({ name: "myelin", version: "0.2.0", type: "module" })}\n`, "utf8");
+  await writeFile(join(otherRoot, "myelin.config"), "", "utf8");
   const rebound = service({ myelinRoot: otherRoot });
 
   const preview = await rebound.install(input(false));
@@ -64,7 +79,7 @@ test("rebind is visible in preview and requires explicit apply consent", async (
   expect(preview.plan.current_root).toBe(myelinRoot);
   await expect(rebound.install(input(true))).rejects.toThrow("--rebind");
   await rebound.install({ ...input(true), rebind: true });
-  expect((await readMachineLocator(locatorPath)).myelin_root).toBe(otherRoot);
+  expect(machineLocatorDataRoot(await readMachineLocator(locatorPath))).toBe(otherRoot);
 });
 
 test("unowned and changed launcher collisions block overwrite and uninstall", async () => {
@@ -84,7 +99,11 @@ test("missing recorded launcher is repaired from locator ownership", async () =>
   await rm(join(binDir, "myelin"));
 
   const preview = await service().install(input(false));
-  expect(preview.plan.actions.map((item) => item.id)).toEqual(["promote_launcher", "promote_locator"]);
+  expect(preview.plan.actions.map((item) => item.id)).toEqual([
+    "promote_launcher",
+    "promote_locator",
+    "verify_activation",
+  ]);
   await service().install(input(true));
   expect(await Bun.file(join(binDir, "myelin")).exists()).toBe(true);
 });
@@ -118,7 +137,7 @@ for (const point of [
     await service().install(input(true));
 
     expect(await Bun.file(journalPath).exists()).toBe(false);
-    expect((await readMachineLocator(locatorPath)).myelin_root).toBe(myelinRoot);
+    expect(machineLocatorDataRoot(await readMachineLocator(locatorPath))).toBe(myelinRoot);
   });
 }
 
@@ -144,7 +163,7 @@ test("uninstall is preview-first and preserves checkout state", async () => {
   await service().install(input(true));
 
   const preview = await service().uninstall({ apply: false, providers: [] });
-  expect(preview.plan.actions.map((item) => item.id)).toEqual(["remove_launcher", "remove_locator"]);
+  expect(preview.plan.actions.map((item) => item.id)).toEqual(["remove_launcher", "remove_locator", "remove_version_store"]);
   expect(await Bun.file(locatorPath).exists()).toBe(true);
   await service().uninstall({ apply: true, providers: [] });
 
@@ -163,9 +182,11 @@ test("provider preservation matrix keeps command and provider ownership conserva
   // Bare install selects the sole detected provider.
   const barePreview = await providerService.install({ ...input(false), commandOnly: false });
   expect(barePreview.plan.actions.map((item) => item.id)).toEqual([
+    "promote_version",
     "promote_launcher",
     "apply_provider:codex",
     "promote_locator",
+    "verify_activation",
   ]);
   await providerService.install({ ...input(true), commandOnly: false });
   expect(Object.keys((await readMachineLocator(locatorPath)).providers)).toEqual(["codex"]);
@@ -194,6 +215,7 @@ test("provider preservation matrix keeps command and provider ownership conserva
     "remove_provider:codex",
     "remove_launcher",
     "remove_locator",
+    "remove_version_store",
   ]);
   await providerService.uninstall({ apply: true, providers: [] });
   expect(await Bun.file(locatorPath).exists()).toBe(false);
@@ -230,6 +252,116 @@ test("interrupted provider apply and uninstall resume before locator promotion",
   expect(Object.keys((await readMachineLocator(locatorPath)).providers)).toEqual([]);
 });
 
+test("upgrade activates a new immutable version and retains the previous version for rollback", async () => {
+  await service().install(input(true));
+  const first = await readMachineLocator(locatorPath);
+  expect(first.schema_version).toBe(2);
+  if (first.schema_version !== 2) throw new Error("expected V2 locator");
+  const firstRuntime = first.active_version.path;
+
+  await writeFile(join(myelinRoot, "src", "cli.ts"), "console.log('fixture-v2');\n", "utf8");
+  await writeFile(join(myelinRoot, "package.json"), `${JSON.stringify({ name: "myelin", version: "0.2.0", type: "module" })}\n`, "utf8");
+  await service().install(input(true));
+
+  const upgraded = await readMachineLocator(locatorPath);
+  expect(upgraded.schema_version).toBe(2);
+  if (upgraded.schema_version !== 2) throw new Error("expected V2 locator");
+  expect(upgraded.active_version.id).not.toBe(first.active_version.id);
+  expect(upgraded.previous_version?.id).toBe(first.active_version.id);
+  expect(await readFile(join(firstRuntime, "src", "cli.ts"), "utf8")).toBe("console.log('fixture');\n");
+});
+
+test("failed post-cutover verification atomically restores the previous locator", async () => {
+  await service().install(input(true));
+  const previous = await readMachineLocator(locatorPath);
+  await writeFile(join(myelinRoot, "src", "cli.ts"), "console.log('broken candidate');\n", "utf8");
+
+  await expect(service({ activationVerifier: async () => { throw new Error("smoke failed"); } }).install(input(true)))
+    .rejects.toThrow("previous locator was restored");
+
+  expect(await readMachineLocator(locatorPath)).toEqual(previous);
+  expect(await Bun.file(journalPath).exists()).toBe(false);
+});
+
+test("failed first activation removes incomplete machine ownership and preserves the source root", async () => {
+  await expect(service({ activationVerifier: async () => { throw new Error("first smoke failed"); } }).install(input(true)))
+    .rejects.toThrow("incomplete installation was removed");
+
+  expect(await Bun.file(locatorPath).exists()).toBe(false);
+  expect(await Bun.file(join(binDir, "myelin")).exists()).toBe(false);
+  expect(await Array.fromAsync(new Bun.Glob("*/version-manifest.json").scan({
+    cwd: join(homeDir, ".local", "share", "myelin", "versions"),
+  }))).toEqual([]);
+  expect(await Bun.file(join(myelinRoot, "src", "cli.ts")).exists()).toBe(true);
+  expect(await Bun.file(journalPath).exists()).toBe(false);
+});
+
+test("default upgrades retain one rollback version and prune removes every inactive owned version", async () => {
+  await service().install(input(true));
+  for (const version of ["0.2.0", "0.3.0"] as const) {
+    await writeFile(join(myelinRoot, "src", "cli.ts"), `console.log('${version}');\n`, "utf8");
+    await writeFile(join(myelinRoot, "package.json"), `${JSON.stringify({ name: "myelin", version, type: "module" })}\n`, "utf8");
+    await service().install(input(true));
+  }
+  const versionsRoot = join(homeDir, ".local", "share", "myelin", "versions");
+  expect((await Array.fromAsync(new Bun.Glob("*/version-manifest.json").scan({ cwd: versionsRoot }))).length).toBe(2);
+
+  await service().install({ ...input(true), prune: true });
+  expect((await Array.fromAsync(new Bun.Glob("*/version-manifest.json").scan({ cwd: versionsRoot }))).length).toBe(1);
+  const pruned = await readMachineLocator(locatorPath);
+  expect(pruned.schema_version === 2 ? pruned.previous_version : undefined).toBeNull();
+});
+
+test("a V1 checkout locator migrates in place to a V2 immutable runtime without rebind", async () => {
+  const launcher = renderLauncher(locatorPath);
+  const legacy: MachineLocatorV1 = {
+    schema_version: 1,
+    myelin_root: myelinRoot,
+    launcher: { path: join(binDir, "myelin"), sha256: launcherSha256(launcher) },
+    providers: {},
+    installed_at: "2026-07-01T10:00:00.000Z",
+    updated_at: "2026-07-01T10:00:00.000Z",
+    source_revision: "legacy-revision",
+  };
+  await promoteLauncher(legacy.launcher.path, launcher);
+  await promoteMachineLocator(locatorPath, legacy);
+
+  const preview = await service().install(input(false));
+  expect(preview.plan.rebind).toBe(false);
+  expect(preview.plan.actions.map((item) => item.id)).toEqual([
+    "promote_version",
+    "promote_locator",
+    "verify_activation",
+    "prune_versions",
+  ]);
+  await service().install(input(true));
+
+  const migrated = await readMachineLocator(locatorPath);
+  expect(migrated.schema_version).toBe(2);
+  if (migrated.schema_version !== 2) throw new Error("expected V2 locator");
+  expect(migrated.data_root).toBe(myelinRoot);
+  expect(migrated.previous_version).toBeNull();
+});
+
+test("explicit rollback previews then atomically swaps active and previous versions", async () => {
+  await service().install(input(true));
+  const first = await readMachineLocator(locatorPath);
+  if (first.schema_version !== 2) throw new Error("expected V2 locator");
+  await writeFile(join(myelinRoot, "src", "cli.ts"), "console.log('upgrade');\n", "utf8");
+  await service().install(input(true));
+  const upgraded = await readMachineLocator(locatorPath);
+  if (upgraded.schema_version !== 2) throw new Error("expected V2 locator");
+
+  const preview = await service().install({ ...input(false), rollback: true, commandOnly: false });
+  expect(preview.plan.actions.map((item) => item.id)).toEqual(["promote_locator", "verify_activation"]);
+  await service().install({ ...input(true), rollback: true, commandOnly: false });
+
+  const rolledBack = await readMachineLocator(locatorPath);
+  if (rolledBack.schema_version !== 2) throw new Error("expected V2 locator");
+  expect(rolledBack.active_version.id).toBe(first.active_version.id);
+  expect(rolledBack.previous_version?.id).toBe(upgraded.active_version.id);
+});
+
 function input(apply: boolean) {
   return { apply, rebind: false, binDir: null, commandOnly: true, providers: [] };
 }
@@ -240,6 +372,7 @@ function service(overrides: Partial<{
   failAt: (point: InstallFailurePoint) => void;
   codexRoot: string;
   detectedProviders: string[];
+  activationVerifier: () => Promise<void>;
 }> = {}): InstallService {
   return new InstallService({
     myelinRoot: overrides.myelinRoot ?? myelinRoot,
@@ -247,10 +380,10 @@ function service(overrides: Partial<{
     locatorPath,
     journalPath,
     env: overrides.env ?? { PATH: binDir },
-    sourceRevision: null,
     now: () => new Date("2026-07-10T10:00:00.000Z"),
     failAt: overrides.failAt,
     codexRoot: overrides.codexRoot,
     detectedProviders: overrides.detectedProviders,
+    activationVerifier: overrides.activationVerifier ?? (async () => {}),
   });
 }

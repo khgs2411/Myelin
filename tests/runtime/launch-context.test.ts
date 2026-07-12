@@ -10,6 +10,7 @@ import {
   resolveLaunchContext,
   type LaunchContext,
   type MachineLocatorV1,
+  type MachineLocatorV2,
 } from "../../src/runtime/launch-context.ts";
 
 let dir: string;
@@ -61,6 +62,7 @@ test("source invocation derives root from the absolute CLI entrypoint and never 
 
   expect(context).toEqual({
     myelinRoot: root,
+    runtimeRoot: root,
     callerCwd,
     invocationKind: "source",
     rootSource: "source_entrypoint",
@@ -107,6 +109,22 @@ test("installed invocation validates but never selects a propagated internal roo
   ).rejects.toThrow("does not match the machine locator root");
 });
 
+test("V2 installed invocation separates durable data root from immutable runtime root", async () => {
+  const runtimeRoot = join(dir, "store", "versions", "1.0.0+fixture");
+  await seedCheckout(runtimeRoot);
+  await writeLocator(locatorV2(runtimeRoot));
+  await rm(join(root, "src"), { recursive: true, force: true });
+  await rm(join(root, "package.json"), { force: true });
+
+  const context = await resolveLaunchContext({
+    callerCwd,
+    locatorPath,
+    env: { [INTERNAL_INVOCATION_KIND_ENV]: "installed", [INTERNAL_LAUNCHER_PATH_ENV]: launcherPath },
+  });
+
+  expect(context).toMatchObject({ myelinRoot: root, runtimeRoot, invocationKind: "installed" });
+});
+
 test("hook and worker contexts accept only an absolute internal root", async () => {
   for (const invocationKind of ["hook", "worker"] as const) {
     const context = await resolveLaunchContext({
@@ -151,7 +169,7 @@ test("locator failures are actionable and fail closed", async () => {
   await expect(readMachineLocator(locatorPath)).rejects.toThrow("machine locator is malformed");
 
   await writeLocator({ ...locator(), schema_version: 2 } as unknown as MachineLocatorV1);
-  await expect(readMachineLocator(locatorPath)).rejects.toThrow("Unsupported or missing");
+  await expect(readMachineLocator(locatorPath)).rejects.toThrow("data_root");
 });
 
 test("relative paths, invalid roots, and inconsistent test contexts are rejected", async () => {
@@ -206,7 +224,32 @@ function locator(): MachineLocatorV1 {
   };
 }
 
-async function writeLocator(value: MachineLocatorV1): Promise<void> {
+function locatorV2(runtimeRoot: string): MachineLocatorV2 {
+  return {
+    schema_version: 2,
+    data_root: root,
+    store_root: join(dir, "store"),
+    active_version: {
+      id: "1.0.0+fixture",
+      path: runtimeRoot,
+      manifest_path: join(runtimeRoot, "version-manifest.json"),
+      manifest_sha256: "a".repeat(64),
+      product_version: "1.0.0",
+      source_revision: null,
+      source_dirty: false,
+      content_sha256: "b".repeat(64),
+      bun_lock_sha256: null,
+      installed_at: "2026-07-10T10:00:00.000Z",
+    },
+    previous_version: null,
+    launcher: { path: launcherPath, sha256: "abc123" },
+    providers: {},
+    installed_at: "2026-07-10T10:00:00.000Z",
+    updated_at: "2026-07-10T10:00:00.000Z",
+  };
+}
+
+async function writeLocator(value: MachineLocatorV1 | MachineLocatorV2): Promise<void> {
   await mkdir(join(dir, "home", ".myelin"), { recursive: true });
   await writeFile(locatorPath, `${JSON.stringify(value)}\n`, "utf8");
 }

@@ -354,7 +354,7 @@ The core loop now exists: capture and inbox create evidence, Session Memory turn
 - [x] `done` ~~Stabilize the installed `myelin` namespace.~~
   - Description: Make the operator-facing `myelin` command consistently available instead of relying on `bun src/cli.ts` during development.
   - Why: External project usage and detached consumers need a stable operator boundary before they can prove the product outside this repository.
-  - Progress: Completed 2026-07-10 with a checkout-backed copied launcher, a machine-owned locator under `~/.myelin`, and a recoverable install, repair, rebind, provider, and uninstall lifecycle.
+  - Progress: Completed 2026-07-10 with a copied launcher and recoverable ownership lifecycle, then strengthened on 2026-07-12 with content-addressed immutable runtime versions, V1-to-V2 locator migration, verified atomic activation, rollback, owned-version garbage collection, and locator-authoritative provider shims.
 - [x] `done` ~~Reconcile operator documentation with the executable surface.~~
   - Description: Align setup, installation, command, and troubleshooting guidance with the commands and global invocation path operators can actually use.
   - Why: External dogfood should not depend on stale command vocabulary or knowledge of the Myelin source checkout.

@@ -20,8 +20,10 @@ locator, provider, and PATH actions:
 ./install --apply
 ```
 
-This copies a launcher to `~/.local/bin/myelin` and records this checkout in
-`~/.myelin/install.json`; it does not create a symlink. A bare install selects
+This copies a stable launcher to `~/.local/bin/myelin`, snapshots the runtime
+under `~/.local/share/myelin/versions/`, and records the active immutable
+version plus this checkout's durable data root in `~/.myelin/install.json`.
+It does not create a symlink. A bare install selects
 the sole supported provider detected on the machine. Select Codex explicitly,
 or install only the command, with:
 
@@ -54,7 +56,19 @@ myelin ingest status <ingest-job-id>
 An observed `healthy`, `attention`, or `blocked` state exits zero; invocation or
 identity failures that prevent construction of the contract exit nonzero.
 
-Re-running `./install` previews repair or update work. If the checkout moved,
+Re-running `./install` previews repair or version-update work. Each successful
+upgrade retains one previous version for rollback and removes older owned
+versions. The version identity includes the package version, source revision,
+and runtime content digest, so local dirty builds remain distinguishable from
+their Git commit. Roll back or remove every inactive version with:
+
+```bash
+myelin install --rollback
+myelin install --rollback --apply
+./install --prune --apply
+```
+
+If the durable checkout moved,
 preview from the new location and then explicitly rebind it:
 
 ```bash
@@ -68,7 +82,7 @@ a different bin directory.
 
 Uninstall is also preview-first. Provider-only removal preserves the launcher
 and locator; full removal deletes all recorded Myelin-owned provider artifacts,
-the copied launcher, and the locator while preserving the checkout, config,
+the copied launcher, locator, and manifest-owned runtime versions while preserving the checkout, config,
 memory, state, and unrelated provider hooks:
 
 ```bash

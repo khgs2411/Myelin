@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { registerInstallCommands } from "../../src/commands/install.ts";
@@ -13,7 +13,10 @@ beforeEach(async () => {
   sandbox = await mkdtemp(join(tmpdir(), "myelin-install-cli-"));
   root = join(sandbox, "checkout");
   homeDir = join(sandbox, "home");
-  await mkdir(root, { recursive: true });
+  await mkdir(join(root, "src"), { recursive: true });
+  await writeFile(join(root, "src", "cli.ts"), "console.log('fixture');\n", "utf8");
+  await writeFile(join(root, "package.json"), `${JSON.stringify({ name: "myelin", version: "0.1.0", type: "module" })}\n`, "utf8");
+  await writeFile(join(root, "myelin.config"), "", "utf8");
 });
 
 afterEach(async () => {
@@ -46,6 +49,7 @@ test("install parses custom bin and rejects conflicting or incomplete options", 
     "cannot be combined",
   );
   expect((await cli().run(["install", "--codex"])).message).toContain("Unknown install option");
+  expect((await cli().run(["install", "--rollback", "--command-only"])).message).toContain("only be combined");
 });
 
 test("uninstall is preview-first and requires --apply to remove", async () => {
@@ -105,8 +109,8 @@ function cli() {
     service: {
       homeDir,
       env: { PATH: join(homeDir, ".local", "bin") },
-      sourceRevision: null,
       now: () => new Date("2026-07-10T10:00:00.000Z"),
+      activationVerifier: async () => {},
     },
   });
   return command;

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { copyFile, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, copyFile, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { MachineLocatorProvider } from "../runtime/launch-context.ts";
 import { INTERNAL_INVOCATION_KIND_ENV, INTERNAL_LAUNCHER_PATH_ENV } from "../runtime/launch-context.ts";
@@ -44,7 +44,11 @@ export async function inspectCodexProvider(input: {
   const manifest = await readManifestIfExists(paths.manifest_path);
   const shimExists = await exists(paths.shim_path);
   if (!manifest) {
-    if (shimExists) throw new Error(`Unowned Codex shim exists at ${paths.shim_path}; refusing to overwrite it.`);
+    if (shimExists) {
+      const currentShim = await readFile(paths.shim_path, "utf8");
+      const desiredShim = shimScript(input.myelinRoot, input.launcherPath);
+      if (currentShim !== desiredShim) throw new Error(`Unowned Codex shim exists at ${paths.shim_path}; refusing to overwrite it.`);
+    }
     return { ownership: paths, detected: await isDirectory(input.providerRoot), needsApply: true };
   }
   if (manifest.command !== paths.shim_path) throw new Error(`Codex manifest owns an unexpected command: ${manifest.command}`);
@@ -99,10 +103,10 @@ export async function applyCodexProvider(input: {
       input.backupPath ?? join(input.providerRoot, ".myelin", "backups", `hooks-${crypto.randomUUID()}.json`),
     );
   }
-  await writeFile(paths.hooks_path, desiredHooks, "utf8");
+  await promoteTextFile(paths.hooks_path, desiredHooks, 0o600);
 
   const shim = shimScript(input.myelinRoot, input.launcherPath);
-  await writeFile(paths.shim_path, shim, { encoding: "utf8", mode: 0o755 });
+  await promoteTextFile(paths.shim_path, shim, 0o755);
   const manifest: CodexManifestV1 = {
     schema_version: 1,
     provider: "codex",
@@ -110,7 +114,7 @@ export async function applyCodexProvider(input: {
     command: paths.shim_path,
     shim: { path: paths.shim_path, sha256: sha256(shim) },
   };
-  await writeFile(paths.manifest_path, `${JSON.stringify(manifest, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+  await promoteTextFile(paths.manifest_path, `${JSON.stringify(manifest, null, 2)}\n`, 0o600);
   return paths;
 }
 
@@ -147,7 +151,7 @@ export async function removeCodexProvider(input: {
         paths.hooks_path,
         input.backupPath ?? join(input.providerRoot, ".myelin", "backups", `hooks-${crypto.randomUUID()}.json`),
       );
-      await writeFile(paths.hooks_path, desired, "utf8");
+      await promoteTextFile(paths.hooks_path, desired, 0o600);
     }
   }
   await rm(paths.shim_path, { force: true });
@@ -289,12 +293,20 @@ function shimScript(myelinRoot: string, launcherPath?: string): string {
     : `exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(myelinRoot, "src", "cli.ts"))} capture codex-hook "$@"`;
   return [
     "#!/usr/bin/env bash",
-    `export MYELIN_ROOT=${JSON.stringify(myelinRoot)}`,
     `export ${INTERNAL_INVOCATION_KIND_ENV}=hook`,
     ...(launcherPath ? [`export ${INTERNAL_LAUNCHER_PATH_ENV}=${JSON.stringify(launcherPath)}`] : []),
     command,
     "",
   ].join("\n");
+}
+
+async function promoteTextFile(path: string, content: string, mode: number): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
+  const temporary = `${path}.tmp-${crypto.randomUUID()}`;
+  await writeFile(temporary, content, { encoding: "utf8", mode });
+  await chmod(temporary, mode);
+  await rename(temporary, path);
+  await chmod(path, mode);
 }
 
 function sha256(value: string): string {

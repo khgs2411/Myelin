@@ -1,4 +1,5 @@
-import type { MachineLocatorV1 } from "../runtime/launch-context.ts";
+import type { MachineLocator } from "./machine-locator-contracts.ts";
+import type { PlannedInstalledVersion } from "./version-contracts.ts";
 
 export type InstallMode = "preview" | "apply" | "uninstall";
 
@@ -25,6 +26,10 @@ export type MachineInstallOperation = "install" | "uninstall";
 export type MachineActionId =
   | "promote_launcher"
   | "promote_locator"
+  | "promote_version"
+  | "verify_activation"
+  | "prune_versions"
+  | "remove_version_store"
   | "remove_launcher"
   | "remove_locator"
   | `apply_provider:${ProviderName}`
@@ -44,15 +49,19 @@ export type MachineInstallPlan = {
   operation: MachineInstallOperation;
   mode: "preview" | "apply";
   myelin_root: string;
+  source_root: string;
   launcher_path: string;
   locator_path: string;
   journal_path: string;
+  store_root: string;
+  active_version: string | null;
+  previous_version: string | null;
   current_root: string | null;
   rebind: boolean;
   path_active: boolean;
   actions: MachineInstallAction[];
   warnings: string[];
-  desired_manifest: MachineLocatorV1 | null;
+  desired_manifest: MachineLocator | null;
 };
 
 export type InstallJournalV1 = {
@@ -60,9 +69,13 @@ export type InstallJournalV1 = {
   transaction_id: string;
   operation: MachineInstallOperation;
   myelin_root: string;
+  source_root: string;
   launcher_path: string;
   locator_path: string;
-  desired_manifest: MachineLocatorV1 | null;
+  desired_manifest: MachineLocator | null;
+  previous_manifest: MachineLocator | null;
+  version_plan: PlannedInstalledVersion | null;
+  prune: boolean;
   actions: Array<MachineInstallAction & { state: MachineActionState }>;
   created_at: string;
 };
@@ -74,17 +87,19 @@ export type InstallFailurePoint =
 
 export type InstallServiceDeps = {
   myelinRoot: string;
+  sourceRoot?: string;
   homeDir?: string;
   binDir?: string;
   locatorPath?: string;
   journalPath?: string;
   env?: NodeJS.ProcessEnv;
   now?: () => Date;
-  sourceRevision?: string | null;
   failAt?: (point: InstallFailurePoint) => void | Promise<void>;
   codexRoot?: string;
+  storeRoot?: string;
   detectedProviders?: string[];
   supportedProviders?: string[];
+  activationVerifier?: (input: { launcherPath: string; locator: MachineLocator }) => void | Promise<void>;
 };
 
 export type InstallInput = {
@@ -93,6 +108,8 @@ export type InstallInput = {
   binDir: string | null;
   commandOnly: boolean;
   providers: string[];
+  prune?: boolean;
+  rollback?: boolean;
 };
 
 export type UninstallInput = {

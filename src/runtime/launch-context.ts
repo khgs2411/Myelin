@@ -1,36 +1,25 @@
 import { readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+import {
+  machineLocatorDataRoot,
+  machineLocatorRuntimeRoot,
+  type MachineLocator,
+} from "../install/machine-locator-contracts.ts";
+
+export type { MachineLocator, MachineLocatorProvider, MachineLocatorV1, MachineLocatorV2 } from "../install/machine-locator-contracts.ts";
 
 export type InvocationKind = "installed" | "source" | "hook" | "worker" | "test";
 export type RootSource = "machine_locator" | "source_entrypoint" | "internal_env" | "test_dependency";
 
 export type LaunchContext = {
   myelinRoot: string;
+  runtimeRoot?: string;
   callerCwd: string;
   invocationKind: InvocationKind;
   rootSource: RootSource;
   launcherPath: string | null;
   locatorPath: string | null;
-};
-
-export type MachineLocatorProvider = {
-  hooks_path: string;
-  shim_path: string;
-  manifest_path: string;
-};
-
-export type MachineLocatorV1 = {
-  schema_version: 1;
-  myelin_root: string;
-  launcher: {
-    path: string;
-    sha256: string;
-  };
-  providers: Record<string, MachineLocatorProvider>;
-  installed_at: string;
-  updated_at: string;
-  source_revision: string | null;
 };
 
 export const INTERNAL_INVOCATION_KIND_ENV = "MYELIN_INTERNAL_INVOCATION_KIND";
@@ -77,9 +66,9 @@ export async function resolveLaunchContext(deps: LaunchContextDeps = {}): Promis
     const locatorPath = nullableAbsolute(env[INTERNAL_LOCATOR_PATH_ENV], "internal locator path");
     if (locatorPath) {
       const locator = await readMachineLocator(locatorPath, { readText });
-      if (resolve(locator.myelin_root) !== resolve(myelinRoot)) {
+      if (resolve(machineLocatorDataRoot(locator)) !== resolve(myelinRoot)) {
         throw new Error(
-          `Internal MYELIN_ROOT ${myelinRoot} does not match the machine locator root ${locator.myelin_root}. Re-run myelin install --apply.`,
+          `Internal MYELIN_ROOT ${myelinRoot} does not match the machine locator root ${machineLocatorDataRoot(locator)}. Re-run myelin install --apply.`,
         );
       }
       if (launcherPath && resolve(locator.launcher.path) !== resolve(launcherPath)) {
@@ -89,6 +78,7 @@ export async function resolveLaunchContext(deps: LaunchContextDeps = {}): Promis
 
     const context: LaunchContext = {
       myelinRoot: resolve(myelinRoot),
+      runtimeRoot: locatorPath ? resolve(machineLocatorRuntimeRoot(await readMachineLocator(locatorPath, { readText }))) : resolve(myelinRoot),
       callerCwd: resolve(callerCwd),
       invocationKind: internalKind,
       rootSource: "internal_env",
@@ -104,9 +94,9 @@ export async function resolveLaunchContext(deps: LaunchContextDeps = {}): Promis
     const locator = await readMachineLocator(locatorPath, { readText });
     if (env.MYELIN_ROOT) {
       assertAbsolute(env.MYELIN_ROOT, "internal MYELIN_ROOT");
-      if (resolve(env.MYELIN_ROOT) !== resolve(locator.myelin_root)) {
+      if (resolve(env.MYELIN_ROOT) !== resolve(machineLocatorDataRoot(locator))) {
         throw new Error(
-          `Internal MYELIN_ROOT ${env.MYELIN_ROOT} does not match the machine locator root ${locator.myelin_root}. Re-run myelin install --apply.`,
+          `Internal MYELIN_ROOT ${env.MYELIN_ROOT} does not match the machine locator root ${machineLocatorDataRoot(locator)}. Re-run myelin install --apply.`,
         );
       }
     }
@@ -116,7 +106,8 @@ export async function resolveLaunchContext(deps: LaunchContextDeps = {}): Promis
     }
 
     const context: LaunchContext = {
-      myelinRoot: resolve(locator.myelin_root),
+      myelinRoot: resolve(machineLocatorDataRoot(locator)),
+      runtimeRoot: resolve(machineLocatorRuntimeRoot(locator)),
       callerCwd: resolve(callerCwd),
       invocationKind: "installed",
       rootSource: "machine_locator",
@@ -137,6 +128,7 @@ export async function resolveLaunchContext(deps: LaunchContextDeps = {}): Promis
 
   const context: LaunchContext = {
     myelinRoot,
+    runtimeRoot: myelinRoot,
     callerCwd: resolve(callerCwd),
     invocationKind: "source",
     rootSource: "source_entrypoint",
@@ -150,7 +142,7 @@ export async function resolveLaunchContext(deps: LaunchContextDeps = {}): Promis
 export async function readMachineLocator(
   path: string,
   deps: Pick<LaunchContextDeps, "readText"> = {},
-): Promise<MachineLocatorV1> {
+): Promise<MachineLocator> {
   assertAbsolute(path, "machine locator path");
   let raw: string;
   try {
@@ -171,11 +163,19 @@ export async function readMachineLocator(
   return parseMachineLocator(value, path);
 }
 
-export function parseMachineLocator(value: unknown, path = "machine locator"): MachineLocatorV1 {
-  if (!isRecord(value) || value.schema_version !== 1) {
+export function parseMachineLocator(value: unknown, path = "machine locator"): MachineLocator {
+  if (!isRecord(value) || (value.schema_version !== 1 && value.schema_version !== 2)) {
     throw new Error(`Unsupported or missing Myelin machine locator schema at ${path}. Re-run ./install --apply.`);
   }
-  if (!isAbsoluteString(value.myelin_root)) throw invalidLocator(path, "myelin_root must be absolute");
+  if (value.schema_version === 1 && !isAbsoluteString(value.myelin_root)) throw invalidLocator(path, "myelin_root must be absolute");
+  if (value.schema_version === 2) {
+    if (!isAbsoluteString(value.data_root)) throw invalidLocator(path, "data_root must be absolute");
+    if (!isAbsoluteString(value.store_root)) throw invalidLocator(path, "store_root must be absolute");
+    assertInstalledVersion(value.active_version, path, "active_version");
+    if (value.previous_version !== null) assertInstalledVersion(value.previous_version, path, "previous_version");
+    assertVersionStoreOwnership(value.active_version, value.store_root, path, "active_version");
+    if (value.previous_version !== null) assertVersionStoreOwnership(value.previous_version, value.store_root, path, "previous_version");
+  }
   if (!isRecord(value.launcher) || !isAbsoluteString(value.launcher.path) || !isNonEmptyString(value.launcher.sha256)) {
     throw invalidLocator(path, "launcher path/hash is invalid");
   }
@@ -194,14 +194,15 @@ export function parseMachineLocator(value: unknown, path = "machine locator"): M
   if (!isNonEmptyString(value.installed_at) || !isNonEmptyString(value.updated_at)) {
     throw invalidLocator(path, "installation timestamps are invalid");
   }
-  if (value.source_revision !== null && !isNonEmptyString(value.source_revision)) {
+  if (value.schema_version === 1 && value.source_revision !== null && !isNonEmptyString(value.source_revision)) {
     throw invalidLocator(path, "source_revision must be a string or null");
   }
-  return value as MachineLocatorV1;
+  return value as MachineLocator;
 }
 
 async function validateContext(context: LaunchContext, statPath: (path: string) => Promise<PathStat>): Promise<void> {
   assertAbsolute(context.myelinRoot, "Myelin root");
+  if (context.runtimeRoot) assertAbsolute(context.runtimeRoot, "Myelin runtime root");
   assertAbsolute(context.callerCwd, "caller working directory");
   if (context.launcherPath) assertAbsolute(context.launcherPath, "launcher path");
   if (context.locatorPath) assertAbsolute(context.locatorPath, "locator path");
@@ -213,13 +214,47 @@ async function validateContext(context: LaunchContext, statPath: (path: string) 
   }
 
   const root = resolve(context.myelinRoot);
+  const runtimeRoot = resolve(context.runtimeRoot ?? context.myelinRoot);
   try {
     if (!(await statPath(root)).isDirectory()) throw new Error("not a directory");
-    for (const marker of ["myelin.config", "package.json", join("src", "cli.ts")]) {
-      if (!(await statPath(join(root, marker))).isFile()) throw new Error(`${marker} is not a file`);
+    if (!(await statPath(join(root, "myelin.config"))).isFile()) throw new Error("myelin.config is not a file");
+    if (!(await statPath(runtimeRoot)).isDirectory()) throw new Error("runtime root is not a directory");
+    for (const marker of ["package.json", join("src", "cli.ts")]) {
+      if (!(await statPath(join(runtimeRoot, marker))).isFile()) throw new Error(`runtime ${marker} is not a file`);
     }
   } catch (error) {
     throw new Error(`Invalid Myelin root ${root}: ${errorMessage(error)}. Re-run myelin install --apply.`);
+  }
+}
+
+function assertInstalledVersion(value: unknown, path: string, field: string): void {
+  if (
+    !isRecord(value) ||
+    !isNonEmptyString(value.id) ||
+    !isAbsoluteString(value.path) ||
+    !isAbsoluteString(value.manifest_path) ||
+    !isSha256(value.manifest_sha256) ||
+    !isNonEmptyString(value.product_version) ||
+    (value.source_revision !== null && !isNonEmptyString(value.source_revision)) ||
+    typeof value.source_dirty !== "boolean" ||
+    !isSha256(value.content_sha256) ||
+    (value.bun_lock_sha256 !== null && !isSha256(value.bun_lock_sha256)) ||
+    !isNonEmptyString(value.installed_at) ||
+    Number.isNaN(Date.parse(value.installed_at))
+  ) {
+    throw invalidLocator(path, `${field} is invalid`);
+  }
+}
+
+function assertVersionStoreOwnership(value: unknown, storeRoot: unknown, path: string, field: string): void {
+  if (!isRecord(value) || !isAbsoluteString(storeRoot)) throw invalidLocator(path, `${field} ownership is invalid`);
+  const expectedParent = resolve(storeRoot, "versions");
+  if (
+    resolve(dirname(String(value.path))) !== expectedParent ||
+    basename(String(value.path)) !== value.id ||
+    resolve(String(value.manifest_path)) !== resolve(String(value.path), "version-manifest.json")
+  ) {
+    throw invalidLocator(path, `${field} is outside the owned version store`);
   }
 }
 
@@ -249,6 +284,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;
+}
+
+function isSha256(value: unknown): value is string {
+  return typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
 }
 
 function isAbsoluteString(value: unknown): value is string {
