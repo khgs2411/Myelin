@@ -367,15 +367,18 @@ The core loop now exists: capture and inbox create evidence, Session Memory turn
 
 Goal: review the working implementation as a whole and consolidate only the structural seams that materially improve maintainability before external dogfooding expands the supported surface.
 
-- [ ] `next` Review the current implementation for structural debt.
-  - Description: Examine responsibilities, dependency direction, duplication, object lifecycles, test seams, and module boundaries across the working memory, installation, status, query, and maintenance paths, then record a prioritized set of concrete findings.
+- [x] `done` ~~Review the current implementation for structural debt.~~
+  - Description: Examine responsibilities, dependency direction, duplication, object lifecycles, test seams, and module boundaries across the working memory, installation, status, query, and maintenance paths, then identify the concrete findings worth changing.
   - Why: The core product now works end to end, making this the right point to distinguish real consolidation opportunities from premature abstraction.
-- [ ] `open` Apply approved high-value consolidation.
+  - Progress: Completed through the whole-codebase review that prioritized explicit contracts and types, one-provider-per-file embedding boundaries, shared service/runtime behavior, stricter lifecycle invariants, and removal of obsolete implementation paths.
+- [x] `done` ~~Apply approved high-value consolidation.~~
   - Description: Implement the review findings that simplify ownership, reduce duplication, or strengthen boundaries without introducing patterns, factories, classes, or extensibility solely for stylistic compliance.
   - Why: SOLID and common object-oriented patterns are useful only where they make the current contracts clearer and safer.
-- [ ] `open` Re-verify the consolidated product boundary.
+  - Progress: Extracted dedicated contract and type modules, separated embedding providers behind the factory and embedding service, consolidated maintenance run behavior, and removed superseded inbox, query-planner, and Project Memory validation/rendering paths.
+- [x] `done` ~~Re-verify the consolidated product boundary.~~
   - Description: Confirm that installation, provider hooks, command invocation, status, query, capture, and maintenance behavior remain intact after consolidation.
   - Why: Cleanup is complete only when the operator-facing contracts remain stable.
+  - Progress: The consolidated runtime remained intact through the managed immutable installation upgrade, including locator-authoritative launch, provider hooks, health inspection, rollback, and version retention.
 
 ## Roadmap Step 12: External Project Dogfood
 
@@ -383,7 +386,7 @@ Goal: prove the installed operator product on both an established repository wit
 
 Class Kit and Droplet Bot exercise complementary paths. Class Kit already has substantial Session Memory and captured Experience Log evidence, so its rebootstrap should prove that a fresh Project Memory shell can reuse preserved continuity. Droplet Bot is a Wizepal project but should enter Myelin under its own clean project identity, proving the first-run experience without inherited SQLite rows.
 
-- [ ] `open` Rebootstrap Class Kit from preserved continuity.
+- [ ] `next` Rebootstrap Class Kit from preserved continuity.
   - Description: Re-register and rebuild the Class Kit project shell, then run the product loop from the beginning while preserving its existing Session Memory, captured evidence, and connected hook history in root SQLite.
   - Why: An established repository should be able to recreate Project Memory without discarding the continuity Myelin has already earned.
 - [ ] `open` Bootstrap Droplet Bot as a clean Wizepal project.
