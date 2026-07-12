@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT } from "../../src/runtime/config.ts";
 import { openMemoryDbAt } from "../../src/memory/db.ts";
-import type { EmbeddingProviderClient } from "../../src/memory/embedding-provider.ts";
+import type { EmbeddingProviderClient } from "../../src/memory/embedding-types.ts";
 import { DeterministicMemoryQueryResponseService, MemoryQueryService } from "../../src/query/memory-query-service.ts";
 
 test("MemoryQueryService delegates retrieval and builds deterministic query response", async () => {
@@ -249,6 +249,9 @@ function fixedProvider(): EmbeddingProviderClient {
         model: request.contract.model,
         dimensions: request.contract.dimensions,
       };
+    },
+    async embedBatch(requests) {
+      return Promise.all(requests.map((request) => this.embed(request)));
     },
   };
 }

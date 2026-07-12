@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { openMemoryDbAt, type MemoryDb } from "../../src/memory/db.ts";
-import type { EmbeddingProviderClient } from "../../src/memory/embedding-provider.ts";
+import type { EmbeddingProviderClient } from "../../src/memory/embedding-types.ts";
 import {
   ensurePendingProjectMemoryRetrievalEmbedding,
   markProjectMemoryRetrievalEmbeddingIndexed,
@@ -436,6 +436,9 @@ function fixedProvider(): EmbeddingProviderClient {
         model: request.contract.model,
         dimensions: request.contract.dimensions,
       };
+    },
+    async embedBatch(requests) {
+      return Promise.all(requests.map((request) => this.embed(request)));
     },
   };
 }

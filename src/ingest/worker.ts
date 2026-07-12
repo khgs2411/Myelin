@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { join } from "node:path";
-import type { JsonObject, ProcessRunner } from "../runtime/llm-client.ts";
+import type { JsonObject, ProcessRunner } from "../runtime/llm-contracts.ts";
 import { invokeLlm, PROMPT_SIZE_LIMIT } from "../runtime/llm-client.ts";
 import type { LeasedExperienceEvent } from "../memory/experience.ts";
 import {
@@ -40,10 +40,8 @@ import {
 } from "./reconciliation-context.ts";
 import { updateIngestJobStatus } from "./jobs.ts";
 import { readIngestProjectStatus, type IngestProjectStatus } from "./status.ts";
-import {
-  AutoProjectMemoryMaintenanceService,
-  type AutoProjectMemoryMaintenanceScheduler,
-} from "../maintenance/auto-project-memory-maintenance.ts";
+import { AutoProjectMemoryMaintenanceService } from "../maintenance/auto-project-memory-maintenance.ts";
+import type { AutoProjectMemoryMaintenanceScheduler } from "../maintenance/maintenance-contracts.ts";
 
 const MAX_PROMPT_RETAINED_EVIDENCE_CHARS = 6_000;
 const TRUNCATED_EVIDENCE_SUFFIX = "\n...[truncated for ingest prompt; full evidence is preserved in the tombstone audit row]";

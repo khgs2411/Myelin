@@ -7,7 +7,6 @@ import {
   extractProjectMemorySectionsFromMarkdown,
   writeProjectMemorySectionManifest,
 } from "../../src/project/project-memory-markdown-sections.ts";
-import { renderPageDraft } from "../../src/project/project-memory-markdown-renderer.ts";
 import { readJsonIfExists } from "../../src/runtime/json.ts";
 
 let root: string;
@@ -75,22 +74,15 @@ test("writes sections.json under project-memory-retrieval state", async () => {
 });
 
 test("section extractor sees rendered create page sections", () => {
-  const markdown = renderPageDraft({
-    page_path: "storage-retrieval.md",
-    title: "Storage And Retrieval",
-    purpose: "Documents where Myelin stores memory and how retrieval points back to markdown.",
-    sections: [
-      {
-        heading: "SQLite State",
-        level: 2,
-        body: { paragraphs: ["The root SQLite database lives at state/memory.db."] },
-        evidence_refs: [{ kind: "repo_citation", ref: "src/memory/db.ts" }],
-        repo_citations: [{ path: "src/memory/db.ts", line_start: 11, reason: "memory database path" }],
-      },
-    ],
-    evidence_refs: [{ kind: "repo_citation", ref: "src/memory/db.ts" }],
-    repo_citations: [{ path: "src/memory/db.ts", line_start: 11, reason: "memory database path" }],
-  });
+  const markdown = [
+    "# Storage And Retrieval",
+    "",
+    "Documents where Myelin stores memory and how retrieval points back to markdown.",
+    "",
+    "## SQLite State",
+    "",
+    "The root SQLite database lives at state/memory.db.",
+  ].join("\n");
 
   const sections = extractProjectMemorySectionsFromMarkdown({
     projectKey: "llm-wiki",

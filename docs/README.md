@@ -15,7 +15,7 @@ Read these in order:
 
 ## Active Reference Docs
 
-- `inbox-item-schema.md` — current inbox item contract.
+- Runtime inbox contracts are implemented in `src/inbox/runtime-inbox-items.ts` and exposed through `myelin memory inbox` commands.
 - `CLI.md` — command usage, arguments, side effects, and examples.
 - `adr/` — append-only decision records. These are canonical decisions, but they are not the starting point for understanding the product.
 

@@ -1,4 +1,5 @@
-import { InstallService, type InstallServiceDeps } from "../install/install-service.ts";
+import { InstallService } from "../install/install-service.ts";
+import type { InstallServiceDeps } from "../install/types.ts";
 import type { MachineInstallPlan } from "../install/types.ts";
 import type { LaunchContext } from "../runtime/launch-context.ts";
 import type { Cli } from "./registry.ts";

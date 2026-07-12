@@ -1,9 +1,7 @@
 import { link, mkdir, unlink, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
-import {
-  AutoProjectMemoryMaintenanceService,
-  type AutoProjectMemoryMaintenanceScheduler,
-} from "../maintenance/auto-project-memory-maintenance.ts";
+import { AutoProjectMemoryMaintenanceService } from "../maintenance/auto-project-memory-maintenance.ts";
+import type { AutoProjectMemoryMaintenanceScheduler } from "../maintenance/maintenance-contracts.ts";
 import { projectPath } from "../runtime/fs.ts";
 import { createId } from "../runtime/ids.ts";
 import { stableJson } from "../runtime/json.ts";

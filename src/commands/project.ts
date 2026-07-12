@@ -2,7 +2,7 @@ import type { Cli } from "./registry.ts";
 import { fail, ok } from "./registry.ts";
 import type { LaunchContext } from "../runtime/launch-context.ts";
 import { stableJson } from "../runtime/json.ts";
-import type { ProcessRunner } from "../runtime/llm-client.ts";
+import type { ProcessRunner } from "../runtime/llm-contracts.ts";
 import { ProjectService } from "../project/project-service.ts";
 import { ProjectResetService } from "../project/project-reset-service.ts";
 

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT } from "../../src/runtime/config.ts";
-import type { EmbeddingProviderClient } from "../../src/memory/embedding-provider.ts";
+import type { EmbeddingProviderClient } from "../../src/memory/embedding-types.ts";
 import { openMemoryDbAt, type MemoryDb } from "../../src/memory/db.ts";
 import { SessionMemoryIndexService } from "../../src/memory/session-memory-index-service.ts";
 import { createSessionMemory } from "../../src/memory/session-memories.ts";
@@ -65,6 +65,9 @@ function fixedProvider(): EmbeddingProviderClient {
         model: request.contract.model,
         dimensions: request.contract.dimensions,
       };
+    },
+    async embedBatch(requests) {
+      return Promise.all(requests.map((request) => this.embed(request)));
     },
   };
 }

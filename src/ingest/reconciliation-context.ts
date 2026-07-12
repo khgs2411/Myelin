@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import type { LeasedExperienceEvent } from "../memory/experience.ts";
-import type { EmbeddingProviderClient } from "../memory/embedding-provider.ts";
+import type { EmbeddingProviderClient } from "../memory/embedding-types.ts";
 import type { SessionMemoryRow } from "../memory/ingest-types.ts";
 import {
   querySessionMemory,

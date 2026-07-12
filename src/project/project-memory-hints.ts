@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { projectPath, resolveInside } from "../runtime/fs.ts";
 import { readJsonIfExists, stableJson } from "../runtime/json.ts";

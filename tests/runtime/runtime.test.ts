@@ -378,3 +378,21 @@ test("subprocess helper times out long-running commands", async () => {
   expect(result.exitCode).toBe(124);
   expect(result.stderr).toContain("Process timed out after 25ms");
 });
+
+test("subprocess helper force-kills a command that ignores termination", async () => {
+  const startedAt = Date.now();
+  const result = await runProcess(
+    ["bun", "-e", "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000)"],
+    { timeoutMs: 25, killGraceMs: 25 },
+  );
+
+  expect(result.exitCode).toBe(124);
+  expect(result.stderr).toContain("Process timed out after 25ms");
+  expect(Date.now() - startedAt).toBeLessThan(1_000);
+});
+
+test("subprocess helper rejects invalid kill grace periods without leaving the child running", async () => {
+  await expect(
+    runProcess(["bun", "-e", "setInterval(() => {}, 1000)"], { killGraceMs: -1 }),
+  ).rejects.toThrow("killGraceMs must be a non-negative finite number");
+});

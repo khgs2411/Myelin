@@ -5,7 +5,8 @@ import { openMemoryDb } from "../memory/db.ts";
 import { EmbeddingProviderFactory } from "../memory/embedding-provider-factory.ts";
 import { attachMemoryQueryLogEval } from "../memory/query-logs.ts";
 import { loadConfig } from "../runtime/config.ts";
-import { MemoryQueryService, type QueryResponse } from "./memory-query-service.ts";
+import { MemoryQueryService } from "./memory-query-service.ts";
+import type { QueryResponse } from "./memory-query-contracts.ts";
 
 export type ProjectMemoryGoldenQuestion = {
   id: string;

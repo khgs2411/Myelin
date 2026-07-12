@@ -105,6 +105,24 @@ test("marks selected rows failed when vector store is unavailable", async () => 
   expect(result.degraded_reason).toContain("sqlite-vec unavailable");
 });
 
+test("rejects query contracts at the Project Memory document indexing boundary", async () => {
+  await expect(indexProjectMemoryRetrieval(db, {
+    root,
+    project_key: "demo",
+    contract: { ...DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT, purpose: "retrieval_query" },
+    provider: {
+      async embed(request) {
+        return {
+          embedding: unitVector(request.contract.dimensions),
+          model: request.contract.model,
+          dimensions: request.contract.dimensions,
+        };
+      },
+    },
+    limit: 10,
+  })).rejects.toThrow("requires retrieval_document embeddings");
+});
+
 test("indexes only valid matching hints with structural section text", async () => {
   await mkdir(join(root, "projects", "demo", "wiki", "architecture"), { recursive: true });
   await writeFile(join(root, "projects", "demo", "wiki", "architecture", "ranking.md"), "# Ranking\n\nRanking body.\n\n## Proposal Ranking\n\nRanking detail.\n", "utf8");

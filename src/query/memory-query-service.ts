@@ -1,58 +1,26 @@
 import type { Database } from "bun:sqlite";
-import type { EmbeddingProviderClient } from "../memory/embedding-provider.ts";
+import type { EmbeddingProviderClient } from "../memory/embedding-types.ts";
 import {
   querySessionMemory,
-  type SessionMemoryQueryMatch,
-  type SessionMemoryQueryResult,
 } from "../memory/session-memory-query.ts";
+import type { SessionMemoryQueryMatch, SessionMemoryQueryResult } from "../memory/session-memory-query-types.ts";
 import {
   queryProjectMemory,
-  type ProjectMemoryQueryMatch,
-  type ProjectMemoryQueryResult,
 } from "./project-memory-query-service.ts";
+import type { ProjectMemoryQueryMatch, ProjectMemoryQueryResult } from "./project-memory-query-types.ts";
 import type { ActiveEmbeddingContract } from "../runtime/config.ts";
 import { attachMemoryQueryLogResponse } from "../memory/query-logs.ts";
-
-export type FacadeResponse = {
-  answer: string;
-  confidence: number;
-  memory_scope: string;
-  citations: string[];
-  candidate_ids: string[];
-  degraded: boolean;
-  degraded_reason: string | null;
-  source_tools: string[];
-};
-
-export type QueryLayerDiagnostic = {
-  layer: "session_memory" | "project_memory";
-  query_log_id: string | null;
-  degraded: boolean;
-  degraded_reason: string | null;
-  indexed_count: number;
-  pending_count: number;
-  match_count: number;
-  query_embedding_cache_hit: boolean | null;
-  query_embedding_cache_id: string | null;
-  normalized_question: string | null;
-};
-
-export type QueryResponse = FacadeResponse & {
-  matches: SessionMemoryQueryMatch[];
-  project_memory_matches: ProjectMemoryQueryMatch[];
-  layers?: QueryLayerDiagnostic[];
-};
-
-export type MemoryQueryInput = {
-  root: string;
-  projectKey: string;
-  question: string;
-  limit?: number;
-  includeRoute?: boolean;
-  gitBranch?: string;
-  layer?: "session" | "project";
-  maxInlineChars?: number;
-};
+import type {
+  MemoryQueryInput,
+  QueryLayerDiagnostic,
+  QueryResponse,
+} from "./memory-query-contracts.ts";
+export type {
+  FacadeResponse,
+  MemoryQueryInput,
+  QueryLayerDiagnostic,
+  QueryResponse,
+} from "./memory-query-contracts.ts";
 
 type SessionMemoryQueryRunner = typeof querySessionMemory;
 type ProjectMemoryQueryRunner = typeof queryProjectMemory;

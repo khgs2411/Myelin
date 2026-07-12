@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT } from "../../src/runtime/config.ts";
-import type { EmbeddingProviderClient } from "../../src/memory/embedding-provider.ts";
+import type { EmbeddingProviderClient } from "../../src/memory/embedding-types.ts";
 import { openMemoryDbAt, type MemoryDb } from "../../src/memory/db.ts";
 import { markSessionMemoryEmbeddingIndexed } from "../../src/memory/session-memory-embeddings.ts";
 import { querySessionMemory, type SessionMemoryQueryVectorStore } from "../../src/memory/session-memory-query.ts";
@@ -66,6 +66,9 @@ test("embeds the question as retrieval query and hydrates vector matches", async
         model: request.contract.model,
         dimensions: request.contract.dimensions,
       };
+    },
+    async embedBatch(requests) {
+      return Promise.all(requests.map((request) => this.embed(request)));
     },
   };
   const vectorStore: SessionMemoryQueryVectorStore = {
@@ -302,6 +305,9 @@ test("reuses cached question embeddings on repeated queries", async () => {
         dimensions: request.contract.dimensions,
       };
     },
+    async embedBatch(requests) {
+      return Promise.all(requests.map((request) => this.embed(request)));
+    },
   };
   const vectorStore: SessionMemoryQueryVectorStore = {
     ensure: () => ({ available: true }),
@@ -355,6 +361,9 @@ test("degrades when query embedding provider fails on a cache miss", async () =>
       async embed() {
         throw new Error("provider unavailable");
       },
+      async embedBatch() {
+        throw new Error("provider unavailable");
+      },
     },
     limit: 5,
     vector_store: {
@@ -378,6 +387,9 @@ function fixedProvider(): EmbeddingProviderClient {
         model: request.contract.model,
         dimensions: request.contract.dimensions,
       };
+    },
+    async embedBatch(requests) {
+      return Promise.all(requests.map((request) => this.embed(request)));
     },
   };
 }

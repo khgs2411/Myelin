@@ -1,95 +1,5 @@
-import type {
-  ProjectMemoryCuratorOutput,
-  ProjectMemoryEvidenceRef,
-  ProjectMemoryLifecycleIntent,
-  ProjectMemoryMaintenanceProposalItem,
-  ProjectMemoryRepoCitation,
-  ProjectMemoryRisk,
-} from "./project-memory-curator-contracts.ts";
 import type { ProjectMemoryAgentCandidateDisposition } from "./project-memory-agent-contracts.ts";
 import type { ProjectMemoryPacket } from "./project-memory-packet.ts";
-
-export type ProjectMemoryApplyPayload = {
-  schema_version: 1;
-  entries?: ProjectMemoryEntryDraft[];
-  pages?: ProjectMemoryPageDraft[];
-  section?: ProjectMemorySectionDraft | null;
-  page?: ProjectMemoryPageDraft | null;
-};
-
-export type ProjectMemoryEntryDraft = {
-  entry_id: string;
-  title: string;
-  body: ProjectMemoryMarkdownLines;
-  lifecycle: ProjectMemoryLifecycleIntent;
-  evidence_refs: ProjectMemoryEvidenceRef[];
-  repo_citations: ProjectMemoryRepoCitation[];
-  inference?: ProjectMemoryInferenceLabel;
-  applicability?: ProjectMemoryApplicability;
-};
-
-export type ProjectMemoryPageDraft = {
-  page_path: string;
-  title: string;
-  purpose: string;
-  sections: ProjectMemorySectionDraft[];
-  evidence_refs: ProjectMemoryEvidenceRef[];
-  repo_citations: ProjectMemoryRepoCitation[];
-  inference?: ProjectMemoryInferenceLabel;
-};
-
-export type ProjectMemorySectionDraft = {
-  heading: string;
-  level: number;
-  body: ProjectMemoryMarkdownLines;
-  evidence_refs: ProjectMemoryEvidenceRef[];
-  repo_citations: ProjectMemoryRepoCitation[];
-  inference?: ProjectMemoryInferenceLabel;
-};
-
-export type ProjectMemoryMarkdownLines = {
-  paragraphs: string[];
-  bullets?: string[];
-  warnings?: string[];
-};
-
-export type ProjectMemoryInferenceLabel = {
-  label: string;
-  basis?: string;
-  why_direct_repo_evidence_is_unavailable: string;
-};
-
-export type ProjectMemoryApplicability = {
-  branches?: string[];
-  repo_paths?: string[];
-  commands?: string[];
-  notes?: string;
-};
-
-export type ProjectMemoryApplicableMaintenanceItem = ProjectMemoryMaintenanceProposalItem & {
-  apply_payload: ProjectMemoryApplyPayload;
-};
-
-export type ProjectMemoryApplyInput = {
-  root: string;
-  project_key: string;
-  packet: ProjectMemoryPacket;
-  curator_output: ProjectMemoryCuratorOutput;
-  validation: {
-    ok: true;
-    mode: "create" | "maintain";
-    eligible_item_ids?: string[];
-  };
-  selection:
-    | { mode: "create"; page_ids: string[] }
-    | { mode: "maintain"; item_ids: string[] };
-  run_dir: string;
-  absolute_run_dir: string;
-  journal_path: string;
-  staged_outputs_dir: string;
-  dry_run: false;
-  review: false;
-};
 
 export type ProjectMemoryApplyResult = {
   status: "applied" | "skipped" | "failed";
@@ -138,34 +48,15 @@ export type ProjectMemoryChangeset = {
   curator_output_ref: string;
   validation_ref: "curator-validation.json";
   applied_at: string;
-  risk: ProjectMemoryRisk;
+  risk: {
+    level: "low" | "medium" | "high";
+    reasons: string[];
+    requires_quarantine: boolean;
+  };
   file_changes: ProjectMemoryAppliedFileChange[];
-  page_changes: ProjectMemoryAppliedPageChange[];
-  item_changes: ProjectMemoryAppliedItemChange[];
+  page_changes: unknown[];
+  item_changes: unknown[];
   source_consumptions: ProjectMemorySourceConsumptionRecord[];
-};
-
-export type ProjectMemoryAppliedPageChange = {
-  page_id: string;
-  operation: "create" | "adopt" | "rewrite";
-  target_page: string;
-  before_snippet?: ProjectMemoryBoundedSnippet;
-  after_snippet: ProjectMemoryBoundedSnippet;
-  evidence_refs: ProjectMemoryEvidenceRef[];
-  repo_citations: ProjectMemoryRepoCitation[];
-  inference?: ProjectMemoryInferenceLabel;
-};
-
-export type ProjectMemoryAppliedItemChange = {
-  item_id: string;
-  operation: ProjectMemoryMaintenanceProposalItem["operation"];
-  target_page: string;
-  entry_id?: string;
-  before_snippet?: ProjectMemoryBoundedSnippet;
-  after_snippet?: ProjectMemoryBoundedSnippet;
-  evidence_refs: ProjectMemoryEvidenceRef[];
-  repo_citations: ProjectMemoryRepoCitation[];
-  inference?: ProjectMemoryInferenceLabel;
 };
 
 export type ProjectMemoryApplyJournal = {
@@ -201,14 +92,6 @@ export type ProjectMemoryObservedPromotion = {
   canonical_path: string;
   after_sha256: string;
   promoted_at: string;
-};
-
-export type ProjectMemoryBoundedSnippet = {
-  path: string;
-  anchor: string;
-  sha256: string;
-  text: string;
-  truncated: boolean;
 };
 
 export type ProjectMemorySourceConsumptionRecord = {

@@ -1,7 +1,6 @@
 import type { Database } from "bun:sqlite";
 import type { ActiveEmbeddingContract } from "../runtime/config.ts";
-import type { EmbeddingProviderClient } from "./embedding-provider.ts";
-import type { SessionMemoryKind, SessionMemoryRow, SessionMemoryStatus } from "./ingest-types.ts";
+import type { SessionMemoryRow } from "./ingest-types.ts";
 import { ensureSessionMemoryVectorStorage } from "./session-memory-embeddings.ts";
 import {
   createSqliteVecAdapter,
@@ -14,71 +13,25 @@ import { recordMemoryQueryLog } from "./query-logs.ts";
 import {
   listSessionMemoryContexts,
   sessionMemoryHasBranchContext,
-  type SessionMemoryContextRow,
 } from "./session-memory-contexts.ts";
-
-export type SessionMemoryQueryFilters = {
-  memory_kind?: SessionMemoryKind[];
-  git_branch?: string;
-  status?: SessionMemoryStatus[];
-};
-
-export type SessionMemoryQueryMatch = {
-  id: string;
-  memory_kind: SessionMemoryKind;
-  title: string | null;
-  summary: string;
-  payload: Record<string, unknown>;
-  source_event_refs: string[];
-  contexts: SessionMemoryContextRow[];
-  created_at: string;
-  updated_at: string;
-  distance: number;
-};
-
-export type SessionMemoryQueryResult = {
-  project_key: string;
-  question: string;
-  query_log_id?: string;
-  degraded: boolean;
-  degraded_reason?: string;
-  indexed_count: number;
-  pending_count: number;
-  query_embedding_cache_hit?: boolean;
-  query_embedding_cache_id?: string;
-  normalized_question?: string;
-  matches: SessionMemoryQueryMatch[];
-  source_tools: string[];
-};
-
-export type SessionMemoryQueryVectorStore = {
-  ensure: (
-    db: Database,
-    input: { contract: ActiveEmbeddingContract },
-  ) => { available: boolean; reason?: string };
-  search: (
-    db: Database,
-    input: {
-      project_key: string;
-      contract: ActiveEmbeddingContract;
-      embedding: number[];
-      limit: number;
-    },
-  ) => SessionMemoryVectorMatch[];
-};
+import type {
+  SessionMemoryQueryFilters,
+  SessionMemoryQueryInput,
+  SessionMemoryQueryMatch,
+  SessionMemoryQueryResult,
+  SessionMemoryQueryVectorStore,
+} from "./session-memory-query-types.ts";
+export type {
+  SessionMemoryQueryFilters,
+  SessionMemoryQueryInput,
+  SessionMemoryQueryMatch,
+  SessionMemoryQueryResult,
+  SessionMemoryQueryVectorStore,
+} from "./session-memory-query-types.ts";
 
 export async function querySessionMemory(
   db: Database,
-  input: {
-    project_key: string;
-    question: string;
-    document_contract: ActiveEmbeddingContract;
-    provider: EmbeddingProviderClient;
-    limit: number;
-    filters?: SessionMemoryQueryFilters;
-    vector_store?: SessionMemoryQueryVectorStore;
-    now?: () => string;
-  },
+  input: SessionMemoryQueryInput,
 ): Promise<SessionMemoryQueryResult> {
   const vectorStore = input.vector_store ?? defaultSessionMemoryQueryVectorStore(createSqliteVecAdapter());
   const counts = indexCounts(db, {

@@ -19,49 +19,17 @@ import {
 } from "./codex.ts";
 import { ProviderRegistry } from "./provider-registry.ts";
 import type {
+  InstallFailurePoint,
+  InstallInput,
   InstallJournalV1,
+  InstallResult,
+  InstallServiceDeps,
   MachineInstallAction,
   MachineInstallOperation,
   MachineInstallPlan,
+  UninstallInput,
 } from "./types.ts";
-
-export type InstallFailurePoint =
-  | "before_launcher_promotion"
-  | "after_launcher_promotion"
-  | "before_locator_promotion";
-
-export type InstallServiceDeps = {
-  myelinRoot: string;
-  homeDir?: string;
-  binDir?: string;
-  locatorPath?: string;
-  journalPath?: string;
-  env?: NodeJS.ProcessEnv;
-  now?: () => Date;
-  sourceRevision?: string | null;
-  failAt?: (point: InstallFailurePoint) => void | Promise<void>;
-  codexRoot?: string;
-  detectedProviders?: string[];
-  supportedProviders?: string[];
-};
-
-export type InstallInput = {
-  apply: boolean;
-  rebind: boolean;
-  binDir: string | null;
-  commandOnly: boolean;
-  providers: string[];
-};
-
-export type UninstallInput = {
-  apply: boolean;
-  providers: string[];
-};
-
-export type InstallResult = {
-  mode: "preview" | "apply";
-  plan: MachineInstallPlan;
-};
+export type { InstallFailurePoint, InstallInput, InstallResult, InstallServiceDeps, UninstallInput } from "./types.ts";
 
 export class InstallService {
   constructor(private readonly deps: InstallServiceDeps) {}

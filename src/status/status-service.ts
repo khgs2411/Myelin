@@ -4,7 +4,7 @@ import { realpath } from "node:fs/promises";
 import { discoverProjects, findProject, type Project } from "../runtime/projects.ts";
 import { loadConfig } from "../runtime/config.ts";
 import { isProcessAlive } from "../ingest/runtime.ts";
-import { EvidenceRegistry, type OperationalStatusResult, type ProjectMemoryStatusSection, type SessionMemoryStatusSection, type StatusWarning } from "./contracts.ts";
+import { EvidenceRegistry, type OperationalStatusResult, type ProjectMemoryStatusSection, type SessionMemoryStatusSection } from "./contracts.ts";
 import { inspectInstallation } from "./installation-inspector.ts";
 import { inspectProjectMemory } from "./project-memory-inspector.ts";
 import { inspectSessionMemory, openStatusDatabase } from "./session-memory-inspector.ts";

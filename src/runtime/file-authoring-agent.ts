@@ -2,7 +2,8 @@ import { createHash } from "node:crypto";
 import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { Provider, Workload } from "./config.ts";
-import { resolveInvocation, type ProcessRunner } from "./llm-client.ts";
+import { resolveInvocation } from "./llm-client.ts";
+import type { ProcessRunner } from "./llm-contracts.ts";
 import { runProcess } from "./process.ts";
 
 export const FILE_AUTHORING_AGENT_RESULT = "file-authoring-agent-result.json" as const;

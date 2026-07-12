@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
 import type { Database } from "bun:sqlite";
 import type { ActiveEmbeddingContract } from "../runtime/config.ts";
-import type { EmbeddingProviderClient, EmbeddingResult } from "./embedding-provider.ts";
+import type { EmbeddingTransport } from "./embedding-types.ts";
+import { EmbeddingService } from "./embedding-service.ts";
+import { executeEmbeddingBatches } from "./embedding-batch-executor.ts";
 import {
   extractProjectMemorySections,
   writeProjectMemorySectionManifest,
@@ -21,42 +23,23 @@ import {
   type ProjectMemoryRetrievalEmbeddingRow,
 } from "./project-memory-retrieval-storage.ts";
 import { normalizeProjectMemorySectionForEmbedding } from "./project-memory-retrieval-text.ts";
+import type {
+  ProjectMemoryRetrievalIndexFailure,
+  ProjectMemoryRetrievalIndexResult,
+  ProjectMemoryRetrievalVectorStore,
+} from "./project-memory-retrieval-index-types.ts";
 import { upsertProjectMemorySectionFtsRow } from "./project-memory-section-fts.ts";
 import {
   createSqliteVecAdapter,
   ensureProjectMemoryRetrievalVectorTable,
   upsertProjectMemoryRetrievalVector,
-  type ProjectMemoryRetrievalVectorInput,
   type SqliteVecAdapter,
 } from "./sqlite-vec.ts";
-
-export type ProjectMemoryRetrievalIndexFailure = {
-  retrieval_row_id: string;
-  wiki_path: string;
-  section_id: string;
-  reason: string;
-};
-
-export type ProjectMemoryRetrievalIndexResult = {
-  project_key: string;
-  structural_sections_seen: number;
-  hints_valid: number;
-  hints_stale: number;
-  hints_orphaned: number;
-  selected: number;
-  indexed: number;
-  failed: number;
-  pending_remaining: number;
-  degraded: boolean;
-  batch_size: number;
-  degraded_reason?: string;
-  failures: ProjectMemoryRetrievalIndexFailure[];
-};
-
-export type ProjectMemoryRetrievalVectorStore = {
-  ensure: (db: Database, input: { contract: ActiveEmbeddingContract }) => { available: boolean; reason?: string };
-  upsert: (db: Database, input: ProjectMemoryRetrievalVectorInput) => void;
-};
+export type {
+  ProjectMemoryRetrievalIndexFailure,
+  ProjectMemoryRetrievalIndexResult,
+  ProjectMemoryRetrievalVectorStore,
+} from "./project-memory-retrieval-index-types.ts";
 
 type PreparedEmbeddingEntry = {
   row: ProjectMemoryRetrievalEmbeddingRow;
@@ -71,7 +54,7 @@ export async function indexProjectMemoryRetrieval(
     root: string;
     project_key: string;
     contract: ActiveEmbeddingContract;
-    provider: EmbeddingProviderClient;
+    provider: EmbeddingTransport;
     limit: number;
     batch_size?: number;
     retry_failed?: boolean;
@@ -80,6 +63,12 @@ export async function indexProjectMemoryRetrieval(
   },
 ): Promise<ProjectMemoryRetrievalIndexResult> {
   const now = input.now ?? (() => new Date().toISOString());
+  const embeddingPurpose = input.contract.purpose;
+  if (embeddingPurpose !== "retrieval_document") {
+    throw new Error(
+      `Project Memory retrieval indexing requires retrieval_document embeddings, got ${input.contract.purpose}`,
+    );
+  }
   const batchSize = input.batch_size ?? input.limit;
   if (!Number.isInteger(batchSize) || batchSize <= 0) throw new Error(`Invalid embedding batch size: ${batchSize}`);
 
@@ -158,7 +147,6 @@ export async function indexProjectMemoryRetrieval(
     });
   }
 
-  let indexed = 0;
   const entries: PreparedEmbeddingEntry[] = [];
   for (const row of rows) {
     const section = sectionByRowId.get(row.id) ?? findSectionForRow(manifest.sections, row);
@@ -177,47 +165,17 @@ export async function indexProjectMemoryRetrieval(
     });
   }
 
-  for (const chunk of chunks(entries, batchSize)) {
-    let embeddings: EmbeddingResult[];
-    try {
-      embeddings =
-        input.provider.embedBatch && chunk.length > 1
-          ? await input.provider.embedBatch(
-              chunk.map((entry) => ({
-                contract: input.contract,
-                title: entry.section.page_title,
-                text: entry.normalizedText,
-              })),
-            )
-          : await Promise.all(
-              chunk.map((entry) =>
-                input.provider.embed({
-                  contract: input.contract,
-                  title: entry.section.page_title,
-                  text: entry.normalizedText,
-                }),
-              ),
-            );
-      if (embeddings.length !== chunk.length) {
-        throw new Error(`Embedding batch result count mismatch: expected ${chunk.length}, got ${embeddings.length}`);
-      }
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      for (const entry of chunk) {
-        markFailed(db, entry.row, sectionByRowId, reason, now(), failures);
-      }
-      continue;
-    }
-
-    for (let index = 0; index < chunk.length; index += 1) {
-      const entry = chunk[index];
-      const embedding = embeddings[index];
-      try {
-        if (embedding.dimensions !== input.contract.dimensions) {
-          throw new Error(
-            `Embedding dimensions mismatch: expected ${input.contract.dimensions}, got ${embedding.dimensions}`,
-          );
-        }
+  const indexed = await executeEmbeddingBatches({
+    entries,
+    batchSize,
+    contract: input.contract,
+    provider: EmbeddingService.bind(input.contract, input.provider),
+    requestFor: (entry) => ({
+      contract: input.contract,
+      title: entry.section.page_title,
+      text: entry.normalizedText,
+    }),
+    onSuccess: (entry, embedding) => {
         const indexedAt = now();
         db.transaction(() => {
           vectorStore.upsert(db, {
@@ -227,7 +185,7 @@ export async function indexProjectMemoryRetrieval(
             section_id: entry.row.section_id,
             embedding_model: input.contract.model,
             embedding_dimensions: input.contract.dimensions,
-            embedding_purpose: "retrieval_document",
+            embedding_purpose: embeddingPurpose,
             format_version: input.contract.formatVersion,
             embedding: embedding.embedding,
           });
@@ -242,12 +200,9 @@ export async function indexProjectMemoryRetrieval(
             section: entry.section,
           });
         })();
-        indexed += 1;
-      } catch (error) {
-        markFailed(db, entry.row, sectionByRowId, error instanceof Error ? error.message : String(error), now(), failures);
-      }
-    }
-  }
+    },
+    onFailure: (entry, reason) => markFailed(db, entry.row, sectionByRowId, reason, now(), failures),
+  });
 
   return resultFor({
     db,
@@ -383,14 +338,6 @@ function findSectionForRow(
 
 function isIndexableProjectMemorySection(section: ProjectMemoryMarkdownSection): boolean {
   return section.heading_level > 1;
-}
-
-function chunks<T>(values: T[], size: number): T[][] {
-  const result: T[][] = [];
-  for (let index = 0; index < values.length; index += size) {
-    result.push(values.slice(index, index + size));
-  }
-  return result;
 }
 
 function markFailed(

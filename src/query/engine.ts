@@ -2,9 +2,10 @@ import { openMemoryDb } from "../memory/db.ts";
 import { EmbeddingProviderFactory } from "../memory/embedding-provider-factory.ts";
 import { loadConfig } from "../runtime/config.ts";
 import { currentGitBranch, resolveIngestTargetRepo } from "../ingest/runtime.ts";
-import { MemoryQueryService, type QueryResponse } from "./memory-query-service.ts";
+import { MemoryQueryService } from "./memory-query-service.ts";
+import type { QueryResponse } from "./memory-query-contracts.ts";
 
-export type { FacadeResponse, QueryLayerDiagnostic, QueryResponse } from "./memory-query-service.ts";
+export type { FacadeResponse, QueryLayerDiagnostic, QueryResponse } from "./memory-query-contracts.ts";
 
 export async function queryMemory(options: {
   root: string;

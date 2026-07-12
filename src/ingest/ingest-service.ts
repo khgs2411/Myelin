@@ -1,66 +1,32 @@
-import { createIngestJob, getIngestJob, updateIngestJobStatus } from "./jobs.ts";
-import { readIngestProjectStatus, type IngestProjectStatus } from "./status.ts";
+import { createIngestJob, getIngestJob } from "./jobs.ts";
+import { readIngestProjectStatus } from "./status.ts";
 import {
   launchDetachedIngestWorker,
   readCurrentGitBranch,
   refreshDetachedIngestJobStatus,
   resolveIngestTargetRepo,
-  type DetachedSpawner,
-  type ProcessLivenessChecker,
-  type RuntimeProcessRunner,
 } from "./runtime.ts";
 import { runIngestWorker } from "./worker.ts";
 import { openMemoryDb } from "../memory/db.ts";
 import { countExperienceEvents } from "../memory/experience.ts";
 import type { IngestJobRow } from "../memory/ingest-types.ts";
-import { loadConfig } from "../runtime/config.ts";
+import { loadConfig, MAX_INGEST_BATCH_SIZE } from "../runtime/config.ts";
 import { createId } from "../runtime/ids.ts";
 import { findProject } from "../runtime/projects.ts";
-import type { LaunchContext } from "../runtime/launch-context.ts";
+import type {
+  IngestServiceDeps,
+  IngestStatusResult,
+  StartIngestInput,
+  StartIngestResult,
+} from "./ingest-service-contracts.ts";
 
-export type IngestProvider = "codex" | "claude";
-
-export type IngestServiceDeps = {
-  now?: () => Date;
-  runner?: RuntimeProcessRunner;
-  spawn?: DetachedSpawner;
-  isProcessAlive?: ProcessLivenessChecker;
-  runWorker?: typeof runIngestWorker;
-  context?: LaunchContext;
-};
-
-export type StartIngestInput = {
-  projectKey: string;
-  limit?: number;
-  batchSize?: number;
-  provider: IngestProvider;
-};
-
-export type StartIngestResult =
-  | {
-      kind: "no_work";
-      project_key: string;
-      queued_count: number;
-      batch_size: number;
-      target_branch: string | null;
-      jobs: IngestJobRow[];
-    }
-  | {
-      kind: "started";
-      project_key: string;
-      queued_count: number;
-      selected_count: number;
-      batch_size: number;
-      batch_count: number;
-      target_branch: string | null;
-      job: IngestJobRow;
-      jobs: IngestJobRow[];
-      launches: Array<Awaited<ReturnType<typeof launchDetachedIngestWorker>>>;
-    };
-
-export type IngestStatusResult =
-  | { kind: "project"; status: IngestProjectStatus }
-  | { kind: "job"; job: IngestJobRow };
+export type {
+  IngestProvider,
+  IngestServiceDeps,
+  IngestStatusResult,
+  StartIngestInput,
+  StartIngestResult,
+} from "./ingest-service-contracts.ts";
 
 export class IngestService {
   constructor(
@@ -69,11 +35,14 @@ export class IngestService {
   ) {}
 
   async start(input: StartIngestInput): Promise<StartIngestResult> {
+    assertPositiveInteger("ingest limit", input.limit);
+
     const db = openMemoryDb(this.root);
     const now = this.now();
     try {
       const config = await loadConfig(this.root);
       const batchSize = input.batchSize ?? config.ingest.batchSize;
+      assertPositiveInteger("ingest batch size", batchSize, MAX_INGEST_BATCH_SIZE);
       const targetRepo = await resolveIngestTargetRepo(this.root, input.projectKey);
       const targetBranch = await readCurrentGitBranch(targetRepo, this.deps.runner);
 
@@ -131,6 +100,9 @@ export class IngestService {
         launches.push(launched);
       }
 
+      const firstJob = jobs[0];
+      if (!firstJob) throw new Error("Ingest started without creating a job");
+
       return {
         kind: "started",
         project_key: input.projectKey,
@@ -139,7 +111,7 @@ export class IngestService {
         batch_size: batchSize,
         batch_count: batchCount,
         target_branch: targetBranch,
-        job: jobs[0],
+        job: firstJob,
         jobs,
         launches,
       };
@@ -228,4 +200,12 @@ export class IngestService {
 async function sleep(ms: number): Promise<void> {
   if (!Number.isFinite(ms) || ms <= 0) return;
   await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function assertPositiveInteger(name: string, value: number | undefined, maximum?: number): void {
+  if (value === undefined) return;
+  if (!Number.isInteger(value) || value <= 0 || (maximum !== undefined && value > maximum)) {
+    const expected = maximum === undefined ? "a positive integer" : `an integer between 1 and ${maximum}`;
+    throw new Error(`Invalid ${name}: ${value}. Expected ${expected}`);
+  }
 }

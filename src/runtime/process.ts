@@ -1,18 +1,10 @@
-export type RunProcessOptions = {
-  cwd?: string;
-  env?: Record<string, string | undefined>;
-  stdin?: string;
-  timeoutMs?: number;
-};
+import type { RunProcessOptions, RunProcessResult } from "./process-contracts.ts";
 
-export type RunProcessResult = {
-  exitCode: number;
-  stdout: string;
-  stderr: string;
-};
+export type { RunProcessOptions, RunProcessResult } from "./process-contracts.ts";
 
 export async function runProcess(command: string[], options: RunProcessOptions = {}): Promise<RunProcessResult> {
   if (command.length === 0) throw new Error("Command must not be empty");
+  const killGraceMs = normalizeKillGraceMs(options.killGraceMs);
 
   const proc = Bun.spawn(command, {
     cwd: options.cwd,
@@ -22,31 +14,66 @@ export async function runProcess(command: string[], options: RunProcessOptions =
     stderr: "pipe",
   });
   let timedOut = false;
+  let terminationStarted = false;
+  let forceKill: ReturnType<typeof setTimeout> | null = null;
+  const terminate = (): void => {
+    if (terminationStarted) return;
+    terminationStarted = true;
+    try {
+      proc.kill("SIGTERM");
+    } catch {
+      // The process may already have exited.
+    }
+    forceKill = setTimeout(() => {
+      try {
+        proc.kill("SIGKILL");
+      } catch {
+        // The process may have exited between the grace timer firing and kill.
+      }
+    }, killGraceMs);
+  };
   const timeout =
     options.timeoutMs !== undefined && Number.isFinite(options.timeoutMs) && options.timeoutMs > 0
       ? setTimeout(() => {
           timedOut = true;
-          proc.kill();
+          terminate();
         }, options.timeoutMs)
       : null;
 
-  if (options.stdin !== undefined) {
-    const stdin = proc.stdin;
-    if (!stdin) throw new Error("Process stdin pipe was not created");
-    stdin.write(options.stdin);
-    stdin.end();
-  }
+  let stdout: string;
+  let stderr: string;
+  let exitCode: number;
+  try {
+    if (options.stdin !== undefined) {
+      const stdin = proc.stdin;
+      if (!stdin) throw new Error("Process stdin pipe was not created");
+      stdin.write(options.stdin);
+      stdin.end();
+    }
 
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
-  if (timeout) clearTimeout(timeout);
+    [stdout, stderr, exitCode] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+  } catch (error) {
+    terminate();
+    await proc.exited.catch(() => undefined);
+    throw error;
+  } finally {
+    if (timeout) clearTimeout(timeout);
+    if (forceKill) clearTimeout(forceKill);
+  }
 
   if (!timedOut) return { exitCode, stdout, stderr };
   const timeoutMessage = `Process timed out after ${options.timeoutMs}ms`;
   return { exitCode: 124, stdout, stderr: stderr ? `${stderr.trimEnd()}\n${timeoutMessage}` : timeoutMessage };
+}
+
+function normalizeKillGraceMs(value: number | undefined): number {
+  if (value === undefined) return 1_000;
+  if (!Number.isFinite(value) || value < 0) throw new Error("killGraceMs must be a non-negative finite number");
+  return value;
 }
 
 export async function runProcessChecked(command: string[], options: RunProcessOptions = {}): Promise<string> {

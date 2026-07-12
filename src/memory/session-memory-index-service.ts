@@ -1,25 +1,22 @@
 import type { Database } from "bun:sqlite";
-import type { EmbeddingProviderClient } from "./embedding-provider.ts";
+import type { EmbeddingTransport } from "./embedding-types.ts";
 import {
   indexSessionMemories,
-  type SessionMemoryIndexResult,
-  type SessionMemoryVectorStore,
 } from "./session-memory-indexer.ts";
 import type { ActiveEmbeddingContract } from "../runtime/config.ts";
-
-export type SessionMemoryIndexInput = {
-  projectKey: string;
-  limit: number;
-  batchSize: number;
-  retryFailed: boolean;
-};
+import type {
+  SessionMemoryIndexInput,
+  SessionMemoryIndexResult,
+  SessionMemoryVectorStore,
+} from "./session-memory-index-types.ts";
+export type { SessionMemoryIndexInput } from "./session-memory-index-types.ts";
 
 export class SessionMemoryIndexService {
   constructor(
     private readonly deps: {
       db: Database;
       contract: ActiveEmbeddingContract;
-      provider: EmbeddingProviderClient;
+      provider: EmbeddingTransport;
       vectorStore?: SessionMemoryVectorStore;
     },
   ) {}

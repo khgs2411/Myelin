@@ -1,9 +1,7 @@
 import { cp, mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import type { Provider } from "../runtime/config.ts";
 import { resolveInside } from "../runtime/fs.ts";
 import { readJson, writeJson } from "../runtime/json.ts";
-import type { ProcessRunner } from "../runtime/llm-client.ts";
 import { invokeFileAuthoringAgent } from "../runtime/project-run-infrastructure.ts";
 import type { ProjectMemorySourceConsumptionRecord } from "./project-memory-apply-contracts.ts";
 import {
@@ -12,44 +10,18 @@ import {
   type ProjectMemoryMaintenanceDisposition,
   type ProjectMemoryMaintenanceReport,
 } from "./project-memory-agent-contracts.ts";
+import type {
+  ProjectMemoryMaintenanceModeInput,
+  ProjectMemoryMaintenanceModeResult,
+  ProjectMemoryMaintenancePendingSource,
+} from "./project-memory-agent-service-contracts.ts";
+export type {
+  ProjectMemoryMaintenanceModeInput,
+  ProjectMemoryMaintenanceModeResult,
+  ProjectMemoryMaintenancePendingSource,
+} from "./project-memory-agent-service-contracts.ts";
 
 const FILE_AUTHORING_TIMEOUT_MS = 600_000;
-
-export type ProjectMemoryMaintenancePendingSource = {
-  source_kind: "project_candidate" | "project_handoff";
-  source_ref: string;
-  title?: string | null;
-  summary: string;
-  priority?: string;
-  reason?: string;
-};
-
-export type ProjectMemoryMaintenanceModeInput = {
-  root: string;
-  projectKey: string;
-  runDir: string;
-  absoluteRunDir: string;
-  targetRepoDir: string;
-  baseWikiDir: string;
-  pendingSources: ProjectMemoryMaintenancePendingSource[];
-  provider?: Provider;
-  modelOverride?: string;
-  env?: NodeJS.ProcessEnv;
-  runner?: ProcessRunner;
-  now?: Date;
-};
-
-export type ProjectMemoryMaintenanceModeResult = {
-  status: "completed" | "noop" | "degraded" | "failed";
-  project_key: string;
-  draft_wiki_dir: string;
-  report: ProjectMemoryMaintenanceReport;
-  report_ref: "reports/documentation-maintenance-report.json";
-  file_authoring_run_ref?: "agents/maintenance/file-authoring-agent-result.json";
-  source_consumptions: ProjectMemorySourceConsumptionRecord[];
-  degraded_reasons: string[];
-  error?: string;
-};
 
 export async function runProjectMemoryMaintenanceMode(
   input: ProjectMemoryMaintenanceModeInput,
@@ -158,6 +130,7 @@ export function assertMaintenanceReport(
     assertDisposition(disposition);
     const ref = `${disposition.source_kind}:${disposition.source_ref}`;
     if (!pendingRefs.has(ref)) throw new Error(`maintenance report disposition references unknown source: ${ref}`);
+    if (seenRefs.has(ref)) throw new Error(`maintenance report has duplicate disposition for source: ${ref}`);
     seenRefs.add(ref);
   }
   for (const ref of pendingRefs) {

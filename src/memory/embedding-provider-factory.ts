@@ -6,15 +6,17 @@ import {
   type MyelinConfig,
 } from "../runtime/config.ts";
 import {
-  createGeminiEmbeddingProvider,
-  createOllamaEmbeddingClient,
-  createStubEmbeddingProvider,
   type EmbeddingClient,
   type FetchLike,
-} from "./embedding-provider.ts";
+} from "./embedding-types.ts";
+import { EmbeddingService } from "./embedding-service.ts";
+import { createGeminiEmbeddingProvider } from "./providers/gemini-embedding-provider.ts";
+import { createNomicEmbeddingProvider } from "./providers/nomic-embedding-provider.ts";
+import { createQwenEmbeddingProvider } from "./providers/qwen-embedding-provider.ts";
+import { createStubEmbeddingProvider } from "./providers/stub-embedding-provider.ts";
 
 export type ResolvedEmbeddingClient = {
-  client: EmbeddingClient;
+  client: EmbeddingService;
   contract: ActiveEmbeddingContract;
   fallbackReason?: string;
 };
@@ -27,9 +29,10 @@ export class EmbeddingProviderFactory {
       const provider = this.config.embedding.provider === "auto"
         ? "ollama_nomic"
         : this.config.embedding.provider;
+      const contract = selectEmbeddingContract(this.config, provider, purpose);
       return {
-        client: createStubEmbeddingProvider(this.config.embedding.stubResponsesDir),
-        contract: selectEmbeddingContract(this.config, provider, purpose),
+        client: new EmbeddingService(contract, createStubEmbeddingProvider(this.config.embedding.stubResponsesDir)),
+        contract,
       };
     }
 
@@ -38,9 +41,10 @@ export class EmbeddingProviderFactory {
     for (const client of candidates) {
       const initialized = await client.initialize();
       if (initialized.available) {
+        const contract = selectEmbeddingContract(this.config, client.provider, purpose);
         return {
-          client,
-          contract: selectEmbeddingContract(this.config, client.provider, purpose),
+          client: new EmbeddingService(contract, client),
+          contract,
           fallbackReason: unavailable.length === 0 ? undefined : unavailable.join("; "),
         };
       }
@@ -50,16 +54,12 @@ export class EmbeddingProviderFactory {
   }
 
   private candidates(): Array<EmbeddingClient & { provider: EmbeddingProvider }> {
-    const nomic = createOllamaEmbeddingClient({
-      provider: "ollama_nomic",
-      priority: 1,
+    const nomic = createNomicEmbeddingProvider({
       baseUrl: this.config.embedding.ollamaUrl,
       ...this.config.embedding.providers.ollama_nomic,
       fetch: this.fetch,
     });
-    const qwen = createOllamaEmbeddingClient({
-      provider: "ollama_qwen",
-      priority: 2,
+    const qwen = createQwenEmbeddingProvider({
       baseUrl: this.config.embedding.ollamaUrl,
       ...this.config.embedding.providers.ollama_qwen,
       fetch: this.fetch,

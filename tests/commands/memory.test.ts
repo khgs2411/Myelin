@@ -13,7 +13,9 @@ import { createSessionMemoryContexts } from "../../src/memory/session-memory-con
 import { createSessionMemoryLink } from "../../src/memory/session-memory-links.ts";
 import { createSessionMemory, supersedeSessionMemory } from "../../src/memory/session-memories.ts";
 import { openMemoryDb } from "../../src/memory/db.ts";
-import { stubEmbeddingFilename, type EmbeddingRequest } from "../../src/memory/embedding-provider.ts";
+import type { EmbeddingRequest } from "../../src/memory/embedding-types.ts";
+import { stubEmbeddingFilename } from "../../src/memory/providers/stub-embedding-provider.ts";
+import { normalizeQueryQuestion } from "../../src/memory/query-embedding-cache.ts";
 import { markSessionMemoryEmbeddingIndexed } from "../../src/memory/session-memory-embeddings.ts";
 import { ensureSessionMemoryVectorStorage } from "../../src/memory/session-memory-embeddings.ts";
 import {
@@ -771,7 +773,7 @@ async function seedQueryMemoryFixture(question: string): Promise<void> {
   const queryContract = { ...DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT, purpose: "retrieval_query" as const };
   const request: EmbeddingRequest = {
     contract: queryContract,
-    text: question,
+    text: normalizeQueryQuestion(question),
   };
   await writeFile(
     join(stubDir, stubEmbeddingFilename(request)),
@@ -854,7 +856,7 @@ async function seedProjectMemoryQueryFixture(question: string): Promise<void> {
   const queryContract = { ...DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT, purpose: "retrieval_query" as const };
   const request: EmbeddingRequest = {
     contract: queryContract,
-    text: question,
+    text: normalizeQueryQuestion(question),
   };
   await writeFile(
     join(stubDir, stubEmbeddingFilename(request)),

@@ -60,6 +60,22 @@ test("IngestService starts workers on non-master and returns branch metadata", a
   expect(JSON.parse(result.job.input_json)).toMatchObject({ target_branch: "feature/refactor" });
 });
 
+test.each([
+  ["limit", { limit: 0 }, "Invalid ingest limit: 0. Expected a positive integer"],
+  ["negative limit", { limit: -1 }, "Invalid ingest limit: -1. Expected a positive integer"],
+  ["fractional limit", { limit: 1.5 }, "Invalid ingest limit: 1.5. Expected a positive integer"],
+  ["batch size", { batchSize: 0 }, "Invalid ingest batch size: 0. Expected an integer between 1 and 500"],
+  ["negative batch size", { batchSize: -1 }, "Invalid ingest batch size: -1. Expected an integer between 1 and 500"],
+  ["fractional batch size", { batchSize: 1.5 }, "Invalid ingest batch size: 1.5. Expected an integer between 1 and 500"],
+  ["oversized batch size", { batchSize: 501 }, "Invalid ingest batch size: 501. Expected an integer between 1 and 500"],
+] as const)("IngestService rejects an invalid %s at the service boundary", async (_name, input, message) => {
+  const service = new IngestService(root, {
+    runner: async () => ({ exitCode: 0, stdout: "master\n", stderr: "" }),
+  });
+
+  await expect(service.start({ projectKey: "demo", provider: "codex", ...input })).rejects.toThrow(message);
+});
+
 async function seedProject(): Promise<void> {
   const repo = join(root, "repos", "demo");
   await mkdir(repo, { recursive: true });

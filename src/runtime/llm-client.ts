@@ -3,39 +3,18 @@ import { existsSync, readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { loadConfig, type ModelProfile, type Provider, type Workload } from "./config.ts";
-import { type RunProcessOptions, type RunProcessResult, runProcess } from "./process.ts";
+import { runProcess } from "./process.ts";
+import type {
+  InvokeLlmOptions,
+  JsonObject,
+  LlmResult,
+  ProcessRunner,
+  TokenUsage,
+} from "./llm-contracts.ts";
+export type { InvokeLlmOptions, JsonObject, LlmResult, ProcessRunner, TokenUsage } from "./llm-contracts.ts";
 
 export const PROMPT_SIZE_LIMIT = 200_000;
 export const DEFAULT_LLM_TIMEOUT_MS = 10 * 60 * 1000;
-
-export type JsonObject = Record<string, unknown>;
-
-export type TokenUsage = {
-  input_chars: number;
-  output_chars: number;
-  is_estimate: boolean;
-};
-
-export type LlmResult = {
-  response: JsonObject;
-  tokens_consumed: TokenUsage;
-};
-
-export type InvokeLlmOptions = {
-  root?: string;
-  workload: Workload;
-  stageId?: string;
-  prompt: string;
-  outputSchema?: string;
-  provider?: Provider;
-  modelOverride?: string;
-  timeoutMs?: number;
-  env?: NodeJS.ProcessEnv;
-  cwd?: string;
-  runner?: ProcessRunner;
-};
-
-export type ProcessRunner = (command: string[], options?: RunProcessOptions) => Promise<RunProcessResult>;
 
 type ResolvedInvocation = {
   provider: Provider;

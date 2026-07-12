@@ -1,16 +1,10 @@
 import type { Database } from "bun:sqlite";
 import { openMemoryDb, type MemoryDb } from "./db.ts";
 import type { SessionMemoryRow, SessionMemoryStatus } from "./ingest-types.ts";
-import { listSessionMemoryContexts, type SessionMemoryContextRow } from "./session-memory-contexts.ts";
+import { listSessionMemoryContexts } from "./session-memory-contexts.ts";
 import type { SessionMemoryLinkRow } from "./session-memory-links.ts";
-
-export type SessionMemoryInspectRow = SessionMemoryRow & {
-  contexts: SessionMemoryContextRow[];
-};
-
-export type SessionMemoryInspectionServiceDeps = {
-  db?: Database;
-};
+import type { SessionMemoryInspectRow, SessionMemoryInspectionServiceDeps } from "./session-memory-inspection-contracts.ts";
+export type { SessionMemoryInspectRow, SessionMemoryInspectionServiceDeps } from "./session-memory-inspection-contracts.ts";
 
 export class SessionMemoryInspectionService {
   constructor(private readonly root: string, private readonly deps: SessionMemoryInspectionServiceDeps = {}) {}
@@ -94,4 +88,3 @@ export class SessionMemoryInspectionService {
     }
   }
 }
-

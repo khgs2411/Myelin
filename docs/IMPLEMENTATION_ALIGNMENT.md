@@ -191,27 +191,29 @@ Keep. Do not add advanced schema features until the desired memory artifacts are
 What exists:
 
 - `myelin memory query <key> "<question>"`.
-- Query fails closed when schema context is missing or invalid.
-- Query planner routes over `page-metadata.json` or `pages.json`.
+- Query routes explicitly to indexed Session Memory or Project Memory retrieval.
+- Query embedding cache, vector recall, Project Memory FTS fusion, and deterministic response shaping are separate boundaries.
 - Response envelope includes confidence, memory scope, citations, degradation, and optional route metadata.
 
 Code evidence:
 
 - `src/commands/memory.ts`
 - `src/query/engine.ts`
-- `src/query/planner.ts`
+- `src/query/memory-query-service.ts`
+- `src/query/project-memory-query-service.ts`
+- `src/memory/session-memory-query.ts`
 
 Alignment:
 
-Partially aligned. It points toward the V2 `query` facade but currently serves mostly `project_wiki`.
+Partially aligned. It provides the V2 query facade for Project Memory and Session Memory.
 
 Mismatch:
 
-The V2 interface should route across Project Memory, Session Memory, Practice Memory, Personal Memory, and project state. The current implementation mostly selects wiki pages from metadata.
+The V2 interface should eventually route across Practice Memory, Personal Memory, and project state in addition to the implemented Project and Session Memory layers.
 
 Verdict:
 
-Keep as a project-wiki query seed. Reframe as one backend for the future `query` facade, not the complete query product.
+Keep the current explicit layer routing and retrieval services as backends for the future multi-layer query facade.
 
 ### Status
 
@@ -262,57 +264,58 @@ instead of overloading the operational inspector.
 
 What exists:
 
-- `myelin project learn <key>` runs the Project Memory Curator pre-write flow.
+- `myelin project learn <key>` runs agent-authored Project Memory creation or maintenance.
 - Top-level `myelin ingest <key>` remains the Session Memory / Experience Log ingest command.
 - Project Memory Curator artifacts live under `projects/<key>/runs/project-learn/<run-id>/`.
-- Curator output is validated before any markdown write.
-- Markdown apply is not implemented in the current Project Memory Curator slice.
+- File-authoring agents write a draft wiki, and a journaled promotion step publishes it to canonical markdown.
+- Recovery fails closed when staged or already-promoted files drift.
 
 Code evidence:
 
 - `src/commands/project.ts`
 - `src/project/project-memory-curator-service.ts`
-- `src/project/project-memory-curator-validator.ts`
+- `src/project/project-memory-draft-promotion.ts`
+- `src/project/project-memory-markdown-applier.ts`
 - `src/runtime/project-run-infrastructure.ts`
 
 Alignment:
 
-This is now aligned with the pre-write Project Memory Curator boundary. It still stops before canonical markdown mutation.
+This is aligned with the agent-authored Project Memory boundary. Structured curator output schemas, deterministic quality gates, and entry-level markdown mutation were retired after the planner/writer flow became authoritative.
 
 Mismatch:
 
-The current apply stage records run artifacts and freshness state, but it does not perform meaningful curated wiki updates. The V2 product needs a pipeline that asks "what durable project knowledge changed?" and writes focused, provenance-backed Project Memory updates.
+The apply boundary promotes complete markdown documents rather than interpreting a second structured mutation language. Retrieval indexing remains derived state and runs after canonical publication.
 
 Verdict:
 
-Do not extend blindly. Revisit the learn/ingest model before adding more stages.
+Keep new Project Memory behavior on the agent-authored document path; do not reintroduce the retired structured-curator gates as a parallel pipeline.
 
-### Inbox And Gap Flow
+### Runtime Inbox And Candidate Intake
 
 What exists:
 
-- Typed inbox item writer.
-- Manual and MCP-created gap items.
-- Auto-update wrapper with lock/log behavior.
-- Existing MCP tools can flag stale answers, create inbox items, and enrich gaps.
+- Typed runtime inbox source-item writer.
+- CLI-created project-memory inbox items.
+- Deterministic intake into Project Memory candidates.
+- Optional detached Project Memory maintenance scheduling after source preservation.
 
 Code evidence:
 
-- `src/inbox/items.ts`
-- `src/inbox/auto-update.ts`
-- `docs/inbox-item-schema.md`
+- `src/inbox/runtime-inbox-items.ts`
+- `src/project/project-memory-candidate-intake-service.ts`
+- `src/maintenance/auto-project-memory-maintenance.ts`
 
 Alignment:
 
-Useful, but currently legacy-shaped. It maps well to Project Memory repair or candidate intake.
+Aligned with the V2 evidence-to-candidate boundary. Runtime inbox JSON remains preserved source material until deterministic intake records its terminal disposition.
 
 Mismatch:
 
-It is still framed around gap notes and auto-update behavior. V2 should generalize this as evidence/candidate intake, not just query repair.
+The runtime inbox is currently project-scoped; broader layer routing remains outside this slice.
 
 Verdict:
 
-Keep and reframe. This is likely valuable if renamed and routed through the V2 candidate model.
+Extend the runtime inbox contract when another producer needs preserved source intake; do not restore the retired low-confidence gap schema or detached `ingest` wrapper.
 
 ### SQLite Memory And Session CLI
 
@@ -388,7 +391,7 @@ Keep as foundation:
 
 Keep but reframe:
 
-- query planner and project-wiki query
+- Project Memory and Session Memory query backends
 - inbox/gap flow
 - status command
 - project wiki metadata

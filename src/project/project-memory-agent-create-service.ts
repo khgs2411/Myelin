@@ -1,7 +1,5 @@
 import { cp, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import type { Provider } from "../runtime/config.ts";
-import type { ProcessRunner } from "../runtime/llm-client.ts";
 import { invokeFileAuthoringAgent } from "../runtime/project-run-infrastructure.ts";
 import { readJson } from "../runtime/json.ts";
 import { resolveInside } from "../runtime/fs.ts";
@@ -10,38 +8,16 @@ import type {
   ProjectMemorySubjectManifestEntry,
   ProjectMemorySubjectReport,
 } from "./project-memory-agent-contracts.ts";
+import type {
+  ProjectMemoryCreateModeInput,
+  ProjectMemoryCreateModeResult,
+} from "./project-memory-agent-service-contracts.ts";
+export type {
+  ProjectMemoryCreateModeInput,
+  ProjectMemoryCreateModeResult,
+} from "./project-memory-agent-service-contracts.ts";
 
 const FILE_AUTHORING_TIMEOUT_MS = 600_000;
-
-export type ProjectMemoryCreateModeInput = {
-  root: string;
-  projectKey: string;
-  runDir: string;
-  absoluteRunDir: string;
-  targetRepoDir: string;
-  provider?: Provider;
-  modelOverride?: string;
-  env?: NodeJS.ProcessEnv;
-  runner?: ProcessRunner;
-  concurrency?: number;
-  now?: Date;
-};
-
-export type ProjectMemoryCreateModeResult = {
-  status: "completed" | "failed";
-  project_key: string;
-  draft_wiki_dir: string;
-  manifest: ProjectMemorySubjectManifest;
-  planner_report_ref: "reports/documentation-planner-report.json";
-  subject_manifest_ref: "reports/documentation-subject-manifest.json";
-  subject_reports: ProjectMemorySubjectReport[];
-  subject_report_refs: string[];
-  file_authoring_run_refs: string[];
-  pre_maintenance_wiki_ref: "pre-maintenance-wiki";
-  concurrency_limit: number;
-  retry_limit: 1;
-  error?: string;
-};
 
 export async function runProjectMemoryCreateMode(
   input: ProjectMemoryCreateModeInput,

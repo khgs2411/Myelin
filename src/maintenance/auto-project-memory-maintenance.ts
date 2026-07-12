@@ -1,7 +1,5 @@
 import type { Database } from "bun:sqlite";
-import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import type { DetachedSpawner, ProcessLivenessChecker } from "../ingest/runtime.ts";
+import { readdir } from "node:fs/promises";
 import { isProcessAlive, resolveIngestTargetRepo } from "../ingest/runtime.ts";
 import { openMemoryDb } from "../memory/db.ts";
 import { ProjectService } from "../project/project-service.ts";
@@ -9,80 +7,31 @@ import { loadConfig, type AutoProjectMemoryMaintenanceConfig } from "../runtime/
 import { projectPath } from "../runtime/fs.ts";
 import { createId } from "../runtime/ids.ts";
 import { prepareProjectLogFile, projectLogPath } from "../runtime/project-logs.ts";
-import type { LaunchContext } from "../runtime/launch-context.ts";
 import {
   backgroundInvocationEnv,
   backgroundLaunchContext,
   resolveMyelinCommandInvocation,
 } from "../runtime/command-invocation.ts";
+import {
+  type AutoProjectMemoryMaintenanceCounts,
+  type AutoProjectMemoryMaintenanceDeps,
+  type AutoProjectMemoryMaintenanceRunResult,
+  type AutoProjectMemoryMaintenanceScheduleResult,
+  type AutoProjectMemoryMaintenanceScheduler,
+  type AutoProjectMemoryMaintenanceState,
+  type AutoProjectMemoryMaintenanceTrigger,
+} from "./maintenance-contracts.ts";
+import { MaintenanceRunRuntime, spawnDetachedMaintenanceWorker } from "./maintenance-run-runtime.ts";
 
-export type AutoProjectMemoryMaintenanceTrigger = "runtime_inbox_created" | "session_memory_candidate_created";
-
-export type AutoProjectMemoryMaintenanceCounts = {
-  pending_inbox_items: number;
-  pending_project_candidates: number;
-};
-
-export type AutoProjectMemoryMaintenanceScheduleResult =
-  | { status: "disabled"; reason: string }
-  | { status: "skipped"; reason: string; counts?: AutoProjectMemoryMaintenanceCounts }
-  | {
-    status: "scheduled";
-    project_key: string;
-    run_id: string;
-    pid: number | null;
-    log_path: string;
-    trigger: AutoProjectMemoryMaintenanceTrigger;
-    counts: AutoProjectMemoryMaintenanceCounts;
-  };
-
-export type AutoProjectMemoryMaintenanceRunResult = {
-  status: "completed" | "failed";
-  project_key: string;
-  run_id: string;
-  maintenance_status?: string;
-  changed_files: string[];
-  counts_before: AutoProjectMemoryMaintenanceCounts;
-  counts_after: AutoProjectMemoryMaintenanceCounts;
-  error_message?: string;
-};
-
-export type AutoProjectMemoryMaintenanceState = {
-  project_key: string;
-  last_run_id?: string;
-  last_scheduled_at?: string;
-  last_started_at?: string;
-  last_finished_at?: string;
-  last_status?: "scheduled" | "running" | "completed" | "failed" | "skipped";
-  last_reason?: string;
-  last_trigger?: AutoProjectMemoryMaintenanceTrigger;
-  last_log_path?: string;
-  last_pid?: number | null;
-  last_counts?: Partial<AutoProjectMemoryMaintenanceCounts> & {
-    pending_inbox_items_after?: number;
-    pending_project_candidates_after?: number;
-  };
-};
-
-export type AutoProjectMemoryMaintenanceScheduler = {
-  maybeSchedule: (
-    projectKey: string,
-    trigger: AutoProjectMemoryMaintenanceTrigger,
-  ) => Promise<AutoProjectMemoryMaintenanceScheduleResult>;
-};
-
-type AutoProjectMemoryMaintenanceDeps = {
-  now?: () => Date;
-  spawn?: DetachedSpawner;
-  isProcessAlive?: ProcessLivenessChecker;
-  runMaintenance?: (projectKey: string) => Promise<{ status: string; changed_files?: string[]; stopped_reason?: string }>;
-  context?: LaunchContext;
-};
-
-type LockHandle = {
-  runId: string;
-  release: () => Promise<void>;
-};
+export type {
+  AutoProjectMemoryMaintenanceCounts,
+  AutoProjectMemoryMaintenanceDeps,
+  AutoProjectMemoryMaintenanceRunResult,
+  AutoProjectMemoryMaintenanceScheduleResult,
+  AutoProjectMemoryMaintenanceScheduler,
+  AutoProjectMemoryMaintenanceState,
+  AutoProjectMemoryMaintenanceTrigger,
+} from "./maintenance-contracts.ts";
 
 export class AutoProjectMemoryMaintenanceService implements AutoProjectMemoryMaintenanceScheduler {
   constructor(
@@ -121,7 +70,7 @@ export class AutoProjectMemoryMaintenanceService implements AutoProjectMemoryMai
     projectKey: string,
     runId = process.env.MYELIN_AUTO_PROJECT_MEMORY_RUN_ID ?? `auto_project_memory_${createId()}`,
   ): Promise<AutoProjectMemoryMaintenanceRunResult> {
-    const lock = await adoptOrAcquireLock(this.root, projectKey, runId, this.now());
+    const lock = await this.runtime(projectKey).adoptOrAcquireLock(runId);
     if (!lock) {
       return {
         status: "failed",
@@ -207,9 +156,10 @@ export class AutoProjectMemoryMaintenanceService implements AutoProjectMemoryMai
     counts: AutoProjectMemoryMaintenanceCounts,
   ): Promise<AutoProjectMemoryMaintenanceScheduleResult> {
     const runId = `auto_project_memory_${createId()}`;
-    let lock = await tryAcquireLock(this.root, projectKey, runId, this.now());
-    if (!lock && await this.clearDeadLock(projectKey)) {
-      lock = await tryAcquireLock(this.root, projectKey, runId, this.now());
+    const runtime = this.runtime(projectKey);
+    let lock = await runtime.tryAcquireLock(runId);
+    if (!lock && await runtime.clearDeadLock("Detached auto project memory maintenance worker PID is no longer running.")) {
+      lock = await runtime.tryAcquireLock(runId);
     }
     if (!lock) return this.skip(projectKey, "project memory maintenance already locked", { counts, trigger, preserveActiveState: true });
 
@@ -223,13 +173,11 @@ export class AutoProjectMemoryMaintenanceService implements AutoProjectMemoryMai
         context: this.deps.context,
       });
       const spawn = this.deps.spawn ?? ((options) => Bun.spawn(options));
-      const proc = spawn({
-        cmd: resolveMyelinCommandInvocation(context, ["maintenance", "worker", "project", projectKey]),
+      const proc = spawnDetachedMaintenanceWorker({
+        spawn,
+        command: resolveMyelinCommandInvocation(context, ["maintenance", "worker", "project", projectKey]),
         cwd: targetRepo,
-        stdout: Bun.file(logPath),
-        stderr: Bun.file(logPath),
-        stdin: "ignore",
-        detached: true,
+        logPath,
         env: {
           ...process.env,
           ...backgroundInvocationEnv(context, "worker"),
@@ -238,7 +186,6 @@ export class AutoProjectMemoryMaintenanceService implements AutoProjectMemoryMai
           MYELIN_AUTO_PROJECT_MEMORY_RUN_ID: runId,
         },
       });
-      proc.unref();
       await writeState(this.root, projectKey, {
         project_key: projectKey,
         last_run_id: runId,
@@ -246,14 +193,14 @@ export class AutoProjectMemoryMaintenanceService implements AutoProjectMemoryMai
         last_status: "scheduled",
         last_trigger: trigger,
         last_log_path: logPath,
-        last_pid: proc.pid ?? null,
+        last_pid: proc.pid,
         last_counts: counts,
       });
       return {
         status: "scheduled",
         project_key: projectKey,
         run_id: runId,
-        pid: proc.pid ?? null,
+        pid: proc.pid,
         log_path: logPath,
         trigger,
         counts,
@@ -289,29 +236,7 @@ export class AutoProjectMemoryMaintenanceService implements AutoProjectMemoryMai
   }
 
   private async isInCooldown(projectKey: string, config: AutoProjectMemoryMaintenanceConfig): Promise<boolean> {
-    if (config.cooldownMs <= 0) return false;
-    const state = await readState(this.root, projectKey);
-    const last = state.last_status === "completed" || state.last_status === "failed"
-      ? state.last_finished_at
-      : state.last_scheduled_at;
-    if (!last) return false;
-    return Date.parse(last) + config.cooldownMs > Date.parse(this.now());
-  }
-
-  private async clearDeadLock(projectKey: string): Promise<boolean> {
-    const state = await readState(this.root, projectKey);
-    if (state.last_status !== "scheduled" && state.last_status !== "running") return false;
-    if (typeof state.last_pid !== "number") return false;
-    const alive = (this.deps.isProcessAlive ?? isProcessAlive)(state.last_pid);
-    if (alive) return false;
-    await rm(lockPath(this.root, projectKey), { recursive: true, force: true });
-    await writeState(this.root, projectKey, {
-      ...state,
-      last_status: "failed",
-      last_finished_at: this.now(),
-      last_reason: "Detached auto project memory maintenance worker PID is no longer running.",
-    });
-    return true;
+    return await this.runtime(projectKey).isInCooldown(config.cooldownMs);
   }
 
   private async skip(
@@ -351,22 +276,18 @@ export class AutoProjectMemoryMaintenanceService implements AutoProjectMemoryMai
   private now(): string {
     return (this.deps.now ?? (() => new Date()))().toISOString();
   }
-}
 
-export async function readState(root: string, projectKey: string): Promise<AutoProjectMemoryMaintenanceState> {
-  try {
-    const text = await readFile(statePath(root, projectKey), "utf8");
-    const parsed = JSON.parse(text) as AutoProjectMemoryMaintenanceState;
-    return parsed && typeof parsed === "object" ? parsed : { project_key: projectKey };
-  } catch {
-    return { project_key: projectKey };
+  private runtime(projectKey: string): MaintenanceRunRuntime<AutoProjectMemoryMaintenanceState> {
+    return maintenanceRuntime(this.root, projectKey, () => this.now(), this.deps.isProcessAlive ?? isProcessAlive);
   }
 }
 
+export async function readState(root: string, projectKey: string): Promise<AutoProjectMemoryMaintenanceState> {
+  return await maintenanceRuntime(root, projectKey).readState();
+}
+
 export async function writeState(root: string, projectKey: string, state: AutoProjectMemoryMaintenanceState): Promise<void> {
-  const path = statePath(root, projectKey);
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+  await maintenanceRuntime(root, projectKey).writeState(state);
 }
 
 export function statePath(root: string, projectKey: string): string {
@@ -411,31 +332,24 @@ function runtimeInboxItemId(filename: string): string | null {
   return filename.slice(0, -".json".length);
 }
 
-async function tryAcquireLock(root: string, projectKey: string, runId: string, now: string): Promise<LockHandle | null> {
-  const path = lockPath(root, projectKey);
-  try {
-    await mkdir(path, { recursive: false });
-    await writeFile(join(path, "owner.json"), `${JSON.stringify({ run_id: runId, created_at: now }, null, 2)}\n`, "utf8");
-    return { runId, release: async () => rm(path, { recursive: true, force: true }) };
-  } catch (error) {
-    if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "EEXIST") return null;
-    throw error;
-  }
-}
-
-async function adoptOrAcquireLock(root: string, projectKey: string, runId: string, now: string): Promise<LockHandle | null> {
-  const path = lockPath(root, projectKey);
-  try {
-    const owner = JSON.parse(await readFile(join(path, "owner.json"), "utf8")) as { run_id?: string };
-    if (owner.run_id === runId) return { runId, release: async () => rm(path, { recursive: true, force: true }) };
-    return null;
-  } catch {
-    return await tryAcquireLock(root, projectKey, runId, now);
-  }
-}
-
 function lockPath(root: string, projectKey: string): string {
   return projectPath(root, projectKey, "state", ".auto-project-memory-maintenance.lock");
+}
+
+function maintenanceRuntime(
+  root: string,
+  projectKey: string,
+  now: () => string = () => new Date().toISOString(),
+  alive: (pid: number) => boolean = isProcessAlive,
+): MaintenanceRunRuntime<AutoProjectMemoryMaintenanceState> {
+  return new MaintenanceRunRuntime({
+    projectKey,
+    statePath: statePath(root, projectKey),
+    lockPath: lockPath(root, projectKey),
+    initialState: () => ({ project_key: projectKey }),
+    now,
+    isProcessAlive: alive,
+  });
 }
 
 function isNotFound(error: unknown): boolean {

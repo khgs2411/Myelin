@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
 import type { Database } from "bun:sqlite";
 import type { ActiveEmbeddingContract } from "../runtime/config.ts";
-import type { EmbeddingProviderClient } from "./embedding-provider.ts";
+import type { EmbeddingTransport } from "./embedding-types.ts";
+import { EmbeddingService } from "./embedding-service.ts";
+import { validateEmbeddingResult, validateEmbeddingVector } from "./embedding-validation.ts";
 
 export type QueryEmbeddingCacheResult = {
   embedding: number[];
@@ -21,7 +23,7 @@ export async function getOrCreateQueryEmbedding(
     project_key: string;
     question: string;
     contract: ActiveEmbeddingContract;
-    provider: EmbeddingProviderClient;
+    provider: EmbeddingTransport;
     now?: () => string;
   },
 ): Promise<QueryEmbeddingCacheResult> {
@@ -35,8 +37,7 @@ export async function getOrCreateQueryEmbedding(
     contract: input.contract,
   });
   if (cached) {
-    const embedding = parseEmbedding(cached.embedding_json);
-    assertDimensions(input.contract.dimensions, embedding.length);
+    const embedding = validateEmbeddingVector(parseEmbedding(cached.embedding_json), input.contract.dimensions);
     markQueryEmbeddingCacheHit(db, { id: cached.id, now: now() });
     return {
       embedding,
@@ -46,11 +47,11 @@ export async function getOrCreateQueryEmbedding(
     };
   }
 
-  const result = await input.provider.embed({
+  const provider = EmbeddingService.bind(input.contract, input.provider);
+  const result = validateEmbeddingResult(input.contract, await provider.embed({
     contract: input.contract,
-    text: input.question,
-  });
-  assertDimensions(input.contract.dimensions, result.dimensions);
+    text: normalizedQuestion,
+  }));
   const timestamp = now();
   const id = queryEmbeddingCacheId({
     project_key: input.project_key,
@@ -96,7 +97,7 @@ export async function getOrCreateQueryEmbedding(
 }
 
 export function normalizeQueryQuestion(question: string): string {
-  return question.trim().replace(/\s+/g, " ").toLowerCase();
+  return question.normalize("NFKC").trim().replace(/\s+/gu, " ").toLocaleLowerCase("en-US");
 }
 
 export function queryEmbeddingCacheId(input: {
@@ -165,9 +166,5 @@ function markQueryEmbeddingCacheHit(db: Database, input: { id: string; now: stri
 function parseEmbedding(text: string): number[] {
   const value = JSON.parse(text) as unknown;
   if (!Array.isArray(value)) throw new Error("Cached query embedding is not an array");
-  return value.map((item) => Number(item));
-}
-
-function assertDimensions(expected: number, actual: number): void {
-  if (expected !== actual) throw new Error(`Query embedding dimensions mismatch: expected ${expected}, got ${actual}`);
+  return value as number[];
 }

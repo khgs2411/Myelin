@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { Database } from "bun:sqlite";
 import { createMemoryCandidate, listMemoryCandidates } from "../../src/memory/candidates.ts";
 import { openMemoryDbAt } from "../../src/memory/db.ts";
-import type { EmbeddingProviderClient } from "../../src/memory/embedding-provider.ts";
+import type { EmbeddingProviderClient } from "../../src/memory/embedding-types.ts";
 import type { MemoryScope, SessionMemoryKind } from "../../src/memory/ingest-types.ts";
 import { querySessionMemory, type SessionMemoryQueryVectorStore } from "../../src/memory/session-memory-query.ts";
 import { ensurePendingSessionMemoryEmbedding, markSessionMemoryEmbeddingIndexed } from "../../src/memory/session-memory-embeddings.ts";
@@ -365,6 +365,9 @@ function fixedProvider(): EmbeddingProviderClient {
         model: request.contract.model,
         dimensions: request.contract.dimensions,
       };
+    },
+    async embedBatch(requests) {
+      return Promise.all(requests.map((request) => this.embed(request)));
     },
   };
 }

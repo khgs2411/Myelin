@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
 import type { Database } from "bun:sqlite";
 import type { ActiveEmbeddingContract } from "../runtime/config.ts";
-import type { EmbeddingProviderClient, EmbeddingResult } from "./embedding-provider.ts";
+import type { EmbeddingTransport } from "./embedding-types.ts";
+import { EmbeddingService } from "./embedding-service.ts";
+import { executeEmbeddingBatches } from "./embedding-batch-executor.ts";
 import type { SessionMemoryRow } from "./ingest-types.ts";
 import {
   ensureActiveSessionMemoryEmbeddings,
@@ -11,46 +13,29 @@ import {
   markSessionMemoryEmbeddingIndexed,
   type SessionMemoryEmbeddingRow,
 } from "./session-memory-embeddings.ts";
+import type {
+  SessionMemoryIndexFailure,
+  SessionMemoryIndexResult,
+  SessionMemoryVectorStore,
+} from "./session-memory-index-types.ts";
 import { normalizeSessionMemoryForEmbedding } from "./session-memory-text.ts";
 import {
   createSqliteVecAdapter,
   upsertSessionMemoryVector,
-  type SessionMemoryVectorInput,
   type SqliteVecAdapter,
 } from "./sqlite-vec.ts";
-
-export type SessionMemoryIndexFailure = {
-  embedding_id: string;
-  session_memory_id: string;
-  reason: string;
-};
-
-export type SessionMemoryIndexResult = {
-  project_key: string;
-  selected: number;
-  indexed: number;
-  failed: number;
-  pending_remaining: number;
-  degraded: boolean;
-  batch_size: number;
-  degraded_reason?: string;
-  failures: SessionMemoryIndexFailure[];
-};
-
-export type SessionMemoryVectorStore = {
-  ensure: (
-    db: Database,
-    input: { contract: ActiveEmbeddingContract },
-  ) => { available: boolean; reason?: string };
-  upsert: (db: Database, input: SessionMemoryVectorInput) => void;
-};
+export type {
+  SessionMemoryIndexFailure,
+  SessionMemoryIndexResult,
+  SessionMemoryVectorStore,
+} from "./session-memory-index-types.ts";
 
 export async function indexSessionMemories(
   db: Database,
   input: {
     project_key: string;
     contract: ActiveEmbeddingContract;
-    provider: EmbeddingProviderClient;
+    provider: EmbeddingTransport;
     limit: number;
     batch_size?: number;
     retry_failed?: boolean;
@@ -107,7 +92,6 @@ export async function indexSessionMemories(
     };
   }
 
-  let indexed = 0;
   const entries: PreparedEmbeddingEntry[] = [];
   for (const row of rows) {
     try {
@@ -119,48 +103,17 @@ export async function indexSessionMemories(
     }
   }
 
-  for (const chunk of chunks(entries, batchSize)) {
-    let embeddings: EmbeddingResult[];
-    try {
-      embeddings =
-        input.provider.embedBatch && chunk.length > 1
-          ? await input.provider.embedBatch(
-              chunk.map((entry) => ({
-                contract: input.contract,
-                title: entry.memory.title,
-                text: entry.normalizedText,
-              })),
-            )
-          : await Promise.all(
-              chunk.map((entry) =>
-                input.provider.embed({
-                  contract: input.contract,
-                  title: entry.memory.title,
-                  text: entry.normalizedText,
-                }),
-              ),
-            );
-      if (embeddings.length !== chunk.length) {
-        throw new Error(`Embedding batch result count mismatch: expected ${chunk.length}, got ${embeddings.length}`);
-      }
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      for (const entry of chunk) {
-        markFailed(db, entry.row, reason, now(), failures);
-      }
-      continue;
-    }
-
-    for (let index = 0; index < chunk.length; index += 1) {
-      const entry = chunk[index];
-      const embedding = embeddings[index];
-      try {
-        if (embedding.dimensions !== input.contract.dimensions) {
-          throw new Error(
-            `Embedding dimensions mismatch: expected ${input.contract.dimensions}, got ${embedding.dimensions}`,
-          );
-        }
-
+  const indexed = await executeEmbeddingBatches({
+    entries,
+    batchSize,
+    contract: input.contract,
+    provider: EmbeddingService.bind(input.contract, input.provider),
+    requestFor: (entry) => ({
+      contract: input.contract,
+      title: entry.memory.title,
+      text: entry.normalizedText,
+    }),
+    onSuccess: (entry, embedding) => {
         const indexedAt = now();
         db.transaction(() => {
           vectorStore.upsert(db, {
@@ -178,12 +131,9 @@ export async function indexSessionMemories(
             now: indexedAt,
           });
         })();
-        indexed += 1;
-      } catch (error) {
-        markFailed(db, entry.row, error instanceof Error ? error.message : String(error), now(), failures);
-      }
-    }
-  }
+    },
+    onFailure: (entry, reason) => markFailed(db, entry.row, reason, now(), failures),
+  });
 
   return {
     project_key: input.project_key,
@@ -250,14 +200,6 @@ type PreparedEmbeddingEntry = {
   memory: SessionMemoryRow;
   normalizedText: string;
 };
-
-function chunks<T>(values: T[], size: number): T[][] {
-  const result: T[][] = [];
-  for (let index = 0; index < values.length; index += size) {
-    result.push(values.slice(index, index + size));
-  }
-  return result;
-}
 
 function markFailed(
   db: Database,

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AutoMemoryMaintenanceService, readState } from "../../src/maintenance/auto-memory-maintenance.ts";
 import { openMemoryDbAt } from "../../src/memory/db.ts";
-import { stubEmbeddingFilename } from "../../src/memory/embedding-provider.ts";
+import { stubEmbeddingFilename } from "../../src/memory/providers/stub-embedding-provider.ts";
 import { recordExperienceEvent } from "../../src/memory/experience.ts";
 import { INGEST_COMPLETION_LAYERS, type IngestJobRow } from "../../src/memory/ingest-types.ts";
 import { createSessionMemory } from "../../src/memory/session-memories.ts";

@@ -10,9 +10,11 @@ import {
   type SessionMemoryStatus,
 } from "../memory/ingest-types.ts";
 import { MemoryCandidateService } from "../memory/memory-candidate-service.ts";
-import { MemoryReviewService, type MemoryReviewItem } from "../memory/memory-review-service.ts";
-import { ProjectMemoryRetrievalIndexService } from "../memory/project-memory-retrieval-index-service.ts";
-import { SessionMemoryInspectionService, type SessionMemoryInspectRow } from "../memory/session-memory-inspection-service.ts";
+import { MemoryReviewService } from "../memory/memory-review-service.ts";
+import type { MemoryReviewItem } from "../memory/memory-review-contracts.ts";
+import { ProjectMemoryRetrievalIndexCoordinator } from "../memory/project-memory-retrieval-index-service.ts";
+import { SessionMemoryInspectionService } from "../memory/session-memory-inspection-service.ts";
+import type { SessionMemoryInspectRow } from "../memory/session-memory-inspection-contracts.ts";
 import type { SessionMemoryLinkRow } from "../memory/session-memory-links.ts";
 import { SessionMemoryIndexService } from "../memory/session-memory-index-service.ts";
 import {
@@ -23,7 +25,7 @@ import { ProjectService } from "../project/project-service.ts";
 import type { LaunchContext } from "../runtime/launch-context.ts";
 import { stableJson } from "../runtime/json.ts";
 import { DEFAULT_EMBEDDING_BATCH_SIZE, loadConfig, MAX_EMBEDDING_BATCH_SIZE } from "../runtime/config.ts";
-import type { ProcessRunner } from "../runtime/llm-client.ts";
+import type { ProcessRunner } from "../runtime/llm-contracts.ts";
 import { queryMemory } from "../query/engine.ts";
 import {
   loadProjectMemoryGoldenQuestions,
@@ -773,7 +775,7 @@ async function indexProject(args: string[], root: string): Promise<CommandResult
   if (parsed.error) return fail(parsed.error);
 
   const config = await loadConfig(root);
-  const response = await new ProjectMemoryRetrievalIndexService({ root }).indexProject({
+  const response = await new ProjectMemoryRetrievalIndexCoordinator({ root }).indexProject({
     projectKey: parsed.projectKey,
     limit: parsed.limit,
     batchSize: parsed.batchSize ?? config.embedding.batchSize,

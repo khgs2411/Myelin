@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT } from "../../src/runtime/config.ts";
-import type { EmbeddingProviderClient } from "../../src/memory/embedding-provider.ts";
+import type { EmbeddingProviderClient } from "../../src/memory/embedding-types.ts";
 import { openMemoryDbAt, type MemoryDb } from "../../src/memory/db.ts";
 import { getOrCreateQueryEmbedding, normalizeQueryQuestion } from "../../src/memory/query-embedding-cache.ts";
 
@@ -17,10 +17,15 @@ afterEach(() => {
 test("query embedding cache normalizes questions and avoids repeat provider calls", async () => {
   const contract = { ...DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT, purpose: "retrieval_query" as const, dimensions: 3 };
   let providerCalls = 0;
+  const providerTexts: string[] = [];
   const provider: EmbeddingProviderClient = {
-    async embed() {
+    async embed(request) {
       providerCalls += 1;
+      providerTexts.push(request.text);
       return { embedding: [0.1, 0.2, 0.3], model: contract.model, dimensions: contract.dimensions };
+    },
+    async embedBatch(requests) {
+      return Promise.all(requests.map((request) => this.embed(request)));
     },
   };
 
@@ -40,6 +45,7 @@ test("query embedding cache normalizes questions and avoids repeat provider call
   });
 
   expect(providerCalls).toBe(1);
+  expect(providerTexts).toEqual(["what did we decide?"]);
   expect(first.cache_hit).toBe(false);
   expect(second.cache_hit).toBe(true);
   expect(second.embedding).toEqual([0.1, 0.2, 0.3]);
@@ -58,6 +64,9 @@ test("query embedding cache is isolated by embedding contract", async () => {
     async embed(request) {
       models.push(request.contract.model);
       return { embedding: [0.1, 0.2, 0.3], model: request.contract.model, dimensions: request.contract.dimensions };
+    },
+    async embedBatch(requests) {
+      return Promise.all(requests.map((request) => this.embed(request)));
     },
   };
 
@@ -81,4 +90,35 @@ test("query embedding cache is isolated by embedding contract", async () => {
 
 test("normalizeQueryQuestion trims collapses whitespace and lowercases", () => {
   expect(normalizeQueryQuestion("  What\nDid\tWe   Decide? ")).toBe("what did we decide?");
+  expect(normalizeQueryQuestion("ＡＢＣ")).toBe("abc");
+});
+
+test("query embedding cache rejects malformed cached vectors", async () => {
+  const contract = {
+    ...DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+    purpose: "retrieval_query" as const,
+    dimensions: 3,
+  };
+  const provider: EmbeddingProviderClient = {
+    async embed() {
+      return { embedding: [0.1, 0.2, 0.3], model: contract.model, dimensions: 3 };
+    },
+    async embedBatch(requests) {
+      return Promise.all(requests.map((request) => this.embed(request)));
+    },
+  };
+  await getOrCreateQueryEmbedding(db, {
+    project_key: "class-kit",
+    question: "What changed?",
+    contract,
+    provider,
+  });
+  db.query("UPDATE query_embedding_cache SET embedding_json = ?").run(JSON.stringify([0.1, "0.2", 0.3]));
+
+  await expect(getOrCreateQueryEmbedding(db, {
+    project_key: "class-kit",
+    question: "WHAT CHANGED?",
+    contract,
+    provider,
+  })).rejects.toThrow("finite numbers");
 });

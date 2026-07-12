@@ -4,7 +4,8 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { EmbeddingProviderFactory } from "../../src/memory/embedding-provider-factory.ts";
 import { DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT, loadConfig } from "../../src/runtime/config.ts";
-import { stubEmbeddingFilename, type EmbeddingRequest } from "../../src/memory/embedding-provider.ts";
+import type { EmbeddingRequest } from "../../src/memory/embedding-types.ts";
+import { stubEmbeddingFilename } from "../../src/memory/providers/stub-embedding-provider.ts";
 
 test("EmbeddingProviderFactory prefers configured stub provider", async () => {
   const root = await mkdtemp(join(tmpdir(), "myelin-embedding-provider-factory-"));
@@ -88,6 +89,18 @@ test("EmbeddingProviderFactory falls back to Google when Ollama is unavailable",
     expect(selection.client.provider).toBe("gemini");
     expect(selection.contract).toMatchObject({ provider: "gemini", model: "gemini-embedding-2" });
     expect(selection.fallbackReason).toContain("connection refused");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("EmbeddingProviderFactory does not select Gemini without credentials", async () => {
+  const root = await mkdtemp(join(tmpdir(), "myelin-embedding-provider-factory-"));
+  try {
+    await writeFile(join(root, "myelin.config"), "EMBEDDING_PROVIDER=gemini\n", "utf8");
+    const config = await loadConfig(root, {});
+    await expect(new EmbeddingProviderFactory(config).initialize("retrieval_query"))
+      .rejects.toThrow("Gemini API key is required");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

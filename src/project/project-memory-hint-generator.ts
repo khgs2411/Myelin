@@ -3,7 +3,8 @@ import type { Database } from "bun:sqlite";
 import { createRunDir, timestampRunId } from "../runtime/artifacts.ts";
 import type { Provider } from "../runtime/config.ts";
 import { resolveInside } from "../runtime/fs.ts";
-import { invokeLlm, type ProcessRunner } from "../runtime/llm-client.ts";
+import { invokeLlm } from "../runtime/llm-client.ts";
+import type { ProcessRunner } from "../runtime/llm-contracts.ts";
 import { stableJson, writeJson } from "../runtime/json.ts";
 import {
   markProjectMemoryHintJobCompleted,

@@ -2,13 +2,15 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EmbeddingService } from "../../src/memory/embedding-service.ts";
+import type { EmbeddingRequest } from "../../src/memory/embedding-types.ts";
+import { createGeminiEmbeddingProvider } from "../../src/memory/providers/gemini-embedding-provider.ts";
+import { createNomicEmbeddingProvider } from "../../src/memory/providers/nomic-embedding-provider.ts";
+import { createQwenEmbeddingProvider } from "../../src/memory/providers/qwen-embedding-provider.ts";
 import {
-  createGeminiEmbeddingProvider,
-  createOllamaEmbeddingClient,
   createStubEmbeddingProvider,
   stubEmbeddingFilename,
-  type EmbeddingRequest,
-} from "../../src/memory/embedding-provider.ts";
+} from "../../src/memory/providers/stub-embedding-provider.ts";
 
 const documentRequest: EmbeddingRequest = {
   contract: {
@@ -123,7 +125,7 @@ test("gemini batch provider validates response count and dimensions", async () =
       apiKey: "key",
       fetch: async () => Response.json({ embeddings: [{ values: [0.1] }] }),
     }).embedBatch?.([documentRequest]),
-  ).rejects.toThrow("Gemini embedding dimensions mismatch: expected 3, got 1");
+  ).rejects.toThrow("Embedding vector length mismatch: expected 3, got 1");
 });
 
 test("gemini provider requires an api key and validates dimensions", async () => {
@@ -136,15 +138,13 @@ test("gemini provider requires an api key and validates dimensions", async () =>
     fetch: async () => Response.json({ embedding: { values: [0.1] } }),
   });
   await expect(provider.embed(documentRequest)).rejects.toThrow(
-    "Gemini embedding dimensions mismatch: expected 3, got 1",
+    "Embedding vector length mismatch: expected 3, got 1",
   );
 });
 
 test("Ollama client initializes only an installed, working model and embeds batches", async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
-  const client = createOllamaEmbeddingClient({
-    provider: "ollama_qwen",
-    priority: 2,
+  const client = createQwenEmbeddingProvider({
     baseUrl: "http://ollama.local/",
     model: "qwen3-embedding:4b",
     dimensions: 3,
@@ -177,9 +177,7 @@ test("Ollama client initializes only an installed, working model and embeds batc
 
 test("Ollama Nomic client uses retrieval task prefixes and unloads after each request", async () => {
   const bodies: unknown[] = [];
-  const client = createOllamaEmbeddingClient({
-    provider: "ollama_nomic",
-    priority: 1,
+  const client = createNomicEmbeddingProvider({
     baseUrl: "http://ollama.local",
     model: "nomic-embed-text:v1.5",
     dimensions: 3,
@@ -231,9 +229,7 @@ test("Ollama Nomic client uses retrieval task prefixes and unloads after each re
 });
 
 test("Ollama client reports a missing model without attempting an embedding", async () => {
-  const client = createOllamaEmbeddingClient({
-    provider: "ollama_qwen",
-    priority: 2,
+  const client = createQwenEmbeddingProvider({
     baseUrl: "http://ollama.local",
     model: "qwen3-embedding:4b",
     dimensions: 3,
@@ -291,9 +287,61 @@ test("stub provider validates dimensions", async () => {
   try {
     await writeFile(join(dir, stubEmbeddingFilename(documentRequest)), JSON.stringify({ embedding: [0.4] }), "utf8");
     await expect(createStubEmbeddingProvider(dir).embed(documentRequest)).rejects.toThrow(
-      "Stub embedding dimensions mismatch: expected 3, got 1",
+      "Embedding vector length mismatch: expected 3, got 1",
     );
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test("gemini initialization fails closed without an API key", async () => {
+  await expect(createGeminiEmbeddingProvider({}).initialize()).resolves.toEqual({
+    available: false,
+    reason: "Gemini API key is required",
+  });
+});
+
+test("embedding facade supplies batch fallback and enforces the active contract", async () => {
+  const service = new EmbeddingService(documentRequest.contract, {
+    async embed(request) {
+      return {
+        embedding: [0.1, 0.2, 0.3],
+        model: request.contract.model,
+        dimensions: request.contract.dimensions,
+      };
+    },
+  });
+
+  await expect(service.embedBatch([documentRequest, { ...documentRequest, text: "second" }])).resolves.toHaveLength(2);
+  await expect(service.embed({
+    ...documentRequest,
+    contract: { ...documentRequest.contract, purpose: "retrieval_query" },
+  })).rejects.toThrow("does not match the initialized embedding contract");
+
+  const queryContract = { ...documentRequest.contract, purpose: "retrieval_query" as const };
+  await expect(EmbeddingService.bind(queryContract, service).embed({
+    ...documentRequest,
+    contract: queryContract,
+  })).resolves.toMatchObject({ model: queryContract.model, dimensions: queryContract.dimensions });
+  expect(() => EmbeddingService.bind({ ...queryContract, model: "other" }, service))
+    .toThrow("incompatible with the initialized provider");
+});
+
+test("embedding facade rejects model, declared dimension, vector length, and non-finite results", async () => {
+  const result = (overrides: Partial<{ embedding: number[]; model: string; dimensions: number }>) =>
+    new EmbeddingService(documentRequest.contract, {
+      async embed() {
+        return {
+          embedding: [0.1, 0.2, 0.3],
+          model: documentRequest.contract.model,
+          dimensions: 3,
+          ...overrides,
+        };
+      },
+    }).embed(documentRequest);
+
+  await expect(result({ model: "wrong-model" })).rejects.toThrow("Embedding model mismatch");
+  await expect(result({ dimensions: 2 })).rejects.toThrow("Embedding dimensions mismatch");
+  await expect(result({ embedding: [0.1] })).rejects.toThrow("Embedding vector length mismatch");
+  await expect(result({ embedding: [0.1, Number.NaN, 0.3] })).rejects.toThrow("finite numbers");
 });

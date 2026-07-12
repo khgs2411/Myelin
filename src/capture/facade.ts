@@ -2,8 +2,9 @@ import { isAbsolute, join, relative, resolve } from "node:path";
 import { openMemoryDb } from "../memory/db.ts";
 import { recordExperienceEvent, recordHookError, type ExperienceStatus } from "../memory/experience.ts";
 import { projectForRepoPath, type Project } from "../runtime/projects.ts";
-import { readGitWorktreeContext, type GitContextRunner, type GitWorktreeContext } from "./git-context.ts";
-import { AutoMemoryMaintenanceService, type AutoMemoryMaintenanceScheduleResult } from "../maintenance/auto-memory-maintenance.ts";
+import { readGitWorktreeContext, type GitContextRunner } from "./git-context.ts";
+import { AutoMemoryMaintenanceService } from "../maintenance/auto-memory-maintenance.ts";
+import type { AutoMemoryMaintenanceScheduleResult } from "../maintenance/maintenance-contracts.ts";
 
 export type NormalizedCaptureEvent = {
   id?: string;
