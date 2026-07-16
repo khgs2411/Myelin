@@ -169,10 +169,12 @@ test("project learn routes through agent-authored create plus maintenance", asyn
   await seedSchema();
   const stubs = await seedCreateStubs("active");
   const cli = createCli("myelin");
+  const progressEvents: unknown[] = [];
   registerProjectCommands(cli, {
     now: () => new Date("2026-07-06T10:00:00.000Z"),
     env: { ...process.env, [FILE_AUTHORING_STUB_OUTPUTS_DIR]: stubs },
     runner: hintRunner("active"),
+    progress: (event) => progressEvents.push(event),
   });
 
   const result = await cli.run(["project", "learn", "active", "--json"]);
@@ -188,6 +190,7 @@ test("project learn routes through agent-authored create plus maintenance", asyn
   expect(response.stopped_before_writes).toBe(false);
   expect(await readFile(join(root, response.run_dir, "summary.md"), "utf8")).toContain("run_kind: create_then_maintenance");
   expect(await readFile(join(root, "projects", "active", "wiki", "runtime.md"), "utf8")).toContain("Runtime documentation");
+  expect(progressEvents).toEqual([]);
 });
 
 test("project learn human output reports pending retrieval index after successful writes", async () => {
@@ -196,10 +199,12 @@ test("project learn human output reports pending retrieval index after successfu
   await seedSchema();
   const stubs = await seedCreateStubs("pending-index");
   const cli = createCli("myelin");
+  const progressEvents: Array<{ stage: string; status: string; current?: number; total?: number }> = [];
   registerProjectCommands(cli, {
     now: () => new Date("2026-07-06T10:00:00.000Z"),
     env: { ...process.env, [FILE_AUTHORING_STUB_OUTPUTS_DIR]: stubs },
     runner: hintRunner("pending-index"),
+    progress: (event) => progressEvents.push(event),
   });
 
   const result = await cli.run(["project", "learn", "pending-index"]);
@@ -208,6 +213,10 @@ test("project learn human output reports pending retrieval index after successfu
   expect(result.message).toContain("Project learn completed for pending-index.");
   expect(result.message).toContain("run kind: create_then_maintenance");
   expect(result.message).not.toContain("pending retrieval index: yes");
+  expect(progressEvents.some((event) => event.stage === "command" && event.status === "started")).toBe(true);
+  expect(progressEvents.some((event) => event.stage === "planner" && event.status === "started")).toBe(true);
+  expect(progressEvents.some((event) => event.stage === "subject_writers" && event.current === 1 && event.total === 1)).toBe(true);
+  expect(progressEvents.some((event) => event.stage === "run" && event.status === "completed")).toBe(true);
 });
 
 test("project learn JSON includes runtime inbox intake artifact when intake runs", async () => {
@@ -254,6 +263,16 @@ test("project ingest is not a Project Memory command", async () => {
   expect(result.exitCode).toBe(1);
 });
 
+test("project learn exposes an explicit resume option and rejects incompatible modes", async () => {
+  const cli = createCli("myelin");
+  registerProjectCommands(cli);
+
+  const result = await cli.run(["project", "learn", "active", "--resume", "run-1", "--review"]);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.message).toContain("--resume cannot be combined with --dry-run, --review, or --recreate");
+});
+
 async function seedProject(key: string, lifecycle: "active" | "legacy"): Promise<void> {
   await writeJson(join(root, "projects", key, "state", "project.json"), {
     key,
@@ -287,7 +306,11 @@ async function seedCreateAndMaintenanceStubs(projectKey: string): Promise<string
   const stubs = await seedCreateStubs(projectKey);
   await mkdir(join(stubs, "maintenance", "draft-wiki"), { recursive: true });
   await mkdir(join(stubs, "maintenance", "reports"), { recursive: true });
-  await writeFile(join(stubs, "maintenance", "draft-wiki", "index.md"), `# ${projectKey}\n\nIndex.\n`, "utf8");
+  await writeFile(
+    join(stubs, "maintenance", "draft-wiki", "index.md"),
+    `# ${projectKey}\n\n## Canonical subjects\n\n- [Runtime](runtime.md)\n`,
+    "utf8",
+  );
   await writeFile(join(stubs, "maintenance", "draft-wiki", "runtime.md"), "# Runtime\n\nRuntime documentation updated from inbox.\n", "utf8");
   await writeJson(join(stubs, "maintenance", "reports", "documentation-maintenance-report.json"), {
     schema_version: 1,
@@ -326,7 +349,10 @@ async function writeCreateStages(stubs: string, projectKey: string): Promise<voi
     }],
   });
   await writeJson(join(stubs, "create-planner", "reports", "documentation-planner-report.json"), {
+    schema_version: 1,
+    project_key: projectKey,
     evidence_paths: ["README.md"],
+    surface_coverage: createStubSurfaceCoverage(),
     known_gaps: [],
   });
   await mkdir(join(stubs, "subject-runtime", "draft-wiki"), { recursive: true });
@@ -342,6 +368,33 @@ async function writeCreateStages(stubs: string, projectKey: string): Promise<voi
     touched_paths: ["runtime.md"],
     known_gaps: [],
   });
+  await mkdir(join(stubs, "create-index-finalizer", "finalized-index"), { recursive: true });
+  await writeFile(
+    join(stubs, "create-index-finalizer", "finalized-index", "index.md"),
+    `# ${projectKey}\n\n## Canonical subjects\n\n- [Runtime](runtime.md)\n`,
+    "utf8",
+  );
+}
+
+function createStubSurfaceCoverage() {
+  return [
+    {
+      surface_id: "runtime",
+      kind: "public_interface",
+      status: "covered",
+      summary: "Runtime interface.",
+      evidence_paths: ["src/runtime.ts"],
+      subject_ids: ["runtime"],
+    },
+    ...["operator_workflow", "administrative_surface", "destructive_or_irreversible_operation"].map((kind) => ({
+      surface_id: `absent-${kind}`,
+      kind,
+      status: "not_present",
+      summary: `No ${kind} is present.`,
+      evidence_paths: ["README.md"],
+      subject_ids: [],
+    })),
+  ];
 }
 
 async function seedSchema(): Promise<void> {

@@ -1,6 +1,7 @@
 import type { Provider } from "../runtime/config.ts";
 import type { ProcessRunner } from "../runtime/llm-contracts.ts";
 import type { ProjectMemorySourceConsumptionRecord } from "./project-memory-apply-contracts.ts";
+import type { ProjectLearnProgressSink } from "./project-learn-progress.ts";
 import type {
   ProjectMemoryMaintenanceReport,
   ProjectMemorySubjectManifest,
@@ -19,6 +20,8 @@ export type ProjectMemoryCreateModeInput = {
   runner?: ProcessRunner;
   concurrency?: number;
   now?: Date;
+  progress?: ProjectLearnProgressSink;
+  retryDelay?: (milliseconds: number) => Promise<void>;
 };
 
 export type ProjectMemoryCreateModeResult = {
@@ -32,8 +35,9 @@ export type ProjectMemoryCreateModeResult = {
   subject_report_refs: string[];
   file_authoring_run_refs: string[];
   pre_maintenance_wiki_ref: "pre-maintenance-wiki";
+  repository_identity_ref: "repository-identity.json";
   concurrency_limit: number;
-  retry_limit: 1;
+  retry_limit: number;
   error?: string;
 };
 
@@ -59,6 +63,7 @@ export type ProjectMemoryMaintenanceModeInput = {
   env?: NodeJS.ProcessEnv;
   runner?: ProcessRunner;
   now?: Date;
+  progress?: ProjectLearnProgressSink;
 };
 
 export type ProjectMemoryMaintenanceModeResult = {

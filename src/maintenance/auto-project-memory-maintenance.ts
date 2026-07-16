@@ -2,6 +2,8 @@ import type { Database } from "bun:sqlite";
 import { readdir } from "node:fs/promises";
 import { isProcessAlive, resolveIngestTargetRepo } from "../ingest/runtime.ts";
 import { openMemoryDb } from "../memory/db.ts";
+import { discoverIndexedEmbeddingContract, readActiveEmbeddingContract } from "../memory/embedding-contract-store.ts";
+import { ProjectMemoryRetrievalIndexCoordinator } from "../memory/project-memory-retrieval-index-service.ts";
 import { ProjectService } from "../project/project-service.ts";
 import { loadConfig, type AutoProjectMemoryMaintenanceConfig } from "../runtime/config.ts";
 import { projectPath } from "../runtime/fs.ts";
@@ -53,9 +55,11 @@ export class AutoProjectMemoryMaintenanceService implements AutoProjectMemoryMai
     }
 
     const counts = await this.countPending(projectKey);
+    const pendingRetrievalRows = this.countPendingRetrieval(projectKey);
     if (
       counts.pending_inbox_items < maintenance.minPendingItems &&
-      counts.pending_project_candidates < maintenance.minPendingItems
+      counts.pending_project_candidates < maintenance.minPendingItems &&
+      pendingRetrievalRows === 0
     ) {
       return this.skip(projectKey, "below project memory maintenance threshold", { counts, trigger });
     }
@@ -94,9 +98,26 @@ export class AutoProjectMemoryMaintenanceService implements AutoProjectMemoryMai
         last_counts: countsBefore,
       });
 
-      const result = await this.runMaintenance(projectKey);
+      const config = await loadConfig(this.root);
+      const stateBefore = await readState(this.root, projectKey);
+      const retrievalOnly = stateBefore.last_trigger === "retrieval_index_pending"
+        && countsBefore.pending_inbox_items < config.autoProjectMemoryMaintenance.minPendingItems
+        && countsBefore.pending_project_candidates < config.autoProjectMemoryMaintenance.minPendingItems;
+      const shouldCurate = !retrievalOnly;
+      const result = shouldCurate
+        ? await this.runMaintenance(projectKey)
+        : { status: "retrieval_only", changed_files: [] };
       if (result.status === "failed") {
         throw new Error(result.stopped_reason ?? "Project Memory maintenance failed.");
+      }
+      if (this.countPendingRetrieval(projectKey) > 0) {
+        const indexResult = await this.indexProject(projectKey);
+        if (indexResult.degraded || indexResult.failed > 0 || indexResult.pending_remaining > 0) {
+          throw new Error(
+            indexResult.degraded_reason
+              ?? `Project Memory retrieval indexing incomplete: ${indexResult.failed} failed, ${indexResult.pending_remaining} pending`,
+          );
+        }
       }
       const countsAfter = await this.countPending(projectKey);
       await writeState(this.root, projectKey, {
@@ -235,6 +256,25 @@ export class AutoProjectMemoryMaintenanceService implements AutoProjectMemoryMai
     }
   }
 
+  private countPendingRetrieval(projectKey: string): number {
+    const db = openMemoryDb(this.root);
+    try {
+      const active = readActiveEmbeddingContract(db, "project_memory")
+        ?? discoverIndexedEmbeddingContract(db, "project_memory")?.contract;
+      if (!active) return 0;
+      return (db.query(
+        `SELECT count(*) AS count
+         FROM project_memory_retrieval_embeddings
+         WHERE project_key = ?
+           AND embedding_provider = ? AND embedding_model = ? AND embedding_dimensions = ?
+           AND embedding_purpose = 'retrieval_document' AND format_version = ?
+           AND status = 'pending'`,
+      ).get(projectKey, active.provider, active.model, active.dimensions, active.formatVersion) as { count: number }).count;
+    } finally {
+      db.close();
+    }
+  }
+
   private async isInCooldown(projectKey: string, config: AutoProjectMemoryMaintenanceConfig): Promise<boolean> {
     return await this.runtime(projectKey).isInCooldown(config.cooldownMs);
   }
@@ -271,6 +311,22 @@ export class AutoProjectMemoryMaintenanceService implements AutoProjectMemoryMai
       review: false,
       provider: config.defaultProvider,
     });
+  }
+
+  private async indexProject(projectKey: string): Promise<{ indexed: number; failed: number; pending_remaining: number; degraded: boolean; degraded_reason?: string }> {
+    if (this.deps.indexProject) return this.deps.indexProject(projectKey);
+    let indexed = 0;
+    while (true) {
+      const result = await new ProjectMemoryRetrievalIndexCoordinator({ root: this.root }).indexProject({
+        projectKey,
+        limit: 500,
+        retryFailed: false,
+      });
+      indexed += result.indexed;
+      if (result.degraded || result.failed > 0 || result.pending_remaining === 0 || result.indexed === 0) {
+        return { ...result, indexed };
+      }
+    }
   }
 
   private now(): string {

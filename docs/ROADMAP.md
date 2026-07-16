@@ -318,6 +318,9 @@ Session Memory auto-maintenance now treats capture as evidence append, then sche
 - [x] `done` ~~Keep auto Session Memory maintenance detached and fail-open.~~
   - Description: Capture hooks append evidence first, then schedule a detached worker guarded by lock, cooldown, and self-capture prevention.
   - Why: Hooks should never block agent workflow or recursively capture Myelin-owned provider sessions.
+- [x] `done` ~~Schedule derived Session Memory indexing independently of capture pressure.~~
+  - Description: Newly created Session Memory schedules active-contract indexing even when captured Experience Log rows remain below the ingest threshold.
+  - Why: Ingest pressure and derived retrieval freshness are separate workloads.
 
 Evidence: `src/maintenance/auto-memory-maintenance.ts`, `src/commands/maintenance.ts`, `src/capture/facade.ts`, `tests/maintenance/auto-memory-maintenance.test.ts`
 
@@ -342,6 +345,9 @@ Project Memory maintenance now mirrors Session Memory's shape: deterministic int
 - [x] `done` ~~Prevent maintenance recursion.~~
   - Description: Project inbox intake inside the maintenance job does not schedule another auto-maintenance run; only external inbox creation and Session Memory-created project candidates trigger scheduling.
   - Why: Inbox intake is already the first stage of the Project Memory maintenance job.
+- [x] `done` ~~Schedule Project Memory retrieval independently of curation pressure.~~
+  - Description: Pending active-contract Project Memory retrieval rows can schedule and run derived indexing below the inbox and candidate threshold.
+  - Why: Canonical wiki changes should become queryable without waiting for unrelated curation leads.
 
 Evidence: `src/project/project-memory-agent-maintenance-service.ts`, `src/project/project-memory-candidate-intake-service.ts`, `src/project/project-memory-curator-service.ts`, `src/commands/memory.ts`, `src/memory/memory-review-service.ts`, `src/maintenance/auto-project-memory-maintenance.ts`, `src/commands/maintenance.ts`, `tests/project/project-memory-curator-service.test.ts`, `tests/memory/memory-review-service.test.ts`, `tests/maintenance/auto-project-memory-maintenance.test.ts`
 
@@ -362,6 +368,10 @@ The core loop now exists: capture and inbox create evidence, Session Memory turn
   - Description: Surface Session and Project auto-maintenance state, ingest jobs and queue pressure, pending candidates and inbox items, locks, log paths, and retrieval readiness through a stable CLI status surface.
   - Why: Background maintenance is useful only when operators can diagnose it without reading SQLite tables or internal state files directly.
   - Progress: Completed 2026-07-10 with a read-only operational status contract that is shared by human and JSON output.
+- [x] `done` ~~Stabilize embedding identity and derived-index lifecycle.~~
+  - Description: Persist one active embedding contract per memory scope, keep automatic selection local and sticky, stage contract changes behind verified activation and rollback, separate active health from historical rows, and retire old derived state through preview-first cleanup.
+  - Why: Provider reachability may vary by process, but the embedding space that owns a retrieval index must remain stable.
+  - Progress: Completed on 2026-07-13. Session and Project retrieval now share persisted contract resolution, versioned migration/rollback/prune behavior, active-contract status semantics, and indexing schedules independent of ingest and curation thresholds.
 
 ## Roadmap Step 11: Codebase Review And Consolidation
 
@@ -386,10 +396,11 @@ Goal: prove the installed operator product on both an established repository wit
 
 Class Kit and Droplet Bot exercise complementary paths. Class Kit already has substantial Session Memory and captured Experience Log evidence, so its rebootstrap should prove that a fresh Project Memory shell can reuse preserved continuity. Droplet Bot is a Wizepal project but should enter Myelin under its own clean project identity, proving the first-run experience without inherited SQLite rows.
 
-- [ ] `next` Rebootstrap Class Kit from preserved continuity.
+- [x] `done` ~~Rebootstrap Class Kit from preserved continuity.~~
   - Description: Re-register and rebuild the Class Kit project shell, then run the product loop from the beginning while preserving its existing Session Memory, captured evidence, and connected hook history in root SQLite.
   - Why: An established repository should be able to recreate Project Memory without discarding the continuity Myelin has already earned.
-- [ ] `open` Bootstrap Droplet Bot as a clean Wizepal project.
+  - Progress: Completed on 2026-07-15. Class Kit now has curated, queryable Project Memory rebuilt from the continuity-rich project baseline, and the reliability findings exposed by the external run were closed before acceptance.
+- [ ] `next` Bootstrap Droplet Bot as a clean Wizepal project.
   - Description: Register Droplet Bot as a new project with no pre-existing project-scoped SQLite memory, then run the same first-create and maintenance path from a genuinely clean state.
   - Why: A clean initialization exposes first-run assumptions that an established project with accumulated memory can hide.
   - Shape: Treat Droplet Bot as a distinct Myelin project identity rather than reusing the existing `wizepal` SQLite continuity.

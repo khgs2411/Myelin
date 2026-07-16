@@ -1,5 +1,5 @@
 import { readdir, readFile, rm } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { join, posix, relative } from "node:path";
 import type { ProjectMemoryAgentStateV2 } from "./project-memory-agent-contracts.ts";
 import type {
   ProjectMemoryChangeset,
@@ -12,6 +12,7 @@ import {
 } from "./project-memory-markdown-applier.ts";
 import { resolveInside } from "../runtime/fs.ts";
 import { writeJson } from "../runtime/json.ts";
+import type { ProjectRepositoryIdentity } from "./project-repository-identity.ts";
 
 export type ProjectMemoryDraftPromotionInput = {
   root: string;
@@ -22,19 +23,53 @@ export type ProjectMemoryDraftPromotionInput = {
   draftWikiDir: string;
   curatorOutputRef: string;
   state: ProjectMemoryAgentStateV2;
+  repositoryIdentity?: ProjectRepositoryIdentity;
+  requiredSubjectWikiPaths?: string[];
   sourceConsumptions: ProjectMemorySourceConsumptionRecord[];
 };
 
 export type ProjectMemoryDraftPromotionResult = ProjectMemoryApplyResult;
 
+const PUBLICATION_VALIDATION_REF = "canonical-publication-validation.json";
+
 export async function promoteDraftWiki(
   input: ProjectMemoryDraftPromotionInput,
 ): Promise<ProjectMemoryDraftPromotionResult> {
-  const markdownWrites = await draftMarkdownWrites(input.projectKey, input.draftWikiDir);
+  const draftWrites = await draftMarkdownWrites(input.projectKey, input.draftWikiDir);
+  const canonicalIdentityPath = `projects/${input.projectKey}/state/repository-identity.json`;
+  const hasCanonicalIdentity = Boolean(input.repositoryIdentity) ||
+    await Bun.file(resolveInside(input.root, canonicalIdentityPath)).exists();
+  let publication;
+  try {
+    publication = validateAndRewriteDraftMarkdown(
+      input.projectKey,
+      draftWrites,
+      hasCanonicalIdentity,
+      input.requiredSubjectWikiPaths ?? [],
+    );
+    await writeJson(resolveInside(input.absoluteRunDir, PUBLICATION_VALIDATION_REF), publication.validation);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await writeJson(resolveInside(input.absoluteRunDir, PUBLICATION_VALIDATION_REF), {
+      schema_version: 1,
+      status: "failed",
+      project_key: input.projectKey,
+      error: message,
+    });
+    throw error;
+  }
+  const markdownWrites = publication.writes;
   assertDraftPublicationMinimum(markdownWrites);
   if (input.mode === "create") await removeStaleWikiMarkdown(input.root, input.projectKey, markdownWrites);
   const writes: ProjectMemoryStagedWrite[] = [
     ...markdownWrites,
+    ...(input.repositoryIdentity
+      ? [{
+          canonical_project_path: canonicalIdentityPath,
+          content: `${JSON.stringify(input.repositoryIdentity, null, 2)}\n`,
+          write_kind: "repository_identity_state" as const,
+        }]
+      : []),
     {
       canonical_project_path: `projects/${input.projectKey}/state/project-memory.json`,
       content: `${JSON.stringify(input.state, null, 2)}\n`,
@@ -72,6 +107,140 @@ export async function promoteDraftWiki(
   };
   await writeDraftApplyArtifacts(input, result);
   return result;
+}
+
+function validateAndRewriteDraftMarkdown(
+  projectKey: string,
+  writes: ProjectMemoryStagedWrite[],
+  hasCanonicalIdentity: boolean,
+  requiredSubjectWikiPaths: string[],
+): {
+  writes: ProjectMemoryStagedWrite[];
+  validation: {
+    schema_version: 1;
+    status: "passed";
+    project_key: string;
+    checked_pages: string[];
+    checked_internal_links: number;
+    rewritten_repo_citations: Array<{ page: string; original_target: string; repo_path: string }>;
+    rewritten_repository_identity_links: Array<{ page: string; original_target: string; canonical_target: string }>;
+  };
+} {
+  const wikiPrefix = `projects/${projectKey}/wiki/`;
+  const pagePaths = new Set(writes
+    .filter((write) => write.write_kind === "wiki_page")
+    .map((write) => write.canonical_project_path.slice(wikiPrefix.length)));
+  const rewrittenRepoCitations: Array<{ page: string; original_target: string; repo_path: string }> = [];
+  const rewrittenRepositoryIdentityLinks: Array<{ page: string; original_target: string; canonical_target: string }> = [];
+  let checkedInternalLinks = 0;
+  const rewritten = writes.map((write) => {
+    if (write.write_kind !== "wiki_page") return write;
+    const page = write.canonical_project_path.slice(wikiPrefix.length);
+    const linkedContent = write.content.replace(
+      /(!?)\[([^\]\n]*)\]\((<?[^)\s>]+>?)(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\)/g,
+      (full, _image: string, label: string, rawTarget: string) => {
+        const target = rawTarget.startsWith("<") && rawTarget.endsWith(">")
+          ? rawTarget.slice(1, -1)
+          : rawTarget;
+        const pathOnly = target.split(/[?#]/, 1)[0];
+        if (isRunLocalRepositoryIdentityTarget(pathOnly)) {
+          if (!hasCanonicalIdentity) {
+            throw new Error(`canonical publication found repository identity link without canonical state in ${page}: ${target}`);
+          }
+          const canonicalTarget = posix.relative(
+            posix.dirname(posix.join("wiki", page)),
+            "state/repository-identity.json",
+          );
+          rewrittenRepositoryIdentityLinks.push({ page, original_target: target, canonical_target: canonicalTarget });
+          return `${_image}[${label}](${canonicalTarget})`;
+        }
+        const repoPath = targetRepoPath(target);
+        if (repoPath) {
+          rewrittenRepoCitations.push({ page, original_target: target, repo_path: repoPath });
+          const citation = `\`repo:${repoPath.replaceAll("`", "\\`")}\``;
+          return label.trim() ? `${label} (${citation})` : citation;
+        }
+        if (isExternalOrAnchor(target)) return full;
+        if (isAgentWorkspaceTarget(target)) {
+          throw new Error(`canonical publication rejected agent-workspace link in ${page}: ${target}`);
+        }
+        if (!pathOnly.endsWith(".md")) return full;
+        const resolved = posix.normalize(posix.join(posix.dirname(page), pathOnly));
+        if (resolved.startsWith("../") || !pagePaths.has(resolved)) {
+          throw new Error(`canonical publication found broken internal wiki link in ${page}: ${target}`);
+        }
+        checkedInternalLinks += 1;
+        return full;
+      },
+    );
+    const content = linkedContent.replace(
+      /`(?:\.\.\/)*target-repo\/([^`\n]+)`/g,
+      (_full, repoPath: string) => `\`repo:${repoPath}\``,
+    );
+    if (hasEphemeralMarkdownTarget(content)) {
+      throw new Error(`canonical publication rejected an unsupported ephemeral link in ${page}`);
+    }
+    if (/(?:^|[\s(])(?:\.\.\/)*target-repo\//m.test(content)) {
+      throw new Error(`canonical publication rejected an unsupported ephemeral source path in ${page}`);
+    }
+    return { ...write, content };
+  });
+  const canonicalIndex = rewritten.find((write) =>
+    write.write_kind === "wiki_page" && write.canonical_project_path === `projects/${projectKey}/wiki/index.md`
+  );
+  if (canonicalIndex && /\b(?:planned canonical subjects|eventual pages|planning placeholders)\b/i.test(canonicalIndex.content)) {
+    throw new Error("canonical publication rejected planner lifecycle language in index.md");
+  }
+  for (const wikiPath of requiredSubjectWikiPaths) {
+    if (!pagePaths.has(wikiPath)) {
+      throw new Error(`canonical publication is missing subject page: ${wikiPath}`);
+    }
+    if (!canonicalIndex?.content.includes(`](${wikiPath})`)) {
+      throw new Error(`canonical publication index is missing subject link: ${wikiPath}`);
+    }
+  }
+  return {
+    writes: rewritten,
+    validation: {
+      schema_version: 1,
+      status: "passed",
+      project_key: projectKey,
+      checked_pages: [...pagePaths].sort(),
+      checked_internal_links: checkedInternalLinks,
+      rewritten_repo_citations: rewrittenRepoCitations,
+      rewritten_repository_identity_links: rewrittenRepositoryIdentityLinks,
+    },
+  };
+}
+
+function isRunLocalRepositoryIdentityTarget(target: string): boolean {
+  const normalized = target.replaceAll("\\", "/");
+  return posix.basename(normalized) === "repository-identity.json" &&
+    !normalized.split("/").includes("state") &&
+    !normalized.split("/").includes("target-repo");
+}
+
+function targetRepoPath(target: string): string | null {
+  const normalized = target.replaceAll("\\", "/");
+  const parts = normalized.split("/");
+  const marker = parts.lastIndexOf("target-repo");
+  if (marker === -1 || marker === parts.length - 1) return null;
+  return parts.slice(marker + 1).join("/");
+}
+
+function isExternalOrAnchor(target: string): boolean {
+  return target.startsWith("#") || target.startsWith("//") || /^[a-z][a-z0-9+.-]*:/i.test(target);
+}
+
+function isAgentWorkspaceTarget(target: string): boolean {
+  const normalized = target.replaceAll("\\", "/");
+  return normalized.includes("/runs/project-learn/") || normalized.split("/").includes("draft-wiki");
+}
+
+function hasEphemeralMarkdownTarget(content: string): boolean {
+  const ephemeral = "(?:target-repo|draft-wiki|runs/project-learn)";
+  return new RegExp(`(?:\\]\\(|^\\s*\\[[^\\]]+\\]:\\s*)<?[^\\n>]*${ephemeral}`, "im").test(content) ||
+    new RegExp(`(?:href|src)=["'][^"']*${ephemeral}`, "i").test(content);
 }
 
 async function removeStaleWikiMarkdown(

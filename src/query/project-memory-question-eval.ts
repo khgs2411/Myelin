@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import type { Database } from "bun:sqlite";
 import { openMemoryDb } from "../memory/db.ts";
-import { EmbeddingProviderFactory } from "../memory/embedding-provider-factory.ts";
+import { resolveEmbeddingRuntime } from "../memory/embedding-contract-resolver.ts";
 import { attachMemoryQueryLogEval } from "../memory/query-logs.ts";
 import { loadConfig } from "../runtime/config.ts";
 import { MemoryQueryService } from "./memory-query-service.ts";
@@ -72,17 +72,18 @@ export async function runProjectMemoryQuestionEval(input: {
   const startedAt = input.now?.() ?? new Date().toISOString();
   const runId = `pm_eval_${randomUUID()}`;
   const config = await loadConfig(input.root);
-  const selection = await new EmbeddingProviderFactory(config).initialize("retrieval_document");
   const ownedDb = input.db ? null : openMemoryDb(input.root);
   const db = input.db ?? ownedDb;
   if (!db) throw new Error("Project Memory eval could not open memory db");
 
   const cases: ProjectMemoryQuestionEvalCaseResult[] = [];
   try {
+    const selection = await resolveEmbeddingRuntime({ db, config, scope: "project_memory" });
     const service = new MemoryQueryService({
       db,
-      documentContract: selection.contract,
-      embeddingProvider: selection.client,
+      documentContract: selection.runtime.contract,
+      embeddingProvider: selection.runtime.client,
+      vectorTable: selection.active.vectorTable,
     });
 
     for (const question of input.questions) {

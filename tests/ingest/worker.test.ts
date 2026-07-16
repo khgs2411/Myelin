@@ -489,6 +489,55 @@ test("worker schedules project memory auto-maintenance after creating project ca
   expect(db.query("SELECT scope FROM memory_candidates WHERE id = ?").get("cand_project_1")).toEqual({ scope: "project" });
 });
 
+test("worker schedules Session Memory indexing after creating session memories", async () => {
+  recordExperienceEvent(db, {
+    id: "evt_1",
+    project_key: "class-kit",
+    occurred_at: "2026-06-13T09:59:00.000Z",
+    provider: "codex",
+    raw_payload_json: "{}",
+    source: "codex-hook",
+    status: "valid",
+  });
+  db.close();
+  const scheduled: Array<{ projectKey: string; forceIndex: boolean | undefined }> = [];
+
+  await runIngestWorker({
+    root,
+    projectKey: "class-kit",
+    jobId: "job_1",
+    targetRepo: "/target/repo",
+    provider: "codex",
+    batchSize: 1,
+    now: fixedNow(),
+    projectMemoryMaintenanceScheduler: false,
+    sessionMemoryMaintenanceScheduler: {
+      async maybeSchedule(projectKey, options) {
+        scheduled.push({ projectKey, forceIndex: options?.forceIndex });
+        return { status: "skipped", reason: "test scheduler" };
+      },
+    },
+    runner: async (): Promise<RunProcessResult> => ({
+      exitCode: 0,
+      stdout: JSON.stringify({
+        session_memories: [{
+          id: "mem_auto_index",
+          source_event_refs: ["tomb_job_1_evt_1"],
+          memory_kind: "continuity",
+          summary: "Schedule derived indexing independently.",
+          payload: {},
+          confidence: "high",
+          risk: "low",
+        }],
+      }),
+      stderr: "",
+    }),
+  });
+
+  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  expect(scheduled).toEqual([{ projectKey: "class-kit", forceIndex: true }]);
+});
+
 test("handoff output stores source refs and finalizes the referenced tombstone", () => {
   seedClaimedTombstone(db, { id: "tomb_1", ingest_job_id: "job_1", project_key: "class-kit" });
 

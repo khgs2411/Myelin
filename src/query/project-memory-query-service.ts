@@ -44,7 +44,10 @@ export async function queryProjectMemory(
   db: Database,
   input: ProjectMemoryQueryInput,
 ): Promise<ProjectMemoryQueryResult> {
-  const vectorStore = input.vector_store ?? defaultProjectMemoryQueryVectorStore(createSqliteVecAdapter());
+  const vectorStore = input.vector_store ?? defaultProjectMemoryQueryVectorStore(
+    createSqliteVecAdapter(),
+    input.vector_table,
+  );
   const counts = indexCounts(db, {
     project_key: input.project_key,
     contract: input.document_contract,
@@ -142,11 +145,13 @@ export async function queryProjectMemory(
 
 export function defaultProjectMemoryQueryVectorStore(
   adapter: SqliteVecAdapter = createSqliteVecAdapter(),
+  vectorTable = "project_memory_section_vec",
 ): ProjectMemoryQueryVectorStore {
   return {
     ensure(db, input) {
       return ensureProjectMemoryRetrievalVectorTable(db, {
         dimensions: input.contract.dimensions,
+        table: vectorTable,
         adapter,
       });
     },
@@ -159,7 +164,7 @@ export function defaultProjectMemoryQueryVectorStore(
         format_version: input.contract.formatVersion,
         embedding: input.embedding,
         limit: input.limit,
-      });
+      }, vectorTable);
     },
   };
 }
@@ -420,7 +425,7 @@ function rerankProjectMemoryMatches(input: {
   const queryTokens = tokenSet(input.question);
   const coverageTokens = coverageTokenSet(input.question);
   const queryPhrases = coveragePhrases(input.question);
-  return input.matches
+  const ranked = input.matches
     .map((match, originalIndex) => {
       const rerank = projectMemoryRerankScore(match, queryTokens, coverageTokens, queryPhrases);
       return {
@@ -435,10 +440,101 @@ function rerankProjectMemoryMatches(input: {
     .sort((left, right) => {
       if (right.rerank_score !== left.rerank_score) return (right.rerank_score ?? 0) - (left.rerank_score ?? 0);
       return left.originalIndex - right.originalIndex;
-    })
+    });
+  return diversifyCompoundQueryMatches(input.question, ranked, input.limit)
     .slice(0, input.limit)
     .map(({ originalIndex: _originalIndex, rerank_text: _rerankText, ...match }) => match);
 }
+
+function diversifyCompoundQueryMatches<T extends HydratedProjectMemoryQueryMatch & {
+  originalIndex: number;
+  rerank_score: number;
+  rerank_reasons: string[];
+}>(question: string, ranked: T[], limit: number): T[] {
+  const facets = compoundQueryFacets(question);
+  if (facets.length < 2 || limit < facets.length) return ranked;
+
+  const selected: T[] = [];
+  const selectedIndexes = new Set<number>();
+  for (const facet of facets) {
+    const candidate = ranked
+      .filter((match) => !selectedIndexes.has(match.originalIndex))
+      .map((match) => ({
+        match,
+        coverage: setCoverage(facet, compoundFacetTokenSet(canonicalMatchText(match))),
+        titleCoverage: setCoverage(facet, compoundFacetTokenSet([
+          match.page_title,
+          match.heading_path.join(" "),
+          match.section_id,
+          match.wiki_path,
+        ].join("\n"))),
+        representativePriority: representativeSectionPriority(match),
+      }))
+      .filter(({ coverage }) => coverage >= COMPOUND_FACET_MIN_COVERAGE)
+      .sort((left, right) => {
+        if (right.coverage !== left.coverage) return right.coverage - left.coverage;
+        if (right.titleCoverage !== left.titleCoverage) return right.titleCoverage - left.titleCoverage;
+        if (right.representativePriority !== left.representativePriority) {
+          return right.representativePriority - left.representativePriority;
+        }
+        if ((left.match.vector_rank ?? Infinity) !== (right.match.vector_rank ?? Infinity)) {
+          return (left.match.vector_rank ?? Infinity) - (right.match.vector_rank ?? Infinity);
+        }
+        return right.match.rerank_score - left.match.rerank_score;
+      })[0]?.match;
+    if (!candidate) continue;
+    selected.push({
+      ...candidate,
+      rerank_reasons: [...candidate.rerank_reasons, "compound_query_facet_match"],
+    });
+    selectedIndexes.add(candidate.originalIndex);
+  }
+
+  for (const match of ranked) {
+    if (!selectedIndexes.has(match.originalIndex)) selected.push(match);
+  }
+  return selected;
+}
+
+function representativeSectionPriority(match: ProjectMemoryQueryMatch): number {
+  const heading = normalizeText(lastHeading(match));
+  return /\b(contract|decision order|behavior|workflow|lifecycle)\b/.test(heading) ? 1 : 0;
+}
+
+function compoundQueryFacets(question: string): Set<string>[] {
+  const facets = question
+    .split(/\s+and\s+/i)
+    .map(compoundFacetTokenSet)
+    .filter((tokens) => tokens.size >= 2);
+  return facets.length >= 2 ? facets : [];
+}
+
+function compoundFacetTokenSet(text: string): Set<string> {
+  return new Set(
+    normalizeText(text)
+      .split(/\s+/)
+      .map(stemToken)
+      .map(normalizeCompoundFacetToken)
+      .filter((token) => token.length >= 3 && !COVERAGE_STOP_WORDS.has(token) && token !== "work"),
+  );
+}
+
+function normalizeCompoundFacetToken(token: string): string {
+  if (/^(destruct|delet|remov|reset|truncat)/.test(token)) return "destructive-operation";
+  return token;
+}
+
+function canonicalMatchText(match: HydratedProjectMemoryQueryMatch): string {
+  return [
+    match.page_title,
+    match.heading_path.join(" "),
+    match.section_id,
+    match.wiki_path,
+    match.rerank_text ?? match.content ?? "",
+  ].join("\n");
+}
+
+const COMPOUND_FACET_MIN_COVERAGE = 0.6;
 
 function projectMemoryRerankScore(
   match: HydratedProjectMemoryQueryMatch,

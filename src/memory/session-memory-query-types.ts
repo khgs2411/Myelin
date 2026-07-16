@@ -57,6 +57,7 @@ export type SessionMemoryQueryInput = {
   question: string;
   document_contract: ActiveEmbeddingContract;
   provider: EmbeddingTransport;
+  vector_table?: string;
   limit: number;
   filters?: SessionMemoryQueryFilters;
   vector_store?: SessionMemoryQueryVectorStore;

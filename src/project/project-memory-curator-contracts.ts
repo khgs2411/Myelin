@@ -1,5 +1,6 @@
 import type { ProcessRunner } from "../runtime/llm-contracts.ts";
 import type { Provider } from "../runtime/config.ts";
+import type { ProjectLearnProgressSink } from "./project-learn-progress.ts";
 
 export const PROJECT_MEMORY_CURATOR_MODES = ["create", "maintain"] as const;
 export const PROJECT_MEMORY_CURATOR_RUN_STATUSES = [
@@ -41,6 +42,8 @@ export type RunProjectMemoryCuratorInput = {
   runner?: ProcessRunner;
   now?: Date;
   recreate?: boolean;
+  resumeRun?: string;
+  progress?: ProjectLearnProgressSink;
 };
 
 export type ProjectMemoryCuratorRunResult = {
@@ -65,12 +68,16 @@ export type ProjectMemoryCuratorRunResult = {
     retrieval_sections?: "project-memory-retrieval-sections.json";
     hint_generation?: "project-memory-hint-generation-result.json";
     retrieval_index_result?: "project-memory-retrieval-index-result.json";
+    publication_validation?: "canonical-publication-validation.json";
+    repository_identity?: "repository-identity.json";
     subject_manifest?: "reports/documentation-subject-manifest.json";
     planner_report?: "reports/documentation-planner-report.json";
     subject_reports?: string[];
     maintenance_report?: "reports/documentation-maintenance-report.json";
     file_authoring_runs?: string[];
     pre_maintenance_wiki?: "pre-maintenance-wiki";
+    create_checkpoint?: "create-checkpoint.json";
+    resume_source?: "resume-source.json";
   };
   curation_kind?: "agent_authored" | "human_reviewed";
   run_kind?: "create" | "maintenance" | "create_then_maintenance" | "recreate";
@@ -83,5 +90,8 @@ export type ProjectMemoryCuratorRunResult = {
   changed_files?: string[];
   source_consumptions?: string[];
   stopped_reason?: string;
+  resumable?: boolean;
+  resume_command?: string;
+  resumed_from_run?: string;
   failure_kind?: "provider_failed_before_output" | "curator_output_invalid_json";
 };

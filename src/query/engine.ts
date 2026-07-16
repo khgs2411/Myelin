@@ -1,5 +1,5 @@
 import { openMemoryDb } from "../memory/db.ts";
-import { EmbeddingProviderFactory } from "../memory/embedding-provider-factory.ts";
+import { resolveEmbeddingRuntime } from "../memory/embedding-contract-resolver.ts";
 import { loadConfig } from "../runtime/config.ts";
 import { currentGitBranch, resolveIngestTargetRepo } from "../ingest/runtime.ts";
 import { MemoryQueryService } from "./memory-query-service.ts";
@@ -20,13 +20,18 @@ export async function queryMemory(options: {
   let db: ReturnType<typeof openMemoryDb> | undefined;
   try {
     const config = await loadConfig(options.root);
-    const selection = await new EmbeddingProviderFactory(config).initialize("retrieval_document");
     const gitBranch = await resolveQueryBranch(options);
     db = openMemoryDb(options.root);
+    const selection = await resolveEmbeddingRuntime({
+      db,
+      config,
+      scope: options.layer === "project" ? "project_memory" : "session_memory",
+    });
     const service = new MemoryQueryService({
       db,
-      documentContract: selection.contract,
-      embeddingProvider: selection.client,
+      documentContract: selection.runtime.contract,
+      embeddingProvider: selection.runtime.client,
+      vectorTable: selection.active.vectorTable,
     });
     return await service.query({
       root: options.root,

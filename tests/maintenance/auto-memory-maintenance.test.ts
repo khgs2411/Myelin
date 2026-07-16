@@ -12,6 +12,7 @@ import { normalizeSessionMemoryForEmbedding } from "../../src/memory/session-mem
 import type { DetachedSpawner } from "../../src/ingest/runtime.ts";
 import { bootstrapProject } from "../../src/runtime/bootstrap.ts";
 import { DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT } from "../../src/runtime/config.ts";
+import { registerInitialActiveEmbeddingContract } from "../../src/memory/embedding-contract-store.ts";
 
 let root: string;
 let repo: string;
@@ -100,6 +101,46 @@ test("auto memory maintenance skips below threshold without starting cooldown", 
   expect(skipped).toMatchObject({ status: "skipped", reason: "below captured event threshold" });
   expect(scheduled.status).toBe("scheduled");
   expect(spawned).toHaveLength(1);
+});
+
+test("auto memory maintenance schedules active embedding work below the capture threshold", async () => {
+  await writeConfig([
+    "AUTO_MEMORY_MAINTENANCE=1",
+    "AUTO_MEMORY_MIN_CAPTURED_EVENTS=25",
+    "AUTO_MEMORY_COOLDOWN_MS=0",
+  ]);
+  const db = openMemoryDbAt(join(root, "state", "memory.db"));
+  registerInitialActiveEmbeddingContract(db, {
+    scope: "session_memory",
+    contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+  });
+  createSessionMemory(db, {
+    id: "mem_pending_below_capture_threshold",
+    project_key: "demo",
+    source_event_refs: ["tomb_pending"],
+    memory_kind: "continuity",
+    title: "Pending embedding",
+    summary: "This row should schedule indexing independently of capture pressure.",
+    payload: {},
+    confidence: "high",
+    risk: "low",
+    now: "2026-07-13T00:00:00.000Z",
+  });
+  db.query("DELETE FROM session_memory_embeddings WHERE session_memory_id = ?")
+    .run("mem_pending_below_capture_threshold");
+  db.close();
+  const spawned: Array<Parameters<DetachedSpawner>[0]> = [];
+
+  const result = await new AutoMemoryMaintenanceService(root, {
+    spawn: (options) => {
+      spawned.push(options);
+      return { pid: 9876, unref: () => {} };
+    },
+  }).maybeSchedule("demo");
+
+  expect(result).toMatchObject({ status: "scheduled", queued_count: 0 });
+  expect(spawned).toHaveLength(1);
+  expect(spawned[0].env.MYELIN_AUTO_MEMORY_FORCE_INGEST).toBeUndefined();
 });
 
 test("SessionStart can force maintenance below the threshold and through cooldown", async () => {

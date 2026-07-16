@@ -3,12 +3,13 @@ import { basename, dirname, isAbsolute, join, relative, resolve } from "node:pat
 import { realpath } from "node:fs/promises";
 import { discoverProjects, findProject, type Project } from "../runtime/projects.ts";
 import { loadConfig } from "../runtime/config.ts";
+import { EmbeddingProviderFactory } from "../memory/embedding-provider-factory.ts";
 import { isProcessAlive } from "../ingest/runtime.ts";
 import { EvidenceRegistry, type OperationalStatusResult, type ProjectMemoryStatusSection, type SessionMemoryStatusSection } from "./contracts.ts";
 import { inspectInstallation } from "./installation-inspector.ts";
 import { inspectProjectMemory } from "./project-memory-inspector.ts";
 import { inspectSessionMemory, openStatusDatabase } from "./session-memory-inspector.ts";
-import { aggregateOverall, warning } from "./severity.ts";
+import { aggregateOverall, maxState, warning } from "./severity.ts";
 
 export type StatusServiceDeps = {
   now?: () => Date;
@@ -36,8 +37,8 @@ export class StatusService {
     try {
       const snapshot = openStatusDatabase(this.root);
       try {
-        session = await inspectSessionMemory({ root: this.root, projectKey: resolved.project.key, db: snapshot.db, config: config.autoMemoryMaintenance, evidence, isAlive: alive });
-        project = await inspectProjectMemory({ root: this.root, projectKey: resolved.project.key, db: snapshot.db, config: config.autoProjectMemoryMaintenance, evidence, isAlive: alive });
+        session = await inspectSessionMemory({ root: this.root, projectKey: resolved.project.key, db: snapshot.db, config: config.autoMemoryMaintenance, embeddingConfig: config.embedding, evidence, isAlive: alive });
+        project = await inspectProjectMemory({ root: this.root, projectKey: resolved.project.key, db: snapshot.db, config: config.autoProjectMemoryMaintenance, embeddingConfig: config.embedding, evidence, isAlive: alive });
       } finally {
         snapshot.close();
       }
@@ -47,6 +48,7 @@ export class StatusService {
       session = { section: unavailableSession(resolved.project.key, dbId), warnings: [dbWarning], actions: [] };
       project = { section: unavailableProject(resolved.project.key, dbId), warnings: [warning("ROOT_SQLITE_UNAVAILABLE", "blocked", "project_memory", errorMessage(error), [dbId])], actions: [] };
     }
+    await this.enrichProviderAvailability(config, session, project);
     const warnings = [...installation.warnings, ...session.warnings, ...project.warnings];
     const actions = [...installation.actions, ...session.actions, ...project.actions];
     return {
@@ -60,6 +62,50 @@ export class StatusService {
       actions,
       evidence: evidence.all(),
     };
+  }
+
+  private async enrichProviderAvailability(
+    config: Awaited<ReturnType<typeof loadConfig>>,
+    session: Awaited<ReturnType<typeof inspectSessionMemory>>,
+    project: Awaited<ReturnType<typeof inspectProjectMemory>>,
+  ): Promise<void> {
+    const cache = new Map<string, { available: boolean; reason?: string }>();
+    for (const [sectionName, inspection] of [
+      ["session_memory", session],
+      ["project_memory", project],
+    ] as const) {
+      const contract = inspection.section.retrieval.active_contract;
+      if (!contract) continue;
+      const key = `${contract.provider}\0${contract.model}\0${contract.dimensions}\0${contract.format_version}`;
+      let availability = cache.get(key);
+      if (!availability) {
+        try {
+          await new EmbeddingProviderFactory(config).initializeContract({
+            provider: contract.provider as "ollama_nomic" | "ollama_qwen" | "gemini",
+            model: contract.model,
+            dimensions: contract.dimensions,
+            purpose: "retrieval_document",
+            formatVersion: contract.format_version,
+          });
+          availability = { available: true };
+        } catch (error) {
+          availability = { available: false, reason: errorMessage(error) };
+        }
+        cache.set(key, availability);
+      }
+      inspection.section.retrieval.provider_state = availability.available ? "available" : "unavailable";
+      if (!availability.available) {
+        inspection.section.state = maxState(inspection.section.state, "attention");
+        inspection.section.lifecycle = "provider_unavailable";
+        inspection.warnings.push(warning(
+          sectionName === "session_memory" ? "SESSION_EMBEDDING_PROVIDER_UNAVAILABLE" : "PROJECT_EMBEDDING_PROVIDER_UNAVAILABLE",
+          "attention",
+          sectionName,
+          availability.reason ?? "The active embedding provider is unavailable.",
+          inspection.section.evidence_ids,
+        ));
+      }
+    }
   }
 
   private async resolveProject(input: { projectKey?: string | null; cwd?: string }): Promise<{ project: Project; from: "argument" | "cwd" } | null> {
@@ -87,7 +133,7 @@ function unavailableSession(key: string, evidenceId: string): SessionMemoryStatu
     capture: { queued_events: 0, unleased_events: 0, leased_events: 0 },
     ingest: { running_jobs: 0, failed_jobs: 0, terminal_tombstones: 0, latest_log_path: null },
     maintenance: { enabled: false, lifecycle: "unknown", lock: { lifecycle: "absent", path: `projects/${key}/state/.auto-memory-maintenance.lock`, run_id: null, pid: null }, last_run_id: null, last_log_path: null },
-    retrieval: { indexed_count: 0, pending_count: 0, failed_count: 0 },
+    retrieval: { active_contract: null, desired_contract: null, migration_required: false, provider_state: "not_checked", indexed_count: 0, pending_count: 0, failed_count: 0, historical: { contract_count: 0, row_count: 0 } },
   };
 }
 
@@ -97,7 +143,7 @@ function unavailableProject(key: string, evidenceId: string): ProjectMemoryStatu
     inbox: { pending_items: 0 }, candidates: { pending: 0, needs_review: 0 },
     maintenance: { enabled: false, lifecycle: "unknown", lock: { lifecycle: "absent", path: `projects/${key}/state/.auto-project-memory-maintenance.lock`, run_id: null, pid: null }, last_run_id: null, last_log_path: null },
     curation: { lifecycle: "unknown", canonical_wiki_path: `projects/${key}/wiki`, latest_run_path: null },
-    retrieval: { indexed_count: 0, pending_count: 0, failed_count: 0 },
+    retrieval: { active_contract: null, desired_contract: null, migration_required: false, provider_state: "not_checked", indexed_count: 0, pending_count: 0, failed_count: 0, historical: { contract_count: 0, row_count: 0 } },
   };
 }
 

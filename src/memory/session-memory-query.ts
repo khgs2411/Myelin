@@ -33,7 +33,10 @@ export async function querySessionMemory(
   db: Database,
   input: SessionMemoryQueryInput,
 ): Promise<SessionMemoryQueryResult> {
-  const vectorStore = input.vector_store ?? defaultSessionMemoryQueryVectorStore(createSqliteVecAdapter());
+  const vectorStore = input.vector_store ?? defaultSessionMemoryQueryVectorStore(
+    createSqliteVecAdapter(),
+    input.vector_table,
+  );
   const counts = indexCounts(db, {
     project_key: input.project_key,
     contract: input.document_contract,
@@ -95,12 +98,14 @@ export async function querySessionMemory(
 
 export function defaultSessionMemoryQueryVectorStore(
   adapter: SqliteVecAdapter = createSqliteVecAdapter(),
+  vectorTable = "session_memory_vec",
 ): SessionMemoryQueryVectorStore {
   return {
     ensure(db, input) {
       return ensureSessionMemoryVectorStorage(db, {
         contract: input.contract,
         adapter,
+        vector_table: vectorTable,
       });
     },
     search(db, input) {
@@ -112,7 +117,7 @@ export function defaultSessionMemoryQueryVectorStore(
         format_version: input.contract.formatVersion,
         embedding: input.embedding,
         limit: input.limit,
-      });
+      }, vectorTable);
     },
   };
 }

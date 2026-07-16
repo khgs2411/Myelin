@@ -17,6 +17,7 @@ export class SessionMemoryIndexService {
       db: Database;
       contract: ActiveEmbeddingContract;
       provider: EmbeddingTransport;
+      vectorTable?: string;
       vectorStore?: SessionMemoryVectorStore;
     },
   ) {}
@@ -26,6 +27,7 @@ export class SessionMemoryIndexService {
       project_key: input.projectKey,
       contract: this.deps.contract,
       provider: this.deps.provider,
+      vector_table: this.deps.vectorTable,
       limit: input.limit,
       batch_size: input.batchSize,
       retry_failed: input.retryFailed,

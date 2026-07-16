@@ -3,6 +3,7 @@ import { discoverProjects } from "../runtime/projects.ts";
 import type { ProjectMemoryCuratorRunResult, RunProjectMemoryCuratorInput } from "./project-memory-curator-contracts.ts";
 import { ProjectMemoryCuratorService } from "./project-memory-curator-service.ts";
 import { buildProjectMemoryPacket, type ProjectMemoryPacket } from "./project-memory-packet.ts";
+import { ProjectMemoryMutationRuntime } from "./project-memory-mutation-runtime.ts";
 
 export type MigrateProjectLayoutResult = {
   projectActions: MigrationAction[];
@@ -35,11 +36,19 @@ export class ProjectService {
   }
 
   async runProjectLearn(input: RunProjectMemoryCuratorInput): Promise<ProjectMemoryCuratorRunResult> {
-    return await new ProjectMemoryCuratorService(this.root).runProjectLearn(input);
+    return await new ProjectMemoryMutationRuntime(this.root).run({
+      projectKey: input.projectKey,
+      operation: "project learn",
+      task: async () => await new ProjectMemoryCuratorService(this.root).runProjectLearn(input),
+    });
   }
 
   async runProjectMaintenance(input: RunProjectMemoryCuratorInput): Promise<ProjectMemoryCuratorRunResult> {
-    return await new ProjectMemoryCuratorService(this.root).runProjectMaintenance(input);
+    return await new ProjectMemoryMutationRuntime(this.root).run({
+      projectKey: input.projectKey,
+      operation: "project maintenance",
+      task: async () => await new ProjectMemoryCuratorService(this.root).runProjectMaintenance(input),
+    });
   }
 
   async migrateLayout(projectKey: string): Promise<MigrateProjectLayoutResult> {

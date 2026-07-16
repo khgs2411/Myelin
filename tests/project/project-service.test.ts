@@ -107,7 +107,10 @@ async function seedCreateStubs(): Promise<string> {
     }],
   });
   await writeJson(join(stubs, "create-planner", "reports", "documentation-planner-report.json"), {
+    schema_version: 1,
+    project_key: "demo",
     evidence_paths: ["README.md"],
+    surface_coverage: createStubSurfaceCoverage(),
     known_gaps: [],
   });
   await mkdir(join(stubs, "subject-runtime", "draft-wiki"), { recursive: true });
@@ -123,7 +126,34 @@ async function seedCreateStubs(): Promise<string> {
     touched_paths: ["runtime.md"],
     known_gaps: [],
   });
+  await mkdir(join(stubs, "create-index-finalizer", "finalized-index"), { recursive: true });
+  await writeFile(
+    join(stubs, "create-index-finalizer", "finalized-index", "index.md"),
+    "# Demo\n\n## Canonical subjects\n\n- [Runtime](runtime.md)\n",
+    "utf8",
+  );
   return stubs;
+}
+
+function createStubSurfaceCoverage() {
+  return [
+    {
+      surface_id: "runtime",
+      kind: "public_interface",
+      status: "covered",
+      summary: "Runtime interface.",
+      evidence_paths: ["src/runtime.ts"],
+      subject_ids: ["runtime"],
+    },
+    ...["operator_workflow", "administrative_surface", "destructive_or_irreversible_operation"].map((kind) => ({
+      surface_id: `absent-${kind}`,
+      kind,
+      status: "not_present",
+      summary: `No ${kind} is present.`,
+      evidence_paths: ["README.md"],
+      subject_ids: [],
+    })),
+  ];
 }
 
 async function seedSchema(): Promise<void> {

@@ -54,6 +54,33 @@ export type ProjectMemorySubjectManifestEntry = {
   depends_on_subject_ids?: string[];
 };
 
+export const PROJECT_MEMORY_REPOSITORY_SURFACE_KINDS = [
+  "public_interface",
+  "operator_workflow",
+  "administrative_surface",
+  "destructive_or_irreversible_operation",
+] as const;
+
+export type ProjectMemoryRepositorySurfaceKind =
+  (typeof PROJECT_MEMORY_REPOSITORY_SURFACE_KINDS)[number];
+
+export type ProjectMemoryRepositorySurfaceCoverage = {
+  surface_id: string;
+  kind: ProjectMemoryRepositorySurfaceKind;
+  status: "covered" | "not_present";
+  summary: string;
+  evidence_paths: string[];
+  subject_ids: string[];
+};
+
+export type ProjectMemoryPlannerReport = {
+  schema_version: 1;
+  project_key: string;
+  evidence_paths: string[];
+  surface_coverage: ProjectMemoryRepositorySurfaceCoverage[];
+  known_gaps: string[];
+};
+
 export type ProjectMemorySubjectReport = {
   schema_version: 1;
   project_key: string;
@@ -83,6 +110,45 @@ export type ProjectMemoryMaintenanceReport = {
   evidence_paths: string[];
   known_gaps: string[];
 };
+
+export const PROJECT_MEMORY_MAINTENANCE_REPORT_SCHEMA = {
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  title: "ProjectMemoryMaintenanceReport",
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "schema_version",
+    "project_key",
+    "status",
+    "dispositions",
+    "touched_paths",
+    "evidence_paths",
+    "known_gaps",
+  ],
+  properties: {
+    schema_version: { const: 1 },
+    project_key: { type: "string", minLength: 1 },
+    status: { enum: ["completed", "degraded", "failed"] },
+    dispositions: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["source_kind", "source_ref", "disposition", "reason", "output_refs"],
+        properties: {
+          source_kind: { enum: ["project_candidate", "project_handoff"] },
+          source_ref: { type: "string", minLength: 1 },
+          disposition: { enum: PROJECT_MEMORY_AGENT_CANDIDATE_DISPOSITIONS },
+          reason: { type: "string", minLength: 1 },
+          output_refs: { type: "array", items: { type: "string" } },
+        },
+      },
+    },
+    touched_paths: { type: "array", items: { type: "string" } },
+    evidence_paths: { type: "array", items: { type: "string" } },
+    known_gaps: { type: "array", items: { type: "string" } },
+  },
+} as const;
 
 export type ProjectMemoryAgentStateV2 = {
   schema_version: 2;

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { delimiter, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { Provider, Workload } from "./config.ts";
 import { resolveInvocation } from "./llm-client.ts";
 import type { ProcessRunner } from "./llm-contracts.ts";
@@ -112,30 +112,46 @@ async function prepareTargetRepoSnapshot(input: FileAuthoringAgentInput): Promis
   return snapshotDir;
 }
 
-function shouldSkipTargetSnapshotPath(relativePath: string, projectKey: string): boolean {
+export function shouldSkipTargetSnapshotPath(relativePath: string, projectKey: string): boolean {
   const parts = relativePath.split(sep);
+  const excludedSegments = new Set([
+    ".git",
+    ".adl",
+    ".agents",
+    ".codex",
+    ".tmp",
+    "node_modules",
+    "state",
+  ]);
+  const hasGeneratedProjectRun = parts.some(
+    (part, index) => part === "projects" && parts[index + 2] === "runs",
+  );
+
   return (
-    relativePath === ".DS_Store" ||
-    relativePath === ".env" ||
-    relativePath.startsWith(".env.") ||
-    relativePath === ".mcp.json" ||
-    relativePath === ".git" ||
-    relativePath.startsWith(`.git${sep}`) ||
-    relativePath === ".adl" ||
-    relativePath.startsWith(`.adl${sep}`) ||
-    relativePath === ".agents" ||
-    relativePath.startsWith(`.agents${sep}`) ||
-    relativePath === ".codex" ||
-    relativePath.startsWith(`.codex${sep}`) ||
-    relativePath === ".tmp" ||
-    relativePath.startsWith(`.tmp${sep}`) ||
-    relativePath === "node_modules" ||
-    relativePath.startsWith(`node_modules${sep}`) ||
-    relativePath === "state" ||
-    relativePath.startsWith(`state${sep}`) ||
-    (parts[0] === "projects" && parts[2] === "runs") ||
+    parts.some((part) => part === ".DS_Store" || part === ".mcp.json") ||
+    parts.some((part) => (part === ".env" || part.startsWith(".env.")) && part !== ".env.example") ||
+    parts.some((part) => excludedSegments.has(part)) ||
+    hasGeneratedProjectRun ||
     relativePath.startsWith(`projects${sep}${projectKey}${sep}runs${sep}`)
   );
+}
+
+export async function fingerprintTargetRepositorySnapshot(
+  targetRepoDir: string,
+  projectKey: string,
+): Promise<string> {
+  const hash = createHash("sha256");
+  const included = (await listFiles(targetRepoDir))
+    .map((path) => ({ path, relativePath: relative(targetRepoDir, path) }))
+    .filter(({ relativePath }) => !shouldSkipTargetSnapshotPath(relativePath, projectKey))
+    .sort((a, b) => a.relativePath.localeCompare(b.relativePath));
+  for (const file of included) {
+    hash.update(file.relativePath.replaceAll("\\", "/"));
+    hash.update("\0");
+    hash.update(await readFile(file.path));
+    hash.update("\0");
+  }
+  return `sha256:${hash.digest("hex")}`;
 }
 
 async function invokeLiveFileAuthoringAgent(
@@ -151,6 +167,11 @@ async function invokeLiveFileAuthoringAgent(
   command.push("-");
 
   const runner = input.runner ?? runProcess;
+  const inheritedCeilings = env.GIT_CEILING_DIRECTORIES?.trim();
+  const invocationEnv = {
+    ...env,
+    GIT_CEILING_DIRECTORIES: [input.workspaceDir, inheritedCeilings].filter(Boolean).join(delimiter),
+  };
   const output = await runner(command, {
     cwd: input.workspaceDir,
     stdin: [
@@ -159,7 +180,7 @@ async function invokeLiveFileAuthoringAgent(
       `Target repository snapshot: ${targetRepoSnapshot}`,
       "Read repository files from target-repo/. Write only to the explicit output roots named in the prompt.",
     ].join("\n"),
-    env,
+    env: invocationEnv,
     timeoutMs: input.timeoutMs,
   });
   if (output.exitCode !== 0) throw new Error(`file-authoring agent failed: ${output.stderr || output.stdout}`);

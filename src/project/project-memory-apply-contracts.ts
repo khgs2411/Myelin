@@ -83,7 +83,7 @@ export type ProjectMemoryExpectedWrite = {
   staged_output_ref: string;
   before_sha256: string | null;
   write_order: number;
-  write_kind: "wiki_page" | "project_state" | "page_state" | "source_consumption_state" | "log";
+  write_kind: "wiki_page" | "project_state" | "repository_identity_state" | "page_state" | "source_consumption_state" | "log";
   page_ids?: string[];
   item_ids?: string[];
 };

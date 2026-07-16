@@ -58,9 +58,11 @@ identity failures that prevent construction of the contract exit nonzero.
 
 Re-running `./install` previews repair or version-update work. Each successful
 upgrade retains one previous version for rollback and removes older owned
-versions. The version identity includes the package version, source revision,
-and runtime content digest, so local dirty builds remain distinguishable from
-their Git commit. Roll back or remove every inactive version with:
+versions. The version identity is `<product-semver>+<revision>.<content-id>`.
+Changed runtime content requires a greater authored `package.json` major,
+minor, or patch version before installation; identical-byte reinstalls remain
+idempotent. The suffix keeps local dirty builds distinguishable from their Git
+commit. Roll back or remove every inactive version with:
 
 ```bash
 myelin install --rollback
@@ -127,6 +129,7 @@ For the exhaustive command reference, including arguments, options, side effects
 | `make update PROJECT=<key>` | `myelin ingest <key>` / `make ingest PROJECT=<key>` |
 | Experience Log to Session Memory ingest | `myelin ingest <key>` / `myelin ingest status <ingest-job-id>` |
 | Session Memory embedding index/backfill | `myelin memory index session <key> [--limit N] [--retry-failed] [--json]` |
+| Embedding contract migration/rollback/cleanup | `myelin memory embeddings migrate\|rollback\|prune [--apply] [--json]` |
 | Project Memory candidate maintenance after bootstrap | `myelin memory maintain project <key> [--json]` |
 | Review neutral terminal memory outcomes | `myelin memory review <key> [--json]` |
 | `ask` / query helpers | `myelin memory query <key> "<question>"` / `make query ...` |
@@ -178,7 +181,9 @@ make typecheck
 
 Model-backed workflows use the operator's authenticated vendor CLIs through the provider abstraction. Configure defaults in `myelin.config`; environment variables can still override local config for a run.
 
-Embedding-backed indexing defaults to `EMBEDDING_PROVIDER=auto`: Myelin tries local `nomic-embed-text:v1.5` through Ollama first, local `qwen3-embedding:4b` second, then Google. Each provider owns its model and dimensions; all three defaults are 768 dimensions. Ollama requests use `keep_alive: "0"`, unloading the model after each probe or embedding batch; the next operation initializes it again. Configure `EMBEDDING_NOMIC_*`, `EMBEDDING_QWEN_*`, `EMBEDDING_GEMINI_*`, and `EMBEDDING_OLLAMA_URL` to override provider contracts. Google reads `GOOGLE_API_KEY` from `.env` or the process environment; `GEMINI_API_KEY` is accepted as a compatibility alias. Set `EMBEDDING_PROVIDER=ollama_nomic`, `ollama_qwen`, or `gemini` to disable automatic fallback. Running the matching memory index command rebuilds a dimension-mismatched derived vector table and requeues previously indexed rows for the selected contract.
+Embedding identity is persisted separately for Session and Project Memory. With `EMBEDDING_PROVIDER=auto`, Myelin selects local `nomic-embed-text:v1.5` first or local `qwen3-embedding:4b` second only when a scope has no active contract, then reuses that contract on every process. It never silently switches embedding spaces when availability changes, and `auto` never exports memory through Gemini. Gemini requires explicit `EMBEDDING_PROVIDER=gemini`; Google reads `GOOGLE_API_KEY` from `.env` or the process environment, with `GEMINI_API_KEY` as a compatibility alias.
+
+Changing provider, model, dimensions, or embedding format creates a migration requirement rather than rebuilding the active table. `myelin memory embeddings migrate` previews staged Session and Project migrations; add `--apply` to build versioned indexes, verify full coverage and a vector query, and atomically activate them. `memory embeddings rollback --apply` swaps back to the previous healthy contract. `memory embeddings prune` previews retired derived metadata, query-cache, and vector state and removes it only with `--apply`; active and previous contracts remain protected. Canonical Session and Project Memory are never pruned.
 
 On macOS, SQLite extension loading requires a non-Apple SQLite build. Myelin prefers its vendored SQLite runtime, falls back to Homebrew SQLite at `/opt/homebrew/opt/sqlite/lib/libsqlite3.dylib` or `/usr/local/opt/sqlite/lib/libsqlite3.dylib`, and accepts `MYELIN_SQLITE_DYLIB_PATH` or `SQLITE_DYLIB_PATH` overrides.
 

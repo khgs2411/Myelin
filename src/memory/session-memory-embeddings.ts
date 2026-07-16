@@ -214,11 +214,13 @@ export function ensureSessionMemoryVectorStorage(
   input: {
     contract: ActiveEmbeddingContract;
     adapter: SqliteVecAdapter;
+    vector_table?: string;
     rebuild_on_dimension_mismatch?: boolean;
   },
 ): { created: boolean; available: boolean; reason?: string; rebuilt?: boolean } {
   return ensureSessionMemoryVectorTable(db, {
     dimensions: input.contract.dimensions,
+    table: input.vector_table,
     adapter: input.adapter,
     rebuildOnDimensionMismatch: input.rebuild_on_dimension_mismatch,
   });

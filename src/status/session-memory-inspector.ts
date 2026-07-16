@@ -3,11 +3,12 @@ import { copyFileSync, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative } from "node:path";
-import type { AutoMemoryMaintenanceConfig } from "../runtime/config.ts";
+import type { AutoMemoryMaintenanceConfig, EmbeddingConfig } from "../runtime/config.ts";
 import { configureBunSQLite } from "../memory/sqlite-runtime.ts";
 import type { EvidenceRegistry, SessionMemoryStatusSection, StatusInspection } from "./contracts.ts";
 import { inspectLock, type MaintenanceStateRecord } from "./lock-inspector.ts";
 import { maxState, sessionRetrievalState, warning } from "./severity.ts";
+import { inspectEmbeddingRetrievalStatus } from "./embedding-retrieval-status.ts";
 
 const REQUIRED_TABLES = ["experience_events", "experience_event_tombstones", "ingest_jobs", "session_memories", "session_memory_embeddings", "memory_candidates", "project_memory_retrieval_embeddings"];
 
@@ -51,6 +52,7 @@ export async function inspectSessionMemory(input: {
   projectKey: string;
   db: Database;
   config: AutoMemoryMaintenanceConfig;
+  embeddingConfig: EmbeddingConfig;
   evidence: EvidenceRegistry;
   isAlive: (pid: number) => boolean;
 }): Promise<{ section: SessionMemoryStatusSection } & StatusInspection> {
@@ -112,16 +114,31 @@ export async function inspectSessionMemory(input: {
     }
   }
 
-  const retrieval = retrievalCounts(input.db, input.projectKey);
-  const retrievalState = sessionRetrievalState(retrieval.active, retrieval.indexed, retrieval.pending, retrieval.failed);
+  const retrieval = inspectEmbeddingRetrievalStatus({
+    db: input.db,
+    projectKey: input.projectKey,
+    scope: "session_memory",
+    config: input.embeddingConfig,
+  });
+  const retrievalState = sessionRetrievalState(
+    retrieval.active_memory_count,
+    retrieval.indexed_count,
+    retrieval.pending_count,
+    retrieval.failed_count,
+  );
   if (retrievalState !== "healthy") {
-    warnings.push(warning("SESSION_RETRIEVAL_UNAVAILABLE", retrievalState, "session_memory", retrieval.indexed === 0 ? "Active Session Memory has no usable index." : "Session Memory retrieval has pending or failed rows.", [dbId]));
+    warnings.push(warning("SESSION_RETRIEVAL_UNAVAILABLE", retrievalState, "session_memory", retrieval.indexed_count === 0 ? "Active Session Memory has no usable index." : "Session Memory retrieval has pending or failed rows.", [dbId]));
     actions.push({ command: `myelin memory index session ${input.projectKey}`, reason: "Build or repair Session Memory retrieval.", section: "session_memory" });
+  }
+  if (retrieval.migration_required) {
+    warnings.push(warning("SESSION_EMBEDDING_MIGRATION_REQUIRED", "attention", "session_memory", "Configured Session Memory embedding contract differs from the active contract.", [dbId]));
+    actions.push({ command: "myelin memory embeddings migrate", reason: "Preview the configured embedding-contract migration.", section: "session_memory" });
   }
   const queueState = counts.queued >= input.config.minCapturedEvents && !hasLiveJob && !maintenanceActive ? "attention" : "healthy";
   const disabledState = !input.config.enabled && counts.queued > 0 ? "attention" : "healthy";
   const malformedState = stateRead.error ? "attention" : "healthy";
-  const state = maxState(jobState, lock.state, retrievalState, queueState, disabledState, malformedState, maintenanceFailureState, logState);
+  const migrationState = retrieval.migration_required ? "attention" : "healthy";
+  const state = maxState(jobState, lock.state, retrievalState, migrationState, queueState, disabledState, malformedState, maintenanceFailureState, logState);
   const lifecycle = lock.lock.lifecycle === "stale" ? "stale_lock" : retrievalState === "blocked" ? "retrieval_unavailable" : state === "attention" ? "attention" : "ready";
   return {
     section: {
@@ -129,7 +146,7 @@ export async function inspectSessionMemory(input: {
       capture: { queued_events: counts.queued, unleased_events: counts.unleased, leased_events: counts.leased },
       ingest: { running_jobs: jobs.filter((job) => job.status === "running").length, failed_jobs: jobs.filter((job) => job.status === "failed").length, terminal_tombstones: counts.terminal, latest_log_path: latestLog },
       maintenance: { enabled: input.config.enabled, lifecycle: lock.lock.lifecycle === "active" ? "running" : lock.lock.lifecycle === "stale" ? "stale_lock" : stateRead.state?.last_status ?? "never_run", lock: lock.lock, last_run_id: stateRead.state?.last_run_id ?? null, last_log_path: checkoutPath(input.root, stateRead.state?.last_log_path ?? null) },
-      retrieval: { indexed_count: retrieval.indexed, pending_count: retrieval.pending, failed_count: retrieval.failed },
+      retrieval,
     }, warnings, actions,
   };
 }
@@ -139,15 +156,6 @@ function queueCounts(db: Database, key: string): { queued: number; leased: numbe
   const leased = scalar(db, "SELECT count(*) AS count FROM experience_event_tombstones t JOIN experience_events e ON e.id=t.original_event_id AND e.project_key=t.project_key WHERE t.project_key=? AND t.state='claimed'", key);
   const terminal = scalar(db, "SELECT count(*) AS count FROM experience_event_tombstones WHERE project_key=? AND state IN ('output','no_output','failed','unfinished')", key);
   return { queued, leased, unleased: Math.max(0, queued - leased), terminal };
-}
-
-function retrievalCounts(db: Database, key: string): { active: number; indexed: number; pending: number; failed: number } {
-  return {
-    active: scalar(db, "SELECT count(*) AS count FROM session_memories WHERE project_key=? AND status='active'", key),
-    indexed: scalar(db, "SELECT count(DISTINCT sm.id) AS count FROM session_memories sm JOIN session_memory_embeddings e ON e.session_memory_id=sm.id WHERE sm.project_key=? AND sm.status='active' AND e.status='indexed'", key),
-    pending: scalar(db, "SELECT count(*) AS count FROM session_memory_embeddings e JOIN session_memories sm ON sm.id=e.session_memory_id WHERE sm.project_key=? AND sm.status='active' AND e.status='pending'", key),
-    failed: scalar(db, "SELECT count(*) AS count FROM session_memory_embeddings e JOIN session_memories sm ON sm.id=e.session_memory_id WHERE sm.project_key=? AND sm.status='active' AND e.status='failed'", key),
-  };
 }
 
 async function readOptionalState(path: string): Promise<{ state: MaintenanceStateRecord | null; error: string | null }> {

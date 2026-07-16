@@ -379,6 +379,48 @@ test("returns degraded canonical reference when markdown section is missing", as
   expect(result.matches[0].content).toBeUndefined();
 });
 
+test("keeps both subjects in the result set for compound questions", async () => {
+  await writeWikiPage(
+    "registration.md",
+    "# Registration\n\n## Decision order\n\nClass Kit product member auto approval works after membership eligibility.\n\n## Regression evidence\n\nClass Kit product member auto approval is covered by a policy matrix regression.\n\n## Stock outcome\n\nClass Kit product member auto approval consumes stock for eligible grants.\n",
+  );
+  await writeWikiPage(
+    "platform-product-operations.md",
+    "# Platform product operations\n\n## Product truncation contract\n\nDestructive product removal is a truncation reset, not permanent deletion.\n\n## Destructive action confirmation\n\nA platform admin confirms the exact product key before the destructive reset.\n",
+  );
+  const decisionRowId = await indexedRetrievalRow("registration.md", "registration/decision-order");
+  const evidenceRowId = await indexedRetrievalRow("registration.md", "registration/regression-evidence");
+  const stockRowId = await indexedRetrievalRow("registration.md", "registration/stock-outcome");
+  const truncationRowId = await indexedRetrievalRow(
+    "platform-product-operations.md",
+    "platform-product-operations/product-truncation-contract",
+  );
+  const confirmationRowId = await indexedRetrievalRow(
+    "platform-product-operations.md",
+    "platform-product-operations/destructive-action-confirmation",
+  );
+
+  const result = await queryProjectMemory(db, {
+    root,
+    project_key: "demo",
+    question: "How do destructive product removal and member auto-approval work in Class Kit?",
+    document_contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+    provider: fixedProvider(),
+    limit: 2,
+    max_inline_chars: 4000,
+    vector_store: vectorStoreWithDistances([
+      { retrieval_row_id: confirmationRowId, distance: 0.04 },
+      { retrieval_row_id: decisionRowId, distance: 0.05 },
+      { retrieval_row_id: evidenceRowId, distance: 0.06 },
+      { retrieval_row_id: stockRowId, distance: 0.07 },
+      { retrieval_row_id: truncationRowId, distance: 0.8 },
+    ]),
+  });
+
+  expect(result.matches.map((match) => match.retrieval_row_id)).toEqual([truncationRowId, decisionRowId]);
+  expect(result.matches.every((match) => match.rerank_reasons?.includes("compound_query_facet_match"))).toBe(true);
+});
+
 async function writeWikiPage(path: string, text: string): Promise<void> {
   const absolutePath = join(root, "projects", "demo", "wiki", path);
   await mkdir(dirname(absolutePath), { recursive: true });

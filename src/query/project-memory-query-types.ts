@@ -69,6 +69,7 @@ export type ProjectMemoryQueryInput = {
   question: string;
   document_contract: ActiveEmbeddingContract;
   provider: EmbeddingTransport;
+  vector_table?: string;
   limit: number;
   max_inline_chars: number;
   vector_store?: ProjectMemoryQueryVectorStore;

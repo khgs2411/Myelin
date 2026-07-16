@@ -42,8 +42,11 @@ test("create mode plans subjects, runs subject writers, then publishes agent-aut
   expect(result.artifacts.maintenance_report).toBe("reports/documentation-maintenance-report.json");
   expect(result.artifacts.file_authoring_runs).toContain("agents/create/file-authoring-agent-result.json");
   expect(result.artifacts.file_authoring_runs).toContain("agents/subject-runtime/file-authoring-agent-result.json");
-  expect(await readFile(join(root, "projects", "demo", "wiki", "index.md"), "utf8")).toContain("Project Memory index");
+  expect(result.artifacts.file_authoring_runs).toContain("agents/create-index-finalizer/file-authoring-agent-result.json");
+  expect(await readFile(join(root, "projects", "demo", "wiki", "index.md"), "utf8")).toContain("Canonical subjects");
   expect(await readFile(join(root, "projects", "demo", "wiki", "runtime.md"), "utf8")).toContain("Runtime documentation from subject writer");
+  expect(await readFile(join(root, "projects", "demo", "state", "repository-identity.json"), "utf8"))
+    .toContain('"project_key": "demo"');
   const state = JSON.parse(await readFile(join(root, "projects", "demo", "state", "project-memory.json"), "utf8"));
   expect(state).toMatchObject({
     schema_version: 2,
@@ -203,6 +206,164 @@ test("review mode runs agents but stops before publishing canonical wiki writes"
   expect(await Bun.file(join(root, "projects", "demo", "wiki", "runtime.md")).exists()).toBe(false);
 });
 
+test("reports a resumable checkpoint when canonical publication validation fails", async () => {
+  await seedProject("uncurated");
+  seedMemoryDb();
+  await seedSchema();
+  const stubs = await seedCreateStubs("demo");
+  await writeFile(
+    join(stubs, "create-index-finalizer", "finalized-index", "index.md"),
+    "# Demo\n\n- [Runtime](runtime.md)\n- [Missing](missing.md)\n",
+    "utf8",
+  );
+  const service = new ProjectMemoryCuratorService(root, completedRetrievalDeps());
+
+  const result = await service.runProjectLearn({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    now: new Date("2026-07-06T12:30:00.000Z"),
+    env: { ...process.env, [FILE_AUTHORING_STUB_OUTPUTS_DIR]: stubs },
+  });
+
+  expect(result.status).toBe("failed");
+  expect(result.stopped_before_writes).toBe(true);
+  expect(result.stopped_reason).toContain("broken internal wiki link");
+  expect(result.resumable).toBe(true);
+  expect(result.resume_command).toBe(`myelin project learn demo --resume ${result.run_dir}`);
+  expect(await Bun.file(join(root, result.run_dir, "canonical-publication-validation.json")).exists()).toBe(true);
+});
+
+test("resumes a verified failed create checkpoint at maintenance and rejects checkpoint drift", async () => {
+  await seedProject("uncurated");
+  seedMemoryDb();
+  await seedSchema();
+  const db = openMemoryDb(root);
+  createMemoryCandidate(db, {
+    id: "cand_resume",
+    project_key: "demo",
+    scope: "project",
+    status: "pending",
+    candidate_type: "fact",
+    title: "Resume candidate",
+    summary: "Maintenance must process this candidate.",
+    source_event_refs: ["event:resume"],
+    evidence: {},
+    proposed_payload: {},
+    confidence: "high",
+    risk: "low",
+    reason: "resume test",
+    now: "2026-07-06T09:00:00.000Z",
+  });
+  db.close();
+  const stubs = await seedCreateStubs("demo");
+  const service = new ProjectMemoryCuratorService(root, completedRetrievalDeps());
+
+  const failed = await service.runProjectLearn({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    now: new Date("2026-07-06T13:00:00.000Z"),
+    env: { ...process.env, [FILE_AUTHORING_STUB_OUTPUTS_DIR]: stubs },
+  });
+
+  expect(failed.status).toBe("failed");
+  expect(failed.resumable).toBe(true);
+  expect(failed.resume_command).toBe(`myelin project learn demo --resume ${failed.run_dir}`);
+  const checkpointPath = join(root, failed.run_dir, "create-checkpoint.json");
+  expect(await Bun.file(checkpointPath).exists()).toBe(true);
+  const originalCheckpoint = await readFile(checkpointPath, "utf8");
+  const incompatibleCheckpoint = { ...JSON.parse(originalCheckpoint), runtime_contract_version: 999 };
+  await writeFile(checkpointPath, JSON.stringify(incompatibleCheckpoint), "utf8");
+  await expect(service.runProjectLearn({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    resumeRun: failed.run_dir,
+    now: new Date("2026-07-06T13:10:00.000Z"),
+    env: { ...process.env, [FILE_AUTHORING_STUB_OUTPUTS_DIR]: stubs },
+  })).rejects.toThrow("checkpoint runtime contract version is incompatible");
+  await writeFile(checkpointPath, originalCheckpoint, "utf8");
+
+  const repoDriftPath = join(root, "repos", "demo", "src", "drift.ts");
+  await writeFile(repoDriftPath, "export const drift = true;\n", "utf8");
+  await expect(service.runProjectLearn({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    resumeRun: failed.run_dir,
+    now: new Date("2026-07-06T13:20:00.000Z"),
+    env: { ...process.env, [FILE_AUTHORING_STUB_OUTPUTS_DIR]: stubs },
+  })).rejects.toThrow("target repository snapshot changed");
+  await rm(repoDriftPath);
+
+  const sourceApplyJournal = join(root, failed.run_dir, "project-memory-apply-journal.json");
+  await writeFile(sourceApplyJournal, "{}\n", "utf8");
+  await expect(service.runProjectLearn({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    resumeRun: failed.run_dir,
+    now: new Date("2026-07-06T13:25:00.000Z"),
+    env: { ...process.env, [FILE_AUTHORING_STUB_OUTPUTS_DIR]: stubs },
+  })).rejects.toThrow("invalid project memory apply journal");
+  await rm(sourceApplyJournal);
+
+  const draftPath = join(root, failed.run_dir, "pre-maintenance-wiki", "runtime.md");
+  const originalDraft = await readFile(draftPath, "utf8");
+  await writeFile(draftPath, `${originalDraft}\ncorrupt\n`, "utf8");
+
+  await expect(service.runProjectLearn({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    resumeRun: failed.run_dir,
+    now: new Date("2026-07-06T13:30:00.000Z"),
+    env: { ...process.env, [FILE_AUTHORING_STUB_OUTPUTS_DIR]: stubs },
+  })).rejects.toThrow("create artifact changed: pre-maintenance-wiki/runtime.md");
+
+  await writeFile(draftPath, originalDraft, "utf8");
+  await rm(join(stubs, "create-planner"), { recursive: true, force: true });
+  await rm(join(stubs, "subject-runtime"), { recursive: true, force: true });
+  await mkdir(join(stubs, "maintenance", "draft-wiki"), { recursive: true });
+  await mkdir(join(stubs, "maintenance", "reports"), { recursive: true });
+  await writeFile(
+    join(stubs, "maintenance", "draft-wiki", "index.md"),
+    "# Demo\n\n## Canonical subjects\n\n- [Runtime](runtime.md)\n",
+    "utf8",
+  );
+  await writeFile(join(stubs, "maintenance", "draft-wiki", "runtime.md"), `${originalDraft}\nMaintenance resumed.\n`, "utf8");
+  await writeJson(join(stubs, "maintenance", "reports", "documentation-maintenance-report.json"), {
+    schema_version: 1,
+    project_key: "demo",
+    status: "completed",
+    dispositions: [{
+      source_kind: "project_candidate",
+      source_ref: "cand_resume",
+      disposition: "applied_to_project_memory",
+      reason: "The resumed maintenance updated the runtime page.",
+      output_refs: ["runtime.md"],
+    }],
+    touched_paths: ["runtime.md"],
+    evidence_paths: ["README.md"],
+    known_gaps: [],
+  });
+
+  const resumed = await service.runProjectLearn({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    resumeRun: failed.run_dir,
+    now: new Date("2026-07-06T14:00:00.000Z"),
+    env: { ...process.env, [FILE_AUTHORING_STUB_OUTPUTS_DIR]: stubs },
+  });
+
+  expect(resumed.status).toBe("completed");
+  expect(resumed.resumed_from_run).toBe(failed.run_dir);
+  expect(resumed.artifacts.resume_source).toBe("resume-source.json");
+  expect(await readFile(join(root, "projects", "demo", "wiki", "runtime.md"), "utf8")).toContain("Maintenance resumed");
+});
+
 function completedRetrievalDeps() {
   return {
     retrievalLifecycle: {
@@ -261,7 +422,10 @@ async function seedCreateStubs(projectKey: string): Promise<string> {
     ],
   });
   await writeJson(join(stubs, "create-planner", "reports", "documentation-planner-report.json"), {
+    schema_version: 1,
+    project_key: projectKey,
     evidence_paths: ["README.md"],
+    surface_coverage: createStubSurfaceCoverage(),
     known_gaps: [],
   });
   await mkdir(join(stubs, "subject-runtime", "draft-wiki"), { recursive: true });
@@ -281,14 +445,45 @@ async function seedCreateStubs(projectKey: string): Promise<string> {
     touched_paths: ["runtime.md"],
     known_gaps: [],
   });
+  await mkdir(join(stubs, "create-index-finalizer", "finalized-index"), { recursive: true });
+  await writeFile(
+    join(stubs, "create-index-finalizer", "finalized-index", "index.md"),
+    "# Demo\n\n## Canonical subjects\n\n- [Runtime](runtime.md)\n",
+    "utf8",
+  );
   return stubs;
+}
+
+function createStubSurfaceCoverage() {
+  return [
+    {
+      surface_id: "runtime",
+      kind: "public_interface",
+      status: "covered",
+      summary: "Runtime interface.",
+      evidence_paths: ["src/commands/project.ts"],
+      subject_ids: ["runtime"],
+    },
+    ...["operator_workflow", "administrative_surface", "destructive_or_irreversible_operation"].map((kind) => ({
+      surface_id: `absent-${kind}`,
+      kind,
+      status: "not_present",
+      summary: `No ${kind} is present.`,
+      evidence_paths: ["README.md"],
+      subject_ids: [],
+    })),
+  ];
 }
 
 async function seedMaintenanceStubs(projectKey: string, sourceRef = "cand_runtime"): Promise<string> {
   const stubs = await mkdtemp(join(tmpdir(), "myelin-maintenance-stubs-"));
   await mkdir(join(stubs, "maintenance", "draft-wiki"), { recursive: true });
   await mkdir(join(stubs, "maintenance", "reports"), { recursive: true });
-  await writeFile(join(stubs, "maintenance", "draft-wiki", "index.md"), "# Demo\n\nExisting index.\n", "utf8");
+  await writeFile(
+    join(stubs, "maintenance", "draft-wiki", "index.md"),
+    "# Demo\n\n## Canonical subjects\n\n- [Runtime](runtime.md)\n",
+    "utf8",
+  );
   await writeFile(
     join(stubs, "maintenance", "draft-wiki", "runtime.md"),
     "# Runtime\n\nUpdated runtime mentions the CLI surface in src/commands/project.ts.\n",

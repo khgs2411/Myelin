@@ -78,17 +78,13 @@ test("EmbeddingProviderFactory falls back from Ollama Nomic to Ollama Qwen", asy
   }
 });
 
-test("EmbeddingProviderFactory falls back to Google when Ollama is unavailable", async () => {
+test("EmbeddingProviderFactory auto mode never falls through to an external provider", async () => {
   const root = await mkdtemp(join(tmpdir(), "myelin-embedding-provider-factory-"));
   try {
     const config = await loadConfig(root);
-    const selection = await new EmbeddingProviderFactory(config, async () => {
+    await expect(new EmbeddingProviderFactory(config, async () => {
       throw new Error("connection refused");
-    }).initialize("retrieval_query");
-
-    expect(selection.client.provider).toBe("gemini");
-    expect(selection.contract).toMatchObject({ provider: "gemini", model: "gemini-embedding-2" });
-    expect(selection.fallbackReason).toContain("connection refused");
+    }).initialize("retrieval_query")).rejects.toThrow("No local embedding client is available");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

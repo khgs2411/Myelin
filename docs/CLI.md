@@ -35,6 +35,7 @@ Output:
   evidence paths.
 - JSON output has `contract_version: "myelin.status.v1"` and
   `kind: "project_operational_status"`.
+- Retrieval sections report persisted active and configured desired embedding contracts, active-contract indexed/pending/failed counts, provider availability, migration state, and historical contract rows separately. Historical rows do not make current health unhealthy.
 
 Side effects:
 
@@ -132,7 +133,7 @@ myelin schema build class-kit --dry-run
 
 ## project
 
-### `myelin project learn <project-key> [--dry-run] [--review] [--provider codex|claude] [--model <model>] [--json]`
+### `myelin project learn <project-key> [--dry-run] [--review] [--recreate] [--resume <run>] [--provider codex|claude] [--model <model>] [--json]`
 
 Runs the broad project-memory learning pipeline.
 
@@ -144,6 +145,8 @@ Options:
 
 - `--dry-run`: preview without committing writes.
 - `--review`: run in review-oriented mode.
+- `--recreate`: rebuild already-curated Project Memory from a fresh create stage.
+- `--resume <run>`: resume maintenance from a verified, unpromoted create checkpoint. Accepts the run ID or exact `projects/<key>/runs/project-learn/<run>` path and cannot be combined with `--dry-run`, `--review`, or `--recreate`.
 - `--provider codex|claude`: provider override.
 - `--model <model>`: model override.
 - `--json`: emit structured result JSON.
@@ -152,7 +155,13 @@ Output:
 
 - Human-readable run summary by default.
 - Structured run result with `--json`.
+- Human mode writes stage progress and periodic active-stage heartbeats to stderr. Interactive terminals use one updating spinner line; redirected logs use stable stage lines. Counts are shown only when the runtime knows the real total.
+- A subject writer that reports provider capacity exhaustion is retried in place up to three times with 15, 45, and 90 second backoffs. Completed sibling subjects are retained, retry countdowns and attempts are shown in human progress, and failed-attempt metadata remains under the subject workspace.
+- Create and recreate runs finalize `index.md` after subject authoring, require links to every planned subject, and reject planner lifecycle language before canonical publication. Repository identity is published as `projects/<key>/state/repository-identity.json`; run-local identity links are rewritten to that canonical state path.
+- `--json` keeps stdout as one valid JSON result and suppresses human progress output.
+- Foreground and automatic Project Memory mutations are serialized per project through the full authoring, promotion, reconciliation, and retrieval lifecycle. A competing command fails with the active mutation ID; a lock whose recorded process is dead is recovered before a new run starts.
 - Status `completed_with_pending_index` means canonical Project Memory writes succeeded, but derived retrieval hints or indexing still need follow-up.
+- A failure after a verified create checkpoint reports `resumable`, the checkpoint-bearing run, and the exact `myelin project learn <key> --resume <run>` command.
 
 Side effects:
 
@@ -160,6 +169,8 @@ Side effects:
 - Runs deterministic runtime inbox intake before packet construction, creating or reusing Project Memory candidates for valid `projects/<project-key>/sources/inbox/*.json` source proposals.
 - Writes `prompt-budget.json` before curator invocation. Codex-backed curator prompts reference run artifacts instead of inlining the full packet; bounded inline prompt fallback can reduce supporting packet context when needed.
 - May write run artifacts under `projects/<project-key>/runs/`.
+- Create and recreate publication may update canonical repository identity state under `projects/<project-key>/state/repository-identity.json`.
+- First-create runs preserve sanitized repository identity, an immutable create checkpoint, maintenance-report schema, and canonical-publication validation artifacts. Target-repository snapshots remain temporary and are removed after each authoring invocation.
 - May update project memory outputs unless `--dry-run` stops writes.
 
 ### No Active `myelin project ingest`
@@ -189,6 +200,7 @@ Examples:
 
 ```bash
 myelin project learn class-kit --dry-run
+myelin project learn class-kit --resume projects/class-kit/runs/project-learn/2026-07-15T08-00-00.000Z-run
 myelin ingest class-kit
 myelin project migrate-layout class-kit
 ```
@@ -531,7 +543,7 @@ Side effects:
 
 - Calls embedding provider unless a stub provider is configured.
 - Writes `session_memory_embeddings` status and vector table rows.
-- Rebuilds the derived vector table when its dimensions differ from the selected provider contract, then requeues indexed metadata for re-embedding.
+- Uses only the persisted active Session Memory embedding contract and its owned vector table.
 
 Examples:
 
@@ -539,6 +551,25 @@ Examples:
 myelin memory index session wizepal
 myelin memory index session class-kit --retry-failed --json
 ```
+
+### `myelin memory embeddings migrate [--apply] [--json]`
+
+Previews or applies a controlled embedding-contract migration for Session and Project Memory.
+
+Options:
+
+- `--apply`: build versioned staging indexes and atomically activate them after complete metadata/vector coverage and a vector-query smoke check.
+- `--json`: emit the per-scope migration result.
+
+Without `--apply`, this command is read-only. A failed apply leaves the previous active contract queryable and records the staging contract as failed.
+
+### `myelin memory embeddings rollback [--apply] [--json]`
+
+Previews or atomically swaps each scope's active and previous healthy embedding contracts. Without `--apply`, no lifecycle state changes.
+
+### `myelin memory embeddings prune [--apply] [--json]`
+
+Previews or removes retired and failed derived embedding state. Active and previous contracts are always protected. Apply removes owned historical metadata, query-cache entries, and vector rows or tables; it does not delete canonical Session Memory or Project Memory markdown.
 
 ### `myelin memory session list <project-key> [--status active|superseded|retracted] [--limit N] [--json]`
 

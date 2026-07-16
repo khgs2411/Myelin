@@ -8,7 +8,7 @@ import type {
 const SHA256 = /^[a-f0-9]{64}$/;
 const STATUSES = new Set(["staged", "promoting", "recovered", "applied", "failed"]);
 const MODES = new Set(["create", "maintain"]);
-const WRITE_KINDS = new Set(["wiki_page", "project_state", "page_state", "source_consumption_state", "log"]);
+const WRITE_KINDS = new Set(["wiki_page", "project_state", "repository_identity_state", "page_state", "source_consumption_state", "log"]);
 
 export function assertProjectMemoryApplyJournal(input: {
   root: string;
@@ -109,6 +109,9 @@ function assertCanonicalPath(kind: ProjectMemoryExpectedWrite["write_kind"], pat
   const local = path.slice(projectPrefix.length);
   if (kind === "wiki_page" && (!local.startsWith("wiki/") || !local.endsWith(".md"))) fail("wiki_page canonical_path is invalid");
   if (kind === "project_state" && local !== "state/project-memory.json") fail("project_state canonical_path is invalid");
+  if (kind === "repository_identity_state" && local !== "state/repository-identity.json") {
+    fail("repository_identity_state canonical_path is invalid");
+  }
   if (kind === "source_consumption_state" && local !== "state/project-memory-source-consumptions.json") {
     fail("source_consumption_state canonical_path is invalid");
   }

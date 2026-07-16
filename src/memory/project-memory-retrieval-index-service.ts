@@ -3,7 +3,7 @@ import type { ActiveEmbeddingContract } from "../runtime/config.ts";
 import { loadConfig } from "../runtime/config.ts";
 import type { EmbeddingTransport } from "./embedding-types.ts";
 import { openMemoryDb } from "./db.ts";
-import { EmbeddingProviderFactory } from "./embedding-provider-factory.ts";
+import { resolveEmbeddingRuntime } from "./embedding-contract-resolver.ts";
 import { indexProjectMemoryRetrieval } from "./project-memory-retrieval-indexer.ts";
 import type {
   ProjectMemoryRetrievalIndexInput,
@@ -26,6 +26,7 @@ export class ProjectMemoryRetrievalIndexService {
     db: Database;
     contract: ActiveEmbeddingContract;
     provider: EmbeddingTransport;
+    vectorTable?: string;
     vectorStore?: ProjectMemoryRetrievalVectorStore;
   }) {}
 
@@ -35,6 +36,7 @@ export class ProjectMemoryRetrievalIndexService {
       project_key: input.projectKey,
       contract: this.deps.contract,
       provider: this.deps.provider,
+      vector_table: this.deps.vectorTable,
       limit: input.limit,
       batch_size: input.batchSize,
       retry_failed: input.retryFailed,
@@ -49,15 +51,20 @@ export class ProjectMemoryRetrievalIndexCoordinator {
 
   async indexProject(input: ProjectMemoryRetrievalIndexCoordinatorInput): Promise<ProjectMemoryRetrievalIndexResult> {
     const config = await (this.deps.loadConfig ?? loadConfig)(this.deps.root);
-    const selection = await (this.deps.createFactory?.(config) ?? new EmbeddingProviderFactory(config))
-      .initialize("retrieval_document");
     const db = (this.deps.openDb ?? openMemoryDb)(this.deps.root);
     try {
+      const selection = await resolveEmbeddingRuntime({
+        db,
+        config,
+        scope: "project_memory",
+        factory: this.deps.createFactory?.(config),
+      });
       return await new ProjectMemoryRetrievalIndexService({
         root: this.deps.root,
         db,
-        contract: selection.contract,
-        provider: selection.client,
+        contract: selection.runtime.contract,
+        provider: selection.runtime.client,
+        vectorTable: selection.active.vectorTable,
       }).indexProject({
         ...input,
         batchSize: input.batchSize ?? config.embedding.batchSize,

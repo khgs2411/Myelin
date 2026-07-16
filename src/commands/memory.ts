@@ -2,7 +2,8 @@ import type { Cli, CommandResult } from "./registry.ts";
 import { fail, ok } from "./registry.ts";
 import { createRuntimeInboxItem, runtimeInboxRatings, type RuntimeInboxRating } from "../inbox/runtime-inbox-items.ts";
 import { openMemoryDb } from "../memory/db.ts";
-import { EmbeddingProviderFactory } from "../memory/embedding-provider-factory.ts";
+import { resolveEmbeddingRuntime } from "../memory/embedding-contract-resolver.ts";
+import { EmbeddingContractLifecycleService } from "../memory/embedding-contract-lifecycle-service.ts";
 import {
   SESSION_MEMORY_STATUSES,
   type MemoryCandidateStatus,
@@ -52,6 +53,9 @@ export function registerMemoryCommands(cli: Cli, deps: MemoryCommandDeps): void 
   cli.command(["memory", "review"], (args) => memoryReview(args, root));
   cli.command(["memory", "index", "session"], (args) => indexSession(args, root));
   cli.command(["memory", "index", "project"], (args) => indexProject(args, root));
+  cli.command(["memory", "embeddings", "migrate"], (args) => migrateEmbeddingContracts(args, root));
+  cli.command(["memory", "embeddings", "rollback"], (args) => rollbackEmbeddingContracts(args, root));
+  cli.command(["memory", "embeddings", "prune"], (args) => pruneEmbeddingContracts(args, root));
   cli.command(["memory", "maintain", "project"], (args) => maintainProject(args, deps));
   cli.command(["memory", "eval", "project"], (args) => evalProjectMemory(args, root));
   cli.command(["memory", "query"], async (args) => {
@@ -72,6 +76,64 @@ export function registerMemoryCommands(cli: Cli, deps: MemoryCommandDeps): void 
     if (response.degraded) return fail(response.answer);
     return ok(response.answer);
   });
+}
+
+async function migrateEmbeddingContracts(args: string[], root: string): Promise<CommandResult> {
+  const parsed = parseEmbeddingLifecycleArgs(args, "migrate");
+  if (parsed.error) return fail(parsed.error);
+  try {
+    const result = await new EmbeddingContractLifecycleService(root).migrate({ apply: parsed.apply });
+    const failed = result.scopes.some((scope) => Boolean(scope.error));
+    if (parsed.json) return failed ? fail(stableJson(result)) : ok(stableJson(result));
+    const lines = result.scopes.map((scope) =>
+      `${scope.scope}: ${scope.action}${scope.activated ? " (activated)" : ""}`
+      + (scope.error ? ` — ${scope.error}` : ""),
+    );
+    return failed ? fail(lines.join("\n")) : ok(lines.join("\n"));
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error));
+  }
+}
+
+async function rollbackEmbeddingContracts(args: string[], root: string): Promise<CommandResult> {
+  const parsed = parseEmbeddingLifecycleArgs(args, "rollback");
+  if (parsed.error) return fail(parsed.error);
+  try {
+    const result = await new EmbeddingContractLifecycleService(root).rollback({ apply: parsed.apply });
+    if (parsed.json) return ok(stableJson(result));
+    return ok(result.scopes.map((scope) => `${scope.scope}: ${scope.action}${scope.rolled_back ? " (complete)" : ""}`).join("\n"));
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error));
+  }
+}
+
+async function pruneEmbeddingContracts(args: string[], root: string): Promise<CommandResult> {
+  const parsed = parseEmbeddingLifecycleArgs(args, "prune");
+  if (parsed.error) return fail(parsed.error);
+  try {
+    const result = await new EmbeddingContractLifecycleService(root).prune({ apply: parsed.apply });
+    if (parsed.json) return ok(stableJson(result));
+    return ok(
+      `${result.mode}: ${result.candidates.length} inactive embedding contracts; `
+      + `${result.removed_metadata_rows} metadata rows and ${result.removed_query_cache_rows} query cache rows removed.`,
+    );
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error));
+  }
+}
+
+function parseEmbeddingLifecycleArgs(
+  args: string[],
+  command: "migrate" | "rollback" | "prune",
+): { apply: boolean; json: boolean; error?: string } {
+  let apply = false;
+  let json = false;
+  for (const arg of args) {
+    if (arg === "--apply") apply = true;
+    else if (arg === "--json") json = true;
+    else return { apply, json, error: `Unknown memory embeddings ${command} option: ${arg}` };
+  }
+  return { apply, json };
 }
 
 async function evalProjectMemory(args: string[], root: string): Promise<CommandResult> {
@@ -746,13 +808,14 @@ async function indexSession(args: string[], root: string): Promise<CommandResult
   if (parsed.error) return fail(parsed.error);
 
   const config = await loadConfig(root);
-  const selection = await new EmbeddingProviderFactory(config).initialize("retrieval_document");
   const db = openMemoryDb(root);
   try {
+    const selection = await resolveEmbeddingRuntime({ db, config, scope: "session_memory" });
     const service = new SessionMemoryIndexService({
       db,
-      contract: selection.contract,
-      provider: selection.client,
+      contract: selection.runtime.contract,
+      provider: selection.runtime.client,
+      vectorTable: selection.active.vectorTable,
     });
     const response = await service.indexPending({
       projectKey: parsed.projectKey,

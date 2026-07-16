@@ -55,6 +55,7 @@ export async function indexProjectMemoryRetrieval(
     project_key: string;
     contract: ActiveEmbeddingContract;
     provider: EmbeddingTransport;
+    vector_table?: string;
     limit: number;
     batch_size?: number;
     retry_failed?: boolean;
@@ -127,7 +128,10 @@ export async function indexProjectMemoryRetrieval(
     });
   }
 
-  const vectorStore = input.vector_store ?? defaultProjectMemoryRetrievalVectorStore(createSqliteVecAdapter());
+  const vectorStore = input.vector_store ?? defaultProjectMemoryRetrievalVectorStore(
+    createSqliteVecAdapter(),
+    input.vector_table,
+  );
   const availability = vectorStore.ensure(db, { contract: input.contract });
   if (!availability.available) {
     const reason = `sqlite-vec unavailable: ${availability.reason ?? "unknown reason"}`;
@@ -219,17 +223,19 @@ export async function indexProjectMemoryRetrieval(
 
 export function defaultProjectMemoryRetrievalVectorStore(
   adapter: SqliteVecAdapter = createSqliteVecAdapter(),
+  vectorTable = "project_memory_section_vec",
 ): ProjectMemoryRetrievalVectorStore {
   return {
     ensure(db, input) {
       return ensureProjectMemoryRetrievalVectorTable(db, {
         dimensions: input.contract.dimensions,
+        table: vectorTable,
         adapter,
-        rebuildOnDimensionMismatch: true,
+        rebuildOnDimensionMismatch: false,
       });
     },
     upsert(db, input) {
-      upsertProjectMemoryRetrievalVector(db, input);
+      upsertProjectMemoryRetrievalVector(db, input, vectorTable);
     },
   };
 }

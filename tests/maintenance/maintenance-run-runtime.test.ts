@@ -47,6 +47,7 @@ test("maintenance runtime centralizes cooldown and dead-worker recovery", async 
   try {
     await runtime.writeState({
       project_key: "demo",
+      last_run_id: "run_1",
       last_status: "scheduled",
       last_scheduled_at: "2026-07-12T10:00:00.000Z",
       last_pid: 42,

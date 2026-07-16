@@ -271,10 +271,20 @@ test("upgrade activates a new immutable version and retains the previous version
   expect(await readFile(join(firstRuntime, "src", "cli.ts"), "utf8")).toBe("console.log('fixture');\n");
 });
 
+test("changed runtime content requires an advanced product version", async () => {
+  await service().install(input(true));
+  await writeFile(join(myelinRoot, "src", "cli.ts"), "console.log('unversioned change');\n", "utf8");
+
+  await expect(service().install(input(false))).rejects.toThrow(
+    "runtime content changed without advancing package version 0.1.0",
+  );
+});
+
 test("failed post-cutover verification atomically restores the previous locator", async () => {
   await service().install(input(true));
   const previous = await readMachineLocator(locatorPath);
   await writeFile(join(myelinRoot, "src", "cli.ts"), "console.log('broken candidate');\n", "utf8");
+  await writeFile(join(myelinRoot, "package.json"), `${JSON.stringify({ name: "myelin", version: "0.2.0", type: "module" })}\n`, "utf8");
 
   await expect(service({ activationVerifier: async () => { throw new Error("smoke failed"); } }).install(input(true)))
     .rejects.toThrow("previous locator was restored");
@@ -348,6 +358,7 @@ test("explicit rollback previews then atomically swaps active and previous versi
   const first = await readMachineLocator(locatorPath);
   if (first.schema_version !== 2) throw new Error("expected V2 locator");
   await writeFile(join(myelinRoot, "src", "cli.ts"), "console.log('upgrade');\n", "utf8");
+  await writeFile(join(myelinRoot, "package.json"), `${JSON.stringify({ name: "myelin", version: "0.2.0", type: "module" })}\n`, "utf8");
   await service().install(input(true));
   const upgraded = await readMachineLocator(locatorPath);
   if (upgraded.schema_version !== 2) throw new Error("expected V2 locator");

@@ -48,11 +48,29 @@ export type MaintenanceStatus = {
   last_log_path: string | null;
 };
 
+export type EmbeddingContractStatus = {
+  provider: string;
+  model: string;
+  dimensions: number;
+  format_version: number;
+};
+
+export type RetrievalStatus = {
+  active_contract: EmbeddingContractStatus | null;
+  desired_contract: EmbeddingContractStatus | null;
+  migration_required: boolean;
+  provider_state: "not_checked" | "available" | "unavailable";
+  indexed_count: number;
+  pending_count: number;
+  failed_count: number;
+  historical: { contract_count: number; row_count: number };
+};
+
 export type SessionMemoryStatusSection = StatusSectionBase & {
   capture: { queued_events: number; unleased_events: number; leased_events: number };
   ingest: { running_jobs: number; failed_jobs: number; terminal_tombstones: number; latest_log_path: string | null };
   maintenance: MaintenanceStatus;
-  retrieval: { indexed_count: number; pending_count: number; failed_count: number };
+  retrieval: RetrievalStatus;
 };
 
 export type ProjectMemoryStatusSection = StatusSectionBase & {
@@ -60,7 +78,7 @@ export type ProjectMemoryStatusSection = StatusSectionBase & {
   candidates: { pending: number; needs_review: number };
   maintenance: MaintenanceStatus;
   curation: { lifecycle: string; canonical_wiki_path: string; latest_run_path: string | null };
-  retrieval: { indexed_count: number; pending_count: number; failed_count: number };
+  retrieval: RetrievalStatus;
 };
 
 export type OperationalStatusResult = {

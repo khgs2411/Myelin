@@ -1,6 +1,7 @@
 import { openMemoryDb } from "../memory/db.ts";
 import { countExperienceEvents } from "../memory/experience.ts";
-import { EmbeddingProviderFactory } from "../memory/embedding-provider-factory.ts";
+import { resolveEmbeddingRuntime } from "../memory/embedding-contract-resolver.ts";
+import { discoverIndexedEmbeddingContract, readActiveEmbeddingContract } from "../memory/embedding-contract-store.ts";
 import { SessionMemoryIndexService } from "../memory/session-memory-index-service.ts";
 import { isProcessAlive, resolveIngestTargetRepo } from "../ingest/runtime.ts";
 import { IngestService } from "../ingest/ingest-service.ts";
@@ -18,6 +19,7 @@ import {
   type AutoMemoryMaintenanceDeps,
   type AutoMemoryMaintenanceIndexResult,
   type AutoMemoryMaintenanceRunResult,
+  type AutoMemoryMaintenanceScheduler,
   type AutoMemoryMaintenanceScheduleResult,
   type AutoMemoryMaintenanceState,
 } from "./maintenance-contracts.ts";
@@ -26,11 +28,12 @@ import { MaintenanceRunRuntime, spawnDetachedMaintenanceWorker } from "./mainten
 export type {
   AutoMemoryMaintenanceDeps,
   AutoMemoryMaintenanceRunResult,
+  AutoMemoryMaintenanceScheduler,
   AutoMemoryMaintenanceScheduleResult,
   AutoMemoryMaintenanceState,
 } from "./maintenance-contracts.ts";
 
-export class AutoMemoryMaintenanceService {
+export class AutoMemoryMaintenanceService implements AutoMemoryMaintenanceScheduler {
   constructor(
     private readonly root: string,
     private readonly deps: AutoMemoryMaintenanceDeps = {},
@@ -38,19 +41,24 @@ export class AutoMemoryMaintenanceService {
 
   async maybeSchedule(
     projectKey: string,
-    options: { forceIngest?: boolean } = {},
+    options: { forceIngest?: boolean; forceIndex?: boolean } = {},
   ): Promise<AutoMemoryMaintenanceScheduleResult> {
     const config = await loadConfig(this.root);
     const maintenance = config.autoMemoryMaintenance;
     if (!maintenance.enabled) return { status: "disabled", reason: "AUTO_MEMORY_MAINTENANCE is not enabled" };
-    if (process.env.MYELIN_CAPTURE_DISABLED === "1" || process.env.MYELIN_AUTO_MEMORY_MAINTENANCE_WORKER === "1") {
+    if (process.env.MYELIN_AUTO_MEMORY_MAINTENANCE_WORKER === "1") {
+      return { status: "skipped", reason: "capture disabled for Myelin-owned worker" };
+    }
+    if (process.env.MYELIN_CAPTURE_DISABLED === "1" && !options.forceIndex) {
       return { status: "skipped", reason: "capture disabled for Myelin-owned worker" };
     }
 
     const db = openMemoryDb(this.root);
     let queuedCount = 0;
+    let pendingEmbeddingCount = 0;
     try {
       queuedCount = countExperienceEvents(db, projectKey);
+      pendingEmbeddingCount = countActivePendingEmbeddings(db, projectKey);
       const runningJobs = db
         .query("SELECT count(*) AS count FROM ingest_jobs WHERE project_key = ? AND status = 'running'")
         .get(projectKey) as { count: number };
@@ -61,10 +69,13 @@ export class AutoMemoryMaintenanceService {
       db.close();
     }
 
-    if (!options.forceIngest && queuedCount < maintenance.minCapturedEvents) {
+    if (options.forceIndex && pendingEmbeddingCount === 0 && !options.forceIngest) {
+      return this.skip(projectKey, "no active embedding work pending", { queuedCount });
+    }
+    if (!options.forceIngest && !options.forceIndex && queuedCount < maintenance.minCapturedEvents && pendingEmbeddingCount === 0) {
       return this.skip(projectKey, "below captured event threshold", { queuedCount });
     }
-    if (!options.forceIngest && await this.isInCooldown(projectKey, maintenance)) {
+    if (!options.forceIngest && !options.forceIndex && await this.isInCooldown(projectKey, maintenance)) {
       return this.skip(projectKey, "cooldown active", { queuedCount });
     }
 
@@ -314,11 +325,12 @@ export class AutoMemoryMaintenanceService {
 
     const db = openMemoryDb(this.root);
     try {
-      const selection = await new EmbeddingProviderFactory(config).initialize("retrieval_document");
+      const selection = await resolveEmbeddingRuntime({ db, config, scope: "session_memory" });
       return await new SessionMemoryIndexService({
         db,
-        contract: selection.contract,
-        provider: selection.client,
+        contract: selection.runtime.contract,
+        provider: selection.runtime.client,
+        vectorTable: selection.active.vectorTable,
       }).indexPending({
         projectKey,
         limit: config.autoMemoryMaintenance.indexLimit,
@@ -367,6 +379,24 @@ export class AutoMemoryMaintenanceService {
   private runtime(projectKey: string): MaintenanceRunRuntime<AutoMemoryMaintenanceState> {
     return maintenanceRuntime(this.root, projectKey, () => this.now(), this.deps.isProcessAlive ?? isProcessAlive);
   }
+}
+
+function countActivePendingEmbeddings(db: ReturnType<typeof openMemoryDb>, projectKey: string): number {
+  const active = readActiveEmbeddingContract(db, "session_memory")
+    ?? discoverIndexedEmbeddingContract(db, "session_memory")?.contract;
+  if (!active) return 0;
+  return (db.query(
+    `SELECT count(*) AS count
+     FROM session_memories sm
+     WHERE sm.project_key = ? AND sm.status = 'active'
+       AND NOT EXISTS (
+         SELECT 1 FROM session_memory_embeddings e
+         WHERE e.session_memory_id = sm.id
+           AND e.embedding_provider = ? AND e.embedding_model = ? AND e.embedding_dimensions = ?
+           AND e.embedding_purpose = 'retrieval_document' AND e.format_version = ?
+           AND e.status IN ('indexed', 'failed')
+       )`,
+  ).get(projectKey, active.provider, active.model, active.dimensions, active.formatVersion) as { count: number }).count;
 }
 
 export async function readState(root: string, projectKey: string): Promise<AutoMemoryMaintenanceState> {

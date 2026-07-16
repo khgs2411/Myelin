@@ -36,7 +36,37 @@ export class EmbeddingProviderFactory {
       };
     }
 
-    const candidates = this.candidates();
+    if (this.config.embedding.provider !== "auto") {
+      return this.initializeContract(selectEmbeddingContract(this.config, this.config.embedding.provider, purpose));
+    }
+
+    return this.initializeLocalAuto(purpose);
+  }
+
+  async initializeContract(contract: ActiveEmbeddingContract): Promise<ResolvedEmbeddingClient> {
+    if (this.config.embedding.stubResponsesDir) {
+      return {
+        client: new EmbeddingService(contract, createStubEmbeddingProvider(this.config.embedding.stubResponsesDir)),
+        contract,
+      };
+    }
+    const client = this.clientForContract(contract);
+    const initialized = await client.initialize();
+    if (!initialized.available) {
+      throw new Error(`Active embedding provider is unavailable (${contract.provider}): ${initialized.reason}`);
+    }
+    return { client: new EmbeddingService(contract, client), contract };
+  }
+
+  async initializeLocalAuto(purpose: EmbeddingPurpose): Promise<ResolvedEmbeddingClient> {
+    if (this.config.embedding.stubResponsesDir) {
+      const contract = selectEmbeddingContract(this.config, "ollama_nomic", purpose);
+      return {
+        client: new EmbeddingService(contract, createStubEmbeddingProvider(this.config.embedding.stubResponsesDir)),
+        contract,
+      };
+    }
+    const candidates = this.localCandidates();
     const unavailable: string[] = [];
     for (const client of candidates) {
       const initialized = await client.initialize();
@@ -50,10 +80,10 @@ export class EmbeddingProviderFactory {
       }
       unavailable.push(`${client.provider}: ${initialized.reason}`);
     }
-    throw new Error(`No embedding client is available: ${unavailable.join("; ")}`);
+    throw new Error(`No local embedding client is available: ${unavailable.join("; ")}`);
   }
 
-  private candidates(): Array<EmbeddingClient & { provider: EmbeddingProvider }> {
+  private localCandidates(): Array<EmbeddingClient & { provider: EmbeddingProvider }> {
     const nomic = createNomicEmbeddingProvider({
       baseUrl: this.config.embedding.ollamaUrl,
       ...this.config.embedding.providers.ollama_nomic,
@@ -64,13 +94,29 @@ export class EmbeddingProviderFactory {
       ...this.config.embedding.providers.ollama_qwen,
       fetch: this.fetch,
     });
-    const google = createGeminiEmbeddingProvider({
+    return [nomic, qwen].sort((left, right) => left.priority - right.priority);
+  }
+
+  private clientForContract(contract: ActiveEmbeddingContract): EmbeddingClient & { provider: EmbeddingProvider } {
+    if (contract.provider === "ollama_nomic") {
+      return createNomicEmbeddingProvider({
+        baseUrl: this.config.embedding.ollamaUrl,
+        model: contract.model,
+        dimensions: contract.dimensions,
+        fetch: this.fetch,
+      });
+    }
+    if (contract.provider === "ollama_qwen") {
+      return createQwenEmbeddingProvider({
+        baseUrl: this.config.embedding.ollamaUrl,
+        model: contract.model,
+        dimensions: contract.dimensions,
+        fetch: this.fetch,
+      });
+    }
+    return createGeminiEmbeddingProvider({
       apiKey: this.config.values.GOOGLE_API_KEY ?? this.config.values.GEMINI_API_KEY,
       fetch: this.fetch,
     });
-    if (this.config.embedding.provider === "ollama_nomic") return [nomic];
-    if (this.config.embedding.provider === "ollama_qwen") return [qwen];
-    if (this.config.embedding.provider === "gemini") return [google];
-    return [nomic, qwen, google].sort((left, right) => left.priority - right.priority);
   }
 }

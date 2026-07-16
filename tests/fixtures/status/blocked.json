@@ -13,14 +13,14 @@
     "capture": { "queued_events": 8, "unleased_events": 3, "leased_events": 5 },
     "ingest": { "running_jobs": 1, "failed_jobs": 0, "terminal_tombstones": 2, "latest_log_path": "projects/demo/logs/ingest.log" },
     "maintenance": { "enabled": true, "lifecycle": "stale_lock", "lock": { "lifecycle": "stale", "path": "projects/demo/state/.auto-memory-maintenance.lock", "run_id": "dead-run", "pid": 42 }, "last_run_id": "dead-run", "last_log_path": "projects/demo/logs/dead-run.log" },
-    "retrieval": { "indexed_count": 1, "pending_count": 0, "failed_count": 0 }
+    "retrieval": { "active_contract": { "provider": "ollama_nomic", "model": "nomic-embed-text:v1.5", "dimensions": 768, "format_version": 1 }, "desired_contract": { "provider": "ollama_nomic", "model": "nomic-embed-text:v1.5", "dimensions": 768, "format_version": 1 }, "migration_required": false, "provider_state": "unavailable", "indexed_count": 1, "pending_count": 0, "failed_count": 0, "historical": { "contract_count": 0, "row_count": 0 } }
   },
   "project_memory": {
     "state": "attention", "lifecycle": "attention", "evidence_ids": ["e2"],
     "inbox": { "pending_items": 1 }, "candidates": { "pending": 1, "needs_review": 0 },
     "maintenance": { "enabled": false, "lifecycle": "never_run", "lock": { "lifecycle": "absent", "path": "projects/demo/state/.auto-project-memory-maintenance.lock", "run_id": null, "pid": null }, "last_run_id": null, "last_log_path": null },
     "curation": { "lifecycle": "not_curated", "canonical_wiki_path": "projects/demo/wiki", "latest_run_path": null },
-    "retrieval": { "indexed_count": 0, "pending_count": 0, "failed_count": 0 }
+    "retrieval": { "active_contract": null, "desired_contract": null, "migration_required": false, "provider_state": "not_checked", "indexed_count": 0, "pending_count": 0, "failed_count": 0, "historical": { "contract_count": 0, "row_count": 0 } }
   },
   "warnings": [{ "code": "SESSION_MAINTENANCE_STALE_LOCK", "severity": "blocked", "section": "session_memory", "message": "Recorded maintenance owner is not alive.", "evidence_ids": ["e3"] }],
   "actions": [{ "command": "myelin ingest demo", "reason": "Drain queued Experience Log rows.", "section": "session_memory" }],

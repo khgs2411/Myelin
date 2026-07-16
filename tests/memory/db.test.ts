@@ -34,7 +34,7 @@ test("opening creates the session schema and records the migration", () => {
   expect(names).toContain("project_memory_section_fts");
   expect(names).toContain("schema_migrations");
   const applied = db.query("SELECT version FROM schema_migrations").all() as { version: number }[];
-  expect(applied.map((r) => r.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
+  expect(applied.map((r) => r.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
   db.close();
 });
 
@@ -43,7 +43,7 @@ test("migrations are idempotent across re-opens", () => {
   openMemoryDbAt(path).close();
   const db = openMemoryDbAt(path);
   const count = db.query("SELECT count(*) AS n FROM schema_migrations").get() as { n: number };
-  expect(count.n).toBe(14);
+  expect(count.n).toBe(15);
   db.close();
 });
 

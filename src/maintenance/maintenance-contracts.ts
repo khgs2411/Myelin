@@ -12,6 +12,13 @@ export type AutoMemoryMaintenanceScheduleResult =
   | { status: "skipped"; reason: string; queued_count?: number }
   | { status: "scheduled"; project_key: string; run_id: string; pid: number | null; log_path: string; queued_count: number };
 
+export type AutoMemoryMaintenanceScheduler = {
+  maybeSchedule: (
+    projectKey: string,
+    options?: { forceIngest?: boolean; forceIndex?: boolean },
+  ) => Promise<AutoMemoryMaintenanceScheduleResult>;
+};
+
 export type AutoMemoryMaintenanceRunResult = {
   status: "completed" | "failed";
   project_key: string;
@@ -64,7 +71,10 @@ export type AutoMemoryMaintenanceDeps = IngestServiceDeps & {
   context?: LaunchContext;
 };
 
-export type AutoProjectMemoryMaintenanceTrigger = "runtime_inbox_created" | "session_memory_candidate_created";
+export type AutoProjectMemoryMaintenanceTrigger =
+  | "runtime_inbox_created"
+  | "session_memory_candidate_created"
+  | "retrieval_index_pending";
 
 export type AutoProjectMemoryMaintenanceCounts = {
   pending_inbox_items: number;
@@ -115,6 +125,7 @@ export type AutoProjectMemoryMaintenanceDeps = {
   spawn?: DetachedSpawner;
   isProcessAlive?: ProcessLivenessChecker;
   runMaintenance?: (projectKey: string) => Promise<{ status: string; changed_files?: string[]; stopped_reason?: string }>;
+  indexProject?: (projectKey: string) => Promise<{ indexed: number; failed: number; pending_remaining: number; degraded: boolean; degraded_reason?: string }>;
   context?: LaunchContext;
 };
 

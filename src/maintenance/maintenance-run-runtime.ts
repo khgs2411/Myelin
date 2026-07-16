@@ -1,4 +1,4 @@
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, rm, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { DetachedSpawner, ProcessLivenessChecker } from "../ingest/runtime.ts";
 import { readJsonIfExists, writeJson } from "../runtime/json.ts";
@@ -79,6 +79,7 @@ export class MaintenanceRunRuntime<State extends MaintenanceRunState> {
 
   async tryAcquireLock(runId: string): Promise<MaintenanceRunLock | null> {
     await mkdir(dirname(this.input.lockPath), { recursive: true });
+    if (await pathExists(this.recoveryLockPath())) return null;
     try {
       await mkdir(this.input.lockPath, { recursive: false });
     } catch (error) {
@@ -106,17 +107,35 @@ export class MaintenanceRunRuntime<State extends MaintenanceRunState> {
   }
 
   async clearDeadLock(reason: string): Promise<boolean> {
-    const state = await this.readState();
-    if (state.last_status !== "scheduled" && state.last_status !== "running") return false;
-    if (typeof state.last_pid !== "number" || this.input.isProcessAlive(state.last_pid)) return false;
-    await rm(this.input.lockPath, { recursive: true, force: true });
-    await this.writeState({
-      ...state,
-      last_status: "failed",
-      last_finished_at: this.input.now(),
-      last_reason: reason,
-    });
-    return true;
+    const recoveryLockPath = this.recoveryLockPath();
+    try {
+      await mkdir(recoveryLockPath, { recursive: false });
+    } catch (error) {
+      if (hasCode(error, "EEXIST")) return false;
+      throw error;
+    }
+
+    try {
+      const state = await this.readState();
+      if (state.last_status !== "scheduled" && state.last_status !== "running") return false;
+      if (typeof state.last_pid !== "number" || this.input.isProcessAlive(state.last_pid)) return false;
+      const owner = await readJsonIfExists<unknown>(join(this.input.lockPath, "owner.json"));
+      if (!isLockOwner(owner) || owner.run_id !== state.last_run_id) return false;
+      await rm(this.input.lockPath, { recursive: true, force: true });
+      await this.writeState({
+        ...state,
+        last_status: "failed",
+        last_finished_at: this.input.now(),
+        last_reason: reason,
+      });
+      return true;
+    } finally {
+      await rm(recoveryLockPath, { recursive: true, force: true });
+    }
+  }
+
+  private recoveryLockPath(): string {
+    return `${this.input.lockPath}.recovery`;
   }
 
   private lockHandle(runId: string): MaintenanceRunLock {
@@ -143,4 +162,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function hasCode(error: unknown, code: string): boolean {
   return Boolean(error && typeof error === "object" && "code" in error && error.code === code);
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch (error) {
+    if (hasCode(error, "ENOENT")) return false;
+    throw error;
+  }
 }

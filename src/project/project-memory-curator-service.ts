@@ -1,4 +1,5 @@
 import type { ProjectMemoryApplyResult, ProjectMemorySourceConsumptionRecord } from "./project-memory-apply-contracts.ts";
+import { dirname, relative, resolve } from "node:path";
 import {
   type ProjectMemoryCuratorMode,
   type ProjectMemoryCuratorRunResult,
@@ -42,14 +43,22 @@ import {
 } from "../runtime/project-run-infrastructure.ts";
 import { repairProjectShell } from "../runtime/project-shell.ts";
 import { findProject } from "../runtime/projects.ts";
-import { projectPath } from "../runtime/fs.ts";
-import { readJsonIfExists, writeJson } from "../runtime/json.ts";
+import { projectPath, resolveInside } from "../runtime/fs.ts";
+import { readJson, readJsonIfExists, writeJson } from "../runtime/json.ts";
+import type { ProjectRepositoryIdentity } from "./project-repository-identity.ts";
 import { FILE_AUTHORING_STUB_OUTPUTS_DIR } from "../runtime/file-authoring-agent.ts";
 import type {
   ProjectMemoryCuratorServiceDependencies,
   ProjectMemoryPostApplyRetrievalLifecycle,
   ProjectMemoryPostApplyRetrievalLifecycleResult,
 } from "./project-memory-curator-service-contracts.ts";
+import {
+  copyProjectMemoryCreateCheckpointArtifacts,
+  PROJECT_MEMORY_CREATE_CHECKPOINT_REF,
+  verifyProjectMemoryCreateCheckpoint,
+  writeProjectMemoryCreateCheckpoint,
+} from "./project-memory-create-checkpoint.ts";
+import { emitProjectLearnProgress } from "./project-learn-progress.ts";
 export type {
   ProjectMemoryCuratorServiceDependencies,
   ProjectMemoryPostApplyRetrievalLifecycle,
@@ -67,6 +76,7 @@ type CuratorPreflightResult =
       packet: ProjectMemoryPacket;
       mode: ProjectMemoryCuratorMode;
       runKind: ProjectMemoryAgentRunKind;
+      schemaContextHash: string;
     };
 
 export class ProjectMemoryCuratorService {
@@ -89,6 +99,7 @@ export class ProjectMemoryCuratorService {
   }
 
   async runProjectLearn(input: RunProjectMemoryCuratorInput): Promise<ProjectMemoryCuratorRunResult> {
+    if (input.resumeRun) return await this.runResumedCreateThenMaintenance(input);
     const preflight = await this.prepareRun(input, "learn");
     if (preflight.kind === "terminal") return preflight.result;
     return preflight.mode === "create"
@@ -99,6 +110,7 @@ export class ProjectMemoryCuratorService {
           repoPath: preflight.repoPath,
           now: preflight.now,
           runKind: preflight.runKind,
+          schemaContextHash: preflight.schemaContextHash,
         })
       : await this.runMaintenanceOnly({
           input: preflight.input,
@@ -110,11 +122,105 @@ export class ProjectMemoryCuratorService {
         });
   }
 
+  private async runResumedCreateThenMaintenance(
+    input: RunProjectMemoryCuratorInput,
+  ): Promise<ProjectMemoryCuratorRunResult> {
+    if (input.dryRun || input.review || input.recreate) {
+      throw new Error("Project learn resume cannot be combined with dry-run, review, or recreate mode.");
+    }
+    const now = input.now ?? new Date();
+    emitProjectLearnProgress(input.progress, {
+      project_key: input.projectKey,
+      stage: "preflight",
+      status: "started",
+      message: `verifying resume checkpoint ${input.resumeRun}`,
+    });
+    const project = await findProject(this.root, input.projectKey);
+    const repoPath = project.config.repo_paths?.[0] ?? this.root;
+    const incompleteJournals = await new ProjectMemoryMarkdownApplier(this.root).findIncompleteApplyJournals(input.projectKey);
+    if (incompleteJournals.length > 0) {
+      throw new Error("Project learn resume is blocked by an incomplete canonical apply journal; rerun project learn to recover it first.");
+    }
+    await repairProjectShell(this.root, input.projectKey, { repoPath });
+    emitProjectLearnProgress(input.progress, { project_key: input.projectKey, stage: "schema", status: "started" });
+    const schemaContext = await ensureProjectLearnSchemaContext(this.root, input.projectKey, { dryRun: false, now });
+    emitProjectLearnProgress(input.progress, { project_key: input.projectKey, stage: "schema", status: "completed" });
+    emitProjectLearnProgress(input.progress, { project_key: input.projectKey, stage: "packet", status: "started" });
+    const reconciliation = await new ProjectMemorySourceConsumptionReconciler(this.root).reconcileProject(input.projectKey, { now });
+    if (reconciliation.blocking) {
+      throw new Error(`Project learn resume preflight failed: ${reconciliation.degraded_reasons.join("; ")}`);
+    }
+    const runtimeInboxIntake = await new ProjectMemoryCandidateIntakeService(this.root).intakeProjectInbox(input.projectKey, now);
+    if (runtimeInboxIntake.blocking) {
+      throw new Error(`Project learn resume preflight failed: ${runtimeInboxIntake.degraded_reasons.join("; ")}`);
+    }
+    const packet = await buildProjectMemoryPacket(this.root, input.projectKey);
+    const source = resolveResumeSourceRun(this.root, input.projectKey, input.resumeRun!);
+    let verified;
+    try {
+      verified = await verifyProjectMemoryCreateCheckpoint({
+        root: this.root,
+        projectKey: input.projectKey,
+        sourceRunDir: source.relativeRunDir,
+        sourceAbsoluteRunDir: source.absoluteRunDir,
+        repoPath,
+        packet,
+        schemaContextHash: schemaContext.hash,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.startsWith("Project learn resume preflight failed:")) throw error;
+      throw new Error(`Project learn resume preflight failed: source checkpoint is unavailable or invalid: ${message}. Run a fresh \`myelin project learn ${input.projectKey}\` instead.`);
+    }
+
+    const run = await createProjectCuratorRun(this.root, input.projectKey, now);
+    emitProjectLearnProgress(input.progress, {
+      project_key: input.projectKey,
+      stage: "packet",
+      status: "completed",
+      mode: "create",
+      run_dir: run.relative_run_dir,
+      message: "resume inputs and immutable checkpoint verified",
+    });
+    await writeRunArtifact(run, "source-consumption-reconciliation.json", reconciliation);
+    await writeRunArtifact(run, "runtime-inbox-intake.json", runtimeInboxIntake);
+    await writeRunArtifact(run, "input-packet.json", packet);
+    const create = await copyProjectMemoryCreateCheckpointArtifacts({
+      sourceAbsoluteRunDir: source.absoluteRunDir,
+      targetRun: run,
+      checkpoint: verified.checkpoint,
+      create: verified.create,
+    });
+    await writeRunArtifact(run, "resume-source.json", {
+      schema_version: 1,
+      source_run_dir: source.relativeRunDir,
+      checkpoint_ref: `${source.relativeRunDir}/${PROJECT_MEMORY_CREATE_CHECKPOINT_REF}`,
+      verified_at: now.toISOString(),
+      copied_artifacts: verified.checkpoint.create_artifacts.map((artifact) => artifact.path),
+    });
+    return await this.runMaintenanceAfterCreate({
+      input,
+      run,
+      packet,
+      repoPath,
+      now,
+      runKind: "create_then_maintenance",
+      create,
+      resumedFromRun: source.relativeRunDir,
+    });
+  }
+
   private async prepareRun(
     input: RunProjectMemoryCuratorInput,
     entryPoint: "learn" | "maintenance",
   ): Promise<CuratorPreflightResult> {
     const now = input.now ?? new Date();
+    emitProjectLearnProgress(input.progress, {
+      project_key: input.projectKey,
+      stage: "preflight",
+      status: "started",
+      message: "checking project registration and recovery state",
+    });
     const project = await findProject(this.root, input.projectKey);
     const repoPath = project.config.repo_paths?.[0] ?? this.root;
     const applier = new ProjectMemoryMarkdownApplier(this.root);
@@ -142,7 +248,32 @@ export class ProjectMemoryCuratorService {
     if (entryPoint === "learn" && !input.dryRun) await repairProjectShell(this.root, input.projectKey, { repoPath });
 
     const run = await createProjectCuratorRun(this.root, input.projectKey, now);
-    await ensureProjectLearnSchemaContext(this.root, input.projectKey, { dryRun: input.dryRun, now });
+    emitProjectLearnProgress(input.progress, {
+      project_key: input.projectKey,
+      stage: "preflight",
+      status: "completed",
+      run_dir: run.relative_run_dir,
+    });
+    emitProjectLearnProgress(input.progress, {
+      project_key: input.projectKey,
+      stage: "schema",
+      status: "started",
+      run_dir: run.relative_run_dir,
+    });
+    const schemaContext = await ensureProjectLearnSchemaContext(this.root, input.projectKey, { dryRun: input.dryRun, now });
+    emitProjectLearnProgress(input.progress, {
+      project_key: input.projectKey,
+      stage: "schema",
+      status: "completed",
+      run_dir: run.relative_run_dir,
+    });
+    emitProjectLearnProgress(input.progress, {
+      project_key: input.projectKey,
+      stage: "packet",
+      status: "started",
+      run_dir: run.relative_run_dir,
+      message: "reconciling sources, intaking runtime inbox, and building packet",
+    });
 
     const reconciliation = await new ProjectMemorySourceConsumptionReconciler(this.root).reconcileProject(input.projectKey, { now });
     await writeRunArtifact(run, "source-consumption-reconciliation.json", reconciliation);
@@ -170,6 +301,14 @@ export class ProjectMemoryCuratorService {
     const detectedMode = modeForInput(input, packet);
     const mode = entryPoint === "maintenance" ? "maintain" : detectedMode;
     const runKind = entryPoint === "maintenance" ? "maintenance" : runKindForInput(input, packet);
+    emitProjectLearnProgress(input.progress, {
+      project_key: input.projectKey,
+      stage: "packet",
+      status: "completed",
+      mode,
+      run_dir: run.relative_run_dir,
+      message: `${packet.pending.project_candidates.length + packet.pending.project_handoffs.length} pending sources`,
+    });
     if (runtimeInboxIntake.blocking) {
       return { kind: "terminal", result: await this.writeTerminalArtifacts({
         input,
@@ -200,7 +339,7 @@ export class ProjectMemoryCuratorService {
     }
 
     if (entryPoint === "maintenance" && !input.dryRun) await repairProjectShell(this.root, input.projectKey, { repoPath });
-    return { kind: "ready", input, now, repoPath, run, packet, mode, runKind };
+    return { kind: "ready", input, now, repoPath, run, packet, mode, runKind, schemaContextHash: schemaContext.hash };
   }
 
   private async runCreateThenMaintenance(input: {
@@ -210,6 +349,7 @@ export class ProjectMemoryCuratorService {
     repoPath: string;
     now: Date;
     runKind: ProjectMemoryAgentRunKind;
+    schemaContextHash: string;
   }): Promise<ProjectMemoryCuratorRunResult> {
     const create = await runProjectMemoryCreateMode({
       root: this.root,
@@ -222,6 +362,7 @@ export class ProjectMemoryCuratorService {
       env: input.input.env,
       runner: input.input.runner,
       now: input.now,
+      progress: input.input.progress,
     });
     await writeRunArtifact(input.run, "documentation-create-result.json", create);
     if (create.status !== "completed") {
@@ -238,19 +379,45 @@ export class ProjectMemoryCuratorService {
       });
     }
 
+    await writeProjectMemoryCreateCheckpoint({
+      root: this.root,
+      projectKey: input.input.projectKey,
+      run: input.run,
+      repoPath: input.repoPath,
+      packet: input.packet,
+      create,
+      schemaContextHash: input.schemaContextHash,
+      now: input.now,
+    });
+
+    return await this.runMaintenanceAfterCreate({ ...input, create });
+  }
+
+  private async runMaintenanceAfterCreate(input: {
+    input: RunProjectMemoryCuratorInput;
+    run: ProjectCuratorRunPaths;
+    packet: ProjectMemoryPacket;
+    repoPath: string;
+    now: Date;
+    runKind: ProjectMemoryAgentRunKind;
+    create: ProjectMemoryCreateModeResult;
+    resumedFromRun?: string;
+  }): Promise<ProjectMemoryCuratorRunResult> {
+
     const maintenance = await runProjectMemoryMaintenanceMode({
       root: this.root,
       projectKey: input.input.projectKey,
       runDir: input.run.relative_run_dir,
       absoluteRunDir: input.run.absolute_run_dir,
       targetRepoDir: input.repoPath,
-      baseWikiDir: create.draft_wiki_dir,
+      baseWikiDir: input.create.draft_wiki_dir,
       pendingSources: pendingSourcesFromPacket(input.packet),
       provider: input.input.provider,
       modelOverride: input.input.modelOverride,
       env: input.input.env,
       runner: input.input.runner,
       now: input.now,
+      progress: input.input.progress,
     });
     await writeRunArtifact(input.run, "documentation-maintenance-result.json", maintenance);
     if (maintenance.status === "failed") {
@@ -263,8 +430,11 @@ export class ProjectMemoryCuratorService {
         validation: failureValidation(input.input.projectKey, "create", "project_memory_maintenance_failed", maintenance.error ?? "maintenance mode failed"),
         status: "failed",
         stoppedReason: maintenance.error ?? "maintenance mode failed",
-        create,
+        create: input.create,
         maintenance,
+        resumable: true,
+        resumeCommand: resumeCommand(input.input.projectKey, input.resumedFromRun ?? input.run.relative_run_dir),
+        resumedFromRun: input.resumedFromRun,
       });
     }
 
@@ -275,10 +445,11 @@ export class ProjectMemoryCuratorService {
       runKind: input.runKind,
       outputArtifact: "documentation-maintenance-result.json",
       draftWikiDir: maintenance.draft_wiki_dir,
-      create,
+      create: input.create,
       maintenance,
       sourceConsumptions: await this.combinedSourceConsumptions(input.input.projectKey, maintenance.source_consumptions),
       now: input.now,
+      resumedFromRun: input.resumedFromRun,
     });
   }
 
@@ -303,6 +474,7 @@ export class ProjectMemoryCuratorService {
       env: input.input.env,
       runner: input.input.runner,
       now: input.now,
+      progress: input.input.progress,
     });
     await writeRunArtifact(input.run, "documentation-maintenance-result.json", maintenance);
     if (maintenance.status === "failed") {
@@ -343,6 +515,7 @@ export class ProjectMemoryCuratorService {
     maintenance?: ProjectMemoryMaintenanceModeResult;
     sourceConsumptions: ProjectMemorySourceConsumptionRecord[];
     now: Date;
+    resumedFromRun?: string;
   }): Promise<ProjectMemoryCuratorRunResult> {
     const validation = successValidation(input.input.projectKey, input.mode);
     if (input.input.dryRun || input.input.review) {
@@ -357,31 +530,90 @@ export class ProjectMemoryCuratorService {
         stoppedReason: input.input.review ? "review requested" : "dry-run requested",
         create: input.create,
         maintenance: input.maintenance,
+        resumedFromRun: input.resumedFromRun,
       });
     }
 
-    const apply = await promoteDraftWiki({
-      root: this.root,
-      projectKey: input.input.projectKey,
-      runDir: input.run.relative_run_dir,
-      absoluteRunDir: input.run.absolute_run_dir,
+    emitProjectLearnProgress(input.input.progress, {
+      project_key: input.input.projectKey,
+      stage: "canonical_promotion",
+      status: "started",
       mode: input.mode,
-      draftWikiDir: input.draftWikiDir,
-      curatorOutputRef: input.outputArtifact,
-      state: agentState({
+      run_dir: input.run.relative_run_dir,
+      message: "validating canonical links and staging Project Memory writes",
+    });
+    let apply;
+    try {
+      apply = await promoteDraftWiki({
+        root: this.root,
+        projectKey: input.input.projectKey,
+        runDir: input.run.relative_run_dir,
+        absoluteRunDir: input.run.absolute_run_dir,
+        mode: input.mode,
+        draftWikiDir: input.draftWikiDir,
+        curatorOutputRef: input.outputArtifact,
+        state: agentState({
+          input: input.input,
+          run: input.run,
+          runKind: input.runKind,
+          create: input.create,
+          maintenance: input.maintenance,
+          now: input.now,
+        }),
+        repositoryIdentity: input.create
+          ? await readJson<ProjectRepositoryIdentity>(resolveInside(input.run.absolute_run_dir, input.create.repository_identity_ref))
+          : undefined,
+        requiredSubjectWikiPaths: input.create?.manifest.subjects.map((subject) => subject.wiki_path),
+        sourceConsumptions: input.sourceConsumptions,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      emitProjectLearnProgress(input.input.progress, {
+        project_key: input.input.projectKey,
+        stage: "canonical_promotion",
+        status: "failed",
+        mode: input.mode,
+        run_dir: input.run.relative_run_dir,
+        message,
+      });
+      const applyJournalExists = await Bun.file(resolveInside(input.run.absolute_run_dir, "project-memory-apply-journal.json")).exists();
+      if (applyJournalExists) throw error;
+      const resumeRun = input.resumedFromRun ?? input.run.relative_run_dir;
+      return await this.writeTerminalArtifacts({
         input: input.input,
         run: input.run,
+        mode: input.mode,
         runKind: input.runKind,
+        outputArtifact: input.outputArtifact,
+        validation: failureValidation(input.input.projectKey, input.mode, "project_memory_canonical_publication_failed", message),
+        status: "failed",
+        stoppedReason: message,
         create: input.create,
         maintenance: input.maintenance,
-        now: input.now,
-      }),
-      sourceConsumptions: input.sourceConsumptions,
+        resumable: Boolean(input.create),
+        resumeCommand: input.create ? resumeCommand(input.input.projectKey, resumeRun) : undefined,
+        resumedFromRun: input.resumedFromRun,
+      });
+    }
+    emitProjectLearnProgress(input.input.progress, {
+      project_key: input.input.projectKey,
+      stage: "canonical_promotion",
+      status: "completed",
+      mode: input.mode,
+      run_dir: input.run.relative_run_dir,
+      message: `${apply.changed_files.length} files changed`,
     });
     const sourceReconciliation = await new ProjectMemorySourceConsumptionReconciler(this.root).reconcileProject(input.input.projectKey, {
       now: input.now,
     });
     await writeRunArtifact(input.run, "post-apply-source-consumption-reconciliation.json", sourceReconciliation);
+    emitProjectLearnProgress(input.input.progress, {
+      project_key: input.input.projectKey,
+      stage: "retrieval_indexing",
+      status: "started",
+      mode: input.mode,
+      run_dir: input.run.relative_run_dir,
+    });
     const retrieval = await this.postApplyRetrievalLifecycle({
       projectKey: input.input.projectKey,
       mode: input.mode,
@@ -392,6 +624,14 @@ export class ProjectMemoryCuratorService {
       modelOverride: input.input.modelOverride,
       env: input.input.env,
       runner: input.input.runner,
+    });
+    emitProjectLearnProgress(input.input.progress, {
+      project_key: input.input.projectKey,
+      stage: "retrieval_indexing",
+      status: "completed",
+      mode: input.mode,
+      run_dir: input.run.relative_run_dir,
+      message: retrieval.status === "completed" ? "retrieval ready" : retrieval.degraded_reason,
     });
     await this.updateCuratedRetrievalReadiness({
       projectKey: input.input.projectKey,
@@ -413,6 +653,7 @@ export class ProjectMemoryCuratorService {
       retrievalArtifacts: retrieval.artifacts,
       create: input.create,
       maintenance: input.maintenance,
+      resumedFromRun: input.resumedFromRun,
     });
   }
 
@@ -444,6 +685,9 @@ export class ProjectMemoryCuratorService {
     create?: ProjectMemoryCreateModeResult;
     maintenance?: ProjectMemoryMaintenanceModeResult;
     runtimeInboxIntake?: boolean;
+    resumable?: boolean;
+    resumeCommand?: string;
+    resumedFromRun?: string;
   }): Promise<ProjectMemoryCuratorRunResult> {
     await writeRunArtifact(input.run, "curator-validation.json", input.validation);
     const result = buildResult(input);
@@ -503,6 +747,9 @@ function buildResult(input: {
   create?: ProjectMemoryCreateModeResult;
   maintenance?: ProjectMemoryMaintenanceModeResult;
   runtimeInboxIntake?: boolean;
+  resumable?: boolean;
+  resumeCommand?: string;
+  resumedFromRun?: string;
 }): ProjectMemoryCuratorRunResult {
   const fileAuthoringRuns = [
     ...(input.create?.file_authoring_run_refs ?? []),
@@ -523,12 +770,16 @@ function buildResult(input: {
       retrieval_sections: input.retrievalArtifacts?.retrieval_sections,
       hint_generation: input.retrievalArtifacts?.hint_generation,
       retrieval_index_result: input.retrievalArtifacts?.retrieval_index_result,
+      publication_validation: input.apply ? "canonical-publication-validation.json" : undefined,
+      repository_identity: input.create || input.maintenance ? "repository-identity.json" : undefined,
       subject_manifest: input.create ? "reports/documentation-subject-manifest.json" : undefined,
       planner_report: input.create ? "reports/documentation-planner-report.json" : undefined,
       subject_reports: input.create?.subject_report_refs,
       maintenance_report: input.maintenance ? "reports/documentation-maintenance-report.json" : undefined,
       file_authoring_runs: fileAuthoringRuns.length > 0 ? fileAuthoringRuns : undefined,
       pre_maintenance_wiki: input.create ? "pre-maintenance-wiki" : undefined,
+      create_checkpoint: input.create && !input.resumedFromRun ? PROJECT_MEMORY_CREATE_CHECKPOINT_REF : undefined,
+      resume_source: input.resumedFromRun ? "resume-source.json" : undefined,
     },
     curation_kind: "agent_authored",
     run_kind: input.runKind,
@@ -545,6 +796,9 @@ function buildResult(input: {
     changed_files: input.apply?.changed_files.map((file) => file.path),
     source_consumptions: input.apply?.source_consumptions.map((record) => `${record.source_kind}:${record.source_ref}`),
     stopped_reason: input.stoppedReason,
+    resumable: input.resumable,
+    resume_command: input.resumeCommand,
+    resumed_from_run: input.resumedFromRun,
   };
 }
 
@@ -742,10 +996,35 @@ function summaryFor(result: ProjectMemoryCuratorRunResult): string {
     result.artifacts.hint_generation ? `hint_generation: ${result.artifacts.hint_generation}` : "",
     result.artifacts.retrieval_index_result ? `retrieval_index_result: ${result.artifacts.retrieval_index_result}` : "",
     result.status === "completed_with_pending_index" ? "pending_retrieval_index: yes" : "",
+    result.resumable !== undefined ? `resumable: ${result.resumable}` : "",
+    result.resume_command ? `resume_command: ${result.resume_command}` : "",
+    result.resumed_from_run ? `resumed_from_run: ${result.resumed_from_run}` : "",
     "",
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+function resumeCommand(projectKey: string, runDir: string): string {
+  return `myelin project learn ${projectKey} --resume ${runDir}`;
+}
+
+function resolveResumeSourceRun(
+  root: string,
+  projectKey: string,
+  value: string,
+): { absoluteRunDir: string; relativeRunDir: string } {
+  const runsRoot = projectPath(root, projectKey, "runs", "project-learn");
+  const absoluteRunDir = value.includes("/") || value.includes("\\")
+    ? resolveInside(root, value)
+    : resolve(runsRoot, value);
+  if (dirname(absoluteRunDir) !== runsRoot) {
+    throw new Error(`Project learn resume preflight failed: ${value} is not a direct project-learn run for ${projectKey}.`);
+  }
+  return {
+    absoluteRunDir,
+    relativeRunDir: relative(root, absoluteRunDir).replaceAll("\\", "/"),
+  };
 }
 
 class DefaultProjectMemoryPostApplyRetrievalLifecycle implements ProjectMemoryPostApplyRetrievalLifecycle {
@@ -821,6 +1100,19 @@ class DefaultProjectMemoryPostApplyRetrievalLifecycle implements ProjectMemoryPo
       indexResult.degraded_reason,
       (indexResult.pending_remaining ?? 0) > 0 ? `${indexResult.pending_remaining} Project Memory retrieval rows remain pending` : "",
     ].filter(Boolean).join("; ");
+    if (pendingReason) {
+      try {
+        const { AutoProjectMemoryMaintenanceService } = await import(
+          "../maintenance/auto-project-memory-maintenance.ts"
+        );
+        await new AutoProjectMemoryMaintenanceService(this.root).maybeSchedule(
+          input.projectKey,
+          "retrieval_index_pending",
+        );
+      } catch {
+        // Curated Project Memory remains durable and pending if background indexing cannot be scheduled.
+      }
+    }
     return {
       status: pendingReason ? "pending" : "completed",
       artifacts,

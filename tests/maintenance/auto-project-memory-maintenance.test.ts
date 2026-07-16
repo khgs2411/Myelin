@@ -9,6 +9,7 @@ import {
 import type { DetachedSpawner } from "../../src/ingest/runtime.ts";
 import { createMemoryCandidate } from "../../src/memory/candidates.ts";
 import { openMemoryDb } from "../../src/memory/db.ts";
+import { registerInitialActiveEmbeddingContract } from "../../src/memory/embedding-contract-store.ts";
 import { createRuntimeInboxItem } from "../../src/inbox/runtime-inbox-items.ts";
 import { bootstrapProject } from "../../src/runtime/bootstrap.ts";
 
@@ -103,6 +104,48 @@ test("auto project memory maintenance counts only un-intaked inbox items", async
     pending_inbox_items: 1,
     pending_project_candidates: 0,
   });
+});
+
+test("auto project memory maintenance schedules retrieval indexing below the curation threshold", async () => {
+  await writeConfig([
+    "AUTO_PROJECT_MEMORY_MAINTENANCE=1",
+    "AUTO_PROJECT_MEMORY_MIN_PENDING_ITEMS=5",
+    "AUTO_PROJECT_MEMORY_COOLDOWN_MS=0",
+  ]);
+  const db = openMemoryDb(root);
+  try {
+    registerInitialActiveEmbeddingContract(db, {
+      scope: "project_memory",
+      contract: {
+        provider: "ollama_nomic",
+        model: "nomic-embed-text:v1.5",
+        dimensions: 768,
+        formatVersion: 1,
+      },
+    });
+    db.query(
+      `INSERT INTO project_memory_retrieval_embeddings
+        (id, project_key, wiki_path, section_id, section_hash, hint_hash_key,
+         embedding_provider, embedding_model, embedding_dimensions, embedding_purpose,
+         format_version, status, created_at, updated_at)
+       VALUES ('row_1', 'demo', 'wiki/topic.md', 'topic', 'hash', '',
+         'ollama_nomic', 'nomic-embed-text:v1.5', 768, 'retrieval_document',
+         1, 'pending', ?, ?)`,
+    ).run("2026-07-07T10:00:00.000Z", "2026-07-07T10:00:00.000Z");
+  } finally {
+    db.close();
+  }
+  const spawned: Array<Parameters<DetachedSpawner>[0]> = [];
+
+  const result = await new AutoProjectMemoryMaintenanceService(root, {
+    spawn: (options) => {
+      spawned.push(options);
+      return { pid: 2468, unref: () => {} };
+    },
+  }).maybeSchedule("demo", "retrieval_index_pending");
+
+  expect(result).toMatchObject({ status: "scheduled", trigger: "retrieval_index_pending" });
+  expect(spawned).toHaveLength(1);
 });
 
 test("auto project memory maintenance run executes maintenance and releases the lock", async () => {

@@ -21,6 +21,7 @@ import {
   type SessionMemoryLinkRelationship,
   type SessionMemoryKind,
 } from "../memory/ingest-types.ts";
+import { activeDocumentContract, resolveEmbeddingContract } from "../memory/embedding-contract-resolver.ts";
 import { EmbeddingProviderFactory } from "../memory/embedding-provider-factory.ts";
 import { createSessionMemoryLink } from "../memory/session-memory-links.ts";
 import {
@@ -42,6 +43,7 @@ import { updateIngestJobStatus } from "./jobs.ts";
 import { readIngestProjectStatus, type IngestProjectStatus } from "./status.ts";
 import { AutoProjectMemoryMaintenanceService } from "../maintenance/auto-project-memory-maintenance.ts";
 import type { AutoProjectMemoryMaintenanceScheduler } from "../maintenance/maintenance-contracts.ts";
+import type { AutoMemoryMaintenanceScheduler } from "../maintenance/maintenance-contracts.ts";
 
 const MAX_PROMPT_RETAINED_EVIDENCE_CHARS = 6_000;
 const TRUNCATED_EVIDENCE_SUFFIX = "\n...[truncated for ingest prompt; full evidence is preserved in the tombstone audit row]";
@@ -731,12 +733,15 @@ export async function runIngestWorker(input: {
   now?: () => Date;
   runner?: ProcessRunner;
   projectMemoryMaintenanceScheduler?: AutoProjectMemoryMaintenanceScheduler | false;
+  sessionMemoryMaintenanceScheduler?: AutoMemoryMaintenanceScheduler | false;
 }): Promise<void> {
   const db = openMemoryDb(input.root);
   const config = await loadConfig(input.root);
-  const embeddingSelection = await new EmbeddingProviderFactory(config).initialize("retrieval_document");
-  const embeddingContract = embeddingSelection.contract;
-  const embeddingProvider = embeddingSelection.client;
+  const embeddingSelection = await resolveEmbeddingContract({ db, config, scope: "session_memory" });
+  const embeddingContract = activeDocumentContract(embeddingSelection);
+  const embeddingRuntime = await new EmbeddingProviderFactory(config)
+    .initializeContract(embeddingContract)
+    .catch(() => null);
   const now = input.now ?? (() => new Date());
   let claimedCount = 0;
   let sessionMemories = 0;
@@ -785,7 +790,7 @@ export async function runIngestWorker(input: {
         projectKey: input.projectKey,
         leased,
         documentContract: embeddingContract,
-        provider: embeddingProvider,
+        provider: embeddingRuntime?.client,
       });
       const boundedPrompt = buildBoundedIngestPrompt({
         projectKey: input.projectKey,
@@ -854,6 +859,13 @@ export async function runIngestWorker(input: {
         input.projectMemoryMaintenanceScheduler,
       );
     }
+    if (sessionMemories > 0) {
+      await scheduleAutoSessionMemoryIndexing(
+        input.root,
+        input.projectKey,
+        input.sessionMemoryMaintenanceScheduler,
+      );
+    }
   } catch (error) {
     updateIngestJobStatus(db, {
       id: input.jobId,
@@ -865,6 +877,21 @@ export async function runIngestWorker(input: {
     throw error;
   } finally {
     db.close();
+  }
+}
+
+async function scheduleAutoSessionMemoryIndexing(
+  root: string,
+  projectKey: string,
+  scheduler: AutoMemoryMaintenanceScheduler | false | undefined,
+): Promise<void> {
+  if (scheduler === false) return;
+  try {
+    const service = scheduler ?? new (await import("../maintenance/auto-memory-maintenance.ts"))
+      .AutoMemoryMaintenanceService(root);
+    await service.maybeSchedule(projectKey, { forceIndex: true });
+  } catch {
+    // Session Memory remains durable and pending if background indexing cannot be scheduled.
   }
 }
 

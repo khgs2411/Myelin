@@ -31,6 +31,7 @@ export class MemoryQueryService {
       db: Database;
       documentContract: ActiveEmbeddingContract;
       embeddingProvider: EmbeddingProviderClient;
+      vectorTable?: string;
       responseService?: DeterministicMemoryQueryResponseService;
       sessionMemoryQuery?: SessionMemoryQueryRunner;
       projectMemoryQuery?: ProjectMemoryQueryRunner;
@@ -52,6 +53,7 @@ export class MemoryQueryService {
         question: input.question,
         document_contract: this.deps.documentContract,
         provider: this.deps.embeddingProvider,
+        vector_table: this.deps.vectorTable,
         limit: input.limit ?? 5,
         filters: input.gitBranch ? { git_branch: input.gitBranch } : undefined,
       });
@@ -74,6 +76,7 @@ export class MemoryQueryService {
         question: input.question,
         document_contract: this.deps.documentContract,
         provider: this.deps.embeddingProvider,
+        vector_table: this.deps.vectorTable,
         limit: input.limit ?? 5,
         max_inline_chars: input.maxInlineChars ?? 4000,
       });

@@ -1,5 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT } from "../runtime/config.ts";
+import { registerInitialActiveEmbeddingContract } from "./embedding-contract-store.ts";
+import type { EmbeddingContractIdentity, EmbeddingScope } from "./embedding-contract-types.ts";
 import { sessionMemoryEmbeddingId } from "./session-memory-embeddings.ts";
 
 type Migration = { version: number; sql?: string; apply?: (db: Database, now: Date) => void };
@@ -485,6 +487,10 @@ const MIGRATIONS: Migration[] = [
       ALTER TABLE personal_memory_query_logs ADD COLUMN eval_json TEXT;
     `,
   },
+  {
+    version: 15,
+    apply: migrateEmbeddingContracts,
+  },
 ];
 
 export function runMigrations(db: Database, now: Date = new Date()): void {
@@ -493,7 +499,7 @@ export function runMigrations(db: Database, now: Date = new Date()): void {
   const current = row?.v ?? 0;
 
   for (const migration of MIGRATIONS) {
-      if (migration.version <= current) continue;
+    if (migration.version <= current) continue;
     const apply = db.transaction(() => {
       if (migration.sql) db.exec(migration.sql);
       if (migration.apply) migration.apply(db, now);
@@ -717,6 +723,80 @@ function migrateSessionMemoryLifecycle(db: Database): void {
     CREATE INDEX IF NOT EXISTS session_memory_links_project_target
       ON session_memory_links(project_key, target_memory_id, relationship);
   `);
+}
+
+function migrateEmbeddingContracts(db: Database, now: Date): void {
+  db.exec(`
+    CREATE TABLE embedding_contracts (
+      id                   TEXT PRIMARY KEY,
+      scope                TEXT NOT NULL CHECK (scope IN ('session_memory', 'project_memory')),
+      embedding_provider   TEXT NOT NULL CHECK (embedding_provider IN ('ollama_nomic', 'ollama_qwen', 'gemini')),
+      embedding_model      TEXT NOT NULL,
+      embedding_dimensions INTEGER NOT NULL,
+      format_version       INTEGER NOT NULL,
+      lifecycle            TEXT NOT NULL CHECK (lifecycle IN ('active', 'previous', 'staging', 'retired', 'failed')),
+      vector_table         TEXT NOT NULL,
+      created_at           TEXT NOT NULL,
+      updated_at           TEXT NOT NULL,
+      activated_at         TEXT,
+      retired_at           TEXT,
+      failure_reason       TEXT,
+      UNIQUE (scope, embedding_provider, embedding_model, embedding_dimensions, format_version)
+    );
+    CREATE UNIQUE INDEX embedding_contracts_active_scope
+      ON embedding_contracts(scope) WHERE lifecycle = 'active';
+    CREATE UNIQUE INDEX embedding_contracts_previous_scope
+      ON embedding_contracts(scope) WHERE lifecycle = 'previous';
+    CREATE INDEX embedding_contracts_scope_lifecycle
+      ON embedding_contracts(scope, lifecycle, updated_at);
+  `);
+
+  seedActiveContract(db, {
+    scope: "session_memory",
+    metadataTable: "session_memory_embeddings",
+    vectorTable: "session_memory_vec",
+    now: now.toISOString(),
+  });
+  seedActiveContract(db, {
+    scope: "project_memory",
+    metadataTable: "project_memory_retrieval_embeddings",
+    vectorTable: "project_memory_section_vec",
+    now: now.toISOString(),
+  });
+}
+
+function seedActiveContract(
+  db: Database,
+  input: { scope: EmbeddingScope; metadataTable: string; vectorTable: string; now: string },
+): void {
+  if (!tableExists(db, input.metadataTable)) return;
+  const row = db.query(
+    `SELECT embedding_provider, embedding_model, embedding_dimensions, format_version, count(*) AS indexed_count
+     FROM ${input.metadataTable}
+     WHERE status = 'indexed'
+       AND embedding_purpose = 'retrieval_document'
+       AND embedding_provider IN ('ollama_nomic', 'ollama_qwen', 'gemini')
+     GROUP BY embedding_provider, embedding_model, embedding_dimensions, format_version
+     ORDER BY indexed_count DESC, embedding_provider, embedding_model
+     LIMIT 1`,
+  ).get() as (Omit<EmbeddingContractIdentity, "provider" | "formatVersion" | "dimensions" | "model"> & {
+    embedding_provider: EmbeddingContractIdentity["provider"];
+    embedding_model: string;
+    embedding_dimensions: number;
+    format_version: number;
+  }) | null;
+  if (!row) return;
+  registerInitialActiveEmbeddingContract(db, {
+    scope: input.scope,
+    contract: {
+      provider: row.embedding_provider,
+      model: row.embedding_model,
+      dimensions: row.embedding_dimensions,
+      formatVersion: row.format_version,
+    },
+    vectorTable: input.vectorTable,
+    now: input.now,
+  });
 }
 
 function tableExists(db: Database, table: string): boolean {

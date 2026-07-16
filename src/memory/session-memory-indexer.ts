@@ -36,6 +36,7 @@ export async function indexSessionMemories(
     project_key: string;
     contract: ActiveEmbeddingContract;
     provider: EmbeddingTransport;
+    vector_table?: string;
     limit: number;
     batch_size?: number;
     retry_failed?: boolean;
@@ -46,7 +47,7 @@ export async function indexSessionMemories(
   const now = input.now ?? (() => new Date().toISOString());
   const batchSize = input.batch_size ?? input.limit;
   if (!Number.isInteger(batchSize) || batchSize <= 0) throw new Error(`Invalid embedding batch size: ${batchSize}`);
-  const vectorStore = input.vector_store ?? defaultVectorStore(createSqliteVecAdapter());
+  const vectorStore = input.vector_store ?? defaultVectorStore(createSqliteVecAdapter(), input.vector_table);
   ensureActiveSessionMemoryEmbeddings(db, {
     project_key: input.project_key,
     contract: input.contract,
@@ -148,17 +149,21 @@ export async function indexSessionMemories(
   };
 }
 
-export function defaultVectorStore(adapter: SqliteVecAdapter = createSqliteVecAdapter()): SessionMemoryVectorStore {
+export function defaultVectorStore(
+  adapter: SqliteVecAdapter = createSqliteVecAdapter(),
+  vectorTable = "session_memory_vec",
+): SessionMemoryVectorStore {
   return {
     ensure(db, input) {
       return ensureSessionMemoryVectorStorage(db, {
         contract: input.contract,
         adapter,
-        rebuild_on_dimension_mismatch: true,
+        vector_table: vectorTable,
+        rebuild_on_dimension_mismatch: false,
       });
     },
     upsert(db, input) {
-      upsertSessionMemoryVector(db, input);
+      upsertSessionMemoryVector(db, input, vectorTable);
     },
   };
 }

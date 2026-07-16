@@ -1,16 +1,18 @@
 import type { Database } from "bun:sqlite";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { basename, isAbsolute, join, relative } from "node:path";
-import type { AutoProjectMemoryMaintenanceConfig } from "../runtime/config.ts";
+import type { AutoProjectMemoryMaintenanceConfig, EmbeddingConfig } from "../runtime/config.ts";
 import type { EvidenceRegistry, ProjectMemoryStatusSection, StatusInspection } from "./contracts.ts";
 import { inspectLock, type MaintenanceStateRecord } from "./lock-inspector.ts";
 import { maxState, projectRetrievalState, warning } from "./severity.ts";
+import { inspectEmbeddingRetrievalStatus } from "./embedding-retrieval-status.ts";
 
 export async function inspectProjectMemory(input: {
   root: string;
   projectKey: string;
   db: Database;
   config: AutoProjectMemoryMaintenanceConfig;
+  embeddingConfig: EmbeddingConfig;
   evidence: EvidenceRegistry;
   isAlive: (pid: number) => boolean;
 }): Promise<{ section: ProjectMemoryStatusSection } & StatusInspection> {
@@ -77,14 +79,29 @@ export async function inspectProjectMemory(input: {
     }
   }
 
-  const retrieval = retrievalCounts(input.db, input.projectKey);
-  const retrievalState = projectRetrievalState(curated, retrieval.indexed, retrieval.pending, retrieval.failed);
+  const retrieval = inspectEmbeddingRetrievalStatus({
+    db: input.db,
+    projectKey: input.projectKey,
+    scope: "project_memory",
+    config: input.embeddingConfig,
+  });
+  const retrievalState = projectRetrievalState(
+    curated,
+    retrieval.indexed_count,
+    retrieval.pending_count,
+    retrieval.failed_count,
+  );
   if (retrievalState !== "healthy") {
-    warnings.push(warning("PROJECT_RETRIEVAL_UNAVAILABLE", retrievalState, "project_memory", retrieval.indexed === 0 ? "Curated Project Memory has no usable index." : "Project Memory retrieval has pending or failed rows.", [dbId, projectStateId]));
+    warnings.push(warning("PROJECT_RETRIEVAL_UNAVAILABLE", retrievalState, "project_memory", retrieval.indexed_count === 0 ? "Curated Project Memory has no usable index." : "Project Memory retrieval has pending or failed rows.", [dbId, projectStateId]));
     actions.push({ command: `myelin project learn ${input.projectKey}`, reason: "Rebuild Project Memory retrieval state.", section: "project_memory" });
   }
+  if (retrieval.migration_required) {
+    warnings.push(warning("PROJECT_EMBEDDING_MIGRATION_REQUIRED", "attention", "project_memory", "Configured Project Memory embedding contract differs from the active contract.", [dbId]));
+    actions.push({ command: "myelin memory embeddings migrate", reason: "Preview the configured embedding-contract migration.", section: "project_memory" });
+  }
   const pressureState = needsReview > 0 || (pressure >= input.config.minPendingItems && lock.lock.lifecycle !== "active") || (!input.config.enabled && pressure > 0) ? "attention" : "healthy";
-  const state = maxState(inbox.error ? "blocked" : "healthy", lock.state, maintenanceRead.error ? "attention" : "healthy", maintenanceFailureState, pressureState, curationState, retrievalState, logState);
+  const migrationState = retrieval.migration_required ? "attention" : "healthy";
+  const state = maxState(inbox.error ? "blocked" : "healthy", lock.state, maintenanceRead.error ? "attention" : "healthy", maintenanceFailureState, migrationState, pressureState, curationState, retrievalState, logState);
   const lifecycle = lock.lock.lifecycle === "stale" ? "stale_lock" : curationState === "blocked" ? curationLifecycle : retrievalState === "blocked" ? "retrieval_unavailable" : state === "attention" ? "attention" : "ready";
   return {
     section: {
@@ -92,7 +109,7 @@ export async function inspectProjectMemory(input: {
       inbox: { pending_items: inbox.count }, candidates: { pending, needs_review: needsReview },
       maintenance: { enabled: input.config.enabled, lifecycle: lock.lock.lifecycle === "active" ? "running" : lock.lock.lifecycle === "stale" ? "stale_lock" : maintenanceRead.value?.last_status ?? "never_run", lock: lock.lock, last_run_id: maintenanceRead.value?.last_run_id ?? null, last_log_path: checkoutPath(input.root, maintenanceRead.value?.last_log_path ?? null) },
       curation: { lifecycle: curationLifecycle, canonical_wiki_path: `projects/${input.projectKey}/wiki`, latest_run_path: latestRun },
-      retrieval: { indexed_count: retrieval.indexed, pending_count: retrieval.pending, failed_count: retrieval.failed },
+      retrieval,
     }, warnings, actions,
   };
 }
@@ -127,13 +144,6 @@ async function readOptionalObject<T extends object>(path: string): Promise<{ val
 
 async function readableWiki(path: string): Promise<boolean> {
   try { return (await stat(path)).isDirectory() && (await readdir(path)).some((entry) => entry.endsWith(".md")); } catch { return false; }
-}
-function retrievalCounts(db: Database, key: string): { indexed: number; pending: number; failed: number } {
-  return {
-    indexed: scalar(db, "SELECT count(*) AS count FROM project_memory_retrieval_embeddings WHERE project_key=? AND status='indexed'", key),
-    pending: scalar(db, "SELECT count(*) AS count FROM project_memory_retrieval_embeddings WHERE project_key=? AND status IN ('pending','stale','orphaned')", key),
-    failed: scalar(db, "SELECT count(*) AS count FROM project_memory_retrieval_embeddings WHERE project_key=? AND status='failed'", key),
-  };
 }
 function scalar(db: Database, sql: string, value: string): number { return (db.query(sql).get(value) as { count: number }).count; }
 function stringValue(value: unknown): string | null { return typeof value === "string" ? value : null; }

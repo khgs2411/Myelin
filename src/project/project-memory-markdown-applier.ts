@@ -284,8 +284,9 @@ function orderWrites(writes: ProjectMemoryStagedWrite[]): ProjectMemoryStagedWri
     wiki_page: 1,
     page_state: 2,
     log: 3,
-    source_consumption_state: 4,
-    project_state: 5,
+    repository_identity_state: 4,
+    source_consumption_state: 5,
+    project_state: 6,
   };
   return [...writes].sort((a, b) => rank[a.write_kind] - rank[b.write_kind] || a.canonical_project_path.localeCompare(b.canonical_project_path));
 }

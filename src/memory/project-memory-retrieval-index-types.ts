@@ -49,5 +49,5 @@ export type ProjectMemoryRetrievalIndexCoordinatorDependencies = {
   root: string;
   loadConfig?: (root: string) => Promise<MyelinConfig>;
   openDb?: (root: string) => Database;
-  createFactory?: (config: MyelinConfig) => Pick<EmbeddingProviderFactory, "initialize">;
+  createFactory?: (config: MyelinConfig) => Pick<EmbeddingProviderFactory, "initializeContract" | "initializeLocalAuto">;
 };

@@ -196,6 +196,9 @@ export class InstallService {
     if (current?.schema_version === 2 && resolve(current.store_root) !== paths.storeRoot) {
       throw new Error(`The machine locator owns version store ${current.store_root}; refusing a different store root.`);
     }
+    if (current?.schema_version === 2 && current.active_version.id !== versionPlan.version.id) {
+      assertProductVersionAdvanced(current.active_version.product_version, versionPlan.version.product_version);
+    }
 
     if (!current) {
       const unowned = await inspectLauncher(paths.launcherPath, desiredHash);
@@ -568,4 +571,26 @@ function action(
 
 function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function assertProductVersionAdvanced(current: string, next: string): void {
+  const currentCore = semanticVersionCore(current);
+  const nextCore = semanticVersionCore(next);
+  for (let index = 0; index < currentCore.length; index += 1) {
+    if (nextCore[index] > currentCore[index]) return;
+    if (nextCore[index] < currentCore[index]) {
+      throw new Error(
+        `Myelin package version ${next} must be greater than active version ${current}; use install rollback for a downgrade.`,
+      );
+    }
+  }
+  throw new Error(
+    `Myelin runtime content changed without advancing package version ${current}. Bump package.json major, minor, or patch before installing a new managed runtime.`,
+  );
+}
+
+function semanticVersionCore(version: string): [number, number, number] {
+  const match = /^(\d+)\.(\d+)\.(\d+)/.exec(version);
+  if (!match) throw new Error(`Invalid Myelin semantic version: ${version}`);
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
 }

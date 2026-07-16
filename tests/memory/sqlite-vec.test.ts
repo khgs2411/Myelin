@@ -8,6 +8,7 @@ import {
   getSqliteVecAvailability,
   searchProjectMemoryRetrievalVectors,
   searchSessionMemoryVectors,
+  smokeOwnedVectorQuery,
   upsertProjectMemoryRetrievalVector,
   upsertSessionMemoryVector,
 } from "../../src/memory/sqlite-vec.ts";
@@ -93,6 +94,16 @@ test("vector operations are project scoped when sqlite-vec is available", () => 
 
     expect(matches.map((match) => match.memory_id)).toEqual(["mem_class_close", "mem_class_far"]);
     expect(matches[0].distance).toBeLessThanOrEqual(matches[1].distance);
+    expect(smokeOwnedVectorQuery(db, {
+      scope: "session_memory",
+      table: "session_memory_vec",
+      contract: {
+        provider: "ollama_nomic",
+        model: "test-model",
+        dimensions: 3,
+        formatVersion: 1,
+      },
+    })).toBe(3);
   } finally {
     db.close();
   }

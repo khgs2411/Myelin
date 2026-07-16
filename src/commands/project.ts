@@ -5,12 +5,18 @@ import { stableJson } from "../runtime/json.ts";
 import type { ProcessRunner } from "../runtime/llm-contracts.ts";
 import { ProjectService } from "../project/project-service.ts";
 import { ProjectResetService } from "../project/project-reset-service.ts";
+import { createProjectLearnProgressReporter } from "./project-learn-progress-reporter.ts";
+import {
+  emitProjectLearnProgress,
+  type ProjectLearnProgressSink,
+} from "../project/project-learn-progress.ts";
 
 export type ProjectCommandDeps = {
   context: LaunchContext;
   now?: () => Date;
   runner?: ProcessRunner;
   env?: NodeJS.ProcessEnv;
+  progress?: ProjectLearnProgressSink;
 };
 
 export function registerProjectCommands(cli: Cli, deps: ProjectCommandDeps): void {
@@ -115,6 +121,15 @@ async function projectLearnCommand(args: string[], deps: ProjectCommandDeps) {
   const parsed = parseProjectLearnArgs(args);
   if (parsed.error) return fail(parsed.error);
 
+  const progress = parsed.json
+    ? undefined
+    : deps.progress ?? (deps.context.invocationKind === "test" ? undefined : createProjectLearnProgressReporter());
+  emitProjectLearnProgress(progress, {
+    project_key: parsed.projectKey,
+    stage: "command",
+    status: "started",
+    message: "project learn accepted; determining mode and run artifacts",
+  });
   try {
     const result = await new ProjectService(deps.context.myelinRoot).runProjectLearn({
       projectKey: parsed.projectKey,
@@ -123,9 +138,19 @@ async function projectLearnCommand(args: string[], deps: ProjectCommandDeps) {
       provider: parsed.provider,
       modelOverride: parsed.modelOverride,
       recreate: parsed.recreate,
+      resumeRun: parsed.resumeRun,
       env: deps.env,
       runner: deps.runner,
       now: deps.now?.(),
+      progress,
+    });
+    emitProjectLearnProgress(progress, {
+      project_key: result.project_key,
+      stage: "run",
+      status: result.status === "failed" ? "failed" : "completed",
+      message: result.stopped_reason ?? `${result.changed_files?.length ?? 0} documentation files changed`,
+      mode: result.mode,
+      run_dir: result.run_dir,
     });
     if (parsed.json) return ok(stableJson(result));
 
@@ -142,9 +167,19 @@ async function projectLearnCommand(args: string[], deps: ProjectCommandDeps) {
     if (result.changed_files?.length) lines.push(`changed files: ${result.changed_files.join(", ")}`);
     if (result.status === "completed_with_pending_index") lines.push("pending retrieval index: yes");
     if (result.stopped_reason) lines.push(`stopped: ${result.stopped_reason}`);
+    if (result.resumable !== undefined) lines.push(`resumable: ${result.resumable}`);
+    if (result.resume_command) lines.push(`resume: ${result.resume_command}`);
+    if (result.resumed_from_run) lines.push(`resumed from: ${result.resumed_from_run}`);
     return result.status === "failed" ? fail(lines.join("\n")) : ok(lines.join("\n"));
   } catch (error) {
-    return fail(error instanceof Error ? error.message : String(error));
+    const message = error instanceof Error ? error.message : String(error);
+    emitProjectLearnProgress(progress, {
+      project_key: parsed.projectKey,
+      stage: "run",
+      status: "failed",
+      message,
+    });
+    return fail(message);
   }
 }
 
@@ -226,6 +261,7 @@ function parseProjectLearnArgs(args: string[]): {
   provider?: "codex" | "claude";
   modelOverride?: string;
   recreate: boolean;
+  resumeRun?: string;
   error?: string;
 } {
   let projectKey = "";
@@ -235,26 +271,31 @@ function parseProjectLearnArgs(args: string[]): {
   let provider: "codex" | "claude" | undefined;
   let modelOverride: string | undefined;
   let recreate = false;
+  let resumeRun: string | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === "--dry-run") dryRun = true;
     else if (arg === "--review") review = true;
     else if (arg === "--recreate") recreate = true;
+    else if (arg === "--resume") {
+      resumeRun = args[++index];
+      if (!resumeRun) return { projectKey, dryRun, review, json, recreate, error: "--resume requires a run ID or run path" };
+    }
     else if (arg === "--json") json = true;
     else if (arg === "--provider") {
       const value = args[++index];
-      if (value !== "codex" && value !== "claude") return { projectKey, dryRun, review, json, recreate, error: "--provider must be codex or claude" };
+      if (value !== "codex" && value !== "claude") return { projectKey, dryRun, review, json, recreate, resumeRun, error: "--provider must be codex or claude" };
       provider = value;
     } else if (arg === "--model") {
       modelOverride = args[++index];
-      if (!modelOverride) return { projectKey, dryRun, review, json, recreate, error: "--model requires a value" };
+      if (!modelOverride) return { projectKey, dryRun, review, json, recreate, resumeRun, error: "--model requires a value" };
     } else if (arg.startsWith("-")) {
-      return { projectKey, dryRun, review, json, recreate, error: `Unknown project learn option: ${arg}` };
+      return { projectKey, dryRun, review, json, recreate, resumeRun, error: `Unknown project learn option: ${arg}` };
     } else if (!projectKey) {
       projectKey = arg;
     } else {
-      return { projectKey, dryRun, review, json, recreate, error: `Unexpected project learn argument: ${arg}` };
+      return { projectKey, dryRun, review, json, recreate, resumeRun, error: `Unexpected project learn argument: ${arg}` };
     }
   }
 
@@ -265,8 +306,12 @@ function parseProjectLearnArgs(args: string[]): {
       review,
       json,
       recreate,
-      error: "Usage: myelin project learn <project-key> [--dry-run] [--review] [--recreate] [--provider <name>] [--model <model>] [--json]",
+      resumeRun,
+      error: "Usage: myelin project learn <project-key> [--dry-run] [--review] [--recreate] [--resume <run>] [--provider <name>] [--model <model>] [--json]",
     };
   }
-  return { projectKey, dryRun, review, json, provider, modelOverride, recreate };
+  if (resumeRun && (dryRun || review || recreate)) {
+    return { projectKey, dryRun, review, json, provider, modelOverride, recreate, resumeRun, error: "--resume cannot be combined with --dry-run, --review, or --recreate" };
+  }
+  return { projectKey, dryRun, review, json, provider, modelOverride, recreate, resumeRun };
 }

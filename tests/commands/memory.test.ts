@@ -13,6 +13,7 @@ import { createSessionMemoryContexts } from "../../src/memory/session-memory-con
 import { createSessionMemoryLink } from "../../src/memory/session-memory-links.ts";
 import { createSessionMemory, supersedeSessionMemory } from "../../src/memory/session-memories.ts";
 import { openMemoryDb } from "../../src/memory/db.ts";
+import { registerInitialActiveEmbeddingContract } from "../../src/memory/embedding-contract-store.ts";
 import type { EmbeddingRequest } from "../../src/memory/embedding-types.ts";
 import { stubEmbeddingFilename } from "../../src/memory/providers/stub-embedding-provider.ts";
 import { normalizeQueryQuestion } from "../../src/memory/query-embedding-cache.ts";
@@ -84,6 +85,37 @@ test("memory query returns session memory vector matches as JSON with diagnostic
     query_embedding_cache_hit: false,
     match_count: 2,
   });
+});
+
+test("memory embedding lifecycle commands are preview-first", async () => {
+  const db = openMemoryDb(root);
+  try {
+    for (const scope of ["session_memory", "project_memory"] as const) {
+      registerInitialActiveEmbeddingContract(db, {
+        scope,
+        contract: {
+          provider: "ollama_nomic",
+          model: "nomic-embed-text:v1.5",
+          dimensions: 768,
+          formatVersion: 1,
+        },
+      });
+    }
+  } finally {
+    db.close();
+  }
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+
+  const migration = await cli.run(["memory", "embeddings", "migrate", "--json"]);
+  expect(migration.exitCode).toBe(0);
+  expect(JSON.parse(migration.message)).toMatchObject({
+    mode: "preview",
+    scopes: [{ scope: "session_memory", action: "none" }, { scope: "project_memory", action: "none" }],
+  });
+  const prune = await cli.run(["memory", "embeddings", "prune", "--json"]);
+  expect(JSON.parse(prune.message)).toMatchObject({ mode: "preview", candidates: [] });
+  expect((await cli.run(["memory", "embeddings", "rollback", "--apply", "--unknown"])).exitCode).toBe(1);
 });
 
 test("memory query reuses cached question embeddings", async () => {
