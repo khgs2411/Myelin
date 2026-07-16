@@ -1,6 +1,6 @@
 # Compiled Schema Context Shape
 
-`schema build <key>` compiles the authored global schema (`schema/`) into `projects/<key>/state/schema-context.json` — the deterministic, agent-facing contract that `memory query`, `project learn`, and `status` consume. It is generated state, never hand-edited. `memory query` fails closed if it is missing or invalid (ADR 0037).
+`schema build <key>` compiles the authored global schema (`schema/`) into `state/<key>/schema-context.json` — the deterministic, agent-facing contract that `memory query`, `project learn`, and `status` consume. It is generated state, never hand-edited. `memory query` fails closed if it is missing or invalid (ADR 0037).
 
 ## Phase-0 shape (thin, global-only)
 

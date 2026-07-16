@@ -9,14 +9,12 @@ projects
 raw/inbox
 raw/processed
 raw/rejected
-projects/*/logs/
 projects/*/obsidian/
+/sources/
+/runs/
 
 # Generated SQLite memory substrate (ADR 0001/0021) — never curated truth, never committed
-state/memory.db
-state/memory.db-wal
-state/memory.db-shm
-state/hook-errors.jsonl
+/state/
 
 # ADL run-evidence (Architect-Developer Loop) — ephemeral, never committed
 .adl/

@@ -33,7 +33,7 @@ test("capture service normalizes Codex payloads and stores routed experience eve
   });
 
   expect(result.message).toBe("capture stored");
-  const db = openMemoryDbAt(join(root, "state", "memory.db"));
+  const db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   try {
     expect(listExperienceEvents(db, "class-kit").map((event) => event.event_kind)).toEqual(["user.prompt"]);
   } finally {

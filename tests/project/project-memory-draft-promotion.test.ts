@@ -10,7 +10,7 @@ import {
 describe("promoteDraftWiki", () => {
   test("promotes draft markdown and v2 state through the apply journal", async () => {
     const root = await mkdtemp(join(tmpdir(), "myelin-draft-promotion-"));
-    const runDir = join(root, "projects", "demo", "runs", "project-learn", "run-1");
+    const runDir = join(root, "runs", "demo", "project-learn", "run-1");
     const draftWiki = join(runDir, "agents", "create", "draft-wiki");
     await mkdir(draftWiki, { recursive: true });
     await writeFile(join(draftWiki, "index.md"), "# Demo\n\n- [Runtime](runtime.md)\n", "utf8");
@@ -23,15 +23,15 @@ describe("promoteDraftWiki", () => {
     const result = await promoteDraftWiki(validInput(root, runDir, draftWiki));
 
     expect(result.status).toBe("applied");
-    expect(await readFile(join(root, "projects", "demo", "wiki", "index.md"), "utf8")).toContain("# Demo");
-    const runtime = await readFile(join(root, "projects", "demo", "wiki", "runtime.md"), "utf8");
+    expect(await readFile(join(root, "projects", "demo", "index.md"), "utf8")).toContain("# Demo");
+    const runtime = await readFile(join(root, "projects", "demo", "runtime.md"), "utf8");
     expect(runtime).toContain("Source (`repo:src/runtime.ts#L2`)");
     expect(runtime).toContain("`repo:tests/runtime.test.ts`");
     expect(runtime).not.toContain("target-repo");
     const publication = JSON.parse(await readFile(join(runDir, "canonical-publication-validation.json"), "utf8"));
     expect(publication).toMatchObject({ status: "passed", checked_internal_links: 1 });
     expect(publication.rewritten_repo_citations).toHaveLength(1);
-    const state = JSON.parse(await readFile(join(root, "projects", "demo", "state", "project-memory.json"), "utf8"));
+    const state = JSON.parse(await readFile(join(root, "state", "demo", "project-memory.json"), "utf8"));
     expect(state.schema_version).toBe(2);
     expect(state.content_quality.status).toBe("not_evaluated");
     expect(await readFile(join(runDir, "project-memory-apply-result.json"), "utf8")).toContain('"status": "applied"');
@@ -40,7 +40,7 @@ describe("promoteDraftWiki", () => {
 
   test("rejects a draft without index markdown", async () => {
     const root = await mkdtemp(join(tmpdir(), "myelin-draft-promotion-"));
-    const runDir = join(root, "projects", "demo", "runs", "project-learn", "run-2");
+    const runDir = join(root, "runs", "demo", "project-learn", "run-2");
     const draftWiki = join(runDir, "agents", "create", "draft-wiki");
     await mkdir(draftWiki, { recursive: true });
     await writeFile(join(draftWiki, "runtime.md"), "# Runtime\n", "utf8");
@@ -50,33 +50,33 @@ describe("promoteDraftWiki", () => {
 
   test("promotes nested markdown paths inside the draft wiki", async () => {
     const root = await mkdtemp(join(tmpdir(), "myelin-draft-promotion-"));
-    const runDir = join(root, "projects", "demo", "runs", "project-learn", "run-3");
+    const runDir = join(root, "runs", "demo", "project-learn", "run-3");
     const draftWiki = join(runDir, "agents", "create", "draft-wiki");
     await mkdir(join(draftWiki, "nested"), { recursive: true });
     await writeFile(join(draftWiki, "index.md"), "# Demo\n", "utf8");
     await writeFile(join(draftWiki, "nested", "topic.md"), "# Topic\n", "utf8");
 
     const result = await promoteDraftWiki(validInput(root, runDir, draftWiki));
-    expect(result.changed_files.map((file) => file.path)).toContain("projects/demo/wiki/nested/topic.md");
+    expect(result.changed_files.map((file) => file.path)).toContain("projects/demo/nested/topic.md");
   });
 
   test("create mode removes stale canonical wiki markdown absent from the draft", async () => {
     const root = await mkdtemp(join(tmpdir(), "myelin-draft-promotion-"));
-    const runDir = join(root, "projects", "demo", "runs", "project-learn", "run-4");
+    const runDir = join(root, "runs", "demo", "project-learn", "run-4");
     const draftWiki = join(runDir, "agents", "create", "draft-wiki");
     await mkdir(draftWiki, { recursive: true });
-    await mkdir(join(root, "projects", "demo", "wiki"), { recursive: true });
-    await writeFile(join(root, "projects", "demo", "wiki", "old.md"), "# Old\n", "utf8");
+    await mkdir(join(root, "projects", "demo"), { recursive: true });
+    await writeFile(join(root, "projects", "demo", "old.md"), "# Old\n", "utf8");
     await writeFile(join(draftWiki, "index.md"), "# Demo\n", "utf8");
 
     await promoteDraftWiki(validInput(root, runDir, draftWiki));
 
-    expect(await Bun.file(join(root, "projects", "demo", "wiki", "old.md")).exists()).toBe(false);
+    expect(await Bun.file(join(root, "projects", "demo", "old.md")).exists()).toBe(false);
   });
 
   test("rewrites source citations on maintenance pages without changing internal wiki links", async () => {
     const root = await mkdtemp(join(tmpdir(), "myelin-draft-promotion-"));
-    const runDir = join(root, "projects", "demo", "runs", "project-learn", "run-5");
+    const runDir = join(root, "runs", "demo", "project-learn", "run-5");
     const draftWiki = join(runDir, "agents", "maintenance", "draft-wiki");
     await mkdir(draftWiki, { recursive: true });
     await writeFile(join(draftWiki, "index.md"), "# Demo\n\n- [Runtime](runtime.md)\n", "utf8");
@@ -84,31 +84,31 @@ describe("promoteDraftWiki", () => {
 
     await promoteDraftWiki({ ...validInput(root, runDir, draftWiki), mode: "maintain" });
 
-    expect(await readFile(join(root, "projects", "demo", "wiki", "index.md"), "utf8"))
+    expect(await readFile(join(root, "projects", "demo", "index.md"), "utf8"))
       .toContain("[Runtime](runtime.md)");
-    expect(await readFile(join(root, "projects", "demo", "wiki", "runtime.md"), "utf8"))
+    expect(await readFile(join(root, "projects", "demo", "runtime.md"), "utf8"))
       .toContain("Contract (`repo:docs/contract.md`)");
-    expect(await readFile(join(root, "projects", "demo", "wiki", "runtime.md"), "utf8"))
+    expect(await readFile(join(root, "projects", "demo", "runtime.md"), "utf8"))
       .toContain("`repo:tests/contract.test.ts`");
   });
 
   test("rejects broken internal wiki links before canonical writes", async () => {
     const root = await mkdtemp(join(tmpdir(), "myelin-draft-promotion-"));
-    const runDir = join(root, "projects", "demo", "runs", "project-learn", "run-6");
+    const runDir = join(root, "runs", "demo", "project-learn", "run-6");
     const draftWiki = join(runDir, "agents", "create", "draft-wiki");
     await mkdir(draftWiki, { recursive: true });
     await writeFile(join(draftWiki, "index.md"), "# Demo\n\n[Missing](missing.md)\n", "utf8");
 
     await expect(promoteDraftWiki(validInput(root, runDir, draftWiki)))
       .rejects.toThrow("broken internal wiki link in index.md: missing.md");
-    expect(await Bun.file(join(root, "projects", "demo", "wiki", "index.md")).exists()).toBe(false);
+    expect(await Bun.file(join(root, "projects", "demo", "index.md")).exists()).toBe(false);
     const publication = JSON.parse(await readFile(join(runDir, "canonical-publication-validation.json"), "utf8"));
     expect(publication.status).toBe("failed");
   });
 
   test("publishes repository identity state and rewrites run-local identity links", async () => {
     const root = await mkdtemp(join(tmpdir(), "myelin-draft-promotion-"));
-    const runDir = join(root, "projects", "demo", "runs", "project-learn", "run-identity");
+    const runDir = join(root, "runs", "demo", "project-learn", "run-identity");
     const draftWiki = join(runDir, "agents", "create", "draft-wiki");
     await mkdir(draftWiki, { recursive: true });
     await writeFile(
@@ -130,21 +130,21 @@ describe("promoteDraftWiki", () => {
 
     await promoteDraftWiki({ ...validInput(root, runDir, draftWiki), repositoryIdentity });
 
-    expect(await readFile(join(root, "projects", "demo", "wiki", "index.md"), "utf8"))
-      .toContain("[Checkout evidence](../state/repository-identity.json)");
-    expect(JSON.parse(await readFile(join(root, "projects", "demo", "state", "repository-identity.json"), "utf8")))
+    expect(await readFile(join(root, "projects", "demo", "index.md"), "utf8"))
+      .toContain("[Checkout evidence](../../state/demo/repository-identity.json)");
+    expect(JSON.parse(await readFile(join(root, "state", "demo", "repository-identity.json"), "utf8")))
       .toEqual(repositoryIdentity);
     const publication = JSON.parse(await readFile(join(runDir, "canonical-publication-validation.json"), "utf8"));
     expect(publication.rewritten_repository_identity_links).toEqual([{
       page: "index.md",
       original_target: "../repository-identity.json",
-      canonical_target: "../state/repository-identity.json",
+      canonical_target: "../../state/demo/repository-identity.json",
     }]);
   });
 
   test("rejects planner lifecycle language at the canonical publication boundary", async () => {
     const root = await mkdtemp(join(tmpdir(), "myelin-draft-promotion-"));
-    const runDir = join(root, "projects", "demo", "runs", "project-learn", "run-planner-index");
+    const runDir = join(root, "runs", "demo", "project-learn", "run-planner-index");
     const draftWiki = join(runDir, "agents", "create", "draft-wiki");
     await mkdir(draftWiki, { recursive: true });
     await writeFile(
@@ -155,7 +155,7 @@ describe("promoteDraftWiki", () => {
 
     await expect(promoteDraftWiki(validInput(root, runDir, draftWiki)))
       .rejects.toThrow("planner lifecycle language");
-    expect(await Bun.file(join(root, "projects", "demo", "wiki", "index.md")).exists()).toBe(false);
+    expect(await Bun.file(join(root, "projects", "demo", "index.md")).exists()).toBe(false);
   });
 });
 

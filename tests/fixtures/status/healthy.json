@@ -14,20 +14,20 @@
     "state": "healthy", "lifecycle": "ready", "evidence_ids": ["e2"],
     "capture": { "queued_events": 0, "unleased_events": 0, "leased_events": 0 },
     "ingest": { "running_jobs": 0, "failed_jobs": 0, "terminal_tombstones": 3, "latest_log_path": null },
-    "maintenance": { "enabled": true, "lifecycle": "completed", "lock": { "lifecycle": "absent", "path": "projects/demo/state/.auto-memory-maintenance.lock", "run_id": null, "pid": null }, "last_run_id": "session-run", "last_log_path": "projects/demo/logs/session-run.log" },
+    "maintenance": { "enabled": true, "lifecycle": "completed", "lock": { "lifecycle": "absent", "path": "state/demo/.auto-memory-maintenance.lock", "run_id": null, "pid": null }, "last_run_id": "session-run", "last_log_path": "runs/demo/logs/session-run.log" },
     "retrieval": { "active_contract": { "provider": "ollama_nomic", "model": "nomic-embed-text:v1.5", "dimensions": 768, "format_version": 1 }, "desired_contract": { "provider": "ollama_nomic", "model": "nomic-embed-text:v1.5", "dimensions": 768, "format_version": 1 }, "migration_required": false, "provider_state": "available", "indexed_count": 2, "pending_count": 0, "failed_count": 0, "historical": { "contract_count": 0, "row_count": 0 } }
   },
   "project_memory": {
     "state": "healthy", "lifecycle": "ready", "evidence_ids": ["e2", "e3"],
     "inbox": { "pending_items": 0 }, "candidates": { "pending": 0, "needs_review": 0 },
-    "maintenance": { "enabled": true, "lifecycle": "completed", "lock": { "lifecycle": "absent", "path": "projects/demo/state/.auto-project-memory-maintenance.lock", "run_id": null, "pid": null }, "last_run_id": "project-run", "last_log_path": "projects/demo/logs/project-run.log" },
-    "curation": { "lifecycle": "curated", "canonical_wiki_path": "projects/demo/wiki", "latest_run_path": "projects/demo/runs/project-learn/run" },
+    "maintenance": { "enabled": true, "lifecycle": "completed", "lock": { "lifecycle": "absent", "path": "state/demo/.auto-project-memory-maintenance.lock", "run_id": null, "pid": null }, "last_run_id": "project-run", "last_log_path": "runs/demo/logs/project-run.log" },
+    "curation": { "lifecycle": "curated", "canonical_wiki_path": "projects/demo", "latest_run_path": "runs/demo/project-learn/run" },
     "retrieval": { "active_contract": { "provider": "ollama_nomic", "model": "nomic-embed-text:v1.5", "dimensions": 768, "format_version": 1 }, "desired_contract": { "provider": "ollama_nomic", "model": "nomic-embed-text:v1.5", "dimensions": 768, "format_version": 1 }, "migration_required": false, "provider_state": "available", "indexed_count": 4, "pending_count": 0, "failed_count": 0, "historical": { "contract_count": 0, "row_count": 0 } }
   },
   "warnings": [], "actions": [],
   "evidence": [
     { "id": "e1", "kind": "file", "path": "/home/me/.myelin/install.json" },
-    { "id": "e2", "kind": "sqlite", "path": "state/memory.db" },
-    { "id": "e3", "kind": "file", "path": "projects/demo/state/project-memory.json" }
+    { "id": "e2", "kind": "sqlite", "path": "state/memory/memory.db" },
+    { "id": "e3", "kind": "file", "path": "state/demo/project-memory.json" }
   ]
 }

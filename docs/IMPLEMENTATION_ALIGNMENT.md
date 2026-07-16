@@ -144,19 +144,20 @@ version manifest.
 
 What exists:
 
-- Project-owned data under `projects/<key>/`, including `wiki/`, `state/`, `sources/`, `log/`, and `runs/`.
-- Migration support for old run-artifact layouts.
+- Canonical Project Memory markdown directly under `projects/<key>/`.
+- Per-project machine state under `state/<key>/`, preserved evidence under `sources/<key>/`, and runs/logs under `runs/<key>/`.
+- Migration support for project-rooted V2 data and older recorded run paths.
 
 Code evidence:
 
 - `src/runtime/layout.ts`
 - `src/runtime/projects.ts`
 - `src/runtime/state.ts`
-- `projects/<key>/...`
+- `projects/<key>/...`, `state/<key>/...`, `sources/<key>/...`, `runs/<key>/...`
 
 Alignment:
 
-Mostly aligned. The target layout is project-rooted and keeps curated memory next to project state and provenance.
+Aligned. The curated brain is isolated under `projects/<key>/`; machine and evidence artifacts use ownership-specific root directories.
 
 Risk:
 
@@ -276,7 +277,7 @@ What exists:
 
 - `myelin project learn <key>` runs agent-authored Project Memory creation or maintenance.
 - Top-level `myelin ingest <key>` remains the Session Memory / Experience Log ingest command.
-- Project Memory Curator artifacts live under `projects/<key>/runs/project-learn/<run-id>/`.
+- Project Memory Curator artifacts live under `runs/<key>/project-learn/<run-id>/`.
 - File-authoring agents write a draft wiki, and a journaled promotion step publishes it to canonical markdown.
 - Recovery fails closed when staged or already-promoted files drift.
 
@@ -331,7 +332,7 @@ Extend the runtime inbox contract when another producer needs preserved source i
 
 What exists:
 
-- Repo-root `state/memory.db`.
+- Repo-root `state/memory/memory.db`.
 - WAL, foreign-key pragmas, migrations.
 - `sessions` and `session_events` tables.
 - `myelin session start/log/close/recent/show`.

@@ -4,7 +4,7 @@ import { listMemoryCandidates } from "../memory/candidates.ts";
 import { listHandoffInstructions } from "../memory/handoffs.ts";
 import type { HandoffInstructionRow, MemoryCandidateRow, SessionMemoryRow } from "../memory/ingest-types.ts";
 import { listSessionMemories } from "../memory/session-memories.ts";
-import { projectPath } from "../runtime/fs.ts";
+import { projectStatePath } from "../runtime/fs.ts";
 import { readJsonIfExists } from "../runtime/json.ts";
 import { findProject } from "../runtime/projects.ts";
 import {
@@ -127,16 +127,16 @@ export async function buildProjectMemoryPacket(
 ): Promise<ProjectMemoryPacket> {
   const project = await findProject(root, projectKey);
   const state = {
-    bootstrap_state: await readJsonIfExists(projectPath(root, projectKey, "state", "bootstrap-state.json")),
-    project_memory: await readJsonIfExists(projectPath(root, projectKey, "state", "project-memory.json")),
-    freshness: await readJsonIfExists(projectPath(root, projectKey, "state", "freshness.json")),
-    pages_manifest: await readJsonIfExists(projectPath(root, projectKey, "state", "pages.json")),
+    bootstrap_state: await readJsonIfExists(projectStatePath(root, projectKey, "bootstrap-state.json")),
+    project_memory: await readJsonIfExists(projectStatePath(root, projectKey, "project-memory.json")),
+    freshness: await readJsonIfExists(projectStatePath(root, projectKey, "freshness.json")),
+    pages_manifest: await readJsonIfExists(projectStatePath(root, projectKey, "pages.json")),
   };
   const corpus = await loadProjectMemoryCorpus(root, projectKey);
   const sectionManifest = await extractProjectMemorySections(root, projectKey);
   const pages = corpus.pages;
   const degradedReasons: string[] = [];
-  if (pages.length === 0) degradedReasons.push(`projects/${projectKey}/wiki has no markdown pages`);
+  if (pages.length === 0) degradedReasons.push(`projects/${projectKey} has no markdown pages`);
 
   const memoryInputs = await readMemoryInputs(root, projectKey, {
     sessionMemoryLimit: options.sessionMemoryLimit ?? DEFAULT_SESSION_MEMORY_LIMIT,
@@ -225,7 +225,7 @@ async function readMemoryInputs(
       projectHandoffs: [],
       projectCandidates: [],
       sessionMemories: [],
-      degradedReasons: ["state/memory.db is missing; Session Memory and pending handoff inputs are unavailable"],
+      degradedReasons: ["state/memory/memory.db is missing; Session Memory and pending handoff inputs are unavailable"],
     };
   }
 

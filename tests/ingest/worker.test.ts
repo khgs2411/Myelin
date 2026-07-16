@@ -17,7 +17,7 @@ let db: MemoryDb;
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "myelin-ingest-worker-"));
-  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   createIngestJob(db, {
     id: "job_1",
     project_key: "class-kit",
@@ -484,7 +484,7 @@ test("worker schedules project memory auto-maintenance after creating project ca
     }),
   });
 
-  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   expect(scheduled).toEqual(["class-kit:session_memory_candidate_created"]);
   expect(db.query("SELECT scope FROM memory_candidates WHERE id = ?").get("cand_project_1")).toEqual({ scope: "project" });
 });
@@ -534,7 +534,7 @@ test("worker schedules Session Memory indexing after creating session memories",
     }),
   });
 
-  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   expect(scheduled).toEqual([{ projectKey: "class-kit", forceIndex: true }]);
 });
 
@@ -878,7 +878,7 @@ test("worker claims batches from target repo cwd and completes when queue is emp
     },
   });
 
-  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   expect(calls).toHaveLength(1);
   expect(calls[0].command).toContain("--output-schema");
   expect(calls[0].command).toContain(join(root, "src", "ingest", "worker-output.schema.json"));
@@ -931,7 +931,7 @@ test("worker packs large experience rows into prompt-safe sub-batches", async ()
     },
   });
 
-  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   expect(promptLengths.length).toBeGreaterThan(1);
   expect(promptLengths.every((length) => length < PROMPT_SIZE_LIMIT)).toBe(true);
   expect(listExperienceEvents(db, "class-kit")).toEqual([]);
@@ -1017,7 +1017,7 @@ test("worker keeps leased rows retryable when provider invocation fails", async 
     }),
   ).rejects.toThrow("codex exited 1: provider down");
 
-  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   expect(listExperienceEvents(db, "class-kit").map((row) => row.id)).toEqual(["evt_1"]);
   expect(db.query("SELECT state, finalized_at, terminal_decision FROM experience_event_tombstones WHERE id = ?").get("tomb_job_1_evt_1")).toEqual({
     state: "claimed",
@@ -1053,7 +1053,7 @@ test("ordinary retry worker recovers a failed lease and commits the same raw row
     }),
   ).rejects.toThrow("codex exited 1: provider down");
 
-  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   createIngestJob(db, {
     id: "job_2",
     project_key: "class-kit",
@@ -1094,7 +1094,7 @@ test("ordinary retry worker recovers a failed lease and commits the same raw row
     },
   });
 
-  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   expect(prompts).toHaveLength(1);
   expect(prompts[0]).toContain("tomb_job_1_evt_1");
   expect(listExperienceEvents(db, "class-kit")).toEqual([]);
@@ -1142,7 +1142,7 @@ test("worker commits provider no-output refs and deletes source rows", async () 
     }),
   });
 
-  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   expect(listExperienceEvents(db, "class-kit")).toEqual([]);
   expect(db.query("SELECT state, terminal_decision FROM experience_event_tombstones WHERE id = ?").get("tomb_job_1_evt_1")).toEqual({
     state: "no_output",
@@ -1182,7 +1182,7 @@ test("worker compacts large provider failure messages before storing job errors"
     }),
   ).rejects.toThrow("codex exited 1");
 
-  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   const job = getIngestJob(db, "job_1");
   const error = JSON.parse(job?.error_json ?? "{}") as { message: string; retryable: boolean };
   expect(error.retryable).toBe(true);
@@ -1231,7 +1231,7 @@ test("worker rejects invalid provider output before durable memory writes", asyn
     }),
   ).rejects.toThrow("IngestWorkerOutput contract violation: session_memories[0].memory_kind must be one of");
 
-  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   expect(db.query("SELECT COUNT(*) AS count FROM session_memories").get()).toEqual({ count: 0 });
   expect(db.query("SELECT COUNT(*) AS count FROM memory_candidates").get()).toEqual({ count: 0 });
   expect(db.query("SELECT COUNT(*) AS count FROM project_handoff_instructions").get()).toEqual({ count: 0 });

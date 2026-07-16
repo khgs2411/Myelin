@@ -60,8 +60,8 @@ test("writes category hint files and hint status under retrieval state", async (
     { wiki_path: "wiki/architecture/ranking.md", section_id: "ranking", status: "valid", reason: null },
   ]);
 
-  expect(hintPath).toBe("projects/demo/state/project-memory-retrieval/hints/architecture.json");
-  expect(statusPath).toBe("projects/demo/state/project-memory-retrieval/hint-status.json");
+  expect(hintPath).toBe("state/demo/project-memory-retrieval/hints/architecture.json");
+  expect(statusPath).toBe("state/demo/project-memory-retrieval/hint-status.json");
   expect(await readFile(join(root, hintPath), "utf8")).toContain('"keywords"');
   expect(await readFile(join(root, statusPath), "utf8")).toContain('"status": "valid"');
   expect(projectMemoryHintHash(hints.entries[0])).toStartWith("sha256:");

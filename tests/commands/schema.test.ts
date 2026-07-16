@@ -43,7 +43,7 @@ test("schema build compiles global schema for a project with no project-local sc
   registerSchemaCommands(cli);
 
   const result = await cli.run(["schema", "build", "demo"]);
-  const context = await readJson<SchemaContext>(join(root, "projects", "demo", "state", "schema-context.json"));
+  const context = await readJson<SchemaContext>(join(root, "state", "demo", "schema-context.json"));
 
   expect(result.exitCode).toBe(0);
   expect(context.schema_version).toBe("0");
@@ -62,14 +62,14 @@ test("schema build --dry-run previews without writing generated state", async ()
 
   expect(result.exitCode).toBe(0);
   expect(JSON.parse(result.message).schema_version).toBe("0");
-  await expect(stat(join(root, "projects", "demo", "state", "schema-context.json"))).rejects.toThrow();
+  await expect(stat(join(root, "state", "demo", "schema-context.json"))).rejects.toThrow();
 });
 
 test("schema check validates generated context without mutating it", async () => {
   const cli = createCli("myelin");
   registerSchemaCommands(cli);
   await cli.run(["schema", "build", "demo"]);
-  const contextPath = join(root, "projects", "demo", "state", "schema-context.json");
+  const contextPath = join(root, "state", "demo", "schema-context.json");
   const before = await readFile(contextPath, "utf8");
 
   const result = await cli.run(["schema", "check", "demo"]);
@@ -95,11 +95,11 @@ test("schema build fails when authored global rules are invalid", async () => {
 
   expect(result.exitCode).toBe(1);
   expect(result.message).toContain("phase_0 scope is not declared");
-  await expect(stat(join(root, "projects", "demo", "state", "schema-context.json"))).rejects.toThrow();
+  await expect(stat(join(root, "state", "demo", "schema-context.json"))).rejects.toThrow();
 });
 
 async function seedProject(): Promise<void> {
-  await writeJson(join(root, "projects", "demo", "state", "project.json"), {
+  await writeJson(join(root, "state", "demo", "project.json"), {
     key: "demo",
     name: "Demo",
   });

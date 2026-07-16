@@ -8,7 +8,7 @@ import { runProcess } from "../../src/runtime/process.ts";
 describe("runFileAuthoringAgent", () => {
   test("copies fixture outputs into allowed roots and records stub metadata", async () => {
     const root = await mkdtemp(join(tmpdir(), "myelin-agent-root-"));
-    const runDir = join(root, "projects", "demo", "runs", "project-learn", "run-1");
+    const runDir = join(root, "runs", "demo", "project-learn", "run-1");
     const fixtureDir = join(root, "fixtures", "planner");
     await mkdir(join(fixtureDir, "draft-wiki"), { recursive: true });
     await writeFile(join(fixtureDir, "draft-wiki", "index.md"), "# Demo\n", "utf8");
@@ -36,7 +36,7 @@ describe("runFileAuthoringAgent", () => {
   test("invokes codex in a run-local cwd with workspace-write sandbox", async () => {
     const commands: string[][] = [];
     const root = await mkdtemp(join(tmpdir(), "myelin-agent-root-"));
-    const runDir = join(root, "projects", "demo", "runs", "project-learn", "run-2");
+    const runDir = join(root, "runs", "demo", "project-learn", "run-2");
     const result = await runFileAuthoringAgent({
       root,
       projectKey: "demo",
@@ -67,7 +67,7 @@ describe("runFileAuthoringAgent", () => {
     const root = await mkdtemp(join(tmpdir(), "myelin-agent-git-ceiling-"));
     expect((await runProcess(["git", "init"], { cwd: root })).exitCode).toBe(0);
     const targetRepoDir = join(root, "source");
-    const runDir = join(root, "projects", "demo", "runs", "project-learn", "run-git-ceiling");
+    const runDir = join(root, "runs", "demo", "project-learn", "run-git-ceiling");
     const workspaceDir = join(runDir, "agents", "writer");
     await mkdir(targetRepoDir, { recursive: true });
     await writeFile(join(targetRepoDir, "README.md"), "# Demo\n", "utf8");
@@ -99,7 +99,7 @@ describe("runFileAuthoringAgent", () => {
   test("excludes sensitive and generated paths at every repository depth", async () => {
     const root = await mkdtemp(join(tmpdir(), "myelin-agent-root-"));
     const targetRepoDir = await mkdtemp(join(tmpdir(), "myelin-target-repo-"));
-    const runDir = join(root, "projects", "demo", "runs", "project-learn", "run-nested");
+    const runDir = join(root, "runs", "demo", "project-learn", "run-nested");
     const workspaceDir = join(runDir, "agents", "writer");
     const files = [
       ["README.md", "# Demo\n"],
@@ -112,7 +112,7 @@ describe("runFileAuthoringAgent", () => {
       ["apps/web/.agents/context.md", "private\n"],
       ["apps/web/.tmp/cache", "generated\n"],
       ["apps/web/node_modules/package/index.js", "generated\n"],
-      ["apps/web/state/memory.db", "generated\n"],
+      ["apps/web/state/memory/memory.db", "generated\n"],
     ] as const;
     for (const [relativePath, contents] of files) {
       const path = join(targetRepoDir, relativePath);
@@ -149,7 +149,7 @@ describe("runFileAuthoringAgent", () => {
 
   test("fails when an output root escapes the run-local workspace", async () => {
     const root = await mkdtemp(join(tmpdir(), "myelin-agent-root-"));
-    const runDir = join(root, "projects", "demo", "runs", "project-learn", "run-3");
+    const runDir = join(root, "runs", "demo", "project-learn", "run-3");
     const result = await runFileAuthoringAgent({
       root,
       projectKey: "demo",
@@ -169,7 +169,7 @@ describe("runFileAuthoringAgent", () => {
 
   test("fails when the agent writes outside allowed output roots", async () => {
     const root = await mkdtemp(join(tmpdir(), "myelin-agent-root-"));
-    const runDir = join(root, "projects", "demo", "runs", "project-learn", "run-4");
+    const runDir = join(root, "runs", "demo", "project-learn", "run-4");
     const result = await runFileAuthoringAgent({
       root,
       projectKey: "demo",

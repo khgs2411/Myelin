@@ -72,9 +72,9 @@ test("installed command works across cwd classes and uninstalls only machine own
 
     const bootstrap = run([launcher, "bootstrap", "demo", "--repo", externalRepo], externalRepo, installedEnv);
     expect(bootstrap.exitCode).toBe(0);
-    const db = openMemoryDbAt(join(checkout, "state", "memory.db"));
+    const db = openMemoryDbAt(join(checkout, "state", "memory", "memory.db"));
     db.close();
-    const beforeHash = sha256(await readFile(join(checkout, "state", "memory.db")));
+    const beforeHash = sha256(await readFile(join(checkout, "state", "memory", "memory.db")));
 
     const fromRegistered = run([launcher, "status", "--json"], externalRepo, installedEnv);
     if (fromRegistered.exitCode !== 0) throw new Error(fromRegistered.stderr || fromRegistered.stdout);
@@ -91,7 +91,7 @@ test("installed command works across cwd classes and uninstalls only machine own
     const missingIdentity = run([launcher, "status", "--json"], unrelated, installedEnv);
     expect(missingIdentity.exitCode).toBe(1);
     expect(missingIdentity.stderr).toContain("Pass `myelin status <project-key>`");
-    expect(sha256(await readFile(join(checkout, "state", "memory.db")))).toBe(beforeHash);
+    expect(sha256(await readFile(join(checkout, "state", "memory", "memory.db")))).toBe(beforeHash);
 
     const fullPreview = run([launcher, "uninstall"], unrelated, installedEnv);
     expect(fullPreview.exitCode).toBe(0);
@@ -101,8 +101,8 @@ test("installed command works across cwd classes and uninstalls only machine own
     expect(await Bun.file(launcher).exists()).toBe(false);
     expect(await Bun.file(locator).exists()).toBe(false);
     expect(await Bun.file(join(checkout, "myelin.config")).exists()).toBe(true);
-    expect(await Bun.file(join(checkout, "state", "memory.db")).exists()).toBe(true);
-    expect(await Bun.file(join(checkout, "projects", "demo", "wiki", "index.md")).exists()).toBe(true);
+    expect(await Bun.file(join(checkout, "state", "memory", "memory.db")).exists()).toBe(true);
+    expect(await Bun.file(join(checkout, "projects", "demo", "index.md")).exists()).toBe(true);
 
     for (const ownedPath of [home, binDir, codexRoot]) expect(resolve(ownedPath).startsWith(resolve(sandbox))).toBe(true);
   } finally {

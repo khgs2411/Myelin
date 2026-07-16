@@ -8,7 +8,7 @@ import { configureBunSQLite } from "./sqlite-runtime.ts";
 export type MemoryDb = Database;
 
 export function memoryDbPath(root: string): string {
-  return resolveInside(root, "state", "memory.db");
+  return resolveInside(root, "state", "memory", "memory.db");
 }
 
 /** Open the repo-root memory DB (creates state/ if missing). Caller closes. */

@@ -32,7 +32,7 @@ test("builds a bounded Project Memory packet with pending inputs and determinist
   expect(packet.wiki.sections).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
-        wiki_path: "wiki/setup/index.md",
+        wiki_path: "setup/index.md",
         section_id: "setup",
         heading_path: ["Setup"],
         start_line: 1,
@@ -40,7 +40,7 @@ test("builds a bounded Project Memory packet with pending inputs and determinist
       }),
     ]),
   );
-  const setupSection = packet.wiki.sections.find((section) => section.wiki_path === "wiki/setup/index.md");
+  const setupSection = packet.wiki.sections.find((section) => section.wiki_path === "setup/index.md");
   expect(setupSection?.section_hash).toMatch(/^sha256:/);
   expect(packet.pending.project_handoffs.map((handoff) => handoff.id)).toEqual(["handoff_1"]);
   expect(packet.pending.project_candidates.map((candidate) => candidate.id).sort()).toEqual(["cand_1", "cand_2"]);
@@ -62,12 +62,12 @@ test("builds a bounded Project Memory packet with pending inputs and determinist
   ]);
   expect(
     packet.lookup.results.some((result) =>
-      result.hits.some((hit) => hit.canonical_ref?.wiki_path === "wiki/setup/index.md"),
+      result.hits.some((hit) => hit.canonical_ref?.wiki_path === "setup/index.md"),
     ),
   ).toBe(true);
   expect(
     packet.lookup.results.some((result) =>
-      result.hits.some((hit) => hit.canonical_ref?.wiki_path === "wiki/deep/index.md"),
+      result.hits.some((hit) => hit.canonical_ref?.wiki_path === "deep/index.md"),
     ),
   ).toBe(true);
   expect(packet.lookup.results.every((result) => result.lookup_quality === "fallback")).toBe(true);
@@ -91,30 +91,30 @@ test("does not create a memory database when packet inputs are unavailable", asy
   expect(packet.session_memory.selected).toEqual([]);
   expect(packet.wiki.sections.length).toBeGreaterThan(0);
   expect(packet.degraded_reasons).toContain(
-    "state/memory.db is missing; Session Memory and pending handoff inputs are unavailable",
+    "state/memory/memory.db is missing; Session Memory and pending handoff inputs are unavailable",
   );
-  expect(await Bun.file(join(root, "state", "memory.db")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "state", "memory", "memory.db")).exists()).toBe(false);
 });
 
 async function seedProject(): Promise<void> {
-  await writeJson(join(root, "projects", "demo", "state", "project.json"), {
+  await writeJson(join(root, "state", "demo", "project.json"), {
     key: "demo",
     name: "Demo",
     repo_paths: [join(root, "repos", "demo")],
   });
-  await writeJson(join(root, "projects", "demo", "state", "bootstrap-state.json"), {
+  await writeJson(join(root, "state", "demo", "bootstrap-state.json"), {
     status: "uncurated",
     missing: ["curated_project_memory"],
   });
-  await mkdir(join(root, "projects", "demo", "wiki", "setup"), { recursive: true });
-  await mkdir(join(root, "projects", "demo", "wiki", "deep"), { recursive: true });
+  await mkdir(join(root, "projects", "demo", "setup"), { recursive: true });
+  await mkdir(join(root, "projects", "demo", "deep"), { recursive: true });
   await writeFile(
-    join(root, "projects", "demo", "wiki", "index.md"),
+    join(root, "projects", "demo", "index.md"),
     "# Project Memory\n\nProject Memory has not been curated yet.\n",
     "utf8",
   );
   await writeFile(
-    join(root, "projects", "demo", "wiki", "setup", "index.md"),
+    join(root, "projects", "demo", "setup", "index.md"),
     [
       "# Setup",
       "",
@@ -124,7 +124,7 @@ async function seedProject(): Promise<void> {
     "utf8",
   );
   await writeFile(
-    join(root, "projects", "demo", "wiki", "deep", "index.md"),
+    join(root, "projects", "demo", "deep", "index.md"),
     ["# Deep", "", `${"background ".repeat(70)}lateonlytoken project memory marker.`].join("\n"),
     "utf8",
   );

@@ -26,7 +26,7 @@ test("creates project-learn run paths and writes stable artifacts", async () => 
   const run = await createProjectCuratorRun(root, "demo", new Date("2026-06-23T10:00:00.000Z"));
 
   expect(run.run_id).toBe("2026-06-23T10-00-00.000Z-run");
-  expect(run.relative_run_dir).toBe("projects/demo/runs/project-learn/2026-06-23T10-00-00.000Z-run");
+  expect(run.relative_run_dir).toBe("runs/demo/project-learn/2026-06-23T10-00-00.000Z-run");
   expect(run.absolute_run_dir).toBe(join(root, run.relative_run_dir));
 
   await writeRunArtifact(run, "input-packet.json", { b: 2, a: 1 });
@@ -65,7 +65,7 @@ test("ensures schema context using learn semantics", async () => {
 
   expect(schema.hash).toHaveLength(64);
   expect(schema.wrote).toBe(true);
-  expect(await Bun.file(join(root, "projects", "demo", "state", "schema-context.json")).exists()).toBe(true);
+  expect(await Bun.file(join(root, "state", "demo", "schema-context.json")).exists()).toBe(true);
 });
 
 test("invokes curator through pipeline workload without importing the old runner", async () => {
@@ -96,7 +96,7 @@ test("invokes curator through pipeline workload without importing the old runner
 });
 
 async function seedProject(): Promise<void> {
-  await writeJson(join(root, "projects", "demo", "state", "project.json"), {
+  await writeJson(join(root, "state", "demo", "project.json"), {
     key: "demo",
     name: "Demo",
     repo_paths: [join(root, "repos", "demo")],

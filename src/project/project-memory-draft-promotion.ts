@@ -36,7 +36,7 @@ export async function promoteDraftWiki(
   input: ProjectMemoryDraftPromotionInput,
 ): Promise<ProjectMemoryDraftPromotionResult> {
   const draftWrites = await draftMarkdownWrites(input.projectKey, input.draftWikiDir);
-  const canonicalIdentityPath = `projects/${input.projectKey}/state/repository-identity.json`;
+  const canonicalIdentityPath = `state/${input.projectKey}/repository-identity.json`;
   const hasCanonicalIdentity = Boolean(input.repositoryIdentity) ||
     await Bun.file(resolveInside(input.root, canonicalIdentityPath)).exists();
   let publication;
@@ -71,12 +71,12 @@ export async function promoteDraftWiki(
         }]
       : []),
     {
-      canonical_project_path: `projects/${input.projectKey}/state/project-memory.json`,
+      canonical_project_path: `state/${input.projectKey}/project-memory.json`,
       content: `${JSON.stringify(input.state, null, 2)}\n`,
       write_kind: "project_state",
     },
     {
-      canonical_project_path: `projects/${input.projectKey}/state/project-memory-source-consumptions.json`,
+      canonical_project_path: `state/${input.projectKey}/project-memory-source-consumptions.json`,
       content: `${JSON.stringify(
         {
           schema_version: 1,
@@ -126,7 +126,7 @@ function validateAndRewriteDraftMarkdown(
     rewritten_repository_identity_links: Array<{ page: string; original_target: string; canonical_target: string }>;
   };
 } {
-  const wikiPrefix = `projects/${projectKey}/wiki/`;
+  const wikiPrefix = `projects/${projectKey}/`;
   const pagePaths = new Set(writes
     .filter((write) => write.write_kind === "wiki_page")
     .map((write) => write.canonical_project_path.slice(wikiPrefix.length)));
@@ -148,8 +148,8 @@ function validateAndRewriteDraftMarkdown(
             throw new Error(`canonical publication found repository identity link without canonical state in ${page}: ${target}`);
           }
           const canonicalTarget = posix.relative(
-            posix.dirname(posix.join("wiki", page)),
-            "state/repository-identity.json",
+            posix.dirname(posix.join("projects", projectKey, page)),
+            posix.join("state", projectKey, "repository-identity.json"),
           );
           rewrittenRepositoryIdentityLinks.push({ page, original_target: target, canonical_target: canonicalTarget });
           return `${_image}[${label}](${canonicalTarget})`;
@@ -186,7 +186,7 @@ function validateAndRewriteDraftMarkdown(
     return { ...write, content };
   });
   const canonicalIndex = rewritten.find((write) =>
-    write.write_kind === "wiki_page" && write.canonical_project_path === `projects/${projectKey}/wiki/index.md`
+    write.write_kind === "wiki_page" && write.canonical_project_path === `projects/${projectKey}/index.md`
   );
   if (canonicalIndex && /\b(?:planned canonical subjects|eventual pages|planning placeholders)\b/i.test(canonicalIndex.content)) {
     throw new Error("canonical publication rejected planner lifecycle language in index.md");
@@ -248,11 +248,11 @@ async function removeStaleWikiMarkdown(
   projectKey: string,
   markdownWrites: ProjectMemoryStagedWrite[],
 ): Promise<void> {
-  const wikiDir = join(root, "projects", projectKey, "wiki");
+  const wikiDir = join(root, "projects", projectKey);
   const retained = new Set(markdownWrites.map((write) => write.canonical_project_path));
   for (const file of await listMarkdownFiles(wikiDir)) {
     const relativePath = relative(wikiDir, file).replaceAll("\\", "/");
-    const canonicalPath = `projects/${projectKey}/wiki/${relativePath}`;
+    const canonicalPath = `projects/${projectKey}/${relativePath}`;
     if (!retained.has(canonicalPath)) await rm(file, { force: true });
   }
 }
@@ -288,7 +288,7 @@ async function draftMarkdownWrites(
     const relativePath = relative(draftWikiDir, file).replaceAll("\\", "/");
     if (relativePath.startsWith("..")) throw new Error(`draft markdown escaped draft wiki: ${file}`);
     return {
-      canonical_project_path: `projects/${projectKey}/wiki/${relativePath}`,
+      canonical_project_path: `projects/${projectKey}/${relativePath}`,
       content: await readFile(file, "utf8"),
       write_kind: "wiki_page" as const,
       page_ids: [relativePath],

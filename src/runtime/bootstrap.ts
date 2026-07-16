@@ -1,6 +1,6 @@
 import { stat } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
-import { projectPath } from "./fs.ts";
+import { projectStatePath } from "./fs.ts";
 import { repairProjectShell, type ProjectShellMove } from "./project-shell.ts";
 import { readJsonIfExists, writeJson } from "./json.ts";
 import { discoverProjects } from "./projects.ts";
@@ -36,7 +36,7 @@ export async function bootstrapProject(
   const created = [...shell.created];
   const kept = [...shell.kept];
 
-  const projectJsonPath = projectPath(root, projectKey, "state", "project.json");
+  const projectJsonPath = projectStatePath(root, projectKey, "project.json");
   const existingConfig = await readJsonIfExists<ProjectConfig>(projectJsonPath);
   const nextConfig: ProjectConfig = {
     key: projectKey,
@@ -44,8 +44,8 @@ export async function bootstrapProject(
     repo_paths: mergeRepoPaths(existingConfig?.repo_paths ?? [], resolvedRepo),
   };
 
-  if (existingConfig) kept.push(`projects/${projectKey}/state/project.json`);
-  else created.push(`projects/${projectKey}/state/project.json`);
+  if (existingConfig) kept.push(`state/${projectKey}/project.json`);
+  else created.push(`state/${projectKey}/project.json`);
   await writeJson(projectJsonPath, nextConfig);
 
   return {

@@ -97,7 +97,7 @@ test("does nothing when source-consumption state is absent", async () => {
 });
 
 test("fails closed on malformed source-consumption state", async () => {
-  await writeJson(join(root, "projects", "demo", "state", "project-memory-source-consumptions.json"), {
+  await writeJson(join(root, "state", "demo", "project-memory-source-consumptions.json"), {
     schema_version: 2,
     project_key: "demo",
     records: [],
@@ -171,7 +171,7 @@ function seedMemoryDb(): void {
 }
 
 async function seedSourceConsumptionState(records: ReturnType<typeof sourceRecord>[]): Promise<void> {
-  await writeJson(join(root, "projects", "demo", "state", "project-memory-source-consumptions.json"), {
+  await writeJson(join(root, "state", "demo", "project-memory-source-consumptions.json"), {
     schema_version: 1,
     project_key: "demo",
     records,
@@ -187,7 +187,7 @@ function sourceRecord(
     source_kind,
     source_ref,
     project_key: "demo",
-    consumed_by_run: "projects/demo/runs/project-learn/run-1",
+    consumed_by_run: "runs/demo/project-learn/run-1",
     consumed_at: "2026-06-25T08:30:00.000Z",
     terminal_decision,
     output_refs: ["project-memory-changeset.json"],

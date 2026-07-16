@@ -21,7 +21,7 @@ let db: MemoryDb;
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "myelin-ingest-runtime-"));
-  db = openMemoryDbAt(join(root, "state", "memory.db"));
+  db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
 });
 
 afterEach(async () => {
@@ -32,7 +32,7 @@ afterEach(async () => {
 test("resolves target repository from project metadata", async () => {
   const repo = join(root, "repos", "class-kit");
   await mkdir(repo, { recursive: true });
-  await writeJson(join(root, "projects", "class-kit", "state", "project.json"), {
+  await writeJson(join(root, "state", "class-kit", "project.json"), {
     key: "class-kit",
     repo_paths: [repo],
   });
@@ -63,7 +63,7 @@ test("detached spawn runs worker from target repo and returns pid plus log path"
     };
   };
 
-  const logPath = join(root, "projects", "class-kit", "logs", "ingest-job_1.log");
+  const logPath = join(root, "runs", "class-kit", "logs", "ingest-job_1.log");
   await seedProjectLogs("class-kit", 30);
   const result = await spawnDetachedIngestWorker({
     root,
@@ -76,7 +76,7 @@ test("detached spawn runs worker from target repo and returns pid plus log path"
   });
 
   expect(result).toEqual({ pid: 4321, logPath });
-  expect((await readdir(join(root, "projects", "class-kit", "logs"))).filter((entry) => entry.endsWith(".log"))).toHaveLength(24);
+  expect((await readdir(join(root, "runs", "class-kit", "logs"))).filter((entry) => entry.endsWith(".log"))).toHaveLength(24);
   expect(unrefCalled).toBe(true);
   expect(calls).toHaveLength(1);
   expect(calls[0]).toMatchObject({
@@ -96,7 +96,7 @@ test("detached spawn runs worker from target repo and returns pid plus log path"
 });
 
 async function seedProjectLogs(projectKey: string, count: number): Promise<void> {
-  const logsDir = join(root, "projects", projectKey, "logs");
+  const logsDir = join(root, "runs", projectKey, "logs");
   await mkdir(logsDir, { recursive: true });
   for (let i = 0; i < count; i += 1) {
     const path = join(logsDir, `old-${i.toString().padStart(2, "0")}.log`);
@@ -109,7 +109,7 @@ async function seedProjectLogs(projectKey: string, count: number): Promise<void>
 test("launch allows non-master and records branch metadata", async () => {
   const repo = join(root, "repos", "class-kit");
   await mkdir(repo, { recursive: true });
-  await writeJson(join(root, "projects", "class-kit", "state", "project.json"), {
+  await writeJson(join(root, "state", "class-kit", "project.json"), {
     key: "class-kit",
     repo_paths: [repo],
   });
@@ -148,7 +148,7 @@ test("launch allows non-master and records branch metadata", async () => {
 test("launch records detached pid and log path in followup state without provider session id", async () => {
   const repo = join(root, "repos", "class-kit");
   await mkdir(repo, { recursive: true });
-  await writeJson(join(root, "projects", "class-kit", "state", "project.json"), {
+  await writeJson(join(root, "state", "class-kit", "project.json"), {
     key: "class-kit",
     repo_paths: [repo],
   });
@@ -185,7 +185,7 @@ test("launch records detached pid and log path in followup state without provide
 test("launch does not overwrite a terminal state from a fast detached worker", async () => {
   const repo = join(root, "repos", "class-kit");
   await mkdir(repo, { recursive: true });
-  await writeJson(join(root, "projects", "class-kit", "state", "project.json"), {
+  await writeJson(join(root, "state", "class-kit", "project.json"), {
     key: "class-kit",
     repo_paths: [repo],
   });
@@ -224,7 +224,7 @@ test("launch does not overwrite a terminal state from a fast detached worker", a
 test("launch fails job and writes configured log when detached spawn throws", async () => {
   const repo = join(root, "repos", "class-kit");
   await mkdir(repo, { recursive: true });
-  await writeJson(join(root, "projects", "class-kit", "state", "project.json"), {
+  await writeJson(join(root, "state", "class-kit", "project.json"), {
     key: "class-kit",
     repo_paths: [repo],
   });

@@ -121,7 +121,7 @@ Output:
 
 Side effects:
 
-- Writes `projects/<project-key>/state/schema-context.json` unless `--dry-run` is used.
+- Writes `state/<project-key>/schema-context.json` unless `--dry-run` is used.
 
 Examples:
 
@@ -146,7 +146,7 @@ Options:
 - `--dry-run`: preview without committing writes.
 - `--review`: run in review-oriented mode.
 - `--recreate`: rebuild already-curated Project Memory from a fresh create stage.
-- `--resume <run>`: resume maintenance from a verified, unpromoted create checkpoint. Accepts the run ID or exact `projects/<key>/runs/project-learn/<run>` path and cannot be combined with `--dry-run`, `--review`, or `--recreate`.
+- `--resume <run>`: resume maintenance from a verified, unpromoted create checkpoint. Accepts the run ID or exact `runs/<key>/project-learn/<run>` path and cannot be combined with `--dry-run`, `--review`, or `--recreate`.
 - `--provider codex|claude`: provider override.
 - `--model <model>`: model override.
 - `--json`: emit structured result JSON.
@@ -157,7 +157,7 @@ Output:
 - Structured run result with `--json`.
 - Human mode writes stage progress and periodic active-stage heartbeats to stderr. Interactive terminals use one updating spinner line; redirected logs use stable stage lines. Counts are shown only when the runtime knows the real total.
 - A subject writer that reports provider capacity exhaustion is retried in place up to three times with 15, 45, and 90 second backoffs. Completed sibling subjects are retained, retry countdowns and attempts are shown in human progress, and failed-attempt metadata remains under the subject workspace.
-- Create and recreate runs finalize `index.md` after subject authoring, require links to every planned subject, and reject planner lifecycle language before canonical publication. Repository identity is published as `projects/<key>/state/repository-identity.json`; run-local identity links are rewritten to that canonical state path.
+- Create and recreate runs finalize `index.md` after subject authoring, require links to every planned subject, and reject planner lifecycle language before canonical publication. Repository identity is published as `state/<key>/repository-identity.json`; run-local identity links are rewritten to that canonical state path.
 - `--json` keeps stdout as one valid JSON result and suppresses human progress output.
 - Foreground and automatic Project Memory mutations are serialized per project through the full authoring, promotion, reconciliation, and retrieval lifecycle. A competing command fails with the active mutation ID; a lock whose recorded process is dead is recovered before a new run starts.
 - Status `completed_with_pending_index` means canonical Project Memory writes succeeded, but derived retrieval hints or indexing still need follow-up.
@@ -166,10 +166,10 @@ Output:
 Side effects:
 
 - May invoke provider CLIs.
-- Runs deterministic runtime inbox intake before packet construction, creating or reusing Project Memory candidates for valid `projects/<project-key>/sources/inbox/*.json` source proposals.
+- Runs deterministic runtime inbox intake before packet construction, creating or reusing Project Memory candidates for valid `sources/<project-key>/inbox/*.json` source proposals.
 - Writes `prompt-budget.json` before curator invocation. Codex-backed curator prompts reference run artifacts instead of inlining the full packet; bounded inline prompt fallback can reduce supporting packet context when needed.
-- May write run artifacts under `projects/<project-key>/runs/`.
-- Create and recreate publication may update canonical repository identity state under `projects/<project-key>/state/repository-identity.json`.
+- May write run artifacts under `runs/<project-key>/`.
+- Create and recreate publication may update canonical repository identity state under `state/<project-key>/repository-identity.json`.
 - First-create runs preserve sanitized repository identity, an immutable create checkpoint, maintenance-report schema, and canonical-publication validation artifacts. Target-repository snapshots remain temporary and are removed after each authoring invocation.
 - May update project memory outputs unless `--dry-run` stops writes.
 
@@ -382,8 +382,8 @@ Output:
 
 Side effects:
 
-- Writes immutable preserved source JSON under `projects/<project-key>/sources/inbox/<id>.json`.
-- Creates `projects/<project-key>/sources/inbox/` when needed.
+- Writes immutable preserved source JSON under `sources/<project-key>/inbox/<id>.json`.
+- Creates `sources/<project-key>/inbox/` when needed.
 - Does not create memory candidate rows. Use `myelin memory inbox intake <project-key>` or `myelin project learn <project-key>` after this command.
 
 ### `myelin memory inbox intake <project-key> [--json]`
@@ -405,7 +405,7 @@ Output:
 
 Side effects:
 
-- Creates or reuses `memory_candidates` rows for valid `projects/<project-key>/sources/inbox/*.json` files.
+- Creates or reuses `memory_candidates` rows for valid `sources/<project-key>/inbox/*.json` files.
 - Creates only `scope="project"`, `candidate_type="project.inbox"`, `status="needs_review"` candidates in this slice.
 - Does not invoke the Project Memory Curator.
 - Does not rewrite runtime inbox source files.

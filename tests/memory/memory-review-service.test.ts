@@ -18,7 +18,7 @@ afterEach(async () => {
 });
 
 test("reports reviewable Project Memory maintenance dispositions with run artifact paths", async () => {
-  const runDir = join(root, "projects", "demo", "runs", "project-learn", "2026-07-07T10-00-00.000Z-run");
+  const runDir = join(root, "runs", "demo", "project-learn", "2026-07-07T10-00-00.000Z-run");
   await mkdir(join(runDir, "reports"), { recursive: true });
   await writeJson(join(runDir, "reports", "documentation-maintenance-report.json"), {
     schema_version: 1,
@@ -70,7 +70,7 @@ test("reports reviewable Project Memory maintenance dispositions with run artifa
   expect(result.items[0]).toMatchObject({
     kind: "project_memory_disposition",
     status: "insufficient_evidence",
-    json_path: "projects/demo/runs/project-learn/2026-07-07T10-00-00.000Z-run/reports/documentation-maintenance-report.json",
+    json_path: "runs/demo/project-learn/2026-07-07T10-00-00.000Z-run/reports/documentation-maintenance-report.json",
   });
 
   const filtered = await new MemoryReviewService(root).reviewProject({ projectKey: "demo", status: "belongs_to_other_layer" });

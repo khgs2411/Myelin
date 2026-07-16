@@ -37,12 +37,12 @@ test("creates and completes Project Memory hint jobs", () => {
 
   const running = markProjectMemoryHintJobRunning(db, {
     id: job.id,
-    run_ref: "projects/demo/runs/project-learn/hints-run",
+    run_ref: "runs/demo/project-learn/hints-run",
     now: "2026-06-28T10:01:00.000Z",
   });
   const completed = markProjectMemoryHintJobCompleted(db, {
     id: job.id,
-    run_ref: "projects/demo/runs/project-learn/hints-run",
+    run_ref: "runs/demo/project-learn/hints-run",
     now: "2026-06-28T10:02:00.000Z",
   });
 

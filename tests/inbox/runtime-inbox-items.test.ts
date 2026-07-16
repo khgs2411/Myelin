@@ -55,8 +55,8 @@ test("creates a project runtime inbox item as pretty JSON source material", asyn
     risk: "medium",
   });
 
-  expect(await Bun.file(join(root, "projects", "demo", "sources", "index.md")).exists()).toBe(false);
-  expect(await Bun.file(join(root, "projects", "demo", "sources", "inbox", "index.md")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "sources", "demo", "index.md")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "sources", "demo", "inbox", "index.md")).exists()).toBe(false);
 });
 
 test("duplicate runtime inbox ids fail without overwriting preserved source material", async () => {
@@ -121,7 +121,7 @@ test("rejects unsupported layers before writing source material", async () => {
     layer: "personal",
     reason: "Runtime inbox only supports project proposals in this slice",
   });
-  expect(await Bun.file(join(root, "projects", "demo", "sources", "inbox")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "sources", "demo", "inbox")).exists()).toBe(false);
 });
 
 test("fails invalid source metadata before writing", async () => {
@@ -142,7 +142,7 @@ test("fails invalid source metadata before writing", async () => {
   });
 
   expect(result.status).toBe("invalid");
-  expect(await Bun.file(join(root, "projects", "demo", "sources", "inbox")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "sources", "demo", "inbox")).exists()).toBe(false);
 });
 
 test("fails unknown projects before writing source material", async () => {
@@ -166,7 +166,7 @@ test("fails unknown projects before writing source material", async () => {
 });
 
 async function seedProject(projectKey: string): Promise<void> {
-  await writeJson(join(root, "projects", projectKey, "state", "project.json"), {
+  await writeJson(join(root, "state", projectKey, "project.json"), {
     key: projectKey,
     name: projectKey,
   });

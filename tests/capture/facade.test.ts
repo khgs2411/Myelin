@@ -58,7 +58,7 @@ test("stores valid events for bootstrapped project", async () => {
 
   expect(result).toEqual({ status: "stored", project_key: "class-kit", event_id: "evt_1" });
 
-  const db = openMemoryDbAt(join(root, "state", "memory.db"));
+  const db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   try {
     const [event] = listExperienceEvents(db, "class-kit");
     expect(event.git_branch).toBe("feature/sqlite-vec");
@@ -165,7 +165,7 @@ test("stores malformed bootstrapped project events as invalid", async () => {
 
   expect(result.status).toBe("stored");
 
-  const db = openMemoryDbAt(join(root, "state", "memory.db"));
+  const db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   try {
     const [event] = listExperienceEvents(db, "class-kit");
     expect(event.status).toBe("invalid");
@@ -177,7 +177,7 @@ test("stores malformed bootstrapped project events as invalid", async () => {
 
 test("storage failures fail open and write fallback hook error log", async () => {
   await bootstrapProject(root, "class-kit", repo);
-  await mkdir(join(root, "state", "memory.db"), { recursive: true });
+  await mkdir(join(root, "state", "memory", "memory.db"), { recursive: true });
 
   const result = await handleCaptureEvent(root, {
     id: "evt_1",

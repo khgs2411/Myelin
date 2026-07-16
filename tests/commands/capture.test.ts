@@ -34,7 +34,7 @@ test("captureCodexPayload stores mapped events", async () => {
   expect(result.exitCode).toBe(0);
   expect(result.message).toBe("capture stored");
 
-  const db = openMemoryDbAt(join(root, "state", "memory.db"));
+  const db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   try {
     expect(listExperienceEvents(db, "class-kit").map((event) => event.event_kind)).toEqual(["user.prompt"]);
   } finally {
@@ -82,7 +82,7 @@ test("captureCodexPayload stores empty Stop as invalid raw evidence", async () =
   expect(result.exitCode).toBe(0);
   expect(result.message).toBe("capture stored");
 
-  const db = openMemoryDbAt(join(root, "state", "memory.db"));
+  const db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   try {
     const [event] = listExperienceEvents(db, "class-kit");
     expect(event.hook_event_name).toBe("Stop");
@@ -110,7 +110,7 @@ test("captureCodexPayload uses explicit Myelin root even when caller cwd is anot
     });
 
     expect(result.exitCode).toBe(0);
-    const db = openMemoryDbAt(join(root, "state", "memory.db"));
+    const db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
     try {
       expect(listExperienceEvents(db, "class-kit")).toHaveLength(1);
     } finally {

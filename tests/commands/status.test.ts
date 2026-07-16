@@ -55,9 +55,9 @@ function cli(callerCwd = join(root, "caller")): ReturnType<typeof createCli> {
   return value;
 }
 
-function seedDb(): void { openMemoryDbAt(join(root, "state", "memory.db")).close(); }
+function seedDb(): void { openMemoryDbAt(join(root, "state", "memory", "memory.db")).close(); }
 async function seedProject(): Promise<void> {
   const repo = join(root, "repos", "demo");
   await mkdir(repo, { recursive: true });
-  await writeJson(join(root, "projects", "demo", "state", "project.json"), { key: "demo", name: "Demo", repo_paths: [repo] });
+  await writeJson(join(root, "state", "demo", "project.json"), { key: "demo", name: "Demo", repo_paths: [repo] });
 }

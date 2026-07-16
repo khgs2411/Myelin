@@ -18,16 +18,16 @@ afterEach(async () => {
 test("clean rebootstrap deletes project shell while preserving root memory db", async () => {
   const repo = join(root, "repo");
   await mkdir(repo, { recursive: true });
-  await mkdir(join(root, "state"), { recursive: true });
-  await writeFile(join(root, "state", "memory.db"), "memory", "utf8");
-  await writeJson(join(root, "projects", "demo", "state", "project.json"), {
+  await mkdir(join(root, "state", "memory"), { recursive: true });
+  await writeFile(join(root, "state", "memory", "memory.db"), "memory", "utf8");
+  await writeJson(join(root, "state", "demo", "project.json"), {
     key: "demo",
     name: "Demo",
     repo_paths: [repo],
   });
-  await writeJson(join(root, "projects", "demo", "state", "project-memory.json"), { status: "curated" });
-  await mkdir(join(root, "projects", "demo", "wiki"), { recursive: true });
-  await writeFile(join(root, "projects", "demo", "wiki", "old.md"), "# Old curated memory\n", "utf8");
+  await writeJson(join(root, "state", "demo", "project-memory.json"), { status: "curated" });
+  await mkdir(join(root, "projects", "demo"), { recursive: true });
+  await writeFile(join(root, "projects", "demo", "old.md"), "# Old curated memory\n", "utf8");
 
   const result = await new ProjectResetService(root).cleanRebootstrap("demo");
 
@@ -36,9 +36,9 @@ test("clean rebootstrap deletes project shell while preserving root memory db", 
     reset_scope: "project_shell",
     bootstrap_status: "rebootstrapped",
   });
-  expect(await readFile(join(root, "state", "memory.db"), "utf8")).toBe("memory");
-  expect(await Bun.file(join(root, "projects", "demo", "wiki", "old.md")).exists()).toBe(false);
-  expect(await Bun.file(join(root, "projects", "demo", "state", "project-memory.json")).exists()).toBe(false);
-  expect(await Bun.file(join(root, "projects", "demo", "state", "bootstrap-state.json")).exists()).toBe(true);
-  expect(JSON.parse(await readFile(join(root, "projects", "demo", "state", "project.json"), "utf8")).repo_paths).toEqual([repo]);
+  expect(await readFile(join(root, "state", "memory", "memory.db"), "utf8")).toBe("memory");
+  expect(await Bun.file(join(root, "projects", "demo", "old.md")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "state", "demo", "project-memory.json")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "state", "demo", "bootstrap-state.json")).exists()).toBe(true);
+  expect(JSON.parse(await readFile(join(root, "state", "demo", "project.json"), "utf8")).repo_paths).toEqual([repo]);
 });

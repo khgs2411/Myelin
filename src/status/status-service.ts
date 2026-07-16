@@ -10,6 +10,7 @@ import { inspectInstallation } from "./installation-inspector.ts";
 import { inspectProjectMemory } from "./project-memory-inspector.ts";
 import { inspectSessionMemory, openStatusDatabase } from "./session-memory-inspector.ts";
 import { aggregateOverall, maxState, warning } from "./severity.ts";
+import { memoryDbPath } from "../memory/db.ts";
 
 export type StatusServiceDeps = {
   now?: () => Date;
@@ -43,7 +44,7 @@ export class StatusService {
         snapshot.close();
       }
     } catch (error) {
-      const dbId = evidence.add("sqlite", join(this.root, "state", "memory.db"));
+      const dbId = evidence.add("sqlite", memoryDbPath(this.root));
       const dbWarning = warning("ROOT_SQLITE_UNAVAILABLE", "blocked", "session_memory", errorMessage(error), [dbId]);
       session = { section: unavailableSession(resolved.project.key, dbId), warnings: [dbWarning], actions: [] };
       project = { section: unavailableProject(resolved.project.key, dbId), warnings: [warning("ROOT_SQLITE_UNAVAILABLE", "blocked", "project_memory", errorMessage(error), [dbId])], actions: [] };
@@ -132,7 +133,7 @@ function unavailableSession(key: string, evidenceId: string): SessionMemoryStatu
     state: "blocked", lifecycle: "storage_unavailable", evidence_ids: [evidenceId],
     capture: { queued_events: 0, unleased_events: 0, leased_events: 0 },
     ingest: { running_jobs: 0, failed_jobs: 0, terminal_tombstones: 0, latest_log_path: null },
-    maintenance: { enabled: false, lifecycle: "unknown", lock: { lifecycle: "absent", path: `projects/${key}/state/.auto-memory-maintenance.lock`, run_id: null, pid: null }, last_run_id: null, last_log_path: null },
+    maintenance: { enabled: false, lifecycle: "unknown", lock: { lifecycle: "absent", path: `state/${key}/.auto-memory-maintenance.lock`, run_id: null, pid: null }, last_run_id: null, last_log_path: null },
     retrieval: { active_contract: null, desired_contract: null, migration_required: false, provider_state: "not_checked", indexed_count: 0, pending_count: 0, failed_count: 0, historical: { contract_count: 0, row_count: 0 } },
   };
 }
@@ -141,8 +142,8 @@ function unavailableProject(key: string, evidenceId: string): ProjectMemoryStatu
   return {
     state: "blocked", lifecycle: "storage_unavailable", evidence_ids: [evidenceId],
     inbox: { pending_items: 0 }, candidates: { pending: 0, needs_review: 0 },
-    maintenance: { enabled: false, lifecycle: "unknown", lock: { lifecycle: "absent", path: `projects/${key}/state/.auto-project-memory-maintenance.lock`, run_id: null, pid: null }, last_run_id: null, last_log_path: null },
-    curation: { lifecycle: "unknown", canonical_wiki_path: `projects/${key}/wiki`, latest_run_path: null },
+    maintenance: { enabled: false, lifecycle: "unknown", lock: { lifecycle: "absent", path: `state/${key}/.auto-project-memory-maintenance.lock`, run_id: null, pid: null }, last_run_id: null, last_log_path: null },
+    curation: { lifecycle: "unknown", canonical_wiki_path: `projects/${key}`, latest_run_path: null },
     retrieval: { active_contract: null, desired_contract: null, migration_required: false, provider_state: "not_checked", indexed_count: 0, pending_count: 0, failed_count: 0, historical: { contract_count: 0, row_count: 0 } },
   };
 }

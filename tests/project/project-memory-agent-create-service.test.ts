@@ -12,7 +12,7 @@ import { writeJson } from "../../src/runtime/json.ts";
 test("retries a capacity-limited subject writer with visible backoff", async () => {
   const root = await mkdtemp(join(tmpdir(), "myelin-create-retry-"));
   const targetRepoDir = join(root, "repo");
-  const absoluteRunDir = join(root, "projects", "demo", "runs", "project-learn", "run-1");
+  const absoluteRunDir = join(root, "runs", "demo", "project-learn", "run-1");
   await mkdir(targetRepoDir, { recursive: true });
   await writeFile(join(targetRepoDir, "README.md"), "# Demo\n", "utf8");
   const retryDelays: number[] = [];
@@ -24,7 +24,7 @@ test("retries a capacity-limited subject writer with visible backoff", async () 
   const result = await runProjectMemoryCreateMode({
     root,
     projectKey: "demo",
-    runDir: "projects/demo/runs/project-learn/run-1",
+    runDir: "runs/demo/project-learn/run-1",
     absoluteRunDir,
     targetRepoDir,
     concurrency: 1,

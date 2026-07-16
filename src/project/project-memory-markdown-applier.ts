@@ -7,7 +7,7 @@ import type {
   ProjectMemoryExpectedWrite,
   ProjectMemoryObservedPromotion,
 } from "./project-memory-apply-contracts.ts";
-import { ensureParentDir, resolveInside } from "../runtime/fs.ts";
+import { ensureParentDir, normalizeRecordedProjectPath, projectRunsPath, resolveInside } from "../runtime/fs.ts";
 import { readJson, readJsonIfExists, writeJson } from "../runtime/json.ts";
 import { assertProjectMemoryApplyJournal } from "./project-memory-apply-journal-validator.ts";
 
@@ -96,7 +96,7 @@ export class ProjectMemoryMarkdownApplier {
   }
 
   async findIncompleteApplyJournals(projectKey: string): Promise<string[]> {
-    const runsRoot = resolveInside(this.root, "projects", projectKey, "runs", "project-learn");
+    const runsRoot = projectRunsPath(this.root, projectKey, "project-learn");
     try {
       const entries = await readdir(runsRoot, { withFileTypes: true });
       const journals: string[] = [];
@@ -144,7 +144,7 @@ export class ProjectMemoryMarkdownApplier {
 
     for (const expected of [...journal.expected_writes].sort((a, b) => a.write_order - b.write_order)) {
       if (observed.some((promotion) => promotion.canonical_path === expected.canonical_path)) continue;
-      const canonicalPath = resolveInside(this.root, expected.canonical_path);
+      const canonicalPath = resolveInside(this.root, normalizeRecordedProjectPath(expected.canonical_path));
       const stagedPath = resolveInside(runAbs, expected.staged_output_ref);
       const currentHash = await sha256FileIfExists(canonicalPath);
       if (currentHash !== expected.before_sha256) {
@@ -272,7 +272,7 @@ async function readApplyJournalIfExists(
 
 async function observedPromotionDrift(root: string, observed: ProjectMemoryObservedPromotion[]): Promise<string | null> {
   for (const promotion of observed) {
-    const canonicalPath = resolveInside(root, promotion.canonical_path);
+    const canonicalPath = resolveInside(root, normalizeRecordedProjectPath(promotion.canonical_path));
     const currentHash = await sha256FileIfExists(canonicalPath);
     if (currentHash !== promotion.after_sha256) return promotion.canonical_path;
   }

@@ -1,11 +1,13 @@
 import type { Database } from "bun:sqlite";
 import { readFile, readdir, stat } from "node:fs/promises";
-import { basename, isAbsolute, join, relative } from "node:path";
+import { basename, isAbsolute, join } from "node:path";
 import type { AutoProjectMemoryMaintenanceConfig, EmbeddingConfig } from "../runtime/config.ts";
 import type { EvidenceRegistry, ProjectMemoryStatusSection, StatusInspection } from "./contracts.ts";
 import { inspectLock, type MaintenanceStateRecord } from "./lock-inspector.ts";
 import { maxState, projectRetrievalState, warning } from "./severity.ts";
 import { inspectEmbeddingRetrievalStatus } from "./embedding-retrieval-status.ts";
+import { memoryDbPath } from "../memory/db.ts";
+import { normalizeRecordedCheckoutPath, projectPath, projectSourcesPath, projectStatePath } from "../runtime/fs.ts";
 
 export async function inspectProjectMemory(input: {
   root: string;
@@ -16,11 +18,11 @@ export async function inspectProjectMemory(input: {
   evidence: EvidenceRegistry;
   isAlive: (pid: number) => boolean;
 }): Promise<{ section: ProjectMemoryStatusSection } & StatusInspection> {
-  const dbId = input.evidence.add("sqlite", join(input.root, "state", "memory.db"));
-  const statePath = join(input.root, "projects", input.projectKey, "state", "auto-project-memory-maintenance.json");
-  const lockPath = join(input.root, "projects", input.projectKey, "state", ".auto-project-memory-maintenance.lock");
-  const projectMemoryPath = join(input.root, "projects", input.projectKey, "state", "project-memory.json");
-  const wikiPath = join(input.root, "projects", input.projectKey, "wiki");
+  const dbId = input.evidence.add("sqlite", memoryDbPath(input.root));
+  const statePath = projectStatePath(input.root, input.projectKey, "auto-project-memory-maintenance.json");
+  const lockPath = projectStatePath(input.root, input.projectKey, ".auto-project-memory-maintenance.lock");
+  const projectMemoryPath = projectStatePath(input.root, input.projectKey, "project-memory.json");
+  const wikiPath = projectPath(input.root, input.projectKey);
   const maintenanceRead = await readOptionalObject<MaintenanceStateRecord>(statePath);
   const stateId = input.evidence.add("file", statePath);
   const lockId = input.evidence.add("file", join(lockPath, "owner.json"));
@@ -45,7 +47,7 @@ export async function inspectProjectMemory(input: {
   }
   if (!input.config.enabled && pressure > 0) warnings.push(warning("PROJECT_MAINTENANCE_DISABLED", "attention", "project_memory", "Automatic Project Memory maintenance is disabled with pending work.", [stateId]));
   let logState: "healthy" | "attention" = "healthy";
-  const recordedLog = checkoutPath(input.root, maintenanceRead.value?.last_log_path ?? null);
+  const recordedLog = normalizeRecordedCheckoutPath(input.root, maintenanceRead.value?.last_log_path ?? null);
   if (recordedLog && !(await exists(resolveCheckoutPath(input.root, recordedLog)))) {
     logState = "attention";
     warnings.push(warning("PROJECT_REFERENCED_LOG_MISSING", "attention", "project_memory", `Referenced log is missing: ${recordedLog}`, [stateId]));
@@ -107,15 +109,15 @@ export async function inspectProjectMemory(input: {
     section: {
       state, lifecycle, evidence_ids: [dbId, stateId, lockId, projectStateId],
       inbox: { pending_items: inbox.count }, candidates: { pending, needs_review: needsReview },
-      maintenance: { enabled: input.config.enabled, lifecycle: lock.lock.lifecycle === "active" ? "running" : lock.lock.lifecycle === "stale" ? "stale_lock" : maintenanceRead.value?.last_status ?? "never_run", lock: lock.lock, last_run_id: maintenanceRead.value?.last_run_id ?? null, last_log_path: checkoutPath(input.root, maintenanceRead.value?.last_log_path ?? null) },
-      curation: { lifecycle: curationLifecycle, canonical_wiki_path: `projects/${input.projectKey}/wiki`, latest_run_path: latestRun },
+      maintenance: { enabled: input.config.enabled, lifecycle: lock.lock.lifecycle === "active" ? "running" : lock.lock.lifecycle === "stale" ? "stale_lock" : maintenanceRead.value?.last_status ?? "never_run", lock: lock.lock, last_run_id: maintenanceRead.value?.last_run_id ?? null, last_log_path: normalizeRecordedCheckoutPath(input.root, maintenanceRead.value?.last_log_path ?? null) },
+      curation: { lifecycle: curationLifecycle, canonical_wiki_path: `projects/${input.projectKey}`, latest_run_path: latestRun },
       retrieval,
     }, warnings, actions,
   };
 }
 
 async function countPendingInbox(root: string, key: string, db: Database): Promise<{ count: number; error: string | null }> {
-  const dir = join(root, "projects", key, "sources", "inbox");
+  const dir = projectSourcesPath(root, key, "inbox");
   let entries: string[];
   try { entries = await readdir(dir); } catch (error) {
     if (hasCode(error, "ENOENT")) return { count: 0, error: null };
@@ -147,7 +149,6 @@ async function readableWiki(path: string): Promise<boolean> {
 }
 function scalar(db: Database, sql: string, value: string): number { return (db.query(sql).get(value) as { count: number }).count; }
 function stringValue(value: unknown): string | null { return typeof value === "string" ? value : null; }
-function checkoutPath(root: string, value: string | null): string | null { return value && isAbsolute(value) ? relative(root, value) : value; }
 function resolveCheckoutPath(root: string, value: string): string { return isAbsolute(value) ? value : join(root, value); }
 async function exists(path: string): Promise<boolean> { try { await stat(path); return true; } catch { return false; } }
 function hasCode(error: unknown, code: string): boolean { return Boolean(error && typeof error === "object" && "code" in error && error.code === code); }

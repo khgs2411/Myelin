@@ -7,7 +7,7 @@ import { isProcessAlive, resolveIngestTargetRepo } from "../ingest/runtime.ts";
 import { IngestService } from "../ingest/ingest-service.ts";
 import type { IngestProvider, StartIngestResult } from "../ingest/ingest-service-contracts.ts";
 import { loadConfig, type AutoMemoryMaintenanceConfig } from "../runtime/config.ts";
-import { projectPath } from "../runtime/fs.ts";
+import { projectStatePath } from "../runtime/fs.ts";
 import { createId } from "../runtime/ids.ts";
 import { prepareProjectLogFile, projectLogPath } from "../runtime/project-logs.ts";
 import {
@@ -408,7 +408,7 @@ export async function writeState(root: string, projectKey: string, state: AutoMe
 }
 
 export function statePath(root: string, projectKey: string): string {
-  return projectPath(root, projectKey, "state", "auto-memory-maintenance.json");
+  return projectStatePath(root, projectKey, "auto-memory-maintenance.json");
 }
 
 export function autoMemoryLogPath(root: string, projectKey: string, runId: string): string {
@@ -416,7 +416,7 @@ export function autoMemoryLogPath(root: string, projectKey: string, runId: strin
 }
 
 function lockPath(root: string, projectKey: string): string {
-  return projectPath(root, projectKey, "state", ".auto-memory-maintenance.lock");
+  return projectStatePath(root, projectKey, ".auto-memory-maintenance.lock");
 }
 
 function maintenanceRuntime(

@@ -12,7 +12,7 @@ beforeEach(async () => {
   prevCwd = process.cwd();
   root = await mkdtemp(join(tmpdir(), "myelin-session-cmd-"));
   process.chdir(root);
-  await writeJson(join(root, "projects", "trygga", "state", "project.json"), { key: "trygga", name: "Trygga" });
+  await writeJson(join(root, "state", "trygga", "project.json"), { key: "trygga", name: "Trygga" });
 });
 afterEach(async () => { process.chdir(prevCwd); await rm(root, { recursive: true, force: true }); });
 

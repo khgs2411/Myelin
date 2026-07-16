@@ -253,7 +253,7 @@ function maintenancePrompt(
     `You are maintaining Project Memory documentation for project ${projectKey}.`,
     "Read the repository from target-repo/ and the existing documentation from draft-wiki/.",
     `Read ${PROJECT_REPOSITORY_IDENTITY_REF} as sanitized deterministic checkout evidence. When docs conflict with it, preserve and explicitly label the contradiction; never silently prefer a stale no-remote claim.`,
-    `If you cite that evidence artifact, use the canonical wiki-relative target ../state/${PROJECT_REPOSITORY_IDENTITY_REF}; never link to the run-local input path.`,
+    `If you cite that evidence artifact, link to ${PROJECT_REPOSITORY_IDENTITY_REF}; publication rewrites that target to canonical state.`,
     "Keep index.md as current canonical navigation: preserve links to every existing subject page and never describe published pages as planned, eventual, or placeholders.",
     ...PROJECT_MEMORY_BEHAVIOR_COVERAGE_GUIDANCE,
     "For each pending source, decide whether it changes durable project documentation.",

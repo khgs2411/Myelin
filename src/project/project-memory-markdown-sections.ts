@@ -47,7 +47,7 @@ export async function extractProjectMemorySections(
   projectKey: string,
   input: { now?: Date } = {},
 ): Promise<ProjectMemorySectionManifest> {
-  const wikiRoot = projectPath(root, projectKey, "wiki");
+  const wikiRoot = projectPath(root, projectKey);
   if (!(await isDirectory(wikiRoot))) {
     return {
       schema_version: 1,
@@ -55,7 +55,7 @@ export async function extractProjectMemorySections(
       generated_at: (input.now ?? new Date()).toISOString(),
       pages: [],
       sections: [],
-      warnings: [`projects/${projectKey}/wiki directory missing`],
+      warnings: [`Project Memory directory missing: projects/${projectKey}`],
     };
   }
 
@@ -66,7 +66,7 @@ export async function extractProjectMemorySections(
 
   for (const file of files) {
     const text = await readFile(file, "utf8");
-    const wikiPath = `wiki/${relative(wikiRoot, file).replaceAll("\\", "/")}`;
+    const wikiPath = relative(wikiRoot, file).replaceAll("\\", "/");
     const category = categoryFor(wikiPath);
     const title = titleForMarkdown(wikiPath, text);
     pages.push({
@@ -115,7 +115,7 @@ export async function writeProjectMemorySectionManifest(
   root: string,
   manifest: ProjectMemorySectionManifest,
 ): Promise<string> {
-  const relativePath = `projects/${manifest.project_key}/state/project-memory-retrieval/sections.json`;
+  const relativePath = `state/${manifest.project_key}/project-memory-retrieval/sections.json`;
   const absolutePath = resolveInside(root, relativePath);
   await mkdir(dirname(absolutePath), { recursive: true });
   await writeFile(absolutePath, `${stableJson(manifest)}\n`, "utf8");
@@ -271,7 +271,7 @@ function snippetFor(text: string): string {
 
 function categoryFor(wikiPath: string): string | null {
   const parts = wikiPath.split("/");
-  return parts.length > 2 ? parts[1] : null;
+  return parts.length > 1 ? parts[0] : null;
 }
 
 function titleForMarkdown(path: string, text: string): string {

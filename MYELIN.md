@@ -91,7 +91,7 @@ The Schema Layer is the instruction/convention layer that teaches agents how to 
 | --- | --- |
 | Global schema (`schema/`) | `global.md` + typed JSON rules (page taxonomy, provenance fields, memory scopes, CLI vocabulary) |
 | `schema check` / `schema build` | read-only validate; compile schema context (writes by default, `--dry-run` previews) |
-| Generated schema context | `projects/<key>/state/schema-context.json` (per-project), freshness-checked (sha256 of inputs); regenerate on input change, skip if unchanged (ADR 0025) |
+| Generated schema context | `state/<key>/schema-context.json` (per-project), freshness-checked (sha256 of inputs); regenerate on input change, skip if unchanged (ADR 0025) |
 | Project-local schema | per-project conventions that specialize the global schema |
 | Schema Override | typed project-local exception that weakens/replaces a global rule, with a reason |
 | Schema Candidate + lifecycle | proposed schema changes discovered from evidence; states `pending/applied/rejected/superseded/failed` (ADR 0046); dedicated `candidates`/`apply`/`--global` CLI (ADR 0032) |
@@ -188,15 +188,17 @@ Core owns query logic once; the detached MCP consumes it via the `myelin memory 
 
 ```
 projects/<key>/
-  index.md   project-folder navigation
-  wiki/      curated markdown pages (Project Memory), with index.md in every folder
-  state/     metadata, routing, provenance, freshness, generated schema-context.json, with index.md
-  runs/      command-scoped run artifacts, with index.md
-  log/       optional changelog and memory history, created only when used
-  sources/   optional preserved source material, created only when preserved sources exist
-  schema/    optional project-local schema, created only when project-local rules exist
+  index.md   Project Memory orientation and navigation
+  *.md       canonical Project Memory pages and optional subject subdirectories
 state/
-  memory.db  repo-root SQLite serving layer (git-ignored)
+  <key>/     metadata, routing, provenance, freshness, and generated retrieval state
+  memory/
+    memory.db  repo-root SQLite serving layer (git-ignored)
+sources/<key>/
+  inbox/     preserved runtime source proposals
+runs/<key>/
+  logs/      detached project logs
+  project-learn/  Project Memory authoring artifacts
 schema/      global authored schema inputs
 docs/        current product docs, ADRs, and historical archives
 .tasks/      roadmap task stubs, not implementation plans

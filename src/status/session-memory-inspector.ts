@@ -2,13 +2,15 @@ import { Database } from "bun:sqlite";
 import { copyFileSync, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { isAbsolute, join, relative } from "node:path";
+import { isAbsolute, join } from "node:path";
 import type { AutoMemoryMaintenanceConfig, EmbeddingConfig } from "../runtime/config.ts";
 import { configureBunSQLite } from "../memory/sqlite-runtime.ts";
 import type { EvidenceRegistry, SessionMemoryStatusSection, StatusInspection } from "./contracts.ts";
 import { inspectLock, type MaintenanceStateRecord } from "./lock-inspector.ts";
 import { maxState, sessionRetrievalState, warning } from "./severity.ts";
 import { inspectEmbeddingRetrievalStatus } from "./embedding-retrieval-status.ts";
+import { memoryDbPath } from "../memory/db.ts";
+import { normalizeRecordedCheckoutPath, projectStatePath } from "../runtime/fs.ts";
 
 const REQUIRED_TABLES = ["experience_events", "experience_event_tombstones", "ingest_jobs", "session_memories", "session_memory_embeddings", "memory_candidates", "project_memory_retrieval_embeddings"];
 
@@ -19,7 +21,7 @@ export type StatusDatabaseSnapshot = {
 
 export function openStatusDatabase(root: string): StatusDatabaseSnapshot {
   configureBunSQLite(root);
-  const sourcePath = join(root, "state", "memory.db");
+  const sourcePath = memoryDbPath(root);
   if (!existsSync(sourcePath)) throw new Error(`Root SQLite database is missing at ${sourcePath}.`);
   const snapshotDir = mkdtempSync(join(tmpdir(), "myelin-status-snapshot-"));
   const snapshotPath = join(snapshotDir, "memory.db");
@@ -56,9 +58,9 @@ export async function inspectSessionMemory(input: {
   evidence: EvidenceRegistry;
   isAlive: (pid: number) => boolean;
 }): Promise<{ section: SessionMemoryStatusSection } & StatusInspection> {
-  const dbId = input.evidence.add("sqlite", join(input.root, "state", "memory.db"));
-  const statePath = join(input.root, "projects", input.projectKey, "state", "auto-memory-maintenance.json");
-  const lockPath = join(input.root, "projects", input.projectKey, "state", ".auto-memory-maintenance.lock");
+  const dbId = input.evidence.add("sqlite", memoryDbPath(input.root));
+  const statePath = projectStatePath(input.root, input.projectKey, "auto-memory-maintenance.json");
+  const lockPath = projectStatePath(input.root, input.projectKey, ".auto-memory-maintenance.lock");
   const stateRead = await readOptionalState(statePath);
   const stateId = input.evidence.add("file", statePath);
   const lockId = input.evidence.add("file", join(lockPath, "owner.json"));
@@ -75,7 +77,7 @@ export async function inspectSessionMemory(input: {
   for (const job of jobs) {
     const followup = jsonObject(job.followup_state_json);
     const error = jsonObject(job.error_json);
-    latestLog ??= checkoutPath(input.root, stringValue(followup?.log_path) ?? stringValue(error?.log_path));
+    latestLog ??= normalizeRecordedCheckoutPath(input.root, stringValue(followup?.log_path) ?? stringValue(error?.log_path));
     const pid = numberValue(followup?.pid);
     const leased = leasesByJob.get(job.id) ?? 0;
     if (job.status === "running") {
@@ -107,7 +109,7 @@ export async function inspectSessionMemory(input: {
   }
   if (!input.config.enabled && counts.queued > 0) warnings.push(warning("SESSION_MAINTENANCE_DISABLED", "attention", "session_memory", "Automatic Session Memory maintenance is disabled with queued work.", [stateId]));
   let logState: "healthy" | "attention" = "healthy";
-  for (const logPath of [latestLog, checkoutPath(input.root, stateRead.state?.last_log_path ?? null)]) {
+  for (const logPath of [latestLog, normalizeRecordedCheckoutPath(input.root, stateRead.state?.last_log_path ?? null)]) {
     if (logPath && !(await exists(resolveCheckoutPath(input.root, logPath)))) {
       logState = "attention";
       warnings.push(warning("SESSION_REFERENCED_LOG_MISSING", "attention", "session_memory", `Referenced log is missing: ${logPath}`, [stateId]));
@@ -145,7 +147,7 @@ export async function inspectSessionMemory(input: {
       state, lifecycle, evidence_ids: [dbId, stateId, lockId],
       capture: { queued_events: counts.queued, unleased_events: counts.unleased, leased_events: counts.leased },
       ingest: { running_jobs: jobs.filter((job) => job.status === "running").length, failed_jobs: jobs.filter((job) => job.status === "failed").length, terminal_tombstones: counts.terminal, latest_log_path: latestLog },
-      maintenance: { enabled: input.config.enabled, lifecycle: lock.lock.lifecycle === "active" ? "running" : lock.lock.lifecycle === "stale" ? "stale_lock" : stateRead.state?.last_status ?? "never_run", lock: lock.lock, last_run_id: stateRead.state?.last_run_id ?? null, last_log_path: checkoutPath(input.root, stateRead.state?.last_log_path ?? null) },
+      maintenance: { enabled: input.config.enabled, lifecycle: lock.lock.lifecycle === "active" ? "running" : lock.lock.lifecycle === "stale" ? "stale_lock" : stateRead.state?.last_status ?? "never_run", lock: lock.lock, last_run_id: stateRead.state?.last_run_id ?? null, last_log_path: normalizeRecordedCheckoutPath(input.root, stateRead.state?.last_log_path ?? null) },
       retrieval,
     }, warnings, actions,
   };
@@ -174,7 +176,6 @@ function scalar(db: Database, sql: string, value: string): number { return (db.q
 function jsonObject(value: string | null): Record<string, unknown> | null { try { const parsed = value ? JSON.parse(value) : null; return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null; } catch { return null; } }
 function stringValue(value: unknown): string | null { return typeof value === "string" ? value : null; }
 function numberValue(value: unknown): number | null { return Number.isInteger(value) && Number(value) > 0 ? Number(value) : null; }
-function checkoutPath(root: string, value: string | null): string | null { return value && isAbsolute(value) ? relative(root, value) : value; }
 function resolveCheckoutPath(root: string, value: string): string { return isAbsolute(value) ? value : join(root, value); }
 async function exists(path: string): Promise<boolean> { try { await stat(path); return true; } catch { return false; } }
 function hasCode(error: unknown, code: string): boolean { return Boolean(error && typeof error === "object" && "code" in error && error.code === code); }

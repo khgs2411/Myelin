@@ -7,7 +7,7 @@ import { projectRetrievalState, sessionRetrievalState } from "../../src/status/s
 
 let root: string;
 let lockPath: string;
-beforeEach(async () => { root = await mkdtemp(join(tmpdir(), "myelin-status-inspector-")); lockPath = join(root, "projects", "demo", "state", ".lock"); });
+beforeEach(async () => { root = await mkdtemp(join(tmpdir(), "myelin-status-inspector-")); lockPath = join(root, "state", "demo", ".lock"); });
 afterEach(async () => { await rm(root, { recursive: true, force: true }); });
 
 test("retrieval severity follows the approved usable-index matrix", () => {

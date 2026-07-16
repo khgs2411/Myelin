@@ -218,11 +218,11 @@ test("memory query project layer returns approved Project Memory JSON shape", as
   expect(result.exitCode).toBe(0);
   expect(response.matches).toEqual([]);
   expect(response.project_memory_matches[0]).toMatchObject({
-    wiki_path: "wiki/setup/index.md",
+    wiki_path: "setup/index.md",
     section_id: "setup",
     return_kind: "inline_content",
     content: "Setup is documented in canonical Project Memory.",
-    citation: "project_memory:wiki/setup/index.md#setup",
+    citation: "project_memory:setup/index.md#setup",
   });
   expect(response.project_memory_matches[0].reference_reason).toBeUndefined();
   expect(response.layers[0]).toMatchObject({
@@ -234,10 +234,10 @@ test("memory query project layer returns approved Project Memory JSON shape", as
     const log = db
       .query("SELECT answer_text, response_json FROM project_memory_query_logs WHERE question = ?")
       .get("How is setup documented?") as { answer_text: string; response_json: string };
-    expect(log.answer_text).toContain("wiki/setup/index.md#setup");
+    expect(log.answer_text).toContain("setup/index.md#setup");
     expect(JSON.parse(log.response_json)).toMatchObject({
       answer: response.answer,
-      project_memory_matches: [{ wiki_path: "wiki/setup/index.md", section_id: "setup" }],
+      project_memory_matches: [{ wiki_path: "setup/index.md", section_id: "setup" }],
     });
   } finally {
     db.close();
@@ -271,7 +271,7 @@ test("memory eval project logs answer and eval details onto Project Memory query
         {
           id: "setup-docs",
           question: "How is setup documented?",
-          expected_primary_refs: ["wiki/setup/index.md#setup"],
+          expected_primary_refs: ["setup/index.md#setup"],
           must_contain_text: ["Setup is documented"],
         },
       ],
@@ -304,13 +304,13 @@ test("memory eval project logs answer and eval details onto Project Memory query
       };
     expect(log.answer_text).toContain("Setup is documented in canonical Project Memory.");
     expect(JSON.parse(log.response_json)).toMatchObject({
-      project_memory_matches: [{ wiki_path: "wiki/setup/index.md", section_id: "setup" }],
+      project_memory_matches: [{ wiki_path: "setup/index.md", section_id: "setup" }],
     });
     expect(log.eval_run_id).toBe(response.run_id);
     expect(JSON.parse(log.eval_json)).toMatchObject({
       id: "setup-docs",
       passed: true,
-      top_ref: "wiki/setup/index.md#setup",
+      top_ref: "setup/index.md#setup",
     });
   } finally {
     db.close();
@@ -460,7 +460,7 @@ test("memory inbox create writes a runtime inbox source item and no candidate ro
     "--risk",
     "medium",
     "--target-hint",
-    "wiki/architecture/index.md",
+    "architecture/index.md",
     "--json",
   ]);
 
@@ -587,7 +587,7 @@ test("memory inbox create rejects unsupported layers, unknown projects, and inva
   expect(unknownProject.message).toContain("Unknown project: missing");
   expect(missingRisk.exitCode).toBe(1);
   expect(missingRisk.message).toContain("--risk must be one of: low, medium, high");
-  expect(await Bun.file(join(root, "projects", "demo", "sources", "inbox")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "sources", "demo", "inbox")).exists()).toBe(false);
   expect(await Bun.file(join(root, "projects", "missing")).exists()).toBe(false);
 });
 
@@ -708,8 +708,8 @@ test("memory index session reports degraded indexing as JSON without throwing", 
 });
 
 test("memory index project reports Project Memory retrieval indexing as JSON", async () => {
-  await mkdir(join(root, "projects", "demo", "wiki"), { recursive: true });
-  await writeFile(join(root, "projects", "demo", "wiki", "index.md"), "# Demo\n\nProject memory body.\n", "utf8");
+  await mkdir(join(root, "projects", "demo"), { recursive: true });
+  await writeFile(join(root, "projects", "demo", "index.md"), "# Demo\n\nProject memory body.\n", "utf8");
   const cli = createCli("myelin");
   registerMemoryCommands(cli);
 
@@ -737,15 +737,14 @@ test("memory maintain project exposes a pure maintenance command", async () => {
 });
 
 test("memory review reports reviewable maintenance dispositions as JSON", async () => {
-  await mkdir(join(root, "projects", "demo", "runs", "project-learn", "2026-07-07T10-00-00.000Z-run", "reports"), {
+  await mkdir(join(root, "runs", "demo", "project-learn", "2026-07-07T10-00-00.000Z-run", "reports"), {
     recursive: true,
   });
   await writeJson(
     join(
       root,
-      "projects",
-      "demo",
       "runs",
+      "demo",
       "project-learn",
       "2026-07-07T10-00-00.000Z-run",
       "reports",
@@ -792,7 +791,7 @@ test("memory review reports reviewable maintenance dispositions as JSON", async 
 });
 
 async function seedProject(): Promise<void> {
-  await writeJson(join(root, "projects", "demo", "state", "project.json"), {
+  await writeJson(join(root, "state", "demo", "project.json"), {
     key: "demo",
     name: "Demo",
   });
@@ -899,14 +898,14 @@ async function seedProjectMemoryQueryFixture(question: string): Promise<void> {
     }),
     "utf8",
   );
-  await mkdir(join(root, "projects", "demo", "wiki", "setup"), { recursive: true });
+  await mkdir(join(root, "projects", "demo", "setup"), { recursive: true });
   await writeFile(
-    join(root, "projects", "demo", "wiki", "setup", "index.md"),
+    join(root, "projects", "demo", "setup", "index.md"),
     "# Setup\n\nSetup is documented in canonical Project Memory.\n",
     "utf8",
   );
   const manifest = await extractProjectMemorySections(root, "demo");
-  const section = manifest.sections.find((item) => item.wiki_path === "wiki/setup/index.md" && item.section_id === "setup");
+  const section = manifest.sections.find((item) => item.wiki_path === "setup/index.md" && item.section_id === "setup");
   if (!section) throw new Error("missing setup section fixture");
 
   const db = openMemoryDb(root);

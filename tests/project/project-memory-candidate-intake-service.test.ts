@@ -12,7 +12,7 @@ let root: string;
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "myelin-candidate-intake-"));
-  await writeJson(join(root, "projects", "demo", "state", "project.json"), {
+  await writeJson(join(root, "state", "demo", "project.json"), {
     key: "demo",
     name: "Demo",
   });

@@ -2,7 +2,7 @@ import { stat } from "node:fs/promises";
 import { markProjectMemoryCandidateProcessed, type QueueLifecycleUpdateResult } from "../memory/candidates.ts";
 import { memoryDbPath, openMemoryDb } from "../memory/db.ts";
 import { markProjectHandoffInstructionProcessed } from "../memory/handoffs.ts";
-import { projectPath } from "../runtime/fs.ts";
+import { projectStatePath } from "../runtime/fs.ts";
 import { readJsonIfExists } from "../runtime/json.ts";
 import { normalizeProjectMemoryAgentCandidateDisposition } from "./project-memory-agent-contracts.ts";
 import type { ProjectMemorySourceConsumptionRecord } from "./project-memory-apply-contracts.ts";
@@ -41,7 +41,7 @@ export class ProjectMemorySourceConsumptionReconciler {
     projectKey: string,
     input: { now?: Date } = {},
   ): Promise<ProjectMemorySourceConsumptionReconcileResult> {
-    const statePath = projectPath(this.root, projectKey, "state", "project-memory-source-consumptions.json");
+    const statePath = projectStatePath(this.root, projectKey, "project-memory-source-consumptions.json");
     const base = emptyResult(projectKey, statePath);
 
     let state: ProjectMemorySourceConsumptionState | null;
@@ -58,7 +58,7 @@ export class ProjectMemorySourceConsumptionReconciler {
     const records = normalizeRecords(state);
     if (records.length === 0) return base;
     if (!(await exists(memoryDbPath(this.root)))) {
-      return degradedResult(base, "state/memory.db is missing; source-consumption reconciliation skipped", false);
+      return degradedResult(base, "state/memory/memory.db is missing; source-consumption reconciliation skipped", false);
     }
 
     const now = (input.now ?? new Date()).toISOString();

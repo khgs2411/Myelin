@@ -1,11 +1,11 @@
 import { mkdir, readdir, rm, stat } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
-import { projectPath } from "./fs.ts";
+import { projectRunsPath } from "./fs.ts";
 
 export const PROJECT_LOG_RETENTION_LIMIT = 25;
 
 export function projectLogPath(root: string, projectKey: string, filename: string): string {
-  return projectPath(root, projectKey, "logs", filename);
+  return projectRunsPath(root, projectKey, "logs", filename);
 }
 
 export async function prepareProjectLogFile(
@@ -24,7 +24,7 @@ async function pruneProjectLogFiles(
   preservedPath: string,
   limit: number,
 ): Promise<void> {
-  const logsDir = projectPath(root, projectKey, "logs");
+  const logsDir = projectRunsPath(root, projectKey, "logs");
   const preservedName = basename(preservedPath);
   const keepExisting = Math.max(0, limit - 1);
 

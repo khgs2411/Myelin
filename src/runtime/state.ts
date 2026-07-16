@@ -1,10 +1,10 @@
-import { projectPath } from "./fs.ts";
+import { projectStatePath } from "./fs.ts";
 import { readJson, readJsonIfExists, writeJson } from "./json.ts";
 
 export function statePath(root: string, projectKey: string, name: string): string {
   if (name.includes("/") || name.includes("\\")) throw new Error(`State file must be a file name: ${name}`);
   if (!name.endsWith(".json")) throw new Error(`State file must be JSON: ${name}`);
-  return projectPath(root, projectKey, "state", name);
+  return projectStatePath(root, projectKey, name);
 }
 
 export async function readProjectState<T>(root: string, projectKey: string, name: string): Promise<T> {

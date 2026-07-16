@@ -43,7 +43,7 @@ import {
 } from "../runtime/project-run-infrastructure.ts";
 import { repairProjectShell } from "../runtime/project-shell.ts";
 import { findProject } from "../runtime/projects.ts";
-import { projectPath, resolveInside } from "../runtime/fs.ts";
+import { projectPath, projectRunsPath, projectStatePath, resolveInside } from "../runtime/fs.ts";
 import { readJson, readJsonIfExists, writeJson } from "../runtime/json.ts";
 import type { ProjectRepositoryIdentity } from "./project-repository-identity.ts";
 import { FILE_AUTHORING_STUB_OUTPUTS_DIR } from "../runtime/file-authoring-agent.ts";
@@ -467,7 +467,7 @@ export class ProjectMemoryCuratorService {
       runDir: input.run.relative_run_dir,
       absoluteRunDir: input.run.absolute_run_dir,
       targetRepoDir: input.repoPath,
-      baseWikiDir: projectPath(this.root, input.input.projectKey, "wiki"),
+      baseWikiDir: projectPath(this.root, input.input.projectKey),
       pendingSources: pendingSourcesFromPacket(input.packet),
       provider: input.input.provider,
       modelOverride: input.input.modelOverride,
@@ -662,7 +662,7 @@ export class ProjectMemoryCuratorService {
     next: ProjectMemorySourceConsumptionRecord[],
   ): Promise<ProjectMemorySourceConsumptionRecord[]> {
     const existing = await readJsonIfExists<{ records?: ProjectMemorySourceConsumptionRecord[] }>(
-      projectPath(this.root, projectKey, "state", "project-memory-source-consumptions.json"),
+      projectStatePath(this.root, projectKey, "project-memory-source-consumptions.json"),
     );
     const byKey = new Map<string, ProjectMemorySourceConsumptionRecord>();
     for (const record of existing?.records ?? []) byKey.set(`${record.source_kind}:${record.source_ref}`, record);
@@ -717,7 +717,7 @@ export class ProjectMemoryCuratorService {
     reason?: string;
     now: Date;
   }): Promise<void> {
-    const statePath = projectPath(this.root, input.projectKey, "state", "project-memory.json");
+    const statePath = projectStatePath(this.root, input.projectKey, "project-memory.json");
     const state = await readJsonIfExists<Record<string, unknown>>(statePath);
     if (!state || state.status !== "curated") return;
 
@@ -971,7 +971,7 @@ function runInfoFromJournalPath(journalPath: string): {
   mode: ProjectMemoryCuratorMode;
 } {
   const normalized = journalPath.replaceAll("\\", "/");
-  const match = normalized.match(/(projects\/[^/]+\/runs\/project-learn\/([^/]+))\/project-memory-apply-journal\.json$/);
+  const match = normalized.match(/(runs\/[^/]+\/project-learn\/([^/]+))\/project-memory-apply-journal\.json$/);
   return {
     run_id: match?.[2] ?? "recovered",
     run_dir: match?.[1] ?? normalized,
@@ -1014,7 +1014,7 @@ function resolveResumeSourceRun(
   projectKey: string,
   value: string,
 ): { absoluteRunDir: string; relativeRunDir: string } {
-  const runsRoot = projectPath(root, projectKey, "runs", "project-learn");
+  const runsRoot = projectRunsPath(root, projectKey, "project-learn");
   const absoluteRunDir = value.includes("/") || value.includes("\\")
     ? resolveInside(root, value)
     : resolve(runsRoot, value);

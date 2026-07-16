@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { projectPath, resolveInside } from "../runtime/fs.ts";
+import { projectStatePath, resolveInside } from "../runtime/fs.ts";
 import { readJsonIfExists, stableJson } from "../runtime/json.ts";
 import type { ProjectMemorySectionManifest } from "./project-memory-markdown-sections.ts";
 
@@ -111,7 +111,7 @@ export async function writeProjectMemoryHintStatus(
   projectKey: string,
   entries: ProjectMemoryHintStatusEntry[],
 ): Promise<string> {
-  const relativePath = `projects/${projectKey}/state/project-memory-retrieval/hint-status.json`;
+  const relativePath = `state/${projectKey}/project-memory-retrieval/hint-status.json`;
   const absolutePath = resolveInside(root, relativePath);
   await mkdir(dirname(absolutePath), { recursive: true });
   await writeFile(absolutePath, `${stableJson({ schema_version: 1, project_key: projectKey, entries })}\n`, "utf8");
@@ -151,7 +151,7 @@ export async function validateProjectMemoryHintsForManifest(
 }
 
 async function readAllProjectMemoryHintFiles(root: string, projectKey: string): Promise<ProjectMemoryHintFile[]> {
-  const dir = projectPath(root, projectKey, "state", "project-memory-retrieval", "hints");
+  const dir = projectStatePath(root, projectKey, "project-memory-retrieval", "hints");
   let entries: string[];
   try {
     entries = await readdir(dir);
@@ -168,7 +168,7 @@ async function readAllProjectMemoryHintFiles(root: string, projectKey: string): 
 }
 
 function projectMemoryHintRelativePath(projectKey: string, category: string | null): string {
-  return `projects/${projectKey}/state/project-memory-retrieval/hints/${hintCategoryFileName(category)}.json`;
+  return `state/${projectKey}/project-memory-retrieval/hints/${hintCategoryFileName(category)}.json`;
 }
 
 function hintCategoryFileName(category: string | null): string {

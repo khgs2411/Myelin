@@ -50,9 +50,9 @@ export async function checkSchema(root: string, projectKey: string): Promise<Sch
     if (context) {
       const parsed = schemaContextSchema.safeParse(context);
       if (!parsed.success) {
-        errors.push(...formatIssues(`projects/${projectKey}/state/${CONTEXT_FILE}`, parsed.error.issues));
+        errors.push(...formatIssues(`state/${projectKey}/${CONTEXT_FILE}`, parsed.error.issues));
       } else if (stableJson(parsed.data.inputs) !== stableJson(loaded.inputs)) {
-        errors.push(`projects/${projectKey}/state/${CONTEXT_FILE}: inputs are stale; run schema build ${projectKey}`);
+        errors.push(`state/${projectKey}/${CONTEXT_FILE}: inputs are stale; run schema build ${projectKey}`);
       }
     }
   } catch (error) {

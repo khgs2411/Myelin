@@ -152,10 +152,10 @@ test("uninstall is preview-first and preserves checkout state", async () => {
   for (const path of [
     "myelin.config",
     ".env",
-    join("projects", "demo", "wiki", "index.md"),
-    join("state", "memory.db"),
-    join("projects", "demo", "logs", "latest.log"),
-    join("projects", "demo", "runs", "run.json"),
+    join("projects", "demo", "index.md"),
+    join("state", "memory", "memory.db"),
+    join("runs", "demo", "logs", "latest.log"),
+    join("runs", "demo", "run.json"),
   ]) {
     await mkdir(dirname(join(myelinRoot, path)), { recursive: true });
     await writeFile(join(myelinRoot, path), "preserve\n", "utf8");
@@ -170,8 +170,8 @@ test("uninstall is preview-first and preserves checkout state", async () => {
   expect(await Bun.file(locatorPath).exists()).toBe(false);
   expect(await Bun.file(join(binDir, "myelin")).exists()).toBe(false);
   expect(await readFile(join(myelinRoot, "myelin.config"), "utf8")).toBe("preserve\n");
-  expect(await Bun.file(join(myelinRoot, "state", "memory.db")).exists()).toBe(true);
-  expect(await Bun.file(join(myelinRoot, "projects", "demo", "wiki", "index.md")).exists()).toBe(true);
+  expect(await Bun.file(join(myelinRoot, "state", "memory", "memory.db")).exists()).toBe(true);
+  expect(await Bun.file(join(myelinRoot, "projects", "demo", "index.md")).exists()).toBe(true);
 });
 
 test("provider preservation matrix keeps command and provider ownership conservative", async () => {

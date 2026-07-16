@@ -152,7 +152,7 @@ test("auto project memory maintenance run executes maintenance and releases the 
   await writeConfig(["AUTO_PROJECT_MEMORY_MAINTENANCE=1"]);
   const service = new AutoProjectMemoryMaintenanceService(root, {
     now: () => new Date("2026-07-07T10:00:00.000Z"),
-    runMaintenance: async () => ({ status: "completed", changed_files: ["projects/demo/wiki/topic.md"] }),
+    runMaintenance: async () => ({ status: "completed", changed_files: ["projects/demo/topic.md"] }),
   });
 
   const result = await service.run("demo", "auto_project_memory_test");
@@ -162,10 +162,10 @@ test("auto project memory maintenance run executes maintenance and releases the 
     project_key: "demo",
     run_id: "auto_project_memory_test",
     maintenance_status: "completed",
-    changed_files: ["projects/demo/wiki/topic.md"],
+    changed_files: ["projects/demo/topic.md"],
   });
   await expect(
-    Bun.file(join(root, "projects", "demo", "state", ".auto-project-memory-maintenance.lock", "owner.json")).exists(),
+    Bun.file(join(root, "state", "demo", ".auto-project-memory-maintenance.lock", "owner.json")).exists(),
   ).resolves.toBe(false);
   await expect(readState(root, "demo")).resolves.toMatchObject({
     project_key: "demo",

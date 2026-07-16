@@ -1,6 +1,6 @@
-import { mkdir, readFile, readdir, rename, rmdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { projectPath, resolveInside } from "./fs.ts";
+import { projectPath, projectRunsPath, projectSourcesPath, projectStatePath } from "./fs.ts";
 import { readProjectStateIfExists, writeProjectState } from "./state.ts";
 import { writeJson } from "./json.ts";
 
@@ -21,9 +21,6 @@ export type ProjectShellRepairOptions = {
   curated?: boolean;
 };
 
-const REQUIRED_DIRS = ["wiki", "state", "runs"] as const;
-const OPTIONAL_LEGACY_DIRS = ["sources", "schema"] as const;
-
 export async function repairProjectShell(
   root: string,
   projectKey: string,
@@ -33,29 +30,18 @@ export async function repairProjectShell(
   const curated = Boolean(options.curated);
 
   await ensureDirectory(projectPath(root, projectKey), label(projectKey), result);
-  for (const dir of REQUIRED_DIRS) {
-    await ensureDirectory(projectPath(root, projectKey, dir), label(projectKey, dir), result);
-  }
-
-  await moveFileIfDestinationMissing(rootIndexPath(root, projectKey), projectPath(root, projectKey, "wiki", "index.md"), result);
+  await ensureDirectory(projectStatePath(root, projectKey), stateLabel(projectKey), result);
+  await ensureDirectory(projectRunsPath(root, projectKey), runsLabel(projectKey), result);
+  await ensureDirectory(projectSourcesPath(root, projectKey), sourcesLabel(projectKey), result);
+  await ensureDirectory(projectSourcesPath(root, projectKey, "inbox"), sourcesLabel(projectKey, "inbox"), result);
 
   await ensureMarkdownFile(
-    projectPath(root, projectKey, "readme.md"),
-    label(projectKey, "readme.md"),
-    projectReadme(projectKey, options.repoPath, curated),
-    result,
-  );
-  await ensureMarkdownFile(
-    projectPath(root, projectKey, "wiki", "index.md"),
-    label(projectKey, "wiki", "index.md"),
+    projectPath(root, projectKey, "index.md"),
+    label(projectKey, "index.md"),
     wikiIndex(projectKey, curated),
     result,
   );
   await ensureBootstrapState(root, projectKey, result);
-
-  for (const dir of OPTIONAL_LEGACY_DIRS) {
-    await repairOptionalLegacyDirectory(root, projectKey, dir, result);
-  }
 
   return result;
 }
@@ -67,22 +53,8 @@ export async function ensureProjectMemoryBrain(
   runDir: string,
 ): Promise<void> {
   const projectRoot = projectPath(root, projectKey);
-  const wikiRoot = join(projectRoot, "wiki");
-
   await writeGeneratedMarkdown(
-    join(projectRoot, "readme.md"),
-    [
-      `# ${projectKey}`,
-      "",
-      "Project Memory is curated for this project.",
-      "",
-      "- [Wiki](wiki/index.md)",
-      "",
-    ].join("\n"),
-    ["Project Memory has not been curated yet.", "Project Memory is curated for this project."],
-  );
-  await writeGeneratedMarkdown(
-    join(wikiRoot, "index.md"),
+    join(projectRoot, "index.md"),
     [
       "# Project Memory",
       "",
@@ -97,15 +69,15 @@ export async function ensureProjectMemoryBrain(
     ["Project Memory has not been curated yet.", `Curated Project Memory for \`${projectKey}\`.`],
   );
 
-  await writeJson(resolveInside(projectRoot, "state", "project-memory.json"), {
+  await writeJson(projectStatePath(root, projectKey, "project-memory.json"), {
     project_key: projectKey,
     source_run_dir: runDir,
     status: "curated",
     updated_at: now.toISOString(),
   });
-  await writeJson(resolveInside(projectRoot, "state", "pages.json"), {
+  await writeJson(projectStatePath(root, projectKey, "pages.json"), {
     project_key: projectKey,
-    pages: ["readme.md", "wiki/index.md"],
+    pages: ["index.md"],
     updated_at: now.toISOString(),
   });
 
@@ -156,8 +128,8 @@ async function ensureBootstrapState(
   projectKey: string,
   result: ProjectShellRepairResult,
 ): Promise<void> {
-  const path = projectPath(root, projectKey, "state", "bootstrap-state.json");
-  const pathLabel = label(projectKey, "state", "bootstrap-state.json");
+  const path = projectStatePath(root, projectKey, "bootstrap-state.json");
+  const pathLabel = stateLabel(projectKey, "bootstrap-state.json");
 
   if (await exists(path)) {
     result.kept.push(pathLabel);
@@ -169,52 +141,6 @@ async function ensureBootstrapState(
     status: "uncurated",
   });
   result.created.push(pathLabel);
-}
-
-async function repairOptionalLegacyDirectory(
-  root: string,
-  projectKey: string,
-  dir: (typeof OPTIONAL_LEGACY_DIRS)[number],
-  result: ProjectShellRepairResult,
-): Promise<void> {
-  const path = projectPath(root, projectKey, dir);
-  const pathLabel = label(projectKey, dir);
-  const existing = await statIfExists(path);
-  if (!existing) return;
-  if (!existing.isDirectory()) {
-    result.kept.push(pathLabel);
-    return;
-  }
-
-  const entries = await readdir(path);
-  if (entries.length === 0) {
-    await rmdir(path);
-    result.removed.push(pathLabel);
-    return;
-  }
-
-  result.kept.push(pathLabel);
-  result.kept.push(pathLabel);
-}
-
-async function moveFileIfDestinationMissing(
-  from: string,
-  to: string,
-  result: ProjectShellRepairResult,
-): Promise<void> {
-  const source = await statIfExists(from);
-  if (!source) return;
-  if (!source.isFile()) return;
-
-  const destination = await statIfExists(to);
-  if (destination) {
-    result.kept.push(relativeProjectLabel(to));
-    return;
-  }
-
-  await mkdir(dirname(to), { recursive: true });
-  await rename(from, to);
-  result.moved.push({ from: relativeProjectLabel(from), to: relativeProjectLabel(to) });
 }
 
 async function writeMarkdown(path: string, content: string): Promise<void> {
@@ -244,18 +170,6 @@ async function writeGeneratedMarkdown(path: string, content: string, generatedNe
   await writeMarkdown(path, `${content.trimEnd()}${marker}${current.trimEnd()}\n`);
 }
 
-function projectReadme(projectKey: string, repoPath: string | undefined, curated: boolean): string {
-  const lines = [
-    `# ${projectKey}`,
-    "",
-    curated ? "Project Memory is curated for this project." : "Project Memory has not been curated yet.",
-    "",
-  ];
-  if (repoPath) lines.push(`Registered repo: \`${repoPath}\``, "");
-  if (!curated) lines.push(`Run \`myelin project learn ${projectKey}\` to create the project brain.`, "");
-  return lines.join("\n");
-}
-
 function wikiIndex(projectKey: string, curated: boolean): string {
   return [
     "# Project Memory",
@@ -265,18 +179,20 @@ function wikiIndex(projectKey: string, curated: boolean): string {
   ].join("\n");
 }
 
-function rootIndexPath(root: string, projectKey: string): string {
-  return projectPath(root, projectKey, "index.md");
-}
-
 function label(projectKey: string, ...segments: string[]): string {
   return ["projects", projectKey, ...segments].join("/");
 }
 
-function relativeProjectLabel(path: string): string {
-  const marker = "/projects/";
-  const index = path.indexOf(marker);
-  return index === -1 ? path : path.slice(index + 1);
+function stateLabel(projectKey: string, ...segments: string[]): string {
+  return ["state", projectKey, ...segments].join("/");
+}
+
+function sourcesLabel(projectKey: string, ...segments: string[]): string {
+  return ["sources", projectKey, ...segments].join("/");
+}
+
+function runsLabel(projectKey: string, ...segments: string[]): string {
+  return ["runs", projectKey, ...segments].join("/");
 }
 
 async function exists(path: string): Promise<boolean> {

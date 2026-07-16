@@ -4,6 +4,7 @@ import type {
   ProjectMemoryExpectedWrite,
   ProjectMemoryObservedPromotion,
 } from "./project-memory-apply-contracts.ts";
+import { normalizeRecordedProjectPath } from "../runtime/fs.ts";
 
 const SHA256 = /^[a-f0-9]{64}$/;
 const STATUSES = new Set(["staged", "promoting", "recovered", "applied", "failed"]);
@@ -30,12 +31,13 @@ export function assertProjectMemoryApplyJournal(input: {
   if (stagedDir !== "staged") fail("staged_outputs_dir must be staged");
 
   const runDir = safeRelativePath(journal.run_dir, "run_dir");
-  const expectedRunPrefix = `projects/${projectKey}/runs/project-learn/`;
-  if (!runDir.startsWith(expectedRunPrefix) || runDir.slice(expectedRunPrefix.length).includes("/")) {
+  const normalizedRunDir = normalizeRecordedProjectPath(runDir);
+  const expectedRunPrefix = `runs/${projectKey}/project-learn/`;
+  if (!normalizedRunDir.startsWith(expectedRunPrefix) || normalizedRunDir.slice(expectedRunPrefix.length).includes("/")) {
     fail("run_dir does not identify this project's curator run");
   }
   const actualRunDir = relative(input.root, dirname(input.journalPath)).replaceAll("\\", "/");
-  if (actualRunDir !== runDir) fail("run_dir does not match journal location");
+  if (normalizeRecordedProjectPath(actualRunDir) !== normalizedRunDir) fail("run_dir does not match journal location");
 
   if (!Array.isArray(journal.expected_writes)) fail("expected_writes must be an array");
   if (!Array.isArray(journal.observed_promotions)) fail("observed_promotions must be an array");
@@ -104,19 +106,20 @@ function observedPromotion(value: unknown, index: number): ProjectMemoryObserved
 }
 
 function assertCanonicalPath(kind: ProjectMemoryExpectedWrite["write_kind"], path: string, projectKey: string): void {
+  path = normalizeRecordedProjectPath(path);
   const projectPrefix = `projects/${projectKey}/`;
-  if (!path.startsWith(projectPrefix)) fail(`canonical_path is outside project ${projectKey}`);
-  const local = path.slice(projectPrefix.length);
-  if (kind === "wiki_page" && (!local.startsWith("wiki/") || !local.endsWith(".md"))) fail("wiki_page canonical_path is invalid");
-  if (kind === "project_state" && local !== "state/project-memory.json") fail("project_state canonical_path is invalid");
-  if (kind === "repository_identity_state" && local !== "state/repository-identity.json") {
+  const statePrefix = `state/${projectKey}/`;
+  const runsPrefix = `runs/${projectKey}/logs/`;
+  if (kind === "wiki_page" && (!path.startsWith(projectPrefix) || !path.endsWith(".md"))) fail("wiki_page canonical_path is invalid");
+  if (kind === "project_state" && path !== `${statePrefix}project-memory.json`) fail("project_state canonical_path is invalid");
+  if (kind === "repository_identity_state" && path !== `${statePrefix}repository-identity.json`) {
     fail("repository_identity_state canonical_path is invalid");
   }
-  if (kind === "source_consumption_state" && local !== "state/project-memory-source-consumptions.json") {
+  if (kind === "source_consumption_state" && path !== `${statePrefix}project-memory-source-consumptions.json`) {
     fail("source_consumption_state canonical_path is invalid");
   }
-  if (kind === "page_state" && !local.startsWith("state/")) fail("page_state canonical_path is invalid");
-  if (kind === "log" && !local.startsWith("log/")) fail("log canonical_path is invalid");
+  if (kind === "page_state" && !path.startsWith(statePrefix)) fail("page_state canonical_path is invalid");
+  if (kind === "log" && !path.startsWith(runsPrefix)) fail("log canonical_path is invalid");
 }
 
 function safeRelativePath(value: unknown, name: string): string {

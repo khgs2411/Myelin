@@ -5,7 +5,7 @@ The global schema layer — the product-wide instructions and typed rules that t
 ## What lives here
 
 - `global.md` — this guidance (human- and agent-readable intent).
-- `rules/*.json` — hand-authored typed rules, validated by Zod and compiled into `projects/<key>/state/schema-context.json` (shape in `schema-context.md`).
+- `rules/*.json` — hand-authored typed rules, validated by Zod and compiled into `state/<key>/schema-context.json` (shape in `schema-context.md`).
 
 ## Typed rules (Phase 0)
 

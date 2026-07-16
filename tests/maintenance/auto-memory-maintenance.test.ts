@@ -69,7 +69,7 @@ test("auto memory maintenance schedules a detached worker when threshold is reac
   expect(spawned[0].env.MYELIN_CAPTURE_DISABLED).toBe("1");
   expect(spawned[0].env.MYELIN_AUTO_MEMORY_MAINTENANCE_WORKER).toBe("1");
   expect(spawned[0].env.MYELIN_AUTO_MEMORY_RUN_ID).toBeString();
-  await expect(Bun.file(join(root, "projects", "demo", "state", ".auto-memory-maintenance.lock", "owner.json")).exists()).resolves.toBe(true);
+  await expect(Bun.file(join(root, "state", "demo", ".auto-memory-maintenance.lock", "owner.json")).exists()).resolves.toBe(true);
   await expect(readState(root, "demo")).resolves.toMatchObject({
     project_key: "demo",
     last_status: "scheduled",
@@ -109,7 +109,7 @@ test("auto memory maintenance schedules active embedding work below the capture 
     "AUTO_MEMORY_MIN_CAPTURED_EVENTS=25",
     "AUTO_MEMORY_COOLDOWN_MS=0",
   ]);
-  const db = openMemoryDbAt(join(root, "state", "memory.db"));
+  const db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   registerInitialActiveEmbeddingContract(db, {
     scope: "session_memory",
     contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
@@ -237,7 +237,7 @@ test("auto memory maintenance run records completed state when no work remains",
       pending_remaining: 0,
     },
   });
-  await expect(Bun.file(join(root, "projects", "demo", "state", ".auto-memory-maintenance.lock", "owner.json")).exists()).resolves.toBe(false);
+  await expect(Bun.file(join(root, "state", "demo", ".auto-memory-maintenance.lock", "owner.json")).exists()).resolves.toBe(false);
 
   await service.maybeSchedule("demo");
   await expect(readState(root, "demo")).resolves.toMatchObject({
@@ -256,7 +256,7 @@ test("auto memory maintenance keeps SQLite open until asynchronous indexing comp
     "AUTO_MEMORY_MIN_CAPTURED_EVENTS=1",
     `EMBEDDING_STUB_RESPONSES_DIR=${stubDir}`,
   ]);
-  const dbPath = join(root, "state", "memory.db");
+  const dbPath = join(root, "state", "memory", "memory.db");
   const db = openMemoryDbAt(dbPath);
   const memory = createSessionMemory(db, {
     id: "mem_pending",
@@ -391,7 +391,7 @@ test("forced SessionStart worker ingests a below-threshold queue", async () => {
       ingestService: {
         async start(input) {
           starts += 1;
-          const db = openMemoryDbAt(join(root, "state", "memory.db"));
+          const db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
           db.query("DELETE FROM experience_events WHERE project_key = ?").run(input.projectKey);
           db.close();
           return {
@@ -455,7 +455,7 @@ async function writeConfig(lines: string[]): Promise<void> {
 }
 
 function seedExperienceEvents(count: number, offset = 0): void {
-  const db = openMemoryDbAt(join(root, "state", "memory.db"));
+  const db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   try {
     for (let index = 0; index < count; index += 1) {
       const id = `evt_${offset + index + 1}`;

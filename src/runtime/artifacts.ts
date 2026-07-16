@@ -1,8 +1,8 @@
 import { mkdir } from "node:fs/promises";
-import { projectPath, resolveInside } from "./fs.ts";
+import { projectRunsPath, resolveInside } from "./fs.ts";
 
 export function runsRoot(root: string, projectKey: string): string {
-  return projectPath(root, projectKey, "runs");
+  return projectRunsPath(root, projectKey);
 }
 
 export function runDir(root: string, projectKey: string, runId: string, command?: string): string {

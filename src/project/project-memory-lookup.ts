@@ -76,7 +76,7 @@ export async function loadProjectMemoryPages(root: string, projectKey: string): 
 }
 
 export async function loadProjectMemoryCorpus(root: string, projectKey: string): Promise<ProjectMemoryLookupCorpus> {
-  const wikiRoot = projectPath(root, projectKey, "wiki");
+  const wikiRoot = projectPath(root, projectKey);
   if (!(await isDirectory(wikiRoot))) return { pages: [], search_text_by_path: {} };
 
   const files = await markdownFiles(wikiRoot);
@@ -84,7 +84,7 @@ export async function loadProjectMemoryCorpus(root: string, projectKey: string):
   const searchTextByPath: Record<string, string> = {};
   for (const file of files.sort()) {
     const text = await readFile(file, "utf8");
-    const pagePath = `wiki/${relative(wikiRoot, file).replaceAll("\\", "/")}`;
+    const pagePath = relative(wikiRoot, file).replaceAll("\\", "/");
     pages.push({
       path: pagePath,
       title: titleForMarkdown(pagePath, text),
@@ -138,7 +138,7 @@ function scorePage(page: ProjectMemoryPage, terms: string[], fullText?: string):
     if (headingTerms.has(term)) score += 2;
     if (bodyTerms.has(term)) score += 1;
   }
-  if (page.path.endsWith("/index.md")) score += 0.25;
+  if (page.path === "index.md" || page.path.endsWith("/index.md")) score += 0.25;
 
   return {
     path: page.path,
@@ -179,7 +179,7 @@ function lookupResultId(sourceKind: ProjectMemoryLookupSourceKind, sourceId: str
 
 function categoryFor(wikiPath: string): string | null {
   const parts = wikiPath.split("/");
-  return parts.length > 2 ? parts[1] : null;
+  return parts.length > 1 ? parts[0] : null;
 }
 
 function pageSectionId(path: string, title: string): string {

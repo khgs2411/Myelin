@@ -25,22 +25,19 @@ test("bootstrap service creates the project memory shell", async () => {
 
   expect(result.projectKey).toBe("class-kit");
   expect(result.repoPath).toBe(resolve(repo));
-  expect(result.created).toContain("projects/class-kit/state/project.json");
-  expect(result.created).toContain("projects/class-kit/readme.md");
-  expect(result.created).toContain("projects/class-kit/wiki/index.md");
-  expect(result.created).not.toContain("projects/class-kit/index.md");
+  expect(result.created).toContain("state/class-kit/project.json");
+  expect(result.created).toContain("projects/class-kit/index.md");
   expect(result.created).not.toContain("projects/class-kit/schema");
-  expect(result.created).not.toContain("projects/class-kit/sources");
-  expect(await Bun.file(join(root, "projects", "class-kit", "index.md")).exists()).toBe(false);
+  expect(result.created).toContain("sources/class-kit/inbox");
+  expect(await Bun.file(join(root, "projects", "class-kit", "index.md")).exists()).toBe(true);
   expect(await Bun.file(join(root, "projects", "class-kit", "schema")).exists()).toBe(false);
-  expect(await Bun.file(join(root, "projects", "class-kit", "sources")).exists()).toBe(false);
-  expect(await readFile(join(root, "projects", "class-kit", "wiki", "index.md"), "utf8")).toContain(
+  expect(await readFile(join(root, "projects", "class-kit", "index.md"), "utf8")).toContain(
     "Project Memory has not been curated yet.",
   );
-  expect(await Bun.file(join(root, "projects", "class-kit", "runs", "index.md")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "runs", "class-kit", "index.md")).exists()).toBe(false);
   expect(
     await readJson<{ key: string; name: string; repo_paths: string[] }>(
-      join(root, "projects", "class-kit", "state", "project.json"),
+      join(root, "state", "class-kit", "project.json"),
     ),
   ).toEqual({
     key: "class-kit",

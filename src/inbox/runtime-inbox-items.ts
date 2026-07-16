@@ -2,7 +2,7 @@ import { link, mkdir, unlink, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { AutoProjectMemoryMaintenanceService } from "../maintenance/auto-project-memory-maintenance.ts";
 import type { AutoProjectMemoryMaintenanceScheduler } from "../maintenance/maintenance-contracts.ts";
-import { projectPath } from "../runtime/fs.ts";
+import { projectSourcesPath } from "../runtime/fs.ts";
 import { createId } from "../runtime/ids.ts";
 import { stableJson } from "../runtime/json.ts";
 import { findProject } from "../runtime/projects.ts";
@@ -57,7 +57,7 @@ export type CreateRuntimeInboxItemResult =
   | { status: "write_failed"; reason: string };
 
 export function runtimeInboxDir(root: string, projectKey: string): string {
-  return projectPath(root, projectKey, "sources", "inbox");
+  return projectSourcesPath(root, projectKey, "inbox");
 }
 
 export function runtimeInboxItemPath(root: string, projectKey: string, id: string): string {

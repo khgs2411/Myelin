@@ -39,11 +39,11 @@ test("schema service dry run does not write generated state", async () => {
 
   expect(result.wrote).toBe(false);
   expect(result.context.schema_version).toBe("0");
-  await expect(stat(join(root, "projects", "demo", "state", "schema-context.json"))).rejects.toThrow();
+  await expect(stat(join(root, "state", "demo", "schema-context.json"))).rejects.toThrow();
 });
 
 async function seedProject(): Promise<void> {
-  await writeJson(join(root, "projects", "demo", "state", "project.json"), {
+  await writeJson(join(root, "state", "demo", "project.json"), {
     key: "demo",
     name: "Demo",
   });

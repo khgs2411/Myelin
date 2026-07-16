@@ -15,7 +15,7 @@ afterEach(async () => {
 });
 
 test("prepareProjectLogFile prunes project logs to the newest 25 entries", async () => {
-  const logsDir = join(root, "projects", "demo", "logs");
+  const logsDir = join(root, "runs", "demo", "logs");
   await mkdir(logsDir, { recursive: true });
   await writeFile(join(logsDir, "notes.txt"), "not a log\n", "utf8");
 

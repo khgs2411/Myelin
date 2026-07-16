@@ -8,7 +8,7 @@ import type { ProjectCuratorRunPaths } from "../runtime/project-run-infrastructu
 import type { ProjectMemoryCreateModeResult } from "./project-memory-agent-create-service.ts";
 import type { ProjectMemoryCuratorRunResult } from "./project-memory-curator-contracts.ts";
 import type { ProjectMemoryPacket } from "./project-memory-packet.ts";
-import { projectPath } from "../runtime/fs.ts";
+import { projectStatePath } from "../runtime/fs.ts";
 
 export const PROJECT_MEMORY_CREATE_CHECKPOINT_REF = "create-checkpoint.json" as const;
 export const PROJECT_MEMORY_CREATE_CHECKPOINT_CONTRACT_VERSION = 1 as const;
@@ -88,7 +88,7 @@ export async function verifyProjectMemoryCreateCheckpoint(input: {
   if (await Bun.file(resolveInside(input.sourceAbsoluteRunDir, "project-memory-apply-journal.json")).exists()) {
     throw resumeError("source run has a canonical apply journal");
   }
-  const state = await readJsonIfExists<{ source_run_dir?: string }>(projectPath(input.root, input.projectKey, "state", "project-memory.json"));
+  const state = await readJsonIfExists<{ source_run_dir?: string }>(projectStatePath(input.root, input.projectKey, "project-memory.json"));
   if (state?.source_run_dir === input.sourceRunDir) throw resumeError("source run already promoted canonical Project Memory");
 
   const actualDraftFiles = (await listFiles(resolveInside(input.sourceAbsoluteRunDir, "pre-maintenance-wiki")))

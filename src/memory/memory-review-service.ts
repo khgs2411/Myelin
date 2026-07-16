@@ -1,7 +1,7 @@
 import { readdir, stat } from "node:fs/promises";
 import { memoryDbPath, openMemoryDb } from "./db.ts";
 import type { ExperienceEventTombstoneRow, IngestJobRow } from "./ingest-types.ts";
-import { projectPath, resolveInside } from "../runtime/fs.ts";
+import { projectRunsPath, resolveInside } from "../runtime/fs.ts";
 import { readJsonIfExists } from "../runtime/json.ts";
 import type {
   ProjectMemoryAgentCandidateDisposition,
@@ -39,7 +39,7 @@ export class MemoryReviewService {
   }
 
   private async projectMemoryDispositionItems(projectKey: string): Promise<MemoryReviewItem[]> {
-    const runsDir = projectPath(this.root, projectKey, "runs", "project-learn");
+    const runsDir = projectRunsPath(this.root, projectKey, "project-learn");
     let entries: string[];
     try {
       entries = await readdir(runsDir);
@@ -50,7 +50,7 @@ export class MemoryReviewService {
 
     const items: MemoryReviewItem[] = [];
     for (const entry of entries.sort().reverse()) {
-      const runDir = `projects/${projectKey}/runs/project-learn/${entry}`;
+      const runDir = `runs/${projectKey}/project-learn/${entry}`;
       if (!(await isDirectory(resolveInside(this.root, runDir)))) continue;
       const reportRel = `${runDir}/reports/documentation-maintenance-report.json`;
       const reportPath = resolveInside(this.root, reportRel);

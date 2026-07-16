@@ -2,7 +2,7 @@ import type { ProcessLivenessChecker } from "../ingest/runtime.ts";
 import { isProcessAlive } from "../ingest/runtime.ts";
 import type { MaintenanceRunState } from "../maintenance/maintenance-contracts.ts";
 import { MaintenanceRunRuntime } from "../maintenance/maintenance-run-runtime.ts";
-import { projectPath } from "../runtime/fs.ts";
+import { projectStatePath } from "../runtime/fs.ts";
 import { createId } from "../runtime/ids.ts";
 
 export class ProjectMemoryMutationRuntime {
@@ -87,11 +87,11 @@ export class ProjectMemoryMutationRuntime {
 }
 
 export function projectMemoryMutationStatePath(root: string, projectKey: string): string {
-  return projectPath(root, projectKey, "state", "project-memory-mutation.json");
+  return projectStatePath(root, projectKey, "project-memory-mutation.json");
 }
 
 export function projectMemoryMutationLockPath(root: string, projectKey: string): string {
-  return projectPath(root, projectKey, "state", ".project-memory-mutation.lock");
+  return projectStatePath(root, projectKey, ".project-memory-mutation.lock");
 }
 
 function resultFailed(value: unknown): boolean {

@@ -33,7 +33,7 @@ test("builds a normalized contract and resolves project provenance", async () =>
 });
 
 test("missing required SQLite produces a blocked contract without creating the database", async () => {
-  const dbPath = join(root, "state", "memory.db");
+  const dbPath = join(root, "state", "memory", "memory.db");
   const result = await new StatusService(root, { locatorPath: join(root, "machine", "install.json") }).summary({ projectKey: "demo" });
   expect(result.overall_state).toBe("blocked");
   expect(result.warnings.filter((item) => item.code === "ROOT_SQLITE_UNAVAILABLE")).toHaveLength(2);
@@ -42,12 +42,12 @@ test("missing required SQLite produces a blocked contract without creating the d
 
 test("status leaves database bytes unchanged and creates no SQLite sidecars", async () => {
   await seedDb();
-  const dbPath = join(root, "state", "memory.db");
+  const dbPath = join(root, "state", "memory", "memory.db");
   const before = hash(await readFile(dbPath));
-  const sidecarsBefore = (await readdir(join(root, "state"))).filter(isSidecar).sort();
+  const sidecarsBefore = (await readdir(join(root, "state", "memory"))).filter(isSidecar).sort();
   await new StatusService(root, { locatorPath: join(root, "machine", "install.json") }).summary({ projectKey: "demo" });
   const after = hash(await readFile(dbPath));
-  const sidecarsAfter = (await readdir(join(root, "state"))).filter(isSidecar).sort();
+  const sidecarsAfter = (await readdir(join(root, "state", "memory"))).filter(isSidecar).sort();
   expect(after).toBe(before);
   expect(sidecarsAfter).toEqual(sidecarsBefore);
 });
@@ -61,12 +61,12 @@ test("omitted key fails outside registered repos and rejects ambiguous mappings"
 });
 
 async function seedDb(): Promise<void> {
-  const db = openMemoryDbAt(join(root, "state", "memory.db"));
+  const db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   db.close();
 }
 
 async function seedProject(key: string, repo: string): Promise<void> {
-  await writeJson(join(root, "projects", key, "state", "project.json"), { key, name: key === "demo" ? "Demo" : "Other", repo_paths: [repo] });
+  await writeJson(join(root, "state", key, "project.json"), { key, name: key === "demo" ? "Demo" : "Other", repo_paths: [repo] });
   await mkdir(repo, { recursive: true });
 }
 

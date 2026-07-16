@@ -6,7 +6,7 @@ import { discoverIndexedEmbeddingContract, readActiveEmbeddingContract } from ".
 import { ProjectMemoryRetrievalIndexCoordinator } from "../memory/project-memory-retrieval-index-service.ts";
 import { ProjectService } from "../project/project-service.ts";
 import { loadConfig, type AutoProjectMemoryMaintenanceConfig } from "../runtime/config.ts";
-import { projectPath } from "../runtime/fs.ts";
+import { projectSourcesPath, projectStatePath } from "../runtime/fs.ts";
 import { createId } from "../runtime/ids.ts";
 import { prepareProjectLogFile, projectLogPath } from "../runtime/project-logs.ts";
 import {
@@ -347,7 +347,7 @@ export async function writeState(root: string, projectKey: string, state: AutoPr
 }
 
 export function statePath(root: string, projectKey: string): string {
-  return projectPath(root, projectKey, "state", "auto-project-memory-maintenance.json");
+  return projectStatePath(root, projectKey, "auto-project-memory-maintenance.json");
 }
 
 export function autoProjectMemoryLogPath(root: string, projectKey: string, runId: string): string {
@@ -357,7 +357,7 @@ export function autoProjectMemoryLogPath(root: string, projectKey: string, runId
 async function countPendingRuntimeInboxItems(root: string, projectKey: string, db: Database): Promise<number> {
   let entries: string[];
   try {
-    entries = await readdir(projectPath(root, projectKey, "sources", "inbox"));
+    entries = await readdir(projectSourcesPath(root, projectKey, "inbox"));
   } catch (error) {
     if (isNotFound(error)) return 0;
     throw error;
@@ -389,7 +389,7 @@ function runtimeInboxItemId(filename: string): string | null {
 }
 
 function lockPath(root: string, projectKey: string): string {
-  return projectPath(root, projectKey, "state", ".auto-project-memory-maintenance.lock");
+  return projectStatePath(root, projectKey, ".auto-project-memory-maintenance.lock");
 }
 
 function maintenanceRuntime(

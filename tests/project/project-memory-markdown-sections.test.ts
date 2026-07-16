@@ -20,9 +20,9 @@ afterEach(async () => {
 });
 
 test("extracts deterministic page and heading section records", async () => {
-  await mkdir(join(root, "projects", "demo", "wiki", "architecture"), { recursive: true });
+  await mkdir(join(root, "projects", "demo", "architecture"), { recursive: true });
   await writeFile(
-    join(root, "projects", "demo", "wiki", "architecture", "ranking.md"),
+    join(root, "projects", "demo", "architecture", "ranking.md"),
     [
       "# Ranking",
       "",
@@ -44,7 +44,7 @@ test("extracts deterministic page and heading section records", async () => {
 
   expect(first.pages).toHaveLength(1);
   expect(first.pages[0]).toMatchObject({
-    wiki_path: "wiki/architecture/ranking.md",
+    wiki_path: "architecture/ranking.md",
     category: "architecture",
     slug: "ranking",
     title: "Ranking",
@@ -62,13 +62,13 @@ test("extracts deterministic page and heading section records", async () => {
 });
 
 test("writes sections.json under project-memory-retrieval state", async () => {
-  await mkdir(join(root, "projects", "demo", "wiki"), { recursive: true });
-  await writeFile(join(root, "projects", "demo", "wiki", "index.md"), "# Demo\n\nProject memory.\n", "utf8");
+  await mkdir(join(root, "projects", "demo"), { recursive: true });
+  await writeFile(join(root, "projects", "demo", "index.md"), "# Demo\n\nProject memory.\n", "utf8");
 
   const manifest = await extractProjectMemorySections(root, "demo", { now: new Date("2026-06-28T10:00:00.000Z") });
   const written = await writeProjectMemorySectionManifest(root, manifest);
 
-  expect(written).toBe("projects/demo/state/project-memory-retrieval/sections.json");
+  expect(written).toBe("state/demo/project-memory-retrieval/sections.json");
   const stored = await readJsonIfExists(join(root, written));
   expect(stored).toMatchObject({ schema_version: 1, project_key: "demo" });
 });
@@ -81,12 +81,12 @@ test("section extractor sees rendered create page sections", () => {
     "",
     "## SQLite State",
     "",
-    "The root SQLite database lives at state/memory.db.",
+    "The root SQLite database lives at state/memory/memory.db.",
   ].join("\n");
 
   const sections = extractProjectMemorySectionsFromMarkdown({
     projectKey: "llm-wiki",
-    wikiPath: "wiki/storage-retrieval.md",
+    wikiPath: "storage-retrieval.md",
     text: markdown,
   });
 
@@ -98,5 +98,5 @@ test("missing wiki directory returns empty manifest with warning", async () => {
 
   expect(manifest.sections).toEqual([]);
   expect(manifest.pages).toEqual([]);
-  expect(manifest.warnings[0]).toContain("wiki directory missing");
+  expect(manifest.warnings[0]).toContain("Project Memory directory missing");
 });

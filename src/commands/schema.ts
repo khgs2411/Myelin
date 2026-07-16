@@ -27,7 +27,7 @@ export function registerSchemaCommands(cli: Cli, deps: SchemaCommandDeps): void 
       if (parsed.dryRun) return ok(stableJson(result.context));
       return ok(
         result.wrote
-          ? `Wrote projects/${parsed.projectKey}/state/schema-context.json.`
+          ? `Wrote state/${parsed.projectKey}/schema-context.json.`
           : `Schema context already current for ${parsed.projectKey}.`,
       );
     } catch (error) {

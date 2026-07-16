@@ -43,11 +43,11 @@ test("create mode plans subjects, runs subject writers, then publishes agent-aut
   expect(result.artifacts.file_authoring_runs).toContain("agents/create/file-authoring-agent-result.json");
   expect(result.artifacts.file_authoring_runs).toContain("agents/subject-runtime/file-authoring-agent-result.json");
   expect(result.artifacts.file_authoring_runs).toContain("agents/create-index-finalizer/file-authoring-agent-result.json");
-  expect(await readFile(join(root, "projects", "demo", "wiki", "index.md"), "utf8")).toContain("Canonical subjects");
-  expect(await readFile(join(root, "projects", "demo", "wiki", "runtime.md"), "utf8")).toContain("Runtime documentation from subject writer");
-  expect(await readFile(join(root, "projects", "demo", "state", "repository-identity.json"), "utf8"))
+  expect(await readFile(join(root, "projects", "demo", "index.md"), "utf8")).toContain("Canonical subjects");
+  expect(await readFile(join(root, "projects", "demo", "runtime.md"), "utf8")).toContain("Runtime documentation from subject writer");
+  expect(await readFile(join(root, "state", "demo", "repository-identity.json"), "utf8"))
     .toContain('"project_key": "demo"');
-  const state = JSON.parse(await readFile(join(root, "projects", "demo", "state", "project-memory.json"), "utf8"));
+  const state = JSON.parse(await readFile(join(root, "state", "demo", "project-memory.json"), "utf8"));
   expect(state).toMatchObject({
     schema_version: 2,
     status: "curated",
@@ -74,9 +74,9 @@ test("maintenance mode updates documentation and marks pending candidates proces
   await seedProject("curated");
   seedMemoryDb();
   await seedSchema();
-  await mkdir(join(root, "projects", "demo", "wiki"), { recursive: true });
-  await writeFile(join(root, "projects", "demo", "wiki", "index.md"), "# Demo\n\nExisting index.\n", "utf8");
-  await writeFile(join(root, "projects", "demo", "wiki", "runtime.md"), "# Runtime\n\nOld runtime.\n", "utf8");
+  await mkdir(join(root, "projects", "demo"), { recursive: true });
+  await writeFile(join(root, "projects", "demo", "index.md"), "# Demo\n\nExisting index.\n", "utf8");
+  await writeFile(join(root, "projects", "demo", "runtime.md"), "# Runtime\n\nOld runtime.\n", "utf8");
   const db = openMemoryDb(root);
   createMemoryCandidate(db, {
     id: "cand_runtime",
@@ -110,8 +110,8 @@ test("maintenance mode updates documentation and marks pending candidates proces
   expect(result.mode).toBe("maintain");
   expect(result.run_kind).toBe("maintenance");
   expect(result.source_consumptions).toEqual(["project_candidate:cand_runtime"]);
-  expect(await readFile(join(root, "projects", "demo", "wiki", "runtime.md"), "utf8")).toContain("CLI surface");
-  const sourceState = JSON.parse(await readFile(join(root, "projects", "demo", "state", "project-memory-source-consumptions.json"), "utf8"));
+  expect(await readFile(join(root, "projects", "demo", "runtime.md"), "utf8")).toContain("CLI surface");
+  const sourceState = JSON.parse(await readFile(join(root, "state", "demo", "project-memory-source-consumptions.json"), "utf8"));
   expect(sourceState.records[0]).toMatchObject({
     source_ref: "cand_runtime",
     terminal_decision: "applied_to_project_memory",
@@ -125,8 +125,8 @@ test("project maintenance normalizes runtime inbox before agentic curation", asy
   await seedProject("curated");
   seedMemoryDb();
   await seedSchema();
-  await writeFile(join(root, "projects", "demo", "wiki", "index.md"), "# Demo\n\nExisting index.\n", "utf8");
-  await writeFile(join(root, "projects", "demo", "wiki", "runtime.md"), "# Runtime\n\nOld runtime.\n", "utf8");
+  await writeFile(join(root, "projects", "demo", "index.md"), "# Demo\n\nExisting index.\n", "utf8");
+  await writeFile(join(root, "projects", "demo", "runtime.md"), "# Runtime\n\nOld runtime.\n", "utf8");
   const inbox = await createRuntimeInboxItem(root, {
     projectKey: "demo",
     targetLayer: "project",
@@ -159,7 +159,7 @@ test("project maintenance normalizes runtime inbox before agentic curation", asy
   expect(result.run_kind).toBe("maintenance");
   expect(result.artifacts.runtime_inbox_intake).toBe("runtime-inbox-intake.json");
   expect(result.source_consumptions).toEqual([`project_candidate:${candidateId}`]);
-  expect(await readFile(join(root, "projects", "demo", "wiki", "runtime.md"), "utf8")).toContain("CLI surface");
+  expect(await readFile(join(root, "projects", "demo", "runtime.md"), "utf8")).toContain("CLI surface");
   const readDb = openMemoryDb(root);
   expect(getMemoryCandidate(readDb, candidateId)?.status).toBe("processed");
   readDb.close();
@@ -203,7 +203,7 @@ test("review mode runs agents but stops before publishing canonical wiki writes"
   expect(result.status).toBe("needs_review");
   expect(result.stopped_before_writes).toBe(true);
   expect(result.stopped_reason).toBe("review requested");
-  expect(await Bun.file(join(root, "projects", "demo", "wiki", "runtime.md")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "projects", "demo", "runtime.md")).exists()).toBe(false);
 });
 
 test("reports a resumable checkpoint when canonical publication validation fails", async () => {
@@ -361,7 +361,7 @@ test("resumes a verified failed create checkpoint at maintenance and rejects che
   expect(resumed.status).toBe("completed");
   expect(resumed.resumed_from_run).toBe(failed.run_dir);
   expect(resumed.artifacts.resume_source).toBe("resume-source.json");
-  expect(await readFile(join(root, "projects", "demo", "wiki", "runtime.md"), "utf8")).toContain("Maintenance resumed");
+  expect(await readFile(join(root, "projects", "demo", "runtime.md"), "utf8")).toContain("Maintenance resumed");
 });
 
 function completedRetrievalDeps() {
@@ -383,16 +383,16 @@ function completedRetrievalDeps() {
 
 async function seedProject(status: "uncurated" | "curated"): Promise<void> {
   const repoPath = join(root, "repos", "demo");
-  await writeJson(join(root, "projects", "demo", "state", "project.json"), {
+  await writeJson(join(root, "state", "demo", "project.json"), {
     key: "demo",
     name: "Demo",
     repo_paths: [repoPath],
   });
-  await writeJson(join(root, "projects", "demo", "state", "bootstrap-state.json"), { status });
+  await writeJson(join(root, "state", "demo", "bootstrap-state.json"), { status });
   if (status === "curated") {
-    await writeJson(join(root, "projects", "demo", "state", "project-memory.json"), { status: "curated" });
+    await writeJson(join(root, "state", "demo", "project-memory.json"), { status: "curated" });
   }
-  await mkdir(join(root, "projects", "demo", "wiki"), { recursive: true });
+  await mkdir(join(root, "projects", "demo"), { recursive: true });
   await seedRepo(repoPath);
 }
 

@@ -104,8 +104,11 @@ Important runtime variables:
 
 - `src/`: Bun/TypeScript core runtime, CLI commands, schema, query, inbox, and pipeline orchestration.
 - `schema/`: global authored schema inputs.
-- `projects/<key>/`: project memory, wiki pages, state, sources, logs, and runs.
-- `state/`: generated SQLite serving state; ignored, not curated truth.
+- `projects/<key>/`: canonical Project Memory markdown only, flattened for direct Obsidian use.
+- `state/<key>/`: per-project machine state, routing, provenance, freshness, and retrieval metadata.
+- `state/memory/`: generated SQLite serving state; ignored, not curated truth.
+- `sources/<key>/`: preserved project source material and runtime inbox items.
+- `runs/<key>/`: command artifacts and project logs.
 - `docs/`: current product docs, ADRs, and historical archives.
 - `.tasks/`: roadmap task stubs, not implementation plans.
 - `tests/`: Bun test coverage.
@@ -126,8 +129,8 @@ Do not make a local MCP checkout part of the root package graph. Core query beha
 - `memory query <key> "<question>"` is the future multi-layer query facade; in the current slice it queries indexed Session Memory vectors only and uses cached query embeddings.
 - Session Memory vector retrieval requires indexed rows from `myelin memory index session <key>` and fails closed when sqlite-vec, credentials, or the vector index are unavailable. MCP exposure, Current Briefing integration, and non-Session Memory vectorization are deferred.
 - `project learn` verifies schema freshness before learning work.
-- Inbox lockfiles can strand on hard kills; lockfiles live at `projects/<key>/state/.update.lock`.
-- Detached update logs live under `projects/<key>/logs/`.
+- Project lockfiles can strand on hard kills; lockfiles live under `state/<key>/`.
+- Detached project logs live under `runs/<key>/logs/`.
 
 ## System Model
 
@@ -136,9 +139,9 @@ Scope: software repositories only. Do not ingest non-repo content as canonical p
 Treat Myelin as four layers:
 
 - `repo/`: implementation truth
-- source evidence and `sources/`: preserved source material
-- `wiki/`: synthesized human-readable understanding
-- `state/`: machine-readable metadata, routing, provenance, and freshness
+- `sources/<key>/`: preserved source material
+- `projects/<key>/`: synthesized human-readable understanding
+- `state/<key>/`: machine-readable metadata, routing, provenance, and freshness
 
 Default read priority:
 

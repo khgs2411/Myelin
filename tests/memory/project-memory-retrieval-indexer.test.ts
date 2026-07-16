@@ -13,8 +13,8 @@ let db: MemoryDb;
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "myelin-pm-indexer-"));
-  await mkdir(join(root, "projects", "demo", "wiki"), { recursive: true });
-  await writeFile(join(root, "projects", "demo", "wiki", "index.md"), "# Demo\n\nProject memory body.\n\n## Overview\n\nUseful project memory section.\n", "utf8");
+  await mkdir(join(root, "projects", "demo"), { recursive: true });
+  await writeFile(join(root, "projects", "demo", "index.md"), "# Demo\n\nProject memory body.\n\n## Overview\n\nUseful project memory section.\n", "utf8");
   db = openMemoryDb(root);
 });
 
@@ -124,10 +124,10 @@ test("rejects query contracts at the Project Memory document indexing boundary",
 });
 
 test("indexes only valid matching hints with structural section text", async () => {
-  await mkdir(join(root, "projects", "demo", "wiki", "architecture"), { recursive: true });
-  await writeFile(join(root, "projects", "demo", "wiki", "architecture", "ranking.md"), "# Ranking\n\nRanking body.\n\n## Proposal Ranking\n\nRanking detail.\n", "utf8");
+  await mkdir(join(root, "projects", "demo", "architecture"), { recursive: true });
+  await writeFile(join(root, "projects", "demo", "architecture", "ranking.md"), "# Ranking\n\nRanking body.\n\n## Proposal Ranking\n\nRanking detail.\n", "utf8");
   const manifest = await extractProjectMemorySections(root, "demo", { now: new Date("2026-06-28T10:00:00.000Z") });
-  const ranking = manifest.sections.find((section) => section.wiki_path === "wiki/architecture/ranking.md" && section.heading_level > 1);
+  const ranking = manifest.sections.find((section) => section.wiki_path === "architecture/ranking.md" && section.heading_level > 1);
   if (!ranking) throw new Error("missing ranking section");
   await writeProjectMemoryHintFile(root, {
     schema_version: 1,

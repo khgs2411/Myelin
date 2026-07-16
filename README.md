@@ -148,8 +148,10 @@ Session Memory vector retrieval is currently an internal facade. MCP exposure, C
 
 - `src/`: Bun/TypeScript core runtime, CLI commands, query, schema, inbox, and pipeline orchestration.
 - `schema/`: global authored schema inputs for generated project schema context.
-- `projects/`: curated project memory, state, logs, sources, runs, and wiki pages.
-- `state/`: generated SQLite serving state; ignored, not curated truth.
+- `projects/<key>/`: canonical Project Memory markdown only.
+- `state/<key>/`: per-project machine state; `state/memory/` contains the generated SQLite serving layer.
+- `sources/<key>/`: preserved source evidence and runtime inbox items.
+- `runs/<key>/`: command artifacts and project logs.
 - `docs/`: current product docs, ADRs, and historical archives.
 - `.tasks/`: roadmap task stubs, not implementation plans.
 - `tests/`: Bun test coverage for runtime, memory, project, schema, query, and command behavior.

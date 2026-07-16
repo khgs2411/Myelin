@@ -11,9 +11,9 @@ let db: MemoryDb;
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "myelin-pm-index-service-"));
-  await mkdir(join(root, "projects", "demo", "wiki"), { recursive: true });
+  await mkdir(join(root, "projects", "demo"), { recursive: true });
   await writeFile(
-    join(root, "projects", "demo", "wiki", "index.md"),
+    join(root, "projects", "demo", "index.md"),
     "# Demo\n\n## Overview\n\nUseful project memory.\n",
     "utf8",
   );

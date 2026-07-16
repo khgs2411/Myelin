@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { createRunDir, runDir, timestampRunId } from "../../src/runtime/artifacts.ts";
 import { loadConfig, selectEmbeddingContract, selectModelProfile } from "../../src/runtime/config.ts";
-import { resolveInside } from "../../src/runtime/fs.ts";
+import { normalizeRecordedCheckoutPath, resolveInside } from "../../src/runtime/fs.ts";
 import { readJsonIfExists, stableJson, writeJson } from "../../src/runtime/json.ts";
 import { discoverProjects, findProject, projectForRepoPath } from "../../src/runtime/projects.ts";
 import { runProcess, runProcessChecked } from "../../src/runtime/process.ts";
@@ -23,6 +23,11 @@ afterEach(async () => {
 test("safe path resolution rejects traversal outside the repository", () => {
   expect(resolveInside(root, "projects", "demo")).toBe(resolve(root, "projects", "demo"));
   expect(() => resolveInside(root, "..", "outside")).toThrow("escapes repository root");
+});
+
+test("recorded checkout paths normalize legacy project layout locations", () => {
+  expect(normalizeRecordedCheckoutPath(root, "projects/demo/logs/worker.log")).toBe("runs/demo/logs/worker.log");
+  expect(normalizeRecordedCheckoutPath(root, join(root, "projects", "demo", "wiki", "index.md"))).toBe("projects/demo/index.md");
 });
 
 test("JSON writes are deterministic so generated state is reviewable", async () => {
@@ -302,18 +307,18 @@ test("project discovery reads project registry state and resolves cwd ownership"
   const repo = join(root, "repos", "demo");
   await mkdir(join(root, "projects"), { recursive: true });
   await writeFile(join(root, "projects", ".DS_Store"), "finder metadata", "utf8");
-  await writeJson(join(root, "projects", "demo", "state", "project.json"), {
+  await writeJson(join(root, "state", "demo", "project.json"), {
     key: "demo",
     name: "Demo",
     repo_paths: [repo],
   });
-  await writeJson(join(root, "projects", "old-v1", "state", "project.json"), {
+  await writeJson(join(root, "state", "old-v1", "project.json"), {
     key: "old-v1",
     name: "Old V1",
     lifecycle: "legacy",
     repo_paths: [join(root, "repos", "old-v1")],
   });
-  await writeJson(join(root, "projects", "ignored", "state", "other.json"), { key: "ignored" });
+  await writeJson(join(root, "state", "ignored", "other.json"), { key: "ignored" });
 
   const projects = await discoverProjects(root);
 
@@ -336,7 +341,7 @@ test("project discovery reads project registry state and resolves cwd ownership"
 test("project state helpers constrain writes to state JSON files", async () => {
   await writeProjectState(root, "demo", "freshness.json", { stale: false });
 
-  expect(statePath(root, "demo", "freshness.json")).toBe(join(root, "projects", "demo", "state", "freshness.json"));
+  expect(statePath(root, "demo", "freshness.json")).toBe(join(root, "state", "demo", "freshness.json"));
   expect(await readProjectState<{ stale: boolean }>(root, "demo", "freshness.json")).toEqual({ stale: false });
   expect(() => statePath(root, "demo", "../escape.json")).toThrow();
   expect(() => statePath(root, "demo", "freshness.txt")).toThrow("State file must be JSON");
@@ -346,18 +351,18 @@ test("artifact paths are deterministic and reject unsafe run ids", async () => {
   const id = timestampRunId(new Date("2026-06-02T12:34:56.000Z"));
 
   expect(id).toBe("2026-06-02T12-34-56.000Z-run");
-  expect(runDir(root, "demo", id)).toBe(join(root, "projects", "demo", "runs", id));
-  expect(await createRunDir(root, "demo", id)).toBe(join(root, "projects", "demo", "runs", id));
-  expect(await Bun.file(join(root, "projects", "demo", "runs", "index.md")).exists()).toBe(false);
-  expect(await Bun.file(join(root, "projects", "demo", "runs", id, "index.md")).exists()).toBe(false);
+  expect(runDir(root, "demo", id)).toBe(join(root, "runs", "demo", id));
+  expect(await createRunDir(root, "demo", id)).toBe(join(root, "runs", "demo", id));
+  expect(await Bun.file(join(root, "runs", "demo", "index.md")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "runs", "demo", id, "index.md")).exists()).toBe(false);
   expect(runDir(root, "demo", id, "project-learn")).toBe(
-    join(root, "projects", "demo", "runs", "project-learn", id),
+    join(root, "runs", "demo", "project-learn", id),
   );
   expect(await createRunDir(root, "demo", id, "project-learn")).toBe(
-    join(root, "projects", "demo", "runs", "project-learn", id),
+    join(root, "runs", "demo", "project-learn", id),
   );
-  expect(await Bun.file(join(root, "projects", "demo", "runs", "project-learn", "index.md")).exists()).toBe(false);
-  expect(await Bun.file(join(root, "projects", "demo", "runs", "project-learn", id, "index.md")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "runs", "demo", "project-learn", "index.md")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "runs", "demo", "project-learn", id, "index.md")).exists()).toBe(false);
   expect(() => runDir(root, "demo", "../bad")).toThrow("Invalid run id");
   expect(() => runDir(root, "demo", id, "../bad")).toThrow("Invalid run command");
 });

@@ -76,7 +76,7 @@ test("fails closed for missing, unknown, and malformed dispositions", () => {
 test("gives a live maintenance agent an authoritative report contract", async () => {
   const root = await mkdtemp(join(tmpdir(), "myelin-maintenance-root-"));
   const targetRepoDir = await mkdtemp(join(tmpdir(), "myelin-maintenance-target-"));
-  const absoluteRunDir = join(root, "projects", "demo", "runs", "project-learn", "run-1");
+  const absoluteRunDir = join(root, "runs", "demo", "project-learn", "run-1");
   const baseWikiDir = join(absoluteRunDir, "pre-maintenance-wiki");
   await mkdir(baseWikiDir, { recursive: true });
   await writeFile(join(baseWikiDir, "index.md"), "# Demo\n", "utf8");
@@ -85,7 +85,7 @@ test("gives a live maintenance agent an authoritative report contract", async ()
   const result = await runProjectMemoryMaintenanceMode({
     root,
     projectKey: "demo",
-    runDir: "projects/demo/runs/project-learn/run-1",
+    runDir: "runs/demo/project-learn/run-1",
     absoluteRunDir,
     targetRepoDir,
     baseWikiDir,
@@ -130,7 +130,7 @@ test("gives a live maintenance agent an authoritative report contract", async ()
 test("identifies the invalid report artifact and contract", async () => {
   const root = await mkdtemp(join(tmpdir(), "myelin-maintenance-root-"));
   const targetRepoDir = await mkdtemp(join(tmpdir(), "myelin-maintenance-target-"));
-  const absoluteRunDir = join(root, "projects", "demo", "runs", "project-learn", "run-2");
+  const absoluteRunDir = join(root, "runs", "demo", "project-learn", "run-2");
   const baseWikiDir = join(absoluteRunDir, "pre-maintenance-wiki");
   await mkdir(baseWikiDir, { recursive: true });
   await writeFile(join(baseWikiDir, "index.md"), "# Demo\n", "utf8");
@@ -138,7 +138,7 @@ test("identifies the invalid report artifact and contract", async () => {
   const result = await runProjectMemoryMaintenanceMode({
     root,
     projectKey: "demo",
-    runDir: "projects/demo/runs/project-learn/run-2",
+    runDir: "runs/demo/project-learn/run-2",
     absoluteRunDir,
     targetRepoDir,
     baseWikiDir,

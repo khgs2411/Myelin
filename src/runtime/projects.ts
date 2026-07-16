@@ -1,6 +1,6 @@
 import { readdir, stat } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
-import { resolveInside } from "./fs.ts";
+import { projectPath, resolveInside } from "./fs.ts";
 import { readJsonIfExists } from "./json.ts";
 
 export type ProjectConfig = {
@@ -25,28 +25,42 @@ export type ProjectDiscoveryOptions = {
 };
 
 export async function discoverProjects(root: string, options: ProjectDiscoveryOptions = {}): Promise<Project[]> {
-  const projectsDir = resolveInside(root, "projects");
-  let entries: string[];
-
-  try {
-    entries = await readdir(projectsDir);
-  } catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
-      return [];
+  const stateDir = resolveInside(root, "state");
+  const entries = await directoryEntries(stateDir);
+  const projects: Project[] = [];
+  const discovered = new Set<string>();
+  for (const entry of entries.sort()) {
+    const projectStateDir = resolveInside(stateDir, entry);
+    if (!(await stat(projectStateDir)).isDirectory()) continue;
+    const config = await readJsonIfExists<ProjectConfig>(resolveInside(projectStateDir, "project.json"));
+    if (config?.key && (options.includeLegacy || isActiveProject(config))) {
+      projects.push({ key: config.key, dir: projectPath(root, config.key), config });
+      discovered.add(config.key);
     }
-    throw error;
   }
 
-  const projects: Project[] = [];
-  for (const entry of entries.sort()) {
-    const dir = resolveInside(projectsDir, entry);
+  const legacyProjectsDir = resolveInside(root, "projects");
+  for (const entry of (await directoryEntries(legacyProjectsDir)).sort()) {
+    if (discovered.has(entry)) continue;
+    const dir = resolveInside(legacyProjectsDir, entry);
     if (!(await stat(dir)).isDirectory()) continue;
     const config = await readJsonIfExists<ProjectConfig>(resolveInside(dir, "state", "project.json"));
     if (config?.key && (options.includeLegacy || isActiveProject(config))) {
       projects.push({ key: config.key, dir, config });
     }
   }
+
+  projects.sort((a, b) => a.key.localeCompare(b.key));
   return projects;
+}
+
+async function directoryEntries(path: string): Promise<string[]> {
+  try {
+    return await readdir(path);
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return [];
+    throw error;
+  }
 }
 
 export async function findProject(root: string, key: string, options: ProjectDiscoveryOptions = {}): Promise<Project> {

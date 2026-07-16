@@ -68,7 +68,7 @@ test("writes accepted category hint file and preserves raw provider output", asy
   expect(result.status).toBe("completed");
   expect(result.accepted_entries).toBe(1);
   expect(result.rejected_entries).toBe(0);
-  expect(await Bun.file(join(root, "projects", "demo", "state", "project-memory-retrieval", "hints", "architecture.json")).exists()).toBe(true);
+  expect(await Bun.file(join(root, "state", "demo", "project-memory-retrieval", "hints", "architecture.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_ref, "hint-generation-output.json")).exists()).toBe(true);
   expect(await Bun.file(join(root, result.run_ref, "hint-generation-validation.json")).exists()).toBe(true);
   expect(getProjectMemoryHintJob(db, job.id).status).toBe("completed");

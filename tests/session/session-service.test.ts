@@ -9,7 +9,7 @@ let root: string;
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "myelin-session-service-"));
-  await writeJson(join(root, "projects", "trygga", "state", "project.json"), { key: "trygga", name: "Trygga" });
+  await writeJson(join(root, "state", "trygga", "project.json"), { key: "trygga", name: "Trygga" });
 });
 
 afterEach(async () => {

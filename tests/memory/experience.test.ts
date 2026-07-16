@@ -109,7 +109,7 @@ test("tombstones delete raw rows only with terminal output references", () => {
     project_key: "class-kit",
     processed_at: "2026-06-12T10:05:00.000Z",
     terminal_decision: "rejected.no-action",
-    output_references: ["projects/class-kit/state/rejections.json"],
+    output_references: ["state/class-kit/rejections.json"],
   });
 
   expect(listExperienceEvents(db, "class-kit")).toEqual([]);
@@ -303,7 +303,7 @@ test("tombstoned provider identities prevent replayed raw rows", () => {
     project_key: "class-kit",
     processed_at: "2026-06-12T10:05:00.000Z",
     terminal_decision: "memory.candidate",
-    output_references: ["projects/class-kit/state/candidates.json"],
+    output_references: ["state/class-kit/candidates.json"],
   });
 
   const replay = recordExperienceEvent(db, { ...input, id: "evt_2" });
@@ -623,7 +623,7 @@ test("tombstones keep uncertain duplicates when no dedupe identity exists", () =
     project_key: "class-kit",
     processed_at: "2026-06-12T10:05:00.000Z",
     terminal_decision: "rejected.no-action",
-    output_references: ["projects/class-kit/state/rejections.json"],
+    output_references: ["state/class-kit/rejections.json"],
   });
 
   const uncertainReplay = recordExperienceEvent(db, { ...input, id: "evt_2" });

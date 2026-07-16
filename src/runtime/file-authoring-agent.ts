@@ -123,15 +123,15 @@ export function shouldSkipTargetSnapshotPath(relativePath: string, projectKey: s
     "node_modules",
     "state",
   ]);
-  const hasGeneratedProjectRun = parts.some(
-    (part, index) => part === "projects" && parts[index + 2] === "runs",
-  );
+  const hasGeneratedProjectRun = parts.some((part, index) => part === "projects" && parts[index + 2] === "runs");
+  const hasRootGeneratedData = parts[0] === "runs" || parts[0] === "sources";
 
   return (
     parts.some((part) => part === ".DS_Store" || part === ".mcp.json") ||
     parts.some((part) => (part === ".env" || part.startsWith(".env.")) && part !== ".env.example") ||
     parts.some((part) => excludedSegments.has(part)) ||
     hasGeneratedProjectRun ||
+    hasRootGeneratedData ||
     relativePath.startsWith(`projects${sep}${projectKey}${sep}runs${sep}`)
   );
 }

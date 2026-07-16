@@ -25,16 +25,16 @@ test("project service owns layout migration workflow", async () => {
   const result = await service.migrateLayout("demo");
 
   expect(result.projectActions.length).toBeGreaterThan(0);
-  expect(await readFile(join(root, "projects", "demo", "wiki", "index.md"), "utf8")).toBe("# Demo\n");
+  expect(await readFile(join(root, "projects", "demo", "index.md"), "utf8")).toBe("# Demo\n");
 });
 
 test("project service lists active projects unless legacy projects are requested", async () => {
-  await writeJson(join(root, "projects", "active", "state", "project.json"), {
+  await writeJson(join(root, "state", "active", "project.json"), {
     key: "active",
     name: "Active",
     repo_paths: [join(root, "repos", "active")],
   });
-  await writeJson(join(root, "projects", "old-v1", "state", "project.json"), {
+  await writeJson(join(root, "state", "old-v1", "project.json"), {
     key: "old-v1",
     name: "Old V1",
     lifecycle: "legacy",
@@ -72,18 +72,18 @@ test("project service exposes agent-authored project learn", async () => {
   expect(result.artifacts.subject_manifest).toBe("reports/documentation-subject-manifest.json");
   expect(result.artifacts.retrieval_index_result).toBe("project-memory-retrieval-index-result.json");
   expect(result.stopped_before_writes).toBe(false);
-  expect(await readFile(join(root, "projects", "demo", "wiki", "runtime.md"), "utf8")).toContain("Runtime documentation");
+  expect(await readFile(join(root, "projects", "demo", "runtime.md"), "utf8")).toContain("Runtime documentation");
 });
 
 async function seedProject(): Promise<void> {
   const repoPath = join(root, "repos", "demo");
-  await writeJson(join(root, "projects", "demo", "state", "project.json"), {
+  await writeJson(join(root, "state", "demo", "project.json"), {
     key: "demo",
     name: "Demo",
     repo_paths: [repoPath],
   });
-  await writeJson(join(root, "projects", "demo", "state", "bootstrap-state.json"), { status: "uncurated" });
-  await mkdir(join(root, "projects", "demo", "wiki"), { recursive: true });
+  await writeJson(join(root, "state", "demo", "bootstrap-state.json"), { status: "uncurated" });
+  await mkdir(join(root, "projects", "demo"), { recursive: true });
   await mkdir(join(repoPath, "src"), { recursive: true });
   await writeFile(join(repoPath, "README.md"), "# Demo\n", "utf8");
   await writeFile(join(repoPath, "src", "runtime.ts"), "export const runtime = true;\n", "utf8");

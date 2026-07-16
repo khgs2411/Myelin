@@ -79,7 +79,7 @@ Evidence: `src/commands/ingest.ts`, `src/ingest/*`, `src/memory/session-memories
 
 ## Roadmap Step 3: Project Memory Layer
 
-Goal: maintain curated, human-readable project truth in `projects/<key>/wiki/` with machine-readable state and provenance.
+Goal: maintain curated, human-readable project truth in `projects/<key>/` with machine-readable state and provenance under `state/<key>/`.
 
 Project Memory is the first durable curation layer. It should capture what the repo alone does not cheaply reveal: product behavior, feature intent, setup, runbooks, decisions, current state, contradictions, and provenance. It should not become a generic code summarizer, a Session Memory replacement, or a place for unverified free-form agent claims.
 
@@ -118,7 +118,10 @@ Step 3 foundation is complete. Step 3.5 completed transport, retrieval-quality, 
 - [x] `done` ~~Add the V2 runtime durable-memory candidate inbox and Project Memory intake boundary.~~
   - Description: Operators, runtime agents, and future tools can explicitly create project-scoped inbox candidate items that are validated, preserved with provenance, and normalized into `memory_candidates` for `project learn`.
   - Why: Session Memory already creates automated candidates; Project Memory also needs an intentional runtime proposal path that shares the same downstream curator lifecycle without making Session Memory or the tool layer own Project Memory writes.
-  - Progress: implemented on 2026-06-28. `memory inbox create` writes immutable Project runtime inbox JSON under `projects/<key>/sources/inbox/<id>.json`, `memory inbox intake` normalizes valid items into idempotent `needs_review` `project.inbox` candidates, and `project learn` runs the same intake service after source-consumption reconciliation and before packet construction.
+  - Progress: implemented on 2026-06-28. `memory inbox create` writes immutable Project runtime inbox JSON under `sources/<key>/inbox/<id>.json`, `memory inbox intake` normalizes valid items into idempotent `needs_review` `project.inbox` candidates, and `project learn` runs the same intake service after source-consumption reconciliation and before packet construction.
+- [x] `done` ~~Flatten Project Memory into an Obsidian-ready project root and move generated data to ownership-specific roots.~~
+  - Description: Canonical markdown lives directly under `projects/<key>/`; per-project machine state lives under `state/<key>/`; preserved source evidence lives under `sources/<key>/`; run artifacts and logs live under `runs/<key>/`; the shared SQLite database lives at `state/memory/memory.db`.
+  - Progress: implemented on 2026-07-16 with idempotent, collision-safe `project migrate-layout` support and legacy recorded-run path compatibility.
     Completed markdown-apply acceptance evidence:
 
 - [x] ~~Proposed markdown changes are bounded to known pages or explicit new-page requests.~~
@@ -132,7 +135,7 @@ Step 3 foundation is complete. Step 3.5 completed transport, retrieval-quality, 
 
 Completed runtime-inbox/intake acceptance evidence:
 
-- [x] Runtime inbox item files are preserved as pretty JSON under `projects/<key>/sources/inbox/<id>.json`.
+- [x] Runtime inbox item files are preserved as pretty JSON under `sources/<key>/inbox/<id>.json`.
 - [x] Runtime inbox creation creates lazy source indexes and does not create candidate rows.
 - [x] Unsupported layers, invalid input, unknown projects, and duplicate ids fail before unsafe source writes.
 - [x] Intake creates exactly one `needs_review` `project.inbox` candidate per valid Project runtime inbox item.
@@ -251,7 +254,7 @@ Creation mode should not be candidate-driven. It should use candidates and Sessi
   - Description: After deterministic validation passes, run a separate model-backed critique over the rendered markdown and evidence map before `project-memory.json` can mark the project curated.
   - Why: The failed dogfood was a usefulness failure, not only a schema or citation failure.
 - [x] `done` ~~Support explicit clean rebootstrap reset for untrusted create/dogfood runs.~~
-  - Description: Allow an operator-selected reset path to delete and recreate the project shell while preserving the repo-root `state/memory.db` continuity layer.
+  - Description: Allow an operator-selected reset path to delete and recreate the project shell while preserving the repo-root `state/memory/memory.db` continuity layer.
   - Why: Untrusted project-shell files are replaceable; Session Memory and Memory Candidates in SQLite should seed the clean first-create run.
 - [x] `done` ~~Reject generic summaries in create mode.~~
   - Description: Treat broad role-shaped prose without concrete repo paths, commands, state files, flows, and gotchas as shallow even when it has citations.
@@ -274,7 +277,7 @@ The product correction was to stop enforcing a fixed page taxonomy and move the 
   - Description: `project learn <key>` runs create mode for uncurated projects, promotes the draft wiki, then runs maintenance over pending Project Memory leads before publishing the final canonical wiki.
   - Why: A first run should produce a full baseline and immediately reconcile the leads created during the run.
 - [x] `done` ~~Keep Project Memory docs as canonical markdown and retrieval/index state as derived.~~
-  - Description: Draft wiki output is promoted into `projects/<key>/wiki/`; section manifests, vector rows, FTS rows, and hint metadata remain rebuildable serving state.
+  - Description: Draft wiki output is promoted directly into `projects/<key>/`; section manifests, vector rows, FTS rows, and hint metadata remain rebuildable serving state.
   - Why: Future agents should trust markdown, not SQLite retrieval rows.
 
 Evidence: `src/project/project-memory-agent-create-service.ts`, `src/project/project-memory-agent-maintenance-service.ts`, `src/project/project-memory-curator-service.ts`, `src/runtime/file-authoring-agent.ts`, `tests/project/project-memory-curator-service.test.ts`
@@ -399,7 +402,7 @@ Class Kit and Droplet Bot exercise complementary paths. Class Kit already has su
 - [x] `done` ~~Rebootstrap Class Kit from preserved continuity.~~
   - Description: Re-register and rebuild the Class Kit project shell, then run the product loop from the beginning while preserving its existing Session Memory, captured evidence, and connected hook history in root SQLite.
   - Why: An established repository should be able to recreate Project Memory without discarding the continuity Myelin has already earned.
-  - Progress: Completed on 2026-07-15. Class Kit now has curated, queryable Project Memory rebuilt from the continuity-rich project baseline, and the reliability findings exposed by the external run were closed before acceptance.
+  - Progress: Completed on 2026-07-15. The installed product recreated a curated Project Memory from the continuity-rich Class Kit baseline, retained correct repository identity, and returned Project-layer answers for destructive product reset and member auto-approval. Progress, retry, managed-version, repository-isolation, authoring-coverage, publication, and retrieval findings exposed by the run were closed before this baseline was accepted.
 - [ ] `next` Bootstrap Droplet Bot as a clean Wizepal project.
   - Description: Register Droplet Bot as a new project with no pre-existing project-scoped SQLite memory, then run the same first-create and maintenance path from a genuinely clean state.
   - Why: A clean initialization exposes first-run assumptions that an established project with accumulated memory can hide.
@@ -407,9 +410,11 @@ Class Kit and Droplet Bot exercise complementary paths. Class Kit already has su
 - [ ] `open` Run the full external-project dogfood across both paths.
   - Description: Use the installed command and public CLI/JSON contracts to run create, query, maintenance, and auto-maintenance for Class Kit and Droplet Bot, then ask real Project and Session Memory questions before touching either repo directly.
   - Why: Comparing continuity-rich rebootstrap with clean initialization tests both sides of the operator product boundary.
+  - Progress: The continuity-rich Class Kit create and Project Memory query path now passes. The clean Droplet Bot path and the cross-path maintenance and auto-maintenance comparison remain.
 - [ ] `open` Close external-dogfood findings and repeat the product loop.
   - Description: Incorporate material findings from both external runs and repeat the affected workflows until normal use no longer depends on the Myelin checkout or internal serving-state inspection.
   - Why: External dogfood is a reliability gate, not a one-time demonstration.
+  - Progress: Class Kit findings have been closed through an accepted recreated and queryable baseline; this item remains open for Droplet Bot findings and the final repeated comparison.
 
 ## Roadmap Step 13: Core Agent-Facing Facades And Current Briefing
 

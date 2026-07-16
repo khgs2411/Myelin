@@ -88,12 +88,12 @@ test("project list rejects unknown options", async () => {
 
 test("project packet emits a read-only Project Memory packet", async () => {
   await seedProject("active", "active");
-  await writeJson(join(root, "projects", "active", "state", "bootstrap-state.json"), {
+  await writeJson(join(root, "state", "active", "bootstrap-state.json"), {
     status: "uncurated",
     missing: ["curated_project_memory"],
   });
-  await mkdir(join(root, "projects", "active", "wiki"), { recursive: true });
-  await writeFile(join(root, "projects", "active", "wiki", "index.md"), "# Project Memory\n\nShell only.\n", "utf8");
+  await mkdir(join(root, "projects", "active"), { recursive: true });
+  await writeFile(join(root, "projects", "active", "index.md"), "# Project Memory\n\nShell only.\n", "utf8");
   const cli = createCli("myelin");
   registerProjectCommands(cli);
 
@@ -108,9 +108,9 @@ test("project packet emits a read-only Project Memory packet", async () => {
   expect(packet.project_key).toBe("active");
   expect(packet.wiki.page_count).toBe(1);
   expect(packet.degraded_reasons).toContain(
-    "state/memory.db is missing; Session Memory and pending handoff inputs are unavailable",
+    "state/memory/memory.db is missing; Session Memory and pending handoff inputs are unavailable",
   );
-  expect(await Bun.file(join(root, "state", "memory.db")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "state", "memory", "memory.db")).exists()).toBe(false);
 });
 
 test("project packet rejects unknown options and missing project keys", async () => {
@@ -140,11 +140,11 @@ test("project reset requires explicit clean confirmation", async () => {
 test("project reset clean rebootstrap preserves root memory db", async () => {
   await seedProject("active", "active");
   await mkdir(join(root, "repos", "active"), { recursive: true });
-  await mkdir(join(root, "state"), { recursive: true });
-  await writeFile(join(root, "state", "memory.db"), "memory", "utf8");
-  await mkdir(join(root, "projects", "active", "wiki"), { recursive: true });
-  await writeFile(join(root, "projects", "active", "wiki", "old.md"), "# Old\n", "utf8");
-  await writeJson(join(root, "projects", "active", "state", "project-memory.json"), { status: "curated" });
+  await mkdir(join(root, "state", "memory"), { recursive: true });
+  await writeFile(join(root, "state", "memory", "memory.db"), "memory", "utf8");
+  await mkdir(join(root, "projects", "active"), { recursive: true });
+  await writeFile(join(root, "projects", "active", "old.md"), "# Old\n", "utf8");
+  await writeJson(join(root, "state", "active", "project-memory.json"), { status: "curated" });
   const cli = createCli("myelin");
   registerProjectCommands(cli);
 
@@ -157,10 +157,10 @@ test("project reset clean rebootstrap preserves root memory db", async () => {
     reset_scope: "project_shell",
     bootstrap_status: "rebootstrapped",
   });
-  expect(await readFile(join(root, "state", "memory.db"), "utf8")).toBe("memory");
-  expect(await Bun.file(join(root, "projects", "active", "wiki", "old.md")).exists()).toBe(false);
-  expect(await Bun.file(join(root, "projects", "active", "state", "project-memory.json")).exists()).toBe(false);
-  expect(await Bun.file(join(root, "projects", "active", "state", "bootstrap-state.json")).exists()).toBe(true);
+  expect(await readFile(join(root, "state", "memory", "memory.db"), "utf8")).toBe("memory");
+  expect(await Bun.file(join(root, "projects", "active", "old.md")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "state", "active", "project-memory.json")).exists()).toBe(false);
+  expect(await Bun.file(join(root, "state", "active", "bootstrap-state.json")).exists()).toBe(true);
 });
 
 test("project learn routes through agent-authored create plus maintenance", async () => {
@@ -189,7 +189,7 @@ test("project learn routes through agent-authored create plus maintenance", asyn
   expect(response.artifacts.apply_journal).toBe("project-memory-apply-journal.json");
   expect(response.stopped_before_writes).toBe(false);
   expect(await readFile(join(root, response.run_dir, "summary.md"), "utf8")).toContain("run_kind: create_then_maintenance");
-  expect(await readFile(join(root, "projects", "active", "wiki", "runtime.md"), "utf8")).toContain("Runtime documentation");
+  expect(await readFile(join(root, "projects", "active", "runtime.md"), "utf8")).toContain("Runtime documentation");
   expect(progressEvents).toEqual([]);
 });
 
@@ -274,7 +274,7 @@ test("project learn exposes an explicit resume option and rejects incompatible m
 });
 
 async function seedProject(key: string, lifecycle: "active" | "legacy"): Promise<void> {
-  await writeJson(join(root, "projects", key, "state", "project.json"), {
+  await writeJson(join(root, "state", key, "project.json"), {
     key,
     name: key,
     lifecycle,
@@ -284,13 +284,13 @@ async function seedProject(key: string, lifecycle: "active" | "legacy"): Promise
 
 async function seedLearnProject(key: string): Promise<void> {
   const repoPath = join(root, "repos", key);
-  await writeJson(join(root, "projects", key, "state", "project.json"), {
+  await writeJson(join(root, "state", key, "project.json"), {
     key,
     name: key,
     repo_paths: [repoPath],
   });
-  await writeJson(join(root, "projects", key, "state", "bootstrap-state.json"), { status: "uncurated" });
-  await mkdir(join(root, "projects", key, "wiki"), { recursive: true });
+  await writeJson(join(root, "state", key, "bootstrap-state.json"), { status: "uncurated" });
+  await mkdir(join(root, "projects", key), { recursive: true });
   await mkdir(join(repoPath, "src"), { recursive: true });
   await writeFile(join(repoPath, "README.md"), `# ${key}\n`, "utf8");
   await writeFile(join(repoPath, "src", "runtime.ts"), "export const runtime = true;\n", "utf8");

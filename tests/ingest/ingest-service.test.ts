@@ -79,7 +79,7 @@ test.each([
 async function seedProject(): Promise<void> {
   const repo = join(root, "repos", "demo");
   await mkdir(repo, { recursive: true });
-  await writeJson(join(root, "projects", "demo", "state", "project.json"), {
+  await writeJson(join(root, "state", "demo", "project.json"), {
     key: "demo",
     name: "Demo",
     repo_paths: [repo],

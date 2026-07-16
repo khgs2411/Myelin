@@ -48,11 +48,11 @@ test("hydrates vector hits from current canonical markdown sections", async () =
   expect(result.matches).toHaveLength(1);
   expect(result.matches[0]).toMatchObject({
     retrieval_row_id: rowId,
-    wiki_path: "wiki/setup/index.md",
+    wiki_path: "setup/index.md",
     section_id: "setup",
     return_kind: "inline_content",
     content: "Project setup uses the myelin CLI.",
-    citation: "project_memory:wiki/setup/index.md#setup",
+    citation: "project_memory:setup/index.md#setup",
   });
   const log = db.query("SELECT * FROM project_memory_query_logs").get() as {
     project_key: string;
@@ -84,7 +84,7 @@ test("hydrates vector hits from current canonical markdown sections", async () =
 test("hydrates sectioned Project Memory markdown for storage retrieval questions", async () => {
   await writeWikiPage(
     "storage-retrieval.md",
-    "# Storage Retrieval\n\nProject Memory storage notes.\n\n## SQLite State\n\nThe project stores durable retrieval state in state/memory.db and resolves hits back to markdown sections.\n",
+    "# Storage Retrieval\n\nProject Memory storage notes.\n\n## SQLite State\n\nThe project stores durable retrieval state in state/memory/memory.db and resolves hits back to markdown sections.\n",
   );
   const rowId = await indexedRetrievalRow("storage-retrieval.md", "storage-retrieval/sqlite-state");
 
@@ -103,12 +103,12 @@ test("hydrates sectioned Project Memory markdown for storage retrieval questions
   expect(result.degraded).toBe(false);
   expect(result.matches[0]).toMatchObject({
     retrieval_row_id: rowId,
-    wiki_path: "wiki/storage-retrieval.md",
+    wiki_path: "storage-retrieval.md",
     section_id: "storage-retrieval/sqlite-state",
     return_kind: "inline_content",
-    citation: "project_memory:wiki/storage-retrieval.md#storage-retrieval/sqlite-state",
+    citation: "project_memory:storage-retrieval.md#storage-retrieval/sqlite-state",
   });
-  expect(result.matches[0]?.content ?? "").toContain("state/memory.db");
+  expect(result.matches[0]?.content ?? "").toContain("state/memory/memory.db");
 });
 
 test("fetches a broader vector recall set before returning the requested limit", async () => {
@@ -279,7 +279,7 @@ test("returns canonical reference instead of inline content when section is too 
     retrieval_row_id: rowId,
     return_kind: "reference",
     reference_reason: "too_large",
-    citation: "project_memory:wiki/setup/index.md#setup",
+    citation: "project_memory:setup/index.md#setup",
   });
   expect(result.matches[0].content).toBeUndefined();
 });
@@ -346,7 +346,7 @@ test("does not return stale inline content when current markdown hash differs", 
     retrieval_row_id: rowId,
     return_kind: "reference",
     reference_reason: "stale_hash",
-    citation: "project_memory:wiki/setup/index.md#setup",
+    citation: "project_memory:setup/index.md#setup",
   });
   expect(result.matches[0].content).toBeUndefined();
 });
@@ -370,11 +370,11 @@ test("returns degraded canonical reference when markdown section is missing", as
   expect(result.degraded).toBe(true);
   expect(result.matches[0]).toMatchObject({
     retrieval_row_id: rowId,
-    wiki_path: "wiki/setup/index.md",
+    wiki_path: "setup/index.md",
     section_id: "setup",
     return_kind: "reference",
     reference_reason: "missing_markdown",
-    citation: "project_memory:wiki/setup/index.md#setup",
+    citation: "project_memory:setup/index.md#setup",
   });
   expect(result.matches[0].content).toBeUndefined();
 });
@@ -422,14 +422,14 @@ test("keeps both subjects in the result set for compound questions", async () =>
 });
 
 async function writeWikiPage(path: string, text: string): Promise<void> {
-  const absolutePath = join(root, "projects", "demo", "wiki", path);
+  const absolutePath = join(root, "projects", "demo", path);
   await mkdir(dirname(absolutePath), { recursive: true });
   await writeFile(absolutePath, text, "utf8");
 }
 
 async function indexedRetrievalRow(pagePath: string, sectionId: string): Promise<string> {
   const manifest = await extractProjectMemorySections(root, "demo");
-  const section = manifest.sections.find((item) => item.wiki_path === `wiki/${pagePath}` && item.section_id === sectionId);
+  const section = manifest.sections.find((item) => item.wiki_path === pagePath && item.section_id === sectionId);
   if (!section) throw new Error(`missing section fixture: ${pagePath}#${sectionId}`);
   const row = ensurePendingProjectMemoryRetrievalEmbedding(db, {
     project_key: "demo",
