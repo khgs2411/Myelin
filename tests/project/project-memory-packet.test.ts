@@ -47,6 +47,17 @@ test("builds a bounded Project Memory packet with pending inputs and determinist
   expect(packet.pending.project_candidates.find((candidate) => candidate.id === "cand_1")).toMatchObject({
     priority: "normal",
     producer_kind: "normalized",
+    evidence: {
+      observed_facts: ["Bootstrap shell repair is part of project setup."],
+      relevant_paths: ["src/runtime/project-shell.ts"],
+      uncertainties: [],
+    },
+    proposed_payload: {
+      durable_facts: ["Project bootstrap repairs the canonical shell."],
+      change_kind: "architecture.setup",
+      suggested_subjects: ["project setup"],
+      verification_needed: ["Verify the runtime implementation."],
+    },
   });
   expect(packet.pending.project_handoffs[0]).toMatchObject({
     priority: "normal",
@@ -94,6 +105,19 @@ test("does not create a memory database when packet inputs are unavailable", asy
     "state/memory/memory.db is missing; Session Memory and pending handoff inputs are unavailable",
   );
   expect(await Bun.file(join(root, "state", "memory", "memory.db")).exists()).toBe(false);
+});
+
+test("uses maintain mode for a legacy degraded canonical baseline", async () => {
+  await seedProject();
+  await writeJson(join(root, "state", "demo", "project-memory.json"), {
+    schema_version: 2,
+    status: "degraded",
+    maintenance: { status: "degraded" },
+  });
+
+  const packet = await buildProjectMemoryPacket(root, "demo");
+
+  expect(packet.mode).toBe("maintain");
 });
 
 async function seedProject(): Promise<void> {
@@ -155,8 +179,17 @@ async function seedMemoryDb(): Promise<void> {
       title: "Bootstrap shell repair",
       summary: "Bootstrap shell repair should be captured in Project Memory.",
       source_event_refs: ["tomb_1"],
-      evidence: {},
-      proposed_payload: {},
+      evidence: {
+        observed_facts: ["Bootstrap shell repair is part of project setup."],
+        relevant_paths: ["src/runtime/project-shell.ts"],
+        uncertainties: [],
+      },
+      proposed_payload: {
+        durable_facts: ["Project bootstrap repairs the canonical shell."],
+        change_kind: "architecture.setup",
+        suggested_subjects: ["project setup"],
+        verification_needed: ["Verify the runtime implementation."],
+      },
       confidence: "medium",
       risk: "low",
       reason: "Durable project setup behavior",

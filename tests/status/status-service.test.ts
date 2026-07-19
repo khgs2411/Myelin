@@ -40,6 +40,27 @@ test("missing required SQLite produces a blocked contract without creating the d
   expect(await Bun.file(dbPath).exists()).toBe(false);
 });
 
+test("keeps a legacy degraded maintenance result eligible as a curated baseline", async () => {
+  await seedDb();
+  await mkdir(join(root, "projects", "demo"), { recursive: true });
+  await writeFile(join(root, "projects", "demo", "index.md"), "# Demo\n\nCanonical Project Memory.\n", "utf8");
+  await writeJson(join(root, "state", "demo", "project-memory.json"), {
+    schema_version: 2,
+    status: "degraded",
+    maintenance: {
+      status: "degraded",
+      degraded_reasons: ["A prior maintenance run could not verify one candidate."],
+    },
+  });
+
+  const result = await new StatusService(root, { locatorPath: join(root, "machine", "install.json") })
+    .summary({ projectKey: "demo" });
+
+  expect(result.project_memory.curation.lifecycle).toBe("curated_with_degraded_maintenance");
+  expect(result.warnings.map((item) => item.code)).toContain("PROJECT_LATEST_MAINTENANCE_DEGRADED");
+  expect(result.warnings.map((item) => item.code)).not.toContain("PROJECT_CURATION_NOT_READY");
+});
+
 test("status leaves database bytes unchanged and creates no SQLite sidecars", async () => {
   await seedDb();
   const dbPath = join(root, "state", "memory", "memory.db");

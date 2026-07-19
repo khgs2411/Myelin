@@ -59,6 +59,7 @@ import {
   writeProjectMemoryCreateCheckpoint,
 } from "./project-memory-create-checkpoint.ts";
 import { emitProjectLearnProgress } from "./project-learn-progress.ts";
+import { hasCuratedProjectMemoryBaseline } from "./project-memory-state.ts";
 export type {
   ProjectMemoryCuratorServiceDependencies,
   ProjectMemoryPostApplyRetrievalLifecycle,
@@ -719,7 +720,7 @@ export class ProjectMemoryCuratorService {
   }): Promise<void> {
     const statePath = projectStatePath(this.root, input.projectKey, "project-memory.json");
     const state = await readJsonIfExists<Record<string, unknown>>(statePath);
-    if (!state || state.status !== "curated") return;
+    if (!hasCuratedProjectMemoryBaseline(state)) return;
 
     await writeJson(statePath, {
       ...state,
@@ -825,7 +826,7 @@ function agentState(input: {
   return {
     schema_version: 2,
     project_key: input.input.projectKey,
-    status: maintenance?.status === "degraded" ? "degraded" : "curated",
+    status: "curated",
     source_run_dir: input.run.relative_run_dir,
     updated_at: input.now.toISOString(),
     provider_mode: providerModeFor(input.input),
@@ -898,8 +899,11 @@ function candidateSource(candidate: PacketCandidate): ProjectMemoryMaintenancePe
   return {
     source_kind: "project_candidate",
     source_ref: candidate.id,
+    candidate_type: candidate.candidate_type,
     title: candidate.title,
     summary: candidate.summary,
+    evidence: candidate.evidence,
+    proposed_payload: candidate.proposed_payload,
     priority: candidate.priority,
     reason: candidate.reason,
   };
@@ -918,18 +922,12 @@ function handoffSource(handoff: PacketHandoff): ProjectMemoryMaintenancePendingS
 
 function modeForInput(input: RunProjectMemoryCuratorInput, packet: ProjectMemoryPacket): ProjectMemoryCuratorMode {
   if (input.recreate) return "create";
-  return statusOf(packet.state.project_memory) === "curated" ? "maintain" : "create";
+  return hasCuratedProjectMemoryBaseline(packet.state.project_memory) ? "maintain" : "create";
 }
 
 function runKindForInput(input: RunProjectMemoryCuratorInput, packet: ProjectMemoryPacket): ProjectMemoryAgentRunKind {
   if (input.recreate) return "recreate";
-  return statusOf(packet.state.project_memory) === "curated" ? "maintenance" : "create_then_maintenance";
-}
-
-function statusOf(value: unknown): string | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const status = (value as { status?: unknown }).status;
-  return typeof status === "string" ? status : null;
+  return hasCuratedProjectMemoryBaseline(packet.state.project_memory) ? "maintenance" : "create_then_maintenance";
 }
 
 function successValidation(projectKey: string, mode: ProjectMemoryCuratorMode): ProjectMemoryCuratorValidationResult {

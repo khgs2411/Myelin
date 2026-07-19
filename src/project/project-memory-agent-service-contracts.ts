@@ -44,8 +44,11 @@ export type ProjectMemoryCreateModeResult = {
 export type ProjectMemoryMaintenancePendingSource = {
   source_kind: "project_candidate" | "project_handoff";
   source_ref: string;
+  candidate_type?: string;
   title?: string | null;
   summary: string;
+  evidence?: Record<string, unknown>;
+  proposed_payload?: Record<string, unknown>;
   priority?: string;
   reason?: string;
 };

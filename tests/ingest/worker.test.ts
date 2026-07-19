@@ -295,8 +295,17 @@ test("candidate output stores source refs and finalizes the referenced tombstone
           status: "needs_review",
           candidate_type: "session.continuity",
           summary: "Possible risky session summary.",
-          evidence: { tombstones: ["tomb_1"] },
-          proposed_payload: { summary: "Possible risky session summary." },
+          evidence: {
+            observed_facts: ["The source contains a potentially useful session detail."],
+            relevant_paths: [],
+            uncertainties: ["The detail requires review before trust."],
+          },
+          proposed_payload: {
+            durable_facts: ["Preserve the reviewed continuity detail if verified."],
+            change_kind: "session.continuity",
+            suggested_subjects: [],
+            verification_needed: ["Review the source tombstone."],
+          },
           confidence: "medium",
           risk: "medium",
           reason: "Ambiguous evidence",
@@ -472,8 +481,17 @@ test("worker schedules project memory auto-maintenance after creating project ca
             status: "needs_review",
             candidate_type: "project.documentation",
             summary: "Project documentation should mention auto maintenance.",
-            evidence: { tombstones: ["tomb_job_1_evt_1"] },
-            proposed_payload: { summary: "Project documentation should mention auto maintenance." },
+            evidence: {
+              observed_facts: ["Project candidates schedule Project Memory maintenance."],
+              relevant_paths: ["src/maintenance/auto-project-memory-maintenance.ts"],
+              uncertainties: [],
+            },
+            proposed_payload: {
+              durable_facts: ["Project candidate creation triggers the maintenance scheduler."],
+              change_kind: "runtime.maintenance",
+              suggested_subjects: ["Project Memory maintenance"],
+              verification_needed: ["Verify the scheduler call path."],
+            },
             confidence: "medium",
             risk: "low",
             reason: "Durable project behavior was discussed.",
@@ -594,8 +612,17 @@ test("output application ignores unclaimable tombstone refs and preserves valid 
           status: "needs_review",
           candidate_type: "session.continuity",
           summary: "Keep the valid source ref.",
-          evidence: {},
-          proposed_payload: {},
+          evidence: {
+            observed_facts: ["One valid tombstone reference remains."],
+            relevant_paths: [],
+            uncertainties: [],
+          },
+          proposed_payload: {
+            durable_facts: ["Keep only valid source references."],
+            change_kind: "session.continuity",
+            suggested_subjects: [],
+            verification_needed: [],
+          },
           confidence: "low",
           risk: "medium",
           reason: "Missing tombstone was ignored",
@@ -607,8 +634,17 @@ test("output application ignores unclaimable tombstone refs and preserves valid 
           status: "needs_review",
           candidate_type: "session.continuity",
           summary: "No valid source refs.",
-          evidence: {},
-          proposed_payload: {},
+          evidence: {
+            observed_facts: ["No claimable tombstone reference exists."],
+            relevant_paths: [],
+            uncertainties: ["The source cannot be verified."],
+          },
+          proposed_payload: {
+            durable_facts: ["Do not persist an unreferenced candidate."],
+            change_kind: "session.continuity",
+            suggested_subjects: [],
+            verification_needed: ["Recover a valid source reference."],
+          },
           confidence: "low",
           risk: "medium",
           reason: "Should not be written",
@@ -756,6 +792,24 @@ test("parser normalizes non-empty string arrays to singleton arrays", () => {
   expect(output.no_output_tombstone_ids).toEqual(["tomb_1"]);
 });
 
+test("parser requires evidence-bearing candidate leads", () => {
+  expect(() => parseIngestWorkerOutput({
+    memory_candidates: [{
+      id: "cand_1",
+      source_event_refs: ["tomb_1"],
+      scope: "project",
+      status: "needs_review",
+      candidate_type: "project.architecture",
+      summary: "Project layout changed.",
+      evidence: {},
+      proposed_payload: {},
+      confidence: "high",
+      risk: "low",
+      reason: "Durable architecture change.",
+    }],
+  })).toThrow("memory_candidates[0].evidence.observed_facts");
+});
+
 test("prompt caps oversized retained evidence without mutating the tombstone", () => {
   const rawText = "y".repeat(80_000);
   const rawPayload = "x".repeat(80_000);
@@ -831,6 +885,12 @@ test("prompt instructs ingest to retire completed next actions", () => {
   expect(prompt).toContain("\"failed_jobs\": 0");
   expect(prompt).toContain("\"selection_reasons\": [");
   expect(prompt).toContain("\"active_next_action\"");
+  expect(prompt).toContain("Do not substitute a speculative future risk for an evidenced project fact");
+  expect(prompt).toContain("emit a scope=project memory candidate");
+  expect(prompt).toContain("Do not represent a verified durable repository change only as Session Memory");
+  expect(prompt).toContain("\"candidate_type\":\"project.architecture\"");
+  expect(prompt).toContain("\"observed_facts\"");
+  expect(prompt).toContain("\"durable_facts\"");
 });
 
 test("worker claims batches from target repo cwd and completes when queue is empty", async () => {
@@ -887,7 +947,7 @@ test("worker claims batches from target repo cwd and completes when queue is emp
   expect(calls[0].stdin).toContain("Every memory candidate must include: id, source_event_refs, scope, status, candidate_type");
   expect(calls[0].stdin).toContain("Project maintenance status context");
   expect(calls[0].stdin).toContain("\"running_jobs\": 1");
-  expect(calls[0].stdin).toContain("\"candidate_type\":\"session.continuity\"");
+  expect(calls[0].stdin).toContain("\"candidate_type\":\"project.architecture\"");
   expect(listExperienceEvents(db, "class-kit")).toEqual([]);
   expect(db.query("SELECT id FROM session_memories WHERE id = ?").get("mem_1")).toEqual({ id: "mem_1" });
   expect(getIngestJob(db, "job_1")?.status).toBe("completed");
@@ -1262,8 +1322,17 @@ function candidateOutput(
     status: "needs_review" as const,
     candidate_type: `${scope}.documentation`,
     summary: "Repeated candidate.",
-    evidence: {},
-    proposed_payload: {},
+    evidence: {
+      observed_facts: ["A repeated durable candidate was observed."],
+      relevant_paths: ["README.md"],
+      uncertainties: [],
+    },
+    proposed_payload: {
+      durable_facts: ["The repeated candidate should be reviewed for durable documentation."],
+      change_kind: "documentation.update",
+      suggested_subjects: ["documentation"],
+      verification_needed: ["Verify the repository source."],
+    },
     confidence: "medium",
     risk: "low",
     reason: "Durable evidence was repeated.",

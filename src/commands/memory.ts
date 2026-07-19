@@ -23,6 +23,10 @@ import {
   type ProjectInboxIntakeSummary,
 } from "../project/project-memory-candidate-intake-service.ts";
 import { ProjectService } from "../project/project-service.ts";
+import {
+  emitProjectLearnProgress,
+  type ProjectLearnProgressSink,
+} from "../project/project-learn-progress.ts";
 import type { LaunchContext } from "../runtime/launch-context.ts";
 import { stableJson } from "../runtime/json.ts";
 import { DEFAULT_EMBEDDING_BATCH_SIZE, loadConfig, MAX_EMBEDDING_BATCH_SIZE } from "../runtime/config.ts";
@@ -32,6 +36,7 @@ import {
   loadProjectMemoryGoldenQuestions,
   runProjectMemoryQuestionEval,
 } from "../query/project-memory-question-eval.ts";
+import { createProjectLearnProgressReporter } from "./project-learn-progress-reporter.ts";
 
 export type MemoryCommandDeps = {
   context: LaunchContext;
@@ -39,6 +44,7 @@ export type MemoryCommandDeps = {
   creator?: string;
   runner?: ProcessRunner;
   env?: NodeJS.ProcessEnv;
+  progress?: ProjectLearnProgressSink;
 };
 
 export function registerMemoryCommands(cli: Cli, deps: MemoryCommandDeps): void {
@@ -277,6 +283,15 @@ async function maintainProject(args: string[], deps: MemoryCommandDeps): Promise
   const parsed = parseMaintainProjectArgs(args);
   if (parsed.error) return fail(parsed.error);
 
+  const progress = parsed.json
+    ? undefined
+    : deps.progress ?? (deps.context.invocationKind === "test" ? undefined : createProjectLearnProgressReporter());
+  emitProjectLearnProgress(progress, {
+    project_key: parsed.projectKey,
+    stage: "command",
+    status: "started",
+    message: "project maintenance accepted; preparing inputs and run artifacts",
+  });
   try {
     const result = await new ProjectService(deps.context.myelinRoot).runProjectMaintenance({
       projectKey: parsed.projectKey,
@@ -287,6 +302,15 @@ async function maintainProject(args: string[], deps: MemoryCommandDeps): Promise
       env: deps.env,
       runner: deps.runner,
       now: deps.now?.(),
+      progress,
+    });
+    emitProjectLearnProgress(progress, {
+      project_key: result.project_key,
+      stage: "run",
+      status: result.status === "failed" ? "failed" : "completed",
+      message: result.stopped_reason ?? `${result.changed_files?.length ?? 0} documentation files changed`,
+      mode: result.mode,
+      run_dir: result.run_dir,
     });
     if (parsed.json) return result.status === "failed" ? fail(stableJson(result)) : ok(stableJson(result));
 
@@ -294,9 +318,10 @@ async function maintainProject(args: string[], deps: MemoryCommandDeps): Promise
       `Project Memory maintenance ${result.status} for ${result.project_key}.`,
       `mode: ${result.mode}`,
       `run: ${result.run_dir}`,
-      `validation: ${result.validation_ok ? "passed" : "failed"}`,
+      `artifact validation: ${result.validation_ok ? "passed" : "failed"}`,
       `stopped_before_writes: ${result.stopped_before_writes}`,
     ];
+    if (parsed.review) lines.push("manual quality review: required before canonical writes");
     if (result.applied_page_ids?.length) lines.push(`applied pages: ${result.applied_page_ids.join(", ")}`);
     if (result.applied_item_ids?.length) lines.push(`applied items: ${result.applied_item_ids.join(", ")}`);
     if (result.changed_files?.length) lines.push(`changed files: ${result.changed_files.join(", ")}`);
@@ -304,7 +329,14 @@ async function maintainProject(args: string[], deps: MemoryCommandDeps): Promise
     if (result.stopped_reason) lines.push(`stopped: ${result.stopped_reason}`);
     return result.status === "failed" ? fail(lines.join("\n")) : ok(lines.join("\n"));
   } catch (error) {
-    return fail(error instanceof Error ? error.message : String(error));
+    const message = error instanceof Error ? error.message : String(error);
+    emitProjectLearnProgress(progress, {
+      project_key: parsed.projectKey,
+      stage: "run",
+      status: "failed",
+      message,
+    });
+    return fail(message);
   }
 }
 

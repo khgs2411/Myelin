@@ -121,6 +121,77 @@ test("maintenance mode updates documentation and marks pending candidates proces
   readDb.close();
 });
 
+test("legacy degraded state remains maintenance eligible and keeps the canonical baseline curated", async () => {
+  await seedProject("curated");
+  seedMemoryDb();
+  await seedSchema();
+  await writeFile(join(root, "projects", "demo", "index.md"), "# Demo\n\nExisting index.\n", "utf8");
+  await writeFile(join(root, "projects", "demo", "runtime.md"), "# Runtime\n\nOld runtime.\n", "utf8");
+  await writeJson(join(root, "state", "demo", "project-memory.json"), {
+    schema_version: 2,
+    project_key: "demo",
+    status: "degraded",
+    maintenance: {
+      status: "degraded",
+      degraded_reasons: ["Previous maintenance could not verify a candidate."],
+    },
+  });
+  const db = openMemoryDb(root);
+  createMemoryCandidate(db, {
+    id: "cand_runtime",
+    project_key: "demo",
+    scope: "project",
+    status: "needs_review",
+    candidate_type: "project.architecture",
+    title: "Runtime layout",
+    summary: "The runtime layout is already documented.",
+    source_event_refs: ["event:layout"],
+    evidence: {
+      observed_facts: ["Canonical markdown lives directly under projects/<key>."],
+      relevant_paths: ["src/runtime/fs.ts"],
+      uncertainties: [],
+    },
+    proposed_payload: {
+      durable_facts: ["Machine state and runtime artifacts live outside projects/<key>."],
+      change_kind: "architecture.layout",
+      suggested_subjects: ["runtime and project layout"],
+      verification_needed: ["Verify path helpers."],
+    },
+    confidence: "high",
+    risk: "low",
+    reason: "maintenance recovery test",
+    now: "2026-07-06T09:00:00.000Z",
+  });
+  db.close();
+  const stubs = await seedMaintenanceStubs("demo", "cand_runtime", {
+    status: "degraded",
+    disposition: "already_covered",
+    knownGaps: ["One unrelated repository path could not be inspected."],
+  });
+  const service = new ProjectMemoryCuratorService(root, completedRetrievalDeps());
+
+  const result = await service.runProjectLearn({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    now: new Date("2026-07-06T11:15:00.000Z"),
+    env: { ...process.env, [FILE_AUTHORING_STUB_OUTPUTS_DIR]: stubs },
+  });
+
+  expect(result.mode).toBe("maintain");
+  expect(result.run_kind).toBe("maintenance");
+  const state = JSON.parse(await readFile(join(root, "state", "demo", "project-memory.json"), "utf8"));
+  expect(state.status).toBe("curated");
+  expect(state.maintenance).toMatchObject({
+    status: "degraded",
+    already_covered_count: 1,
+    degraded_reasons: ["One unrelated repository path could not be inspected."],
+  });
+  const readDb = openMemoryDb(root);
+  expect(getMemoryCandidate(readDb, "cand_runtime")?.status).toBe("processed");
+  readDb.close();
+});
+
 test("project maintenance normalizes runtime inbox before agentic curation", async () => {
   await seedProject("curated");
   seedMemoryDb();
@@ -475,7 +546,15 @@ function createStubSurfaceCoverage() {
   ];
 }
 
-async function seedMaintenanceStubs(projectKey: string, sourceRef = "cand_runtime"): Promise<string> {
+async function seedMaintenanceStubs(
+  projectKey: string,
+  sourceRef = "cand_runtime",
+  options: {
+    status?: "completed" | "degraded";
+    disposition?: "applied_to_project_memory" | "already_covered";
+    knownGaps?: string[];
+  } = {},
+): Promise<string> {
   const stubs = await mkdtemp(join(tmpdir(), "myelin-maintenance-stubs-"));
   await mkdir(join(stubs, "maintenance", "draft-wiki"), { recursive: true });
   await mkdir(join(stubs, "maintenance", "reports"), { recursive: true });
@@ -492,19 +571,19 @@ async function seedMaintenanceStubs(projectKey: string, sourceRef = "cand_runtim
   await writeJson(join(stubs, "maintenance", "reports", "documentation-maintenance-report.json"), {
     schema_version: 1,
     project_key: projectKey,
-    status: "completed",
+    status: options.status ?? "completed",
     dispositions: [
       {
         source_kind: "project_candidate",
         source_ref: sourceRef,
-        disposition: "applied_to_project_memory",
+        disposition: options.disposition ?? "applied_to_project_memory",
         reason: "Runtime page updated from repo evidence.",
         output_refs: ["runtime.md"],
       },
     ],
     touched_paths: ["runtime.md"],
     evidence_paths: ["src/commands/project.ts"],
-    known_gaps: [],
+    known_gaps: options.knownGaps ?? [],
   });
   return stubs;
 }

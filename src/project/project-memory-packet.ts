@@ -25,6 +25,7 @@ import {
   producerKindForLead,
   type ProjectMemoryLeadPriority,
 } from "./project-memory-producer-boundary.ts";
+import { hasCuratedProjectMemoryBaseline, projectMemoryStatus } from "./project-memory-state.ts";
 
 export type ProjectMemoryPacket = {
   schema_version: 1;
@@ -98,6 +99,8 @@ export type PacketCandidate = {
   candidate_type: string;
   title: string | null;
   summary: string;
+  evidence: Record<string, unknown>;
+  proposed_payload: Record<string, unknown>;
   source_event_refs: string[];
   confidence: string;
   risk: string;
@@ -310,6 +313,8 @@ function compactCandidate(row: MemoryCandidateRow): PacketCandidate {
     candidate_type: row.candidate_type,
     title: row.title,
     summary: row.summary,
+    evidence: jsonObject(row.evidence_json),
+    proposed_payload: jsonObject(row.proposed_payload_json),
     source_event_refs: sourceEventRefs,
     confidence: row.confidence,
     risk: row.risk,
@@ -332,14 +337,8 @@ function compactSessionMemory(row: SessionMemoryRow): PacketSessionMemory {
 }
 
 function packetMode(bootstrapState: unknown, projectMemory: unknown): ProjectMemoryPacket["mode"] {
-  if (statusOf(projectMemory) === "curated" || statusOf(bootstrapState) === "curated") return "maintain";
+  if (hasCuratedProjectMemoryBaseline(projectMemory) || projectMemoryStatus(bootstrapState) === "curated") return "maintain";
   return "create";
-}
-
-function statusOf(value: unknown): string | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const status = (value as { status?: unknown }).status;
-  return typeof status === "string" ? status : null;
 }
 
 function jsonStringArray(value: string): string[] {
@@ -348,6 +347,17 @@ function jsonStringArray(value: string): string[] {
     return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
   } catch {
     return [];
+  }
+}
+
+function jsonObject(value: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
   }
 }
 

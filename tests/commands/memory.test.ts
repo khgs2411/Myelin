@@ -736,6 +736,20 @@ test("memory maintain project exposes a pure maintenance command", async () => {
   expect(recreate.message).toContain("Unknown memory maintain project option: --recreate");
 });
 
+test("memory maintain project emits foreground progress", async () => {
+  const cli = createCli("myelin");
+  const progressEvents: Array<{ stage: string; status: string }> = [];
+  registerMemoryCommands(cli, {
+    progress: (event) => progressEvents.push(event),
+  });
+
+  await cli.run(["memory", "maintain", "project", "demo", "--review"]);
+
+  expect(progressEvents[0]).toMatchObject({ stage: "command", status: "started" });
+  expect(progressEvents.some((event) => event.stage === "preflight")).toBe(true);
+  expect(progressEvents.at(-1)).toMatchObject({ stage: "run", status: "failed" });
+});
+
 test("memory review reports reviewable maintenance dispositions as JSON", async () => {
   await mkdir(join(root, "runs", "demo", "project-learn", "2026-07-07T10-00-00.000Z-run", "reports"), {
     recursive: true,

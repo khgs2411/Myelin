@@ -50,6 +50,19 @@ const TRUNCATED_EVIDENCE_SUFFIX = "\n...[truncated for ingest prompt; full evide
 const INGEST_PROMPT_SAFETY_MARGIN_CHARS = 5_000;
 const INGEST_RECONCILIATION_CONTEXT_BUDGET_CHARS = 25_000;
 
+export type IngestMemoryCandidateEvidence = {
+  observed_facts: string[];
+  relevant_paths: string[];
+  uncertainties: string[];
+};
+
+export type IngestMemoryCandidateProposedPayload = {
+  durable_facts: string[];
+  change_kind: string;
+  suggested_subjects: string[];
+  verification_needed: string[];
+};
+
 export type IngestWorkerOutput = {
   session_memories?: Array<{
     id: string;
@@ -69,8 +82,8 @@ export type IngestWorkerOutput = {
     candidate_type: string;
     title?: string | null;
     summary: string;
-    evidence: JsonObject;
-    proposed_payload: JsonObject;
+    evidence: IngestMemoryCandidateEvidence;
+    proposed_payload: IngestMemoryCandidateProposedPayload;
     confidence: string;
     risk: string;
     reason: string;
@@ -138,8 +151,8 @@ export function parseIngestWorkerOutput(value: JsonObject): IngestWorkerOutput {
         candidate_type: validateString(candidate.candidate_type, `${path}.candidate_type`),
         title: validateOptionalStringOrNull(candidate.title, `${path}.title`),
         summary: validateString(candidate.summary, `${path}.summary`),
-        evidence: validateObject(candidate.evidence, `${path}.evidence`),
-        proposed_payload: validateObject(candidate.proposed_payload, `${path}.proposed_payload`),
+        evidence: validateCandidateEvidence(candidate.evidence, `${path}.evidence`),
+        proposed_payload: validateCandidateProposedPayload(candidate.proposed_payload, `${path}.proposed_payload`),
         confidence: validateString(candidate.confidence, `${path}.confidence`),
         risk: validateString(candidate.risk, `${path}.risk`),
         reason: validateString(candidate.reason, `${path}.reason`),
@@ -250,11 +263,16 @@ export function buildIngestPrompt(input: {
     "Allowed provider-created status values for candidates and handoffs: pending, needs_review.",
     "Every memory candidate must include: id, source_event_refs, scope, status, candidate_type, summary, evidence, proposed_payload, confidence, risk, reason.",
     "Use candidate_type as a stable dotted classifier, for example session.continuity, project.decision, practice.workflow, or personal.preference.",
+    "When leased evidence describes an implemented durable change to this repository's architecture, public contract, operator workflow, persistence, or layout, emit a scope=project memory candidate even if you also create Session Memory continuity or verification.",
+    "Do not represent a verified durable repository change only as Session Memory; the Project Memory candidate is the required maintenance lead.",
+    "For Project Memory candidates, capture the concrete durable change supported by the evidence. Do not substitute a speculative future risk for an evidenced project fact.",
+    "Every memory candidate evidence object must include: observed_facts (at least one), relevant_paths, uncertainties.",
+    "Every memory candidate proposed_payload object must include: durable_facts (at least one), change_kind, suggested_subjects, verification_needed.",
     "Every handoff instruction must include: id, target_scope, status, objective, prompt_text, source_session_memory_ids, source_event_refs, suggested_actions, reason, confidence, risk.",
     "Example session memory: {\"id\":\"mem_<short-id>\",\"source_event_refs\":[\"tomb_<claimed-id>\"],\"memory_kind\":\"continuity\",\"summary\":\"Useful continuity.\",\"payload\":{},\"confidence\":\"high\",\"risk\":\"low\"}.",
     "Example supersession: {\"superseded_memory_id\":\"mem_old\",\"superseding_memory_id\":\"mem_new\",\"relationship\":\"supersedes\",\"reason\":\"New evidence changes the implementation truth.\",\"source_event_refs\":[\"tomb_<claimed-id>\"]}.",
     "Example retraction: {\"memory_id\":\"mem_old\",\"reason\":\"New evidence shows this memory is false and no replacement is appropriate.\",\"source_event_refs\":[\"tomb_<claimed-id>\"]}.",
-    "Example memory candidate: {\"id\":\"cand_<short-id>\",\"source_event_refs\":[\"tomb_<claimed-id>\"],\"scope\":\"session\",\"status\":\"needs_review\",\"candidate_type\":\"session.continuity\",\"summary\":\"Possible useful continuity.\",\"evidence\":{},\"proposed_payload\":{},\"confidence\":\"medium\",\"risk\":\"medium\",\"reason\":\"Needs review before trust\"}.",
+    "Example memory candidate: {\"id\":\"cand_<short-id>\",\"source_event_refs\":[\"tomb_<claimed-id>\"],\"scope\":\"project\",\"status\":\"needs_review\",\"candidate_type\":\"project.architecture\",\"summary\":\"Project runtime layout changed.\",\"evidence\":{\"observed_facts\":[\"Canonical Project Memory markdown now lives directly under projects/<key>.\"],\"relevant_paths\":[\"src/runtime/fs.ts\"],\"uncertainties\":[]},\"proposed_payload\":{\"durable_facts\":[\"Machine state, preserved sources, and run artifacts live outside projects/<key>.\"],\"change_kind\":\"architecture.layout\",\"suggested_subjects\":[\"runtime and project layout\"],\"verification_needed\":[\"Confirm current path helpers and migration behavior.\"]},\"confidence\":\"high\",\"risk\":\"low\",\"reason\":\"The layout is durable project architecture.\"}.",
     "Example handoff instruction: {\"id\":\"handoff_<short-id>\",\"target_scope\":\"project\",\"status\":\"pending\",\"objective\":\"Verify a durable project fact\",\"prompt_text\":\"Review the cited tombstones and update project memory if valid.\",\"source_session_memory_ids\":[],\"source_event_refs\":[\"tomb_<claimed-id>\"],\"suggested_actions\":[\"review evidence\"],\"reason\":\"May belong in project memory\",\"confidence\":\"medium\",\"risk\":\"medium\"}.",
     "",
     "Project maintenance status context:",
@@ -392,6 +410,25 @@ function validateObject(value: unknown, path: string): JsonObject {
   throw new Error(`IngestWorkerOutput contract violation: ${path} must be an object`);
 }
 
+function validateCandidateEvidence(value: unknown, path: string): IngestMemoryCandidateEvidence {
+  const evidence = validateObject(value, path);
+  return {
+    observed_facts: validateAtLeastOneStringArray(evidence.observed_facts, `${path}.observed_facts`),
+    relevant_paths: validateStringArray(evidence.relevant_paths, `${path}.relevant_paths`),
+    uncertainties: validateStringArray(evidence.uncertainties, `${path}.uncertainties`),
+  };
+}
+
+function validateCandidateProposedPayload(value: unknown, path: string): IngestMemoryCandidateProposedPayload {
+  const payload = validateObject(value, path);
+  return {
+    durable_facts: validateAtLeastOneStringArray(payload.durable_facts, `${path}.durable_facts`),
+    change_kind: validateString(payload.change_kind, `${path}.change_kind`),
+    suggested_subjects: validateStringArray(payload.suggested_subjects, `${path}.suggested_subjects`),
+    verification_needed: validateStringArray(payload.verification_needed, `${path}.verification_needed`),
+  };
+}
+
 function validateString(value: unknown, path: string): string {
   if (typeof value === "string" && value.trim() !== "") return value;
   throw new Error(`IngestWorkerOutput contract violation: ${path} must be a non-empty string`);
@@ -422,6 +459,12 @@ function validateNonEmptyStringArray(value: unknown, path: string): string[] {
   const items = validateStringArray(value, path);
   if (items.length > 0) return items;
   throw new Error(`IngestWorkerOutput contract violation: ${path} must contain at least one tombstone id`);
+}
+
+function validateAtLeastOneStringArray(value: unknown, path: string): string[] {
+  const items = validateStringArray(value, path);
+  if (items.length > 0) return items;
+  throw new Error(`IngestWorkerOutput contract violation: ${path} must contain at least one item`);
 }
 
 function validateEnum<T extends string>(value: unknown, path: string, allowed: readonly T[]): T {

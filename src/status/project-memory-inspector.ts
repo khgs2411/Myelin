@@ -8,6 +8,11 @@ import { maxState, projectRetrievalState, warning } from "./severity.ts";
 import { inspectEmbeddingRetrievalStatus } from "./embedding-retrieval-status.ts";
 import { memoryDbPath } from "../memory/db.ts";
 import { normalizeRecordedCheckoutPath, projectPath, projectSourcesPath, projectStatePath } from "../runtime/fs.ts";
+import {
+  hasCuratedProjectMemoryBaseline,
+  projectMemoryMaintenanceStatus,
+  projectMemoryStatus,
+} from "../project/project-memory-state.ts";
 
 export async function inspectProjectMemory(input: {
   root: string;
@@ -64,11 +69,25 @@ export async function inspectProjectMemory(input: {
     warnings.push(warning("PROJECT_CURATION_STATE_INVALID", "blocked", "project_memory", curationRead.error, [projectStateId]));
   } else if (curationRead.value) {
     latestRun = stringValue(curationRead.value.source_run_dir);
-    if (curationRead.value.status === "curated") {
+    if (hasCuratedProjectMemoryBaseline(curationRead.value)) {
       curated = true;
       if (await readableWiki(wikiPath)) {
-        curationState = "healthy";
-        curationLifecycle = "curated";
+        const latestMaintenanceStatus = projectMemoryMaintenanceStatus(curationRead.value);
+        const latestMaintenanceDegraded =
+          projectMemoryStatus(curationRead.value) === "degraded" ||
+          latestMaintenanceStatus === "degraded" ||
+          latestMaintenanceStatus === "failed";
+        curationState = latestMaintenanceDegraded ? "attention" : "healthy";
+        curationLifecycle = latestMaintenanceDegraded ? "curated_with_degraded_maintenance" : "curated";
+        if (latestMaintenanceDegraded) {
+          warnings.push(warning(
+            "PROJECT_LATEST_MAINTENANCE_DEGRADED",
+            "attention",
+            "project_memory",
+            "The canonical Project Memory baseline remains usable, but the latest maintenance result is degraded.",
+            [projectStateId],
+          ));
+        }
       } else {
         curationState = "blocked";
         curationLifecycle = "canonical_wiki_missing";
