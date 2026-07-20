@@ -15,13 +15,14 @@ import {
 import { ProjectMemoryCandidateIntakeService } from "./project-memory-candidate-intake-service.ts";
 import { ProjectMemoryMarkdownApplier } from "./project-memory-markdown-applier.ts";
 import { ProjectMemorySourceConsumptionReconciler } from "./project-memory-source-consumption-reconciler.ts";
-import { promoteDraftWiki } from "./project-memory-draft-promotion.ts";
+import { prepareDraftWikiForReview, promoteDraftWiki } from "./project-memory-draft-promotion.ts";
 import {
   runProjectMemoryCreateMode,
   type ProjectMemoryCreateModeResult,
 } from "./project-memory-agent-create-service.ts";
 import {
   runProjectMemoryMaintenanceMode,
+  sourceConsumptionsFromMaintenanceReport,
   type ProjectMemoryMaintenanceModeResult,
   type ProjectMemoryMaintenancePendingSource,
 } from "./project-memory-agent-maintenance-service.ts";
@@ -60,6 +61,12 @@ import {
 } from "./project-memory-create-checkpoint.ts";
 import { emitProjectLearnProgress } from "./project-learn-progress.ts";
 import { hasCuratedProjectMemoryBaseline } from "./project-memory-state.ts";
+import {
+  copyReviewedMaintenanceDraft,
+  PROJECT_MEMORY_REVIEW_CHECKPOINT_REF,
+  verifyProjectMemoryReviewCheckpoint,
+  writeProjectMemoryReviewCheckpoint,
+} from "./project-memory-review-checkpoint.ts";
 export type {
   ProjectMemoryCuratorServiceDependencies,
   ProjectMemoryPostApplyRetrievalLifecycle,
@@ -87,6 +94,7 @@ export class ProjectMemoryCuratorService {
   ) {}
 
   async runProjectMaintenance(input: RunProjectMemoryCuratorInput): Promise<ProjectMemoryCuratorRunResult> {
+    if (input.promoteRun) return await this.promoteReviewedProjectMaintenance(input);
     const preflight = await this.prepareRun({ ...input, recreate: false }, "maintenance");
     if (preflight.kind === "terminal") return preflight.result;
     return await this.runMaintenanceOnly({
@@ -96,6 +104,89 @@ export class ProjectMemoryCuratorService {
       repoPath: preflight.repoPath,
       now: preflight.now,
       runKind: preflight.runKind,
+    });
+  }
+
+  private async promoteReviewedProjectMaintenance(
+    input: RunProjectMemoryCuratorInput,
+  ): Promise<ProjectMemoryCuratorRunResult> {
+    if (input.dryRun || input.review || input.recreate || input.resumeRun) {
+      throw new Error("Project Memory review promotion cannot be combined with dry-run, review, recreate, or resume mode.");
+    }
+    const now = input.now ?? new Date();
+    emitProjectLearnProgress(input.progress, {
+      project_key: input.projectKey,
+      stage: "preflight",
+      status: "started",
+      message: `verifying reviewed maintenance run ${input.promoteRun}`,
+    });
+    const project = await findProject(this.root, input.projectKey);
+    const repoPath = project.config.repo_paths?.[0] ?? this.root;
+    const incompleteJournals = await new ProjectMemoryMarkdownApplier(this.root).findIncompleteApplyJournals(input.projectKey);
+    if (incompleteJournals.length > 0) {
+      throw new Error("Project Memory review promotion is blocked by an incomplete canonical apply journal; run project maintenance to recover it first.");
+    }
+    await repairProjectShell(this.root, input.projectKey, { repoPath });
+    const source = resolveProjectLearnRun(this.root, input.projectKey, input.promoteRun!, "review promotion");
+    const currentPacket = await buildProjectMemoryPacket(this.root, input.projectKey);
+    const verified = await verifyProjectMemoryReviewCheckpoint({
+      root: this.root,
+      projectKey: input.projectKey,
+      sourceRunDir: source.relativeRunDir,
+      sourceAbsoluteRunDir: source.absoluteRunDir,
+      repoPath,
+      currentPacket,
+    });
+
+    const run = await createProjectCuratorRun(this.root, input.projectKey, now);
+    const draftWikiDir = await copyReviewedMaintenanceDraft({
+      sourceAbsoluteRunDir: source.absoluteRunDir,
+      targetRun: run,
+    });
+    const sourceConsumptions = sourceConsumptionsFromMaintenanceReport({
+      projectKey: input.projectKey,
+      runDir: run.relative_run_dir,
+      now,
+    }, verified.maintenance.report);
+    const maintenance: ProjectMemoryMaintenanceModeResult = {
+      ...verified.maintenance,
+      draft_wiki_dir: draftWikiDir,
+      source_consumptions: sourceConsumptions,
+    };
+    await writeRunArtifact(run, "input-packet.json", verified.sourcePacket);
+    await writeRunArtifact(run, "documentation-maintenance-result.json", maintenance);
+    await writeRunArtifact(run, maintenance.report_ref, maintenance.report);
+    const sourceIdentity = await readJsonIfExists<unknown>(resolveInside(source.absoluteRunDir, "repository-identity.json"));
+    if (sourceIdentity) await writeRunArtifact(run, "repository-identity.json", sourceIdentity);
+    await writeRunArtifact(run, "review-promotion-source.json", {
+      schema_version: 1,
+      project_key: input.projectKey,
+      source_run_dir: source.relativeRunDir,
+      source_checkpoint_ref: `${source.relativeRunDir}/${PROJECT_MEMORY_REVIEW_CHECKPOINT_REF}`,
+      promoted_at: now.toISOString(),
+    });
+    emitProjectLearnProgress(input.progress, {
+      project_key: input.projectKey,
+      stage: "preflight",
+      status: "completed",
+      mode: "maintain",
+      run_dir: run.relative_run_dir,
+      message: "review checkpoint, canonical baseline, repository snapshot, and pending sources verified",
+    });
+    return await this.promoteAndFinish({
+      input: { ...input, promoteRun: undefined },
+      run,
+      mode: "maintain",
+      runKind: "maintenance",
+      outputArtifact: "documentation-maintenance-result.json",
+      draftWikiDir,
+      maintenance,
+      sourceConsumptions: await this.combinedSourceConsumptions(input.projectKey, sourceConsumptions),
+      now,
+      packet: verified.sourcePacket,
+      repoPath,
+      curationKind: "human_reviewed",
+      promotedFromRun: source.relativeRunDir,
     });
   }
 
@@ -156,7 +247,7 @@ export class ProjectMemoryCuratorService {
       throw new Error(`Project learn resume preflight failed: ${runtimeInboxIntake.degraded_reasons.join("; ")}`);
     }
     const packet = await buildProjectMemoryPacket(this.root, input.projectKey);
-    const source = resolveResumeSourceRun(this.root, input.projectKey, input.resumeRun!);
+    const source = resolveProjectLearnRun(this.root, input.projectKey, input.resumeRun!, "resume");
     let verified;
     try {
       verified = await verifyProjectMemoryCreateCheckpoint({
@@ -451,6 +542,8 @@ export class ProjectMemoryCuratorService {
       sourceConsumptions: await this.combinedSourceConsumptions(input.input.projectKey, maintenance.source_consumptions),
       now: input.now,
       resumedFromRun: input.resumedFromRun,
+      packet: input.packet,
+      repoPath: input.repoPath,
     });
   }
 
@@ -502,6 +595,8 @@ export class ProjectMemoryCuratorService {
       maintenance,
       sourceConsumptions: await this.combinedSourceConsumptions(input.input.projectKey, maintenance.source_consumptions),
       now: input.now,
+      packet: input.packet,
+      repoPath: input.repoPath,
     });
   }
 
@@ -517,9 +612,33 @@ export class ProjectMemoryCuratorService {
     sourceConsumptions: ProjectMemorySourceConsumptionRecord[];
     now: Date;
     resumedFromRun?: string;
+    packet: ProjectMemoryPacket;
+    repoPath: string;
+    curationKind?: "agent_authored" | "human_reviewed";
+    promotedFromRun?: string;
   }): Promise<ProjectMemoryCuratorRunResult> {
     const validation = successValidation(input.input.projectKey, input.mode);
     if (input.input.dryRun || input.input.review) {
+      let reviewCheckpoint = false;
+      if (input.input.review && input.mode === "maintain" && input.maintenance) {
+        await prepareDraftWikiForReview({
+          root: this.root,
+          projectKey: input.input.projectKey,
+          absoluteRunDir: input.run.absolute_run_dir,
+          draftWikiDir: input.draftWikiDir,
+          requiredSubjectWikiPaths: input.create?.manifest.subjects.map((subject) => subject.wiki_path),
+        });
+        await writeProjectMemoryReviewCheckpoint({
+          root: this.root,
+          projectKey: input.input.projectKey,
+          run: input.run,
+          repoPath: input.repoPath,
+          packet: input.packet,
+          maintenance: input.maintenance,
+          now: input.now,
+        });
+        reviewCheckpoint = true;
+      }
       return await this.writeTerminalArtifacts({
         input: input.input,
         run: input.run,
@@ -532,6 +651,7 @@ export class ProjectMemoryCuratorService {
         create: input.create,
         maintenance: input.maintenance,
         resumedFromRun: input.resumedFromRun,
+        reviewCheckpoint,
       });
     }
 
@@ -560,6 +680,8 @@ export class ProjectMemoryCuratorService {
           create: input.create,
           maintenance: input.maintenance,
           now: input.now,
+          curationKind: input.curationKind,
+          promotedFromRun: input.promotedFromRun,
         }),
         repositoryIdentity: input.create
           ? await readJson<ProjectRepositoryIdentity>(resolveInside(input.run.absolute_run_dir, input.create.repository_identity_ref))
@@ -655,6 +777,8 @@ export class ProjectMemoryCuratorService {
       create: input.create,
       maintenance: input.maintenance,
       resumedFromRun: input.resumedFromRun,
+      curationKind: input.curationKind,
+      promotedFromRun: input.promotedFromRun,
     });
   }
 
@@ -689,6 +813,9 @@ export class ProjectMemoryCuratorService {
     resumable?: boolean;
     resumeCommand?: string;
     resumedFromRun?: string;
+    reviewCheckpoint?: boolean;
+    curationKind?: "agent_authored" | "human_reviewed";
+    promotedFromRun?: string;
   }): Promise<ProjectMemoryCuratorRunResult> {
     await writeRunArtifact(input.run, "curator-validation.json", input.validation);
     const result = buildResult(input);
@@ -751,6 +878,9 @@ function buildResult(input: {
   resumable?: boolean;
   resumeCommand?: string;
   resumedFromRun?: string;
+  reviewCheckpoint?: boolean;
+  curationKind?: "agent_authored" | "human_reviewed";
+  promotedFromRun?: string;
 }): ProjectMemoryCuratorRunResult {
   const fileAuthoringRuns = [
     ...(input.create?.file_authoring_run_refs ?? []),
@@ -771,7 +901,7 @@ function buildResult(input: {
       retrieval_sections: input.retrievalArtifacts?.retrieval_sections,
       hint_generation: input.retrievalArtifacts?.hint_generation,
       retrieval_index_result: input.retrievalArtifacts?.retrieval_index_result,
-      publication_validation: input.apply ? "canonical-publication-validation.json" : undefined,
+      publication_validation: input.apply || input.reviewCheckpoint ? "canonical-publication-validation.json" : undefined,
       repository_identity: input.create || input.maintenance ? "repository-identity.json" : undefined,
       subject_manifest: input.create ? "reports/documentation-subject-manifest.json" : undefined,
       planner_report: input.create ? "reports/documentation-planner-report.json" : undefined,
@@ -781,8 +911,10 @@ function buildResult(input: {
       pre_maintenance_wiki: input.create ? "pre-maintenance-wiki" : undefined,
       create_checkpoint: input.create && !input.resumedFromRun ? PROJECT_MEMORY_CREATE_CHECKPOINT_REF : undefined,
       resume_source: input.resumedFromRun ? "resume-source.json" : undefined,
+      review_checkpoint: input.reviewCheckpoint ? PROJECT_MEMORY_REVIEW_CHECKPOINT_REF : undefined,
+      review_promotion_source: input.promotedFromRun ? "review-promotion-source.json" : undefined,
     },
-    curation_kind: "agent_authored",
+    curation_kind: input.curationKind ?? "agent_authored",
     run_kind: input.runKind,
     content_quality_status: "trusted",
     retrieval_readiness_status:
@@ -800,6 +932,7 @@ function buildResult(input: {
     resumable: input.resumable,
     resume_command: input.resumeCommand,
     resumed_from_run: input.resumedFromRun,
+    promoted_from_run: input.promotedFromRun,
   };
 }
 
@@ -820,6 +953,8 @@ function agentState(input: {
   create?: ProjectMemoryCreateModeResult;
   maintenance?: ProjectMemoryMaintenanceModeResult;
   now: Date;
+  curationKind?: "agent_authored" | "human_reviewed";
+  promotedFromRun?: string;
 }): ProjectMemoryAgentStateV2 {
   const maintenance = input.maintenance;
   const create = input.create;
@@ -828,9 +963,10 @@ function agentState(input: {
     project_key: input.input.projectKey,
     status: "curated",
     source_run_dir: input.run.relative_run_dir,
+    reviewed_from_run: input.promotedFromRun,
     updated_at: input.now.toISOString(),
     provider_mode: providerModeFor(input.input),
-    curation_kind: "agent_authored",
+    curation_kind: input.curationKind ?? "agent_authored",
     run_kind: input.runKind,
     create: create
       ? {
@@ -997,6 +1133,7 @@ function summaryFor(result: ProjectMemoryCuratorRunResult): string {
     result.resumable !== undefined ? `resumable: ${result.resumable}` : "",
     result.resume_command ? `resume_command: ${result.resume_command}` : "",
     result.resumed_from_run ? `resumed_from_run: ${result.resumed_from_run}` : "",
+    result.promoted_from_run ? `promoted_from_run: ${result.promoted_from_run}` : "",
     "",
   ]
     .filter(Boolean)
@@ -1007,17 +1144,18 @@ function resumeCommand(projectKey: string, runDir: string): string {
   return `myelin project learn ${projectKey} --resume ${runDir}`;
 }
 
-function resolveResumeSourceRun(
+function resolveProjectLearnRun(
   root: string,
   projectKey: string,
   value: string,
+  operation: "resume" | "review promotion",
 ): { absoluteRunDir: string; relativeRunDir: string } {
   const runsRoot = projectRunsPath(root, projectKey, "project-learn");
   const absoluteRunDir = value.includes("/") || value.includes("\\")
     ? resolveInside(root, value)
     : resolve(runsRoot, value);
   if (dirname(absoluteRunDir) !== runsRoot) {
-    throw new Error(`Project learn resume preflight failed: ${value} is not a direct project-learn run for ${projectKey}.`);
+    throw new Error(`Project Memory ${operation} preflight failed: ${value} is not a direct project-learn run for ${projectKey}.`);
   }
   return {
     absoluteRunDir,

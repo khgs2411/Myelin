@@ -90,7 +90,7 @@ test("requires every touched draft path to trace to an applied source", () => {
       reason: "Updated the runtime contract.",
       output_refs: ["draft-wiki/runtime.md"],
     }],
-    touched_paths: ["draft-wiki/runtime.md", "reports/documentation-maintenance-report.json"],
+    touched_paths: ["draft-wiki/runtime.md"],
     evidence_paths: ["target-repo/src/runtime.ts"],
     known_gaps: [],
   };
@@ -106,6 +106,29 @@ test("requires every touched draft path to trace to an applied source", () => {
   })).toThrow("touched draft path is not traced to an applied source: draft-wiki/unrelated.md");
 
   expect(() => assertMaintenanceReport("demo", pending, baseReport)).not.toThrow();
+});
+
+test("rejects non-document artifacts in maintenance touched paths", () => {
+  const pending: ProjectMemoryMaintenancePendingSource[] = [{
+    source_kind: "project_candidate",
+    source_ref: "candidate-1",
+    summary: "Candidate summary",
+  }];
+  expect(() => assertMaintenanceReport("demo", pending, {
+    schema_version: 1,
+    project_key: "demo",
+    status: "completed",
+    dispositions: [{
+      source_kind: "project_candidate",
+      source_ref: "candidate-1",
+      disposition: "already_covered",
+      reason: "Existing documentation covers it.",
+      output_refs: [],
+    }],
+    touched_paths: ["reports/documentation-maintenance-report.json"],
+    evidence_paths: [],
+    known_gaps: [],
+  })).toThrow("touched_paths must identify draft markdown only");
 });
 
 test("gives a live maintenance agent an authoritative report contract", async () => {
@@ -152,10 +175,14 @@ test("gives a live maintenance agent an authoritative report contract", async ()
       expect(options?.stdin).toContain("contracts/project-memory-maintenance-report.schema.json");
       expect(options?.stdin).toContain('"observed_facts"');
       expect(options?.stdin).toContain('"durable_facts"');
+      expect(options?.stdin).toContain("Attribute that evidence-bearing shape to the ingest provider-output schema and worker parser");
+      expect(options?.stdin).toContain("Maintenance deliberately accepts legacy and runtime-inbox candidates");
       expect(options?.stdin).toContain('"candidate_type": "project.architecture"');
       expect(options?.stdin).toContain("relevant_paths, uncertainties, suggested_subjects, and verification_needed fields are required arrays but may be empty");
       expect(options?.stdin).toContain("another project or repository belongs_to_other_layer");
       expect(options?.stdin).toContain("do not perform unrelated cleanup");
+      expect(options?.stdin).toContain("do not edit canonical prose solely to reconcile checkout snapshots");
+      expect(options?.stdin).toContain("Do not include the maintenance report");
       expect(options?.stdin).toContain("Legacy candidates and handoffs may have empty evidence or proposed payloads");
       expect(options?.stdin).toContain("becomes covered by an update attributed to another source in the same pass");
       expect(options?.stdin).toContain("treat the source as stale and use already_covered or apply a correction");

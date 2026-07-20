@@ -5,6 +5,7 @@ import { openMemoryDb } from "../memory/db.ts";
 import { discoverIndexedEmbeddingContract, readActiveEmbeddingContract } from "../memory/embedding-contract-store.ts";
 import { ProjectMemoryRetrievalIndexCoordinator } from "../memory/project-memory-retrieval-index-service.ts";
 import { ProjectService } from "../project/project-service.ts";
+import { isProjectMemoryMutationContentionReason } from "../project/project-memory-mutation-runtime.ts";
 import { loadConfig, type AutoProjectMemoryMaintenanceConfig } from "../runtime/config.ts";
 import { projectSourcesPath, projectStatePath } from "../runtime/fs.ts";
 import { createId } from "../runtime/ids.ts";
@@ -143,13 +144,14 @@ export class AutoProjectMemoryMaintenanceService implements AutoProjectMemoryMai
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      const contention = isProjectMemoryMutationContentionReason(message);
       const countsAfter = await this.countPending(projectKey).catch(() => countsBefore);
       await writeState(this.root, projectKey, {
         ...(await readState(this.root, projectKey)),
         project_key: projectKey,
         last_run_id: runId,
         last_finished_at: this.now(),
-        last_status: "failed",
+        last_status: contention ? "skipped" : "failed",
         last_reason: message,
         last_counts: {
           ...countsBefore,
@@ -158,13 +160,13 @@ export class AutoProjectMemoryMaintenanceService implements AutoProjectMemoryMai
         },
       });
       return {
-        status: "failed",
+        status: contention ? "skipped" : "failed",
         project_key: projectKey,
         run_id: runId,
         changed_files: [],
         counts_before: countsBefore,
         counts_after: countsAfter,
-        error_message: message,
+        ...(contention ? { reason: message } : { error_message: message }),
       };
     } finally {
       await lock.release();

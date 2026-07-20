@@ -1,4 +1,4 @@
-import { readdir, readFile, rm } from "node:fs/promises";
+import { readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, posix, relative } from "node:path";
 import type { ProjectMemoryAgentStateV2 } from "./project-memory-agent-contracts.ts";
 import type {
@@ -31,6 +31,31 @@ export type ProjectMemoryDraftPromotionInput = {
 export type ProjectMemoryDraftPromotionResult = ProjectMemoryApplyResult;
 
 const PUBLICATION_VALIDATION_REF = "canonical-publication-validation.json";
+
+export async function prepareDraftWikiForReview(input: {
+  root: string;
+  projectKey: string;
+  absoluteRunDir: string;
+  draftWikiDir: string;
+  requiredSubjectWikiPaths?: string[];
+}): Promise<void> {
+  const draftWrites = await draftMarkdownWrites(input.projectKey, input.draftWikiDir);
+  const canonicalIdentityPath = `state/${input.projectKey}/repository-identity.json`;
+  const hasCanonicalIdentity = await Bun.file(resolveInside(input.root, canonicalIdentityPath)).exists();
+  const publication = validateAndRewriteDraftMarkdown(
+    input.projectKey,
+    draftWrites,
+    hasCanonicalIdentity,
+    input.requiredSubjectWikiPaths ?? [],
+  );
+  assertDraftPublicationMinimum(publication.writes);
+  await writeJson(resolveInside(input.absoluteRunDir, PUBLICATION_VALIDATION_REF), publication.validation);
+  const wikiPrefix = `projects/${input.projectKey}/`;
+  for (const write of publication.writes) {
+    if (write.write_kind !== "wiki_page") continue;
+    await writeFile(resolveInside(input.draftWikiDir, write.canonical_project_path.slice(wikiPrefix.length)), write.content, "utf8");
+  }
+}
 
 export async function promoteDraftWiki(
   input: ProjectMemoryDraftPromotionInput,

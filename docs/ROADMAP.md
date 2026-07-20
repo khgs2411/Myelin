@@ -392,6 +392,10 @@ Goal: review the working implementation as a whole and consolidate only the stru
   - Description: Confirm that installation, provider hooks, command invocation, status, query, capture, and maintenance behavior remain intact after consolidation.
   - Why: Cleanup is complete only when the operator-facing contracts remain stable.
   - Progress: The consolidated runtime remained intact through the managed immutable installation upgrade, including locator-authoritative launch, provider hooks, health inspection, rollback, and version retention.
+- [x] `done` ~~Prove the Project Memory maintenance review boundary.~~
+  - Description: Exercise recent structural changes through candidate creation, human review, exact reviewed-artifact promotion, source reconciliation, and operational status before expanding external dogfood.
+  - Why: Clean-project dogfood should begin from a maintenance path that cannot silently reauthor an accepted review or misreport expected single-flight contention as failure.
+  - Progress: Completed on 2026-07-19. Reviewed maintenance artifacts can be promoted byte-for-byte with drift protection, reconciled through the normal source lifecycle, and reported accurately when automatic work yields to an active explicit mutation.
 
 ## Roadmap Step 12: External Project Dogfood
 
@@ -407,6 +411,7 @@ Class Kit and Droplet Bot exercise complementary paths. Class Kit already has su
   - Description: Register Droplet Bot as a new project with no pre-existing project-scoped SQLite memory, then run the same first-create and maintenance path from a genuinely clean state.
   - Why: A clean initialization exposes first-run assumptions that an established project with accumulated memory can hide.
   - Shape: Treat Droplet Bot as a distinct Myelin project identity rather than reusing the existing `wizepal` SQLite continuity.
+  - Progress: The internal Project Memory maintenance review gate is complete; this clean bootstrap is now the next product workload.
 - [ ] `open` Run the full external-project dogfood across both paths.
   - Description: Use the installed command and public CLI/JSON contracts to run create, query, maintenance, and auto-maintenance for Class Kit and Droplet Bot, then ask real Project and Session Memory questions before touching either repo directly.
   - Why: Comparing continuity-rich rebootstrap with clean initialization tests both sides of the operator product boundary.

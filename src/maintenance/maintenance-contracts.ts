@@ -95,7 +95,7 @@ export type AutoProjectMemoryMaintenanceScheduleResult =
     };
 
 export type AutoProjectMemoryMaintenanceRunResult = {
-  status: "completed" | "failed";
+  status: "completed" | "failed" | "skipped";
   project_key: string;
   run_id: string;
   maintenance_status?: string;
@@ -103,6 +103,7 @@ export type AutoProjectMemoryMaintenanceRunResult = {
   counts_before: AutoProjectMemoryMaintenanceCounts;
   counts_after: AutoProjectMemoryMaintenanceCounts;
   error_message?: string;
+  reason?: string;
 };
 
 export type AutoProjectMemoryMaintenanceState = MaintenanceRunState & {

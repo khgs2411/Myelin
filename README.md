@@ -47,6 +47,8 @@ myelin schema build <project-key>
 myelin memory query <project-key> "What should I know?"
 myelin memory index session <project-key>
 myelin memory maintain project <project-key>
+myelin memory maintain project <project-key> --review
+myelin memory maintain project <project-key> --promote <review-run>
 myelin project learn <project-key> --dry-run
 myelin ingest <project-key>
 myelin ingest status <ingest-job-id>
@@ -130,7 +132,7 @@ For the exhaustive command reference, including arguments, options, side effects
 | Experience Log to Session Memory ingest | `myelin ingest <key>` / `myelin ingest status <ingest-job-id>` |
 | Session Memory embedding index/backfill | `myelin memory index session <key> [--limit N] [--retry-failed] [--json]` |
 | Embedding contract migration/rollback/cleanup | `myelin memory embeddings migrate\|rollback\|prune [--apply] [--json]` |
-| Project Memory candidate maintenance after bootstrap | `myelin memory maintain project <key> [--json]` |
+| Project Memory candidate maintenance after bootstrap | `myelin memory maintain project <key> [--review] [--promote <run>] [--json]` |
 | Review neutral terminal memory outcomes | `myelin memory review <key> [--json]` |
 | `ask` / query helpers | `myelin memory query <key> "<question>"` / `make query ...` |
 | `make init PROJECT=<key>` | `myelin project onboard <key>` / `make onboard PROJECT=<key>` |

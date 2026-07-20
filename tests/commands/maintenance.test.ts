@@ -77,3 +77,27 @@ test("maintenance worker routes fail closed on usage and service failure", async
     message: "session failed",
   });
 });
+
+test("project maintenance worker reports lock contention as a successful skip", async () => {
+  const cli = createCli("myelin");
+  registerMaintenanceCommands(cli, {
+    context,
+    projectRunner: {
+      async run(projectKey) {
+        return {
+          status: "skipped",
+          project_key: projectKey,
+          run_id: "contended_run",
+          changed_files: [],
+          counts_before: { pending_inbox_items: 0, pending_project_candidates: 2 },
+          counts_after: { pending_inbox_items: 0, pending_project_candidates: 2 },
+          reason: "Project Memory mutation already running for demo: active. Wait for it to finish before starting project maintenance.",
+        };
+      },
+    },
+  });
+
+  const result = await cli.run(["maintenance", "worker", "project", "demo"]);
+  expect(result.exitCode).toBe(0);
+  expect(result.message).toContain("skipped for demo");
+});

@@ -5,6 +5,7 @@ import type { LockStatus, OperationalState } from "./contracts.ts";
 export type MaintenanceStateRecord = {
   last_run_id?: string;
   last_status?: string;
+  last_reason?: string;
   last_pid?: number | null;
   last_log_path?: string;
 };

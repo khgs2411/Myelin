@@ -61,6 +61,28 @@ test("keeps a legacy degraded maintenance result eligible as a curated baseline"
   expect(result.warnings.map((item) => item.code)).not.toContain("PROJECT_CURATION_NOT_READY");
 });
 
+test("reports legacy explicit-mutation contention as skipped rather than failed maintenance", async () => {
+  await seedDb();
+  await mkdir(join(root, "projects", "demo"), { recursive: true });
+  await writeFile(join(root, "projects", "demo", "index.md"), "# Demo\n\nCanonical Project Memory.\n", "utf8");
+  await writeJson(join(root, "state", "demo", "project-memory.json"), {
+    schema_version: 2,
+    status: "curated",
+  });
+  await writeJson(join(root, "state", "demo", "auto-project-memory-maintenance.json"), {
+    project_key: "demo",
+    last_run_id: "auto_contended",
+    last_status: "failed",
+    last_reason: "Project Memory mutation already running for demo: project_memory_project_maintenance_active. Wait for it to finish before starting project maintenance.",
+  });
+
+  const result = await new StatusService(root, { locatorPath: join(root, "machine", "install.json") })
+    .summary({ projectKey: "demo" });
+
+  expect(result.project_memory.maintenance.lifecycle).toBe("skipped");
+  expect(result.warnings.map((item) => item.code)).not.toContain("PROJECT_MAINTENANCE_FAILED");
+});
+
 test("status leaves database bytes unchanged and creates no SQLite sidecars", async () => {
   await seedDb();
   const dbPath = join(root, "state", "memory", "memory.db");

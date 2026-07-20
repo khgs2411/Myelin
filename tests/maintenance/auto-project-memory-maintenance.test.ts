@@ -197,6 +197,33 @@ test("auto project memory maintenance run records failed maintenance as failed",
   });
 });
 
+test("auto project memory maintenance treats explicit mutation contention as skipped", async () => {
+  await writeConfig(["AUTO_PROJECT_MEMORY_MAINTENANCE=1"]);
+  seedProjectCandidate("cand_1");
+  const reason = "Project Memory mutation already running for demo: project_memory_project_maintenance_active. Wait for it to finish before starting project maintenance.";
+  const service = new AutoProjectMemoryMaintenanceService(root, {
+    now: () => new Date("2026-07-07T10:00:00.000Z"),
+    runMaintenance: async () => {
+      throw new Error(reason);
+    },
+  });
+
+  const result = await service.run("demo", "auto_project_memory_contended");
+
+  expect(result).toMatchObject({
+    status: "skipped",
+    project_key: "demo",
+    run_id: "auto_project_memory_contended",
+    reason,
+    counts_after: { pending_project_candidates: 1 },
+  });
+  await expect(readState(root, "demo")).resolves.toMatchObject({
+    last_run_id: "auto_project_memory_contended",
+    last_status: "skipped",
+    last_reason: reason,
+  });
+});
+
 test("runtime inbox creation invokes project memory auto-maintenance scheduling", async () => {
   const scheduled: string[] = [];
 

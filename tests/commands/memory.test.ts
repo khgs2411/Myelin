@@ -729,11 +729,19 @@ test("memory maintain project exposes a pure maintenance command", async () => {
 
   const missing = await cli.run(["memory", "maintain", "project"]);
   const recreate = await cli.run(["memory", "maintain", "project", "demo", "--recreate"]);
+  const missingPromotionRun = await cli.run(["memory", "maintain", "project", "demo", "--promote"]);
+  const conflictingPromotion = await cli.run([
+    "memory", "maintain", "project", "demo", "--review", "--promote", "run-id",
+  ]);
 
   expect(missing.exitCode).toBe(1);
   expect(missing.message).toContain("Usage: myelin memory maintain project <project-key>");
   expect(recreate.exitCode).toBe(1);
   expect(recreate.message).toContain("Unknown memory maintain project option: --recreate");
+  expect(missingPromotionRun.exitCode).toBe(1);
+  expect(missingPromotionRun.message).toContain("--promote requires a run");
+  expect(conflictingPromotion.exitCode).toBe(1);
+  expect(conflictingPromotion.message).toContain("--promote cannot be combined with --dry-run or --review");
 });
 
 test("memory maintain project emits foreground progress", async () => {

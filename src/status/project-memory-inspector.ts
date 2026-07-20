@@ -13,6 +13,7 @@ import {
   projectMemoryMaintenanceStatus,
   projectMemoryStatus,
 } from "../project/project-memory-state.ts";
+import { isProjectMemoryMutationContentionReason } from "../project/project-memory-mutation-runtime.ts";
 
 export async function inspectProjectMemory(input: {
   root: string;
@@ -43,7 +44,11 @@ export async function inspectProjectMemory(input: {
   if (needsReview > 0) warnings.push(warning("PROJECT_CANDIDATES_NEED_REVIEW", "attention", "project_memory", "Project Memory candidates need review.", [dbId]));
   if (maintenanceRead.error) warnings.push(warning("PROJECT_MAINTENANCE_STATE_MALFORMED", "attention", "project_memory", maintenanceRead.error, [stateId]));
   if (lock.state === "blocked") warnings.push(warning("PROJECT_MAINTENANCE_STALE_LOCK", "blocked", "project_memory", lock.reason ?? "Project maintenance lock is stale.", [lockId, stateId]));
-  const maintenanceFailureState = maintenanceRead.value?.last_status === "failed" ? "attention" : "healthy";
+  const recordedMaintenanceStatus = maintenanceRead.value?.last_status === "failed"
+    && isProjectMemoryMutationContentionReason(maintenanceRead.value.last_reason)
+    ? "skipped"
+    : maintenanceRead.value?.last_status;
+  const maintenanceFailureState = recordedMaintenanceStatus === "failed" ? "attention" : "healthy";
   if (maintenanceFailureState === "attention") warnings.push(warning("PROJECT_MAINTENANCE_FAILED", "attention", "project_memory", "The latest Project Memory maintenance run failed.", [stateId]));
   const pressure = inbox.count + pending + needsReview;
   if (pressure >= input.config.minPendingItems && lock.lock.lifecycle !== "active") {
@@ -128,7 +133,7 @@ export async function inspectProjectMemory(input: {
     section: {
       state, lifecycle, evidence_ids: [dbId, stateId, lockId, projectStateId],
       inbox: { pending_items: inbox.count }, candidates: { pending, needs_review: needsReview },
-      maintenance: { enabled: input.config.enabled, lifecycle: lock.lock.lifecycle === "active" ? "running" : lock.lock.lifecycle === "stale" ? "stale_lock" : maintenanceRead.value?.last_status ?? "never_run", lock: lock.lock, last_run_id: maintenanceRead.value?.last_run_id ?? null, last_log_path: normalizeRecordedCheckoutPath(input.root, maintenanceRead.value?.last_log_path ?? null) },
+      maintenance: { enabled: input.config.enabled, lifecycle: lock.lock.lifecycle === "active" ? "running" : lock.lock.lifecycle === "stale" ? "stale_lock" : recordedMaintenanceStatus ?? "never_run", lock: lock.lock, last_run_id: maintenanceRead.value?.last_run_id ?? null, last_log_path: normalizeRecordedCheckoutPath(input.root, maintenanceRead.value?.last_log_path ?? null) },
       curation: { lifecycle: curationLifecycle, canonical_wiki_path: `projects/${input.projectKey}`, latest_run_path: latestRun },
       retrieval,
     }, warnings, actions,

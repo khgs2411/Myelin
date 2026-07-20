@@ -196,6 +196,7 @@ type ParsedMaintainProjectArgs = {
   json: boolean;
   provider?: "codex" | "claude";
   modelOverride?: string;
+  promoteRun?: string;
   error?: string;
 };
 
@@ -290,7 +291,9 @@ async function maintainProject(args: string[], deps: MemoryCommandDeps): Promise
     project_key: parsed.projectKey,
     stage: "command",
     status: "started",
-    message: "project maintenance accepted; preparing inputs and run artifacts",
+    message: parsed.promoteRun
+      ? `review promotion accepted; verifying ${parsed.promoteRun}`
+      : "project maintenance accepted; preparing inputs and run artifacts",
   });
   try {
     const result = await new ProjectService(deps.context.myelinRoot).runProjectMaintenance({
@@ -299,6 +302,7 @@ async function maintainProject(args: string[], deps: MemoryCommandDeps): Promise
       review: parsed.review,
       provider: parsed.provider,
       modelOverride: parsed.modelOverride,
+      promoteRun: parsed.promoteRun,
       env: deps.env,
       runner: deps.runner,
       now: deps.now?.(),
@@ -326,6 +330,7 @@ async function maintainProject(args: string[], deps: MemoryCommandDeps): Promise
     if (result.applied_item_ids?.length) lines.push(`applied items: ${result.applied_item_ids.join(", ")}`);
     if (result.changed_files?.length) lines.push(`changed files: ${result.changed_files.join(", ")}`);
     if (result.status === "completed_with_pending_index") lines.push("pending retrieval index: yes");
+    if (result.promoted_from_run) lines.push(`promoted reviewed run: ${result.promoted_from_run}`);
     if (result.stopped_reason) lines.push(`stopped: ${result.stopped_reason}`);
     return result.status === "failed" ? fail(lines.join("\n")) : ok(lines.join("\n"));
   } catch (error) {
@@ -347,25 +352,30 @@ function parseMaintainProjectArgs(args: string[]): ParsedMaintainProjectArgs {
   let json = false;
   let provider: "codex" | "claude" | undefined;
   let modelOverride: string | undefined;
+  let promoteRun: string | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === "--dry-run") dryRun = true;
     else if (arg === "--review") review = true;
     else if (arg === "--json") json = true;
+    else if (arg === "--promote") {
+      promoteRun = args[++index];
+      if (!promoteRun) return { projectKey, dryRun, review, json, promoteRun, error: "--promote requires a run" };
+    }
     else if (arg === "--provider") {
       const value = args[++index];
-      if (value !== "codex" && value !== "claude") return { projectKey, dryRun, review, json, error: "--provider must be codex or claude" };
+      if (value !== "codex" && value !== "claude") return { projectKey, dryRun, review, json, promoteRun, error: "--provider must be codex or claude" };
       provider = value;
     } else if (arg === "--model") {
       modelOverride = args[++index];
-      if (!modelOverride) return { projectKey, dryRun, review, json, error: "--model requires a value" };
+      if (!modelOverride) return { projectKey, dryRun, review, json, promoteRun, error: "--model requires a value" };
     } else if (arg.startsWith("-")) {
-      return { projectKey, dryRun, review, json, error: `Unknown memory maintain project option: ${arg}` };
+      return { projectKey, dryRun, review, json, promoteRun, error: `Unknown memory maintain project option: ${arg}` };
     } else if (!projectKey) {
       projectKey = arg;
     } else {
-      return { projectKey, dryRun, review, json, error: `Unexpected memory maintain project argument: ${arg}` };
+      return { projectKey, dryRun, review, json, promoteRun, error: `Unexpected memory maintain project argument: ${arg}` };
     }
   }
 
@@ -375,10 +385,14 @@ function parseMaintainProjectArgs(args: string[]): ParsedMaintainProjectArgs {
       dryRun,
       review,
       json,
-      error: "Usage: myelin memory maintain project <project-key> [--dry-run] [--review] [--provider <name>] [--model <model>] [--json]",
+      promoteRun,
+      error: "Usage: myelin memory maintain project <project-key> [--dry-run] [--review] [--promote <run>] [--provider <name>] [--model <model>] [--json]",
     };
   }
-  return { projectKey, dryRun, review, json, provider, modelOverride };
+  if (promoteRun && (dryRun || review)) {
+    return { projectKey, dryRun, review, json, provider, modelOverride, promoteRun, error: "--promote cannot be combined with --dry-run or --review" };
+  }
+  return { projectKey, dryRun, review, json, provider, modelOverride, promoteRun };
 }
 
 async function memoryInboxCreate(args: string[], deps: MemoryCommandDeps): Promise<CommandResult> {

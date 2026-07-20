@@ -27,9 +27,11 @@ export function registerMaintenanceCommands(cli: Cli, deps: MaintenanceCommandDe
     const projectKey = onlyProjectKey(args, "myelin maintenance worker project <project-key>");
     if (typeof projectKey !== "string") return projectKey;
     const result = await (deps.projectRunner ?? new AutoProjectMemoryMaintenanceService(deps.context.myelinRoot)).run(projectKey);
-    return result.status === "failed"
-      ? fail(result.error_message ?? "Auto Project Memory maintenance failed.")
-      : ok(`Auto Project Memory maintenance ${result.run_id} completed for ${result.project_key}.`);
+    if (result.status === "failed") return fail(result.error_message ?? "Auto Project Memory maintenance failed.");
+    if (result.status === "skipped") {
+      return ok(`Auto Project Memory maintenance ${result.run_id} skipped for ${result.project_key}: ${result.reason ?? "maintenance unavailable"}`);
+    }
+    return ok(`Auto Project Memory maintenance ${result.run_id} completed for ${result.project_key}.`);
   });
 }
 

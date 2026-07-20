@@ -94,6 +94,12 @@ export function projectMemoryMutationLockPath(root: string, projectKey: string):
   return projectStatePath(root, projectKey, ".project-memory-mutation.lock");
 }
 
+export function isProjectMemoryMutationContentionReason(reason: string | undefined): boolean {
+  return typeof reason === "string"
+    && reason.startsWith("Project Memory mutation already running for ")
+    && reason.includes(". Wait for it to finish before starting ");
+}
+
 function resultFailed(value: unknown): boolean {
   return Boolean(value && typeof value === "object" && "status" in value && value.status === "failed");
 }

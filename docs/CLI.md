@@ -449,7 +449,7 @@ myelin memory review class-kit --status insufficient_evidence --json
 myelin memory review class-kit --status no_output --limit 25
 ```
 
-### `myelin memory maintain project <project-key> [--dry-run] [--review] [--provider codex|claude] [--model <model>] [--json]`
+### `myelin memory maintain project <project-key> [--dry-run] [--review] [--promote <run>] [--provider codex|claude] [--model <model>] [--json]`
 
 Maintains already-curated Project Memory from runtime inbox items and pending Project Memory candidates.
 
@@ -459,6 +459,8 @@ This is the post-bootstrap Project Memory maintenance pipeline:
 2. Invoke the maintenance agent over pending Project Memory candidates and existing wiki docs.
 3. Publish canonical markdown updates and refresh derived Project Memory retrieval indexes.
 
+For an operator-reviewed update, first run with `--review`, inspect the run-local draft, and then pass that run to `--promote`. Promotion does not invoke the authoring agent again. It cryptographically verifies the reviewed draft and report, canonical Project Memory baseline, target repository snapshot, and reviewed pending sources before publishing those exact reviewed markdown bytes through a separate journaled apply run.
+
 Arguments:
 
 - `project-key`: project whose already-curated Project Memory should be maintained.
@@ -466,7 +468,8 @@ Arguments:
 Options:
 
 - `--dry-run`: run without publishing canonical writes.
-- `--review`: run in review-oriented mode and stop before publishing canonical writes.
+- `--review`: author a review checkpoint and stop before publishing canonical writes.
+- `--promote <run>`: publish an exact validated maintenance review. Accepts the run ID or exact `runs/<key>/project-learn/<run>` path and cannot be combined with `--dry-run` or `--review`.
 - `--provider codex|claude`: provider override.
 - `--model <model>`: model override.
 - `--json`: emit structured run result JSON.
@@ -480,9 +483,17 @@ Side effects:
 
 - Fails without bootstrapping if Project Memory is not already curated. Use `myelin project learn <project-key>` for first-time create mode.
 - May invoke provider CLIs.
+- `--promote` does not invoke maintenance authoring; optional post-apply retrieval hint generation may still use the selected provider.
 - May update canonical Project Memory markdown and source-consumption state.
 - Marks terminal Project Memory candidates as processed through source-consumption reconciliation.
 - Refreshes Project Memory retrieval sections, hints, vector index, and FTS index after published markdown changes.
+
+Examples:
+
+```bash
+myelin memory maintain project llm-wiki --review
+myelin memory maintain project llm-wiki --promote runs/llm-wiki/project-learn/2026-07-19T10-00-00.000Z-run
+```
 
 Automation:
 

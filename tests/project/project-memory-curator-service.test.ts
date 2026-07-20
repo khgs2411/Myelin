@@ -277,6 +277,140 @@ test("review mode runs agents but stops before publishing canonical wiki writes"
   expect(await Bun.file(join(root, "projects", "demo", "runtime.md")).exists()).toBe(false);
 });
 
+test("promotes the exact validated maintenance review without reauthoring", async () => {
+  await seedProject("curated");
+  seedMemoryDb();
+  await seedSchema();
+  await writeFile(join(root, "projects", "demo", "index.md"), "# Demo\n\nExisting index.\n", "utf8");
+  await writeFile(join(root, "projects", "demo", "runtime.md"), "# Runtime\n\nOld runtime.\n", "utf8");
+  const db = openMemoryDb(root);
+  createMemoryCandidate(db, {
+    id: "cand_runtime",
+    project_key: "demo",
+    scope: "project",
+    status: "pending",
+    candidate_type: "fact",
+    title: "Runtime changed",
+    summary: "Runtime documentation should mention the CLI surface.",
+    source_event_refs: ["event:review"],
+    evidence: {},
+    proposed_payload: {},
+    confidence: "high",
+    risk: "low",
+    reason: "review promotion test",
+    now: "2026-07-06T09:00:00.000Z",
+  });
+  db.close();
+  const stubs = await seedMaintenanceStubs("demo");
+  await writeFile(
+    join(stubs, "maintenance", "draft-wiki", "runtime.md"),
+    "# Runtime\n\nUpdated runtime mentions the CLI surface in `target-repo/src/commands/project.ts`.\n",
+    "utf8",
+  );
+  const service = new ProjectMemoryCuratorService(root, completedRetrievalDeps());
+
+  const reviewed = await service.runProjectMaintenance({
+    projectKey: "demo",
+    dryRun: false,
+    review: true,
+    now: new Date("2026-07-06T15:00:00.000Z"),
+    env: { ...process.env, [FILE_AUTHORING_STUB_OUTPUTS_DIR]: stubs },
+  });
+
+  expect(reviewed.status).toBe("needs_review");
+  expect(reviewed.artifacts.review_checkpoint).toBe("review-checkpoint.json");
+  expect(reviewed.artifacts.publication_validation).toBe("canonical-publication-validation.json");
+  expect(await Bun.file(join(root, reviewed.run_dir, "review-checkpoint.json")).exists()).toBe(true);
+  expect(await readFile(join(root, "projects", "demo", "runtime.md"), "utf8")).toContain("Old runtime");
+  const reviewedRuntime = await readFile(
+    join(root, reviewed.run_dir, "agents", "maintenance", "draft-wiki", "runtime.md"),
+    "utf8",
+  );
+  expect(reviewedRuntime).toContain("`repo:src/commands/project.ts`");
+  expect(reviewedRuntime).not.toContain("target-repo/");
+
+  const promoted = await service.runProjectMaintenance({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    promoteRun: reviewed.run_dir,
+    now: new Date("2026-07-06T15:10:00.000Z"),
+  });
+
+  expect(promoted.status).toBe("completed");
+  expect(promoted.curation_kind).toBe("human_reviewed");
+  expect(promoted.promoted_from_run).toBe(reviewed.run_dir);
+  expect(promoted.artifacts.review_promotion_source).toBe("review-promotion-source.json");
+  expect(await readFile(join(root, "projects", "demo", "runtime.md"), "utf8")).toBe(reviewedRuntime);
+  expect(await Bun.file(join(root, reviewed.run_dir, "project-memory-apply-journal.json")).exists()).toBe(false);
+  expect(await Bun.file(join(root, promoted.run_dir, "project-memory-apply-journal.json")).exists()).toBe(true);
+  const state = JSON.parse(await readFile(join(root, "state", "demo", "project-memory.json"), "utf8"));
+  expect(state).toMatchObject({
+    curation_kind: "human_reviewed",
+    source_run_dir: promoted.run_dir,
+    reviewed_from_run: reviewed.run_dir,
+  });
+  const readDb = openMemoryDb(root);
+  expect(getMemoryCandidate(readDb, "cand_runtime")?.status).toBe("processed");
+  readDb.close();
+});
+
+test("blocks review promotion when reviewed bytes or canonical Project Memory drift", async () => {
+  await seedProject("curated");
+  seedMemoryDb();
+  await seedSchema();
+  await writeFile(join(root, "projects", "demo", "index.md"), "# Demo\n\nExisting index.\n", "utf8");
+  await writeFile(join(root, "projects", "demo", "runtime.md"), "# Runtime\n\nOld runtime.\n", "utf8");
+  const db = openMemoryDb(root);
+  createMemoryCandidate(db, {
+    id: "cand_runtime",
+    project_key: "demo",
+    scope: "project",
+    status: "pending",
+    candidate_type: "fact",
+    title: "Runtime changed",
+    summary: "Runtime documentation should mention the CLI surface.",
+    source_event_refs: ["event:review-drift"],
+    evidence: {},
+    proposed_payload: {},
+    confidence: "high",
+    risk: "low",
+    reason: "review drift test",
+    now: "2026-07-06T09:00:00.000Z",
+  });
+  db.close();
+  const stubs = await seedMaintenanceStubs("demo");
+  const service = new ProjectMemoryCuratorService(root, completedRetrievalDeps());
+  const reviewed = await service.runProjectMaintenance({
+    projectKey: "demo",
+    dryRun: false,
+    review: true,
+    now: new Date("2026-07-06T16:00:00.000Z"),
+    env: { ...process.env, [FILE_AUTHORING_STUB_OUTPUTS_DIR]: stubs },
+  });
+  const draftPath = join(root, reviewed.run_dir, "agents", "maintenance", "draft-wiki", "runtime.md");
+  const reviewedDraft = await readFile(draftPath, "utf8");
+  await writeFile(draftPath, `${reviewedDraft}\ntampered\n`, "utf8");
+
+  await expect(service.runProjectMaintenance({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    promoteRun: reviewed.run_dir,
+    now: new Date("2026-07-06T16:10:00.000Z"),
+  })).rejects.toThrow("review artifact changed");
+
+  await writeFile(draftPath, reviewedDraft, "utf8");
+  await writeFile(join(root, "projects", "demo", "runtime.md"), "# Runtime\n\nConcurrent canonical change.\n", "utf8");
+  await expect(service.runProjectMaintenance({
+    projectKey: "demo",
+    dryRun: false,
+    review: false,
+    promoteRun: reviewed.run_dir,
+    now: new Date("2026-07-06T16:20:00.000Z"),
+  })).rejects.toThrow("canonical Project Memory changed after review");
+});
+
 test("reports a resumable checkpoint when canonical publication validation fails", async () => {
   await seedProject("uncurated");
   seedMemoryDb();

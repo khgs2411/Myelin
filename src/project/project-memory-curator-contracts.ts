@@ -43,6 +43,7 @@ export type RunProjectMemoryCuratorInput = {
   now?: Date;
   recreate?: boolean;
   resumeRun?: string;
+  promoteRun?: string;
   progress?: ProjectLearnProgressSink;
 };
 
@@ -78,6 +79,8 @@ export type ProjectMemoryCuratorRunResult = {
     pre_maintenance_wiki?: "pre-maintenance-wiki";
     create_checkpoint?: "create-checkpoint.json";
     resume_source?: "resume-source.json";
+    review_checkpoint?: "review-checkpoint.json";
+    review_promotion_source?: "review-promotion-source.json";
   };
   curation_kind?: "agent_authored" | "human_reviewed";
   run_kind?: "create" | "maintenance" | "create_then_maintenance" | "recreate";
@@ -93,5 +96,6 @@ export type ProjectMemoryCuratorRunResult = {
   resumable?: boolean;
   resume_command?: string;
   resumed_from_run?: string;
+  promoted_from_run?: string;
   failure_kind?: "provider_failed_before_output" | "curator_output_invalid_json";
 };

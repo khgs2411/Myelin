@@ -155,6 +155,7 @@ export type ProjectMemoryAgentStateV2 = {
   project_key: string;
   status: "curated" | "degraded" | "failed";
   source_run_dir: string;
+  reviewed_from_run?: string;
   updated_at: string;
   provider_mode: ProjectMemoryAgentProviderMode;
   curation_kind: ProjectMemoryAgentCurationKind;

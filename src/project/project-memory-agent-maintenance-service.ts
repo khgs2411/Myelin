@@ -174,6 +174,11 @@ export function assertMaintenanceReport(
   assertStringArray(report.evidence_paths, "maintenance report evidence_paths");
   assertStringArray(report.known_gaps, "maintenance report known_gaps");
   const pendingRefs = new Set(pendingSources.map((source) => `${source.source_kind}:${source.source_ref}`));
+  for (const touchedPath of report.touched_paths) {
+    if (!touchedPath.endsWith(".md") || touchedPath.startsWith("reports/") || touchedPath.includes("..")) {
+      throw new Error(`maintenance report touched_paths must identify draft markdown only: ${touchedPath}`);
+    }
+  }
   const seenRefs = new Set<string>();
   const appliedOutputRefs = new Set<string>();
   for (const disposition of report.dispositions) {
@@ -272,8 +277,8 @@ function maintenancePrompt(
   return [
     `You are maintaining Project Memory documentation for project ${projectKey}.`,
     "Read the repository from target-repo/ and the existing documentation from draft-wiki/.",
-    `Read ${PROJECT_REPOSITORY_IDENTITY_REF} as sanitized deterministic checkout evidence. When docs conflict with it, preserve and explicitly label the contradiction; never silently prefer a stale no-remote claim.`,
-    `Use ${PROJECT_REPOSITORY_IDENTITY_REF} in report evidence_paths when relevant. Do not add or refresh a wiki link to that run-local artifact merely because checkout identity was inspected.`,
+    `Read ${PROJECT_REPOSITORY_IDENTITY_REF} as sanitized deterministic checkout evidence. Branch, commit, and remote snapshots are run evidence rather than durable Project Memory policy. Record relevant contradictions in the maintenance report's evidence_paths and disposition reason; do not edit canonical prose solely to reconcile checkout snapshots unless an explicit approved durable-policy source requires that change.`,
+    `Use ${PROJECT_REPOSITORY_IDENTITY_REF} in report evidence_paths when relevant. Do not add or refresh a wiki link or identity paragraph merely because checkout identity was inspected.`,
     "Keep index.md as current canonical navigation: preserve links to every existing subject page and never describe published pages as planned, eventual, or placeholders.",
     ...PROJECT_MEMORY_BEHAVIOR_COVERAGE_GUIDANCE,
     "For each pending source, decide whether it changes durable project documentation.",
@@ -282,6 +287,7 @@ function maintenancePrompt(
     "A requested or proposed implementation handoff is a lead, not proof. Verify it against current repository code and tests: if the work is implemented and materially changes durable behavior, document that current behavior; if it is not implemented, use belongs_to_other_layer for engineering work or not_durable for transient follow-up. Do not classify verified implemented behavior as belongs_to_other_layer merely because the source was phrased as a proposal.",
     "Repository branch, commit hash, and remote URL snapshots are run evidence, not durable project facts. Do not add or refresh canonical prose solely to mirror the current checkout identity; use evidence_paths for repository-identity.json rather than output_refs.",
     "Candidate evidence requires at least one observed_facts item and proposed_payload requires at least one durable_facts item. The relevant_paths, uncertainties, suggested_subjects, and verification_needed fields are required arrays but may be empty. Preserve these exact cardinalities when documenting the candidate contract.",
+    "Attribute that evidence-bearing shape to the ingest provider-output schema and worker parser, not to Project Memory maintenance input validation. Maintenance deliberately accepts legacy and runtime-inbox candidates whose stored evidence or proposed payload may be empty, then verifies their concrete claims against current repository evidence.",
     "Pending source metadata is routing context, not an acceptance gate. Legacy candidates and handoffs may have empty evidence or proposed payloads; for every concrete durable claim, search current target-repo code, tests, and canonical documentation before choosing a disposition.",
     "Use insufficient_evidence only after repository verification cannot establish the claimed fact, and state what current evidence was checked. Do not reject a concrete legacy lead merely because its stored evidence fields are empty when current repository evidence independently verifies it.",
     "Current repository code, active canonical documentation, and regression-test source are more authoritative than stale source wording. When a source calls a decision unresolved but current code and canonical docs consistently implement and name one choice, treat the source as stale and use already_covered or apply a correction; do not preserve a false unresolved state.",
@@ -299,6 +305,7 @@ function maintenancePrompt(
     "A source that clearly concerns another project or repository belongs_to_other_layer even when that other checkout is unavailable; do not classify it as insufficient_evidence merely because the current checkout cannot verify the other project.",
     "Use concrete repo paths and markdown output_refs where helpful.",
     "output_refs identify documentation outputs, not evidence. Every applied_to_project_memory output_ref must also appear in touched_paths; place repository and run evidence only in evidence_paths.",
+    "touched_paths identifies changed draft markdown only. Do not include the maintenance report, contracts, repository identity, or other run artifacts in touched_paths.",
     ...(retryFeedback ? [
       "This is a bounded retry after the previous authoring pass failed validation.",
       `Validation feedback: ${retryFeedback}`,
