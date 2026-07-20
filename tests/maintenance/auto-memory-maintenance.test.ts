@@ -321,6 +321,7 @@ test("auto memory maintenance runs one bounded drain window and schedules contin
           kind: "started",
           project_key: input.projectKey,
           queued_count: 10,
+          reconciled_count: 0,
           selected_count: input.limit ?? 10,
           batch_size: input.batchSize ?? 4,
           batch_count: 1,
@@ -332,6 +333,7 @@ test("auto memory maintenance runs one bounded drain window and schedules contin
       },
       async status() {
         statusReads += 1;
+        if (statusReads === 2) deleteExperienceEvents(6);
         return {
           kind: "project",
           status: ingestProjectStatus(statusReads === 1 ? 1 : 0),
@@ -352,7 +354,7 @@ test("auto memory maintenance runs one bounded drain window and schedules contin
     status: "completed",
     ingest_started: true,
     indexed: 3,
-    queued_remaining: 10,
+    queued_remaining: 4,
     rescheduled: true,
   });
   expect(starts).toEqual([{ limit: 4, batchSize: 4 }]);
@@ -371,7 +373,63 @@ test("auto memory maintenance runs one bounded drain window and schedules contin
     project_key: "demo",
     last_status: "scheduled",
     last_pid: 4321,
-    last_counts: { queued_count: 10 },
+    last_counts: { queued_count: 4 },
+  });
+});
+
+test("auto memory maintenance stops instead of rescheduling when ingest makes no queue progress", async () => {
+  await writeConfig([
+    "AUTO_MEMORY_MAINTENANCE=1",
+    "AUTO_MEMORY_MIN_CAPTURED_EVENTS=2",
+    "AUTO_MEMORY_DRAIN_POLL_INTERVAL_MS=1",
+    "AUTO_MEMORY_DRAIN_TIMEOUT_MS=1000",
+    "INGEST_BATCH_SIZE=4",
+  ]);
+  seedExperienceEvents(4);
+  const spawned: Array<Parameters<DetachedSpawner>[0]> = [];
+
+  const result = await new AutoMemoryMaintenanceService(root, {
+    ingestService: {
+      async start(input) {
+        return {
+          kind: "started",
+          project_key: input.projectKey,
+          queued_count: 4,
+          reconciled_count: 0,
+          selected_count: 4,
+          batch_size: 4,
+          batch_count: 1,
+          target_branch: "master",
+          job: fakeIngestJob(),
+          jobs: [],
+          launches: [],
+        };
+      },
+      async status() {
+        return { kind: "project", status: ingestProjectStatus(0) };
+      },
+    },
+    async indexPending() {
+      return { indexed: 0, failed: 0, pending_remaining: 0 };
+    },
+    spawn: (options) => {
+      spawned.push(options);
+      return { pid: 4321, unref: () => {} };
+    },
+  }).run("demo", "auto_memory_no_progress");
+
+  expect(result).toMatchObject({
+    status: "failed",
+    ingest_started: true,
+    queued_remaining: 4,
+    rescheduled: false,
+    error_message: "Auto memory maintenance made no queue progress for demo: 4 before, 4 after",
+  });
+  expect(spawned).toHaveLength(0);
+  await expect(readState(root, "demo")).resolves.toMatchObject({
+    last_status: "failed",
+    last_reason: "Auto memory maintenance made no queue progress for demo: 4 before, 4 after",
+    last_counts: { queued_count: 4, queued_remaining: 4, rescheduled: false },
   });
 });
 
@@ -398,6 +456,7 @@ test("forced SessionStart worker ingests a below-threshold queue", async () => {
             kind: "started",
             project_key: input.projectKey,
             queued_count: 1,
+            reconciled_count: 0,
             selected_count: 1,
             batch_size: input.batchSize ?? 1,
             batch_count: 1,
@@ -469,6 +528,20 @@ function seedExperienceEvents(count: number, offset = 0): void {
         status: "valid",
       });
     }
+  } finally {
+    db.close();
+  }
+}
+
+function deleteExperienceEvents(count: number): void {
+  const db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
+  try {
+    db.query(
+      `DELETE FROM experience_events
+       WHERE id IN (
+         SELECT id FROM experience_events WHERE project_key = ? ORDER BY occurred_at, id LIMIT ?
+       )`,
+    ).run("demo", count);
   } finally {
     db.close();
   }

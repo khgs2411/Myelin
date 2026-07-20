@@ -218,6 +218,7 @@ export class AutoMemoryMaintenanceService implements AutoMemoryMaintenanceSchedu
             indexed: indexResult.indexed,
             index_failed: indexResult.failed,
             pending_remaining: indexResult.pending_remaining,
+            reconciled_count: ingestResult?.reconciled_count ?? 0,
             queued_remaining: queuedRemaining,
           },
         });
@@ -229,8 +230,43 @@ export class AutoMemoryMaintenanceService implements AutoMemoryMaintenanceSchedu
           indexed: indexResult.indexed,
           index_failed: indexResult.failed,
           pending_remaining: indexResult.pending_remaining,
+          reconciled_count: ingestResult?.reconciled_count ?? 0,
           queued_remaining: queuedRemaining,
           error_message: drainError.message,
+        };
+      }
+
+      if (ingestResult?.kind === "started" && queuedRemaining >= queuedBefore) {
+        const reason = `Auto memory maintenance made no queue progress for ${projectKey}: ${queuedBefore} before, ${queuedRemaining} after`;
+        await writeState(this.root, projectKey, {
+          ...(await readState(this.root, projectKey)),
+          project_key: projectKey,
+          last_run_id: runId,
+          last_finished_at: this.now(),
+          last_status: "failed",
+          last_reason: reason,
+          last_counts: {
+            queued_count: ingestResult.queued_count,
+            indexed: indexResult.indexed,
+            index_failed: indexResult.failed,
+            pending_remaining: indexResult.pending_remaining,
+            reconciled_count: ingestResult.reconciled_count,
+            queued_remaining: queuedRemaining,
+            rescheduled: false,
+          },
+        });
+        return {
+          status: "failed",
+          project_key: projectKey,
+          run_id: runId,
+          ingest_started: true,
+          indexed: indexResult.indexed,
+          index_failed: indexResult.failed,
+          pending_remaining: indexResult.pending_remaining,
+          reconciled_count: ingestResult.reconciled_count,
+          queued_remaining: queuedRemaining,
+          rescheduled: false,
+          error_message: reason,
         };
       }
 
@@ -247,6 +283,7 @@ export class AutoMemoryMaintenanceService implements AutoMemoryMaintenanceSchedu
           indexed: indexResult.indexed,
           index_failed: indexResult.failed,
           pending_remaining: indexResult.pending_remaining,
+          reconciled_count: ingestResult?.reconciled_count ?? 0,
           queued_remaining: queuedRemaining,
           rescheduled: shouldContinue,
         },
@@ -267,6 +304,7 @@ export class AutoMemoryMaintenanceService implements AutoMemoryMaintenanceSchedu
         indexed: indexResult.indexed,
         index_failed: indexResult.failed,
         pending_remaining: indexResult.pending_remaining,
+        reconciled_count: ingestResult?.reconciled_count ?? 0,
         queued_remaining: queuedRemaining,
         rescheduled,
       };

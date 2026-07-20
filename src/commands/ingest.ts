@@ -115,10 +115,16 @@ function renderStart(result: StartIngestResult, json: boolean) {
   const warning = result.target_branch && result.target_branch !== "master"
     ? `\nWarning: ingesting with target repo on ${result.target_branch}. Captured rows may include multiple branches; branch context is preserved per row.`
     : "";
-  if (result.kind === "no_work") return ok(`No queued Experience Log rows for ${result.project_key}.${warning}`);
+  const reconciliation = result.reconciled_count > 0
+    ? `\nReconciled ${result.reconciled_count} terminally tombstoned replay row${result.reconciled_count === 1 ? "" : "s"}.`
+    : "";
+  if (result.kind === "no_work") {
+    return ok(`No queued Experience Log rows for ${result.project_key}.${reconciliation}${warning}`);
+  }
   return ok(
     `Started ${result.jobs.length} ingest job${result.jobs.length === 1 ? "" : "s"} for ${result.project_key}.` +
-      `\nqueued: ${result.queued_count}; selected: ${result.selected_count}; batch size: ${result.batch_size}${warning}`,
+      `\nqueued: ${result.queued_count}; selected: ${result.selected_count}; batch size: ${result.batch_size}` +
+      `${reconciliation}${warning}`,
   );
 }
 

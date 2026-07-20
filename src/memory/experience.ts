@@ -185,6 +185,29 @@ export function countExperienceEvents(db: Database, projectKey: string): number 
   return row.count;
 }
 
+export function reconcileTerminalExperienceEventReplays(db: Database, projectKey: string): number {
+  const result = db
+    .query(
+      `DELETE FROM experience_events
+       WHERE project_key = ?
+         AND EXISTS (
+           SELECT 1
+           FROM experience_event_tombstones t
+           WHERE t.project_key = experience_events.project_key
+             AND t.state <> 'claimed'
+             AND (
+               t.original_event_id = experience_events.id
+               OR (
+                 experience_events.dedupe_key IS NOT NULL
+                 AND t.dedupe_key = experience_events.dedupe_key
+               )
+             )
+         )`,
+    )
+    .run(projectKey);
+  return result.changes;
+}
+
 export function countLeasedExperienceEvents(db: Database, projectKey: string): number {
   const row = db
     .query(

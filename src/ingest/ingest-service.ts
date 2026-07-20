@@ -8,7 +8,7 @@ import {
 } from "./runtime.ts";
 import { runIngestWorker } from "./worker.ts";
 import { openMemoryDb } from "../memory/db.ts";
-import { countExperienceEvents } from "../memory/experience.ts";
+import { countExperienceEvents, reconcileTerminalExperienceEventReplays } from "../memory/experience.ts";
 import type { IngestJobRow } from "../memory/ingest-types.ts";
 import { loadConfig, MAX_INGEST_BATCH_SIZE } from "../runtime/config.ts";
 import { createId } from "../runtime/ids.ts";
@@ -46,6 +46,7 @@ export class IngestService {
       const targetRepo = await resolveIngestTargetRepo(this.root, input.projectKey);
       const targetBranch = await readCurrentGitBranch(targetRepo, this.deps.runner);
 
+      const reconciledCount = reconcileTerminalExperienceEventReplays(db, input.projectKey);
       const queuedCount = countExperienceEvents(db, input.projectKey);
       const selectedCount = input.limit === undefined ? queuedCount : Math.min(input.limit, queuedCount);
       if (selectedCount === 0) {
@@ -53,6 +54,7 @@ export class IngestService {
           kind: "no_work",
           project_key: input.projectKey,
           queued_count: queuedCount,
+          reconciled_count: reconciledCount,
           batch_size: batchSize,
           target_branch: targetBranch,
           jobs: [],
@@ -107,6 +109,7 @@ export class IngestService {
         kind: "started",
         project_key: input.projectKey,
         queued_count: queuedCount,
+        reconciled_count: reconciledCount,
         selected_count: selectedCount,
         batch_size: batchSize,
         batch_count: batchCount,

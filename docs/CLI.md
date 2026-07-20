@@ -226,12 +226,13 @@ Options:
 
 Output:
 
-- Started job count, queued count, selected count, and batch size.
+- Started job count, queued count, selected count, batch size, and any terminal replay rows reconciled before selection.
 - Warns when the registered target repo is on a non-`master` branch; this is warning-only.
 
 Side effects:
 
 - Creates `ingest_jobs` rows.
+- Removes queued replay rows already represented by terminal tombstones; the preserved tombstone remains the authoritative evidence.
 - Launches detached worker processes.
 - Workers may invoke provider CLIs from the target repo cwd.
 - Workers lease Experience Log rows into tombstones, create Session Memory outputs, and finalize tombstones.

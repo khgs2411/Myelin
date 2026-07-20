@@ -27,6 +27,7 @@ export type AutoMemoryMaintenanceRunResult = {
   indexed: number;
   index_failed: number;
   pending_remaining: number;
+  reconciled_count?: number;
   queued_remaining?: number;
   rescheduled?: boolean;
   error_message?: string;
@@ -42,6 +43,7 @@ export type AutoMemoryMaintenanceState = MaintenanceRunState & {
     indexed?: number;
     index_failed?: number;
     pending_remaining?: number;
+    reconciled_count?: number;
     queued_remaining?: number;
     rescheduled?: boolean;
   };

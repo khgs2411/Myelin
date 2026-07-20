@@ -32,6 +32,7 @@ export type StartIngestResult =
       kind: "no_work";
       project_key: string;
       queued_count: number;
+      reconciled_count: number;
       batch_size: number;
       target_branch: string | null;
       jobs: IngestJobRow[];
@@ -40,6 +41,7 @@ export type StartIngestResult =
       kind: "started";
       project_key: string;
       queued_count: number;
+      reconciled_count: number;
       selected_count: number;
       batch_size: number;
       batch_count: number;
