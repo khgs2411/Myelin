@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "subject_id": "destructive-operations",
+  "wiki_path": "destructive-operations.md",
+  "status": "completed",
+  "evidence_paths": [
+    "repository-identity.json",
+    "src/commands/project.ts",
+    "src/project/project-reset-service.ts",
+    "tests/commands/project.test.ts",
+    "src/commands/install.ts",
+    "src/install/install-service.ts",
+    "src/install/version-store.ts",
+    "tests/commands/install.test.ts",
+    "tests/install/install-service.test.ts",
+    "tests/install/version-store.test.ts",
+    "src/commands/memory.ts",
+    "src/memory/embedding-contract-lifecycle-service.ts",
+    "src/memory/embedding-contract-store.ts",
+    "tests/memory/embedding-contract-lifecycle-service.test.ts",
+    "src/commands/ingest.ts",
+    "src/ingest/job-admin-service.ts",
+    "tests/commands/ingest.test.ts"
+  ],
+  "touched_paths": [
+    "draft-wiki/destructive-operations.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "No end-to-end real-provider test was inspected for machine uninstall, embedding lifecycle operations, or detached-ingest resolution.",
+    "Project reset intentionally has no preview mode; safety coverage is limited to matching key confirmation and service path boundaries."
+  ]
+}

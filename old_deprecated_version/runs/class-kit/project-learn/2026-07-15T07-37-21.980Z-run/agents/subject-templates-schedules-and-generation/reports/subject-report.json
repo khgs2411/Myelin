@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "templates-schedules-and-generation",
+  "wiki_path": "templates-schedules-and-generation.md",
+  "status": "documented_contracts_unverified",
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/docs/shared/context.md",
+    "target-repo/docs/api/class-api-map.md",
+    "target-repo/docs/api/backend-api.md",
+    "target-repo/docs/sdk/client-sdk.md",
+    "target-repo/docs/design/2026-06-25-schedule-lifecycle-management/spec.md",
+    "target-repo/docs/repositories/structure.md"
+  ],
+  "touched_paths": [
+    "draft-wiki/templates-schedules-and-generation.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "The supplied checkout has no implementation, migrations, RPC definitions, or regression tests for templates, schedules, generation, or generated-class protection.",
+    "Template lifecycle values, referenced-template deactivation semantics, schedule status transitions, and non-active explicit-generation behavior are not fully documented.",
+    "Protection, refresh, stale cleanup, and occurrence-exclusion behavior conflict between broad API prose and a working-draft lifecycle design.",
+    "repository-identity.json records an origin remote while docs/repositories/structure.md says the parent documentation repository should have no remote."
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/README.md",
+    "target-repo/docs/product-shape.md",
+    "target-repo/docs/api/class-api-map.md",
+    "target-repo/docs/sdk/client-sdk.md",
+    "target-repo/class-kit-sdk/src/types.ts",
+    "target-repo/class-kit-sdk/src/client/class-kit-client.ts",
+    "target-repo/class-kit-api/supabase/functions/_shared/context.ts",
+    "target-repo/class-kit-api/supabase/functions/_shared/permissions.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-classes/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-register-class/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-manage-registrations/index.ts",
+    "target-repo/class-kit-api/supabase/migrations/20260607132920_membership_ledger.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260607134535_template_class_core.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260607160000_registration_engine.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260612120000_permission_layer_foundation.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260629133541_product_access_entries.sql",
+    "target-repo/class-kit-api/supabase/tests/member_auto_approve_registration.sql",
+    "target-repo/class-kit-api/supabase/tests/pending_registration_cancellation.sql",
+    "target-repo/class-kit-api/supabase/tests/truncate_product_admin_action.sql"
+  ],
+  "known_gaps": [
+    "The mounted target-repo Git metadata names the Myelin remote and a different HEAD, contradicting repository-identity.json. The deterministic repository-identity.json is the authority for project identity; the mounted source remains implementation evidence.",
+    "Only four SQL regression-test files are present. Access lifecycle, permission fallback, class visibility/field exposure, schedule generation, membership state transitions, attendance, documents, change requests, and PM synchronization lack directly located regression coverage and must not be documented as test-verified.",
+    "Current behavior was inspected statically; no local Supabase stack, migration reset, Edge Function deployment, or SQL test execution was performed in this documentation-planning run.",
+    "Several current product documents describe future or target direction alongside implemented behavior, especially invite-only flow wording. Future-facing claims require implementation confirmation from context.ts, product-signup, migrations, and SDK behavior before curation.",
+    "The checked-in SDK distribution artifacts may lag src/. Public-contract curation should prioritize source and package build output only after a build/release verification.",
+    "PM software integration supports Trello in the inspected schema/provider code, but provider network behavior and sync failure recovery have no located automated regression coverage."
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "subject_id": "external-boundaries-and-integrations",
+  "wiki_path": "external-boundaries-and-integrations.md",
+  "status": "completed",
+  "evidence_paths": [
+    "target-repo/MYELIN.md",
+    "target-repo/CONTEXT.md",
+    "target-repo/AGENTS.md",
+    "target-repo/docs/CLI.md",
+    "target-repo/docs/IMPLEMENTATION_ALIGNMENT.md",
+    "target-repo/docs/adr/0011-keep-mcp-detached-as-agent-interface.md",
+    "target-repo/docs/adr/0048-core-owns-query-mcp-consumes-via-contract.md",
+    "target-repo/docs/adr/0051-preserve-multi-provider-byo-runner-abstraction.md",
+    "target-repo/docs/adr/0054-use-provider-agnostic-capture-adapters.md",
+    "target-repo/docs/adr/0055-use-global-install-with-per-repo-capture-opt-in.md",
+    "target-repo/docs/adr/0056-use-detached-target-repo-agents-for-experience-log-ingest.md",
+    "target-repo/src/commands/bootstrap.ts",
+    "target-repo/src/commands/capture.ts",
+    "target-repo/src/commands/ingest.ts",
+    "target-repo/src/commands/install.ts",
+    "target-repo/src/commands/memory.ts",
+    "target-repo/src/bootstrap/bootstrap-service.ts",
+    "target-repo/src/runtime/bootstrap.ts",
+    "target-repo/src/runtime/project-shell.ts",
+    "target-repo/src/runtime/config.ts",
+    "target-repo/src/runtime/llm-client.ts",
+    "target-repo/src/install/install-service.ts",
+    "target-repo/src/install/codex.ts",
+    "target-repo/src/install/types.ts",
+    "target-repo/src/capture/facade.ts",
+    "target-repo/src/capture/git-context.ts",
+    "target-repo/src/capture/capture-service.ts",
+    "target-repo/src/capture/providers/codex.ts",
+    "target-repo/src/ingest/runtime.ts",
+    "target-repo/src/query/engine.ts",
+    "target-repo/src/query/memory-query-service.ts",
+    "target-repo/package.json"
+  ],
+  "touched_paths": [
+    "draft-wiki/external-boundaries-and-integrations.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "The detached MCP implementation is outside the target repository snapshot; documented details are root-side contracts and ADR intent.",
+    "The query/how/status MCP facade is target design; current root query implementation supports Session Memory by default and Project Memory via --layer project, with --layer auto not yet a true multi-layer router.",
+    "Only Codex capture installation and Codex hook normalization are implemented despite provider-agnostic adapter design.",
+    "Status and Current Briefing integration remain partial according to AGENTS.md and implementation alignment notes."
+  ]
+}

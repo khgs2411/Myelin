@@ -1,0 +1,18 @@
+{
+  "blocking": false,
+  "created_candidate_ids": [
+    "project_inbox:llm-wiki:2026-07-18T08-47-39.237Z_48417e",
+    "project_inbox:llm-wiki:2026-07-18T08-47-39.250Z_17cd7d"
+  ],
+  "degraded": false,
+  "degraded_reasons": [],
+  "existing_candidate_ids": [],
+  "invalid_source_refs": [],
+  "project_key": "llm-wiki",
+  "skipped_source_refs": [],
+  "terminal_duplicate_candidate_ids": [
+    "project_inbox:llm-wiki:2026-07-10T07-28-53.574Z_628ecf",
+    "project_inbox:llm-wiki:2026-07-10T08-07-27.992Z_a64a3b"
+  ],
+  "unsupported_source_refs": []
+}

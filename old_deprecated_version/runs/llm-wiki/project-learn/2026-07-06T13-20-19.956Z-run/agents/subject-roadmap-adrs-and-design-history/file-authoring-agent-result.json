@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "stage_id": "subject-roadmap-adrs-and-design-history",
+  "status": "completed",
+  "provider_mode": "live",
+  "provider": "codex",
+  "model": "gpt-5.5",
+  "sandbox": "workspace-write",
+  "cwd": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/runs/project-learn/2026-07-06T13-20-19.956Z-run/agents/subject-roadmap-adrs-and-design-history",
+  "target_repo_snapshot": "target-repo (removed after invocation)",
+  "allowed_output_roots": [
+    {
+      "name": "draft_wiki",
+      "relativePath": "draft-wiki"
+    },
+    {
+      "name": "subject_reports",
+      "relativePath": "reports"
+    }
+  ],
+  "discovered_outputs": [
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/roadmap-adrs-and-design-history.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/runs/project-learn/2026-07-06T13-20-19.956Z-run/agents/subject-roadmap-adrs-and-design-history/draft-wiki/roadmap-adrs-and-design-history.md",
+      "size_bytes": 11789
+    },
+    {
+      "root_name": "subject_reports",
+      "relative_path": "reports/subject-report.json",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/runs/project-learn/2026-07-06T13-20-19.956Z-run/agents/subject-roadmap-adrs-and-design-history/reports/subject-report.json",
+      "size_bytes": 2137
+    }
+  ],
+  "result_ref": "file-authoring-agent-result.json"
+}

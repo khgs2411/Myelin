@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "subject_id": "behavior-states-gates",
+  "wiki_path": "behavior-states-and-gates.md",
+  "status": "completed",
+  "evidence_paths": [
+    "src/memory/ingest-types.ts",
+    "src/ingest/worker.ts",
+    "src/ingest/status.ts",
+    "src/project/project-memory-curator-contracts.ts",
+    "src/project/project-memory-agent-contracts.ts",
+    "src/project/project-memory-candidate-intake-service.ts",
+    "src/project/project-memory-retrieval-contracts.ts",
+    "src/memory/embedding-contract-types.ts",
+    "src/memory/embedding-contract-lifecycle-service.ts",
+    "src/status/contracts.ts",
+    "src/status/severity.ts",
+    "src/status/status-service.ts",
+    "src/status/project-memory-inspector.ts",
+    "src/project/project-reset-service.ts",
+    "tests/ingest/worker.test.ts",
+    "tests/memory/embedding-contract-lifecycle-service.test.ts",
+    "tests/status/status-service.test.ts"
+  ],
+  "touched_paths": [
+    "draft-wiki/behavior-states-and-gates.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "repository-identity.json is absent from the target repository snapshot, so checkout identity could not be verified.",
+    "Inspected regression tests do not demonstrate every gate combination in a live-provider, concurrent end-to-end run."
+  ]
+}

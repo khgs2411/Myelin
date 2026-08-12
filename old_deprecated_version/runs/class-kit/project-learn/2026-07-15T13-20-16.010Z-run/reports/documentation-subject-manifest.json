@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subjects": [
+    {
+      "subject_id": "architecture-boundaries",
+      "wiki_path": "architecture-and-boundaries.md",
+      "title": "Architecture and repository boundaries",
+      "purpose": "Defines the SDK/API/browser boundary, repository roles, and product-scoped Supabase ownership.",
+      "suggested_repo_paths": [
+        "README.md",
+        "docs/repositories/structure.md",
+        "docs/shared/deployment.md",
+        "class-kit-api/supabase/config.toml"
+      ]
+    },
+    {
+      "subject_id": "sdk-product-api",
+      "wiki_path": "sdk-and-product-api.md",
+      "title": "SDK and product-facing API",
+      "purpose": "Defines the public `@class-kit/react` client, React context, and product-facing API methods and response shapes.",
+      "suggested_repo_paths": [
+        "class-kit-sdk/src/index.ts",
+        "class-kit-sdk/src/client/class-kit-client.ts",
+        "class-kit-sdk/src/client/product-api.ts",
+        "class-kit-sdk/src/context",
+        "class-kit-sdk/src/types.ts"
+      ]
+    },
+    {
+      "subject_id": "product-access-auth",
+      "wiki_path": "product-access-and-authentication.md",
+      "title": "Product resolution, authentication, and access",
+      "purpose": "Defines origin resolution, auth policy/provider outcomes, access-entry states, and activation of product membership.",
+      "suggested_repo_paths": [
+        "class-kit-api/supabase/functions/_shared/context.ts",
+        "class-kit-api/supabase/functions/class-kit-product-context/index.ts",
+        "class-kit-api/supabase/functions/class-kit-product-signup/index.ts",
+        "class-kit-api/supabase/migrations/20260612073150_product_auth_policy.sql",
+        "class-kit-api/supabase/migrations/20260629133541_product_access_entries.sql"
+      ]
+    },
+    {
+      "subject_id": "authorization-roles",
+      "wiki_path": "authorization-and-roles.md",
+      "title": "Authorization and roles",
+      "purpose": "Defines platform/product scope, level/key precedence, roles, permission grants, and capability derivation.",
+      "suggested_repo_paths": [
+        "class-kit-api/supabase/functions/_shared/permissions.ts",
+        "class-kit-api/supabase/functions/_shared/context.ts",
+        "class-kit-api/supabase/functions/class-kit-product-roles/index.ts",
+        "class-kit-api/supabase/functions/class-kit-product-user-roles/index.ts",
+        "class-kit-api/supabase/migrations/20260612120000_permission_layer_foundation.sql"
+      ]
+    },
+    {
+      "subject_id": "classes-registrations",
+      "wiki_path": "classes-and-registrations.md",
+      "title": "Classes and registrations",
+      "purpose": "Defines public/managed class views, class and registration states, and the precedence of access, eligibility, membership, capacity, approval, and cancellation gates.",
+      "suggested_repo_paths": [
+        "class-kit-api/supabase/functions/class-kit-classes/index.ts",
+        "class-kit-api/supabase/functions/class-kit-register-class/index.ts",
+        "class-kit-api/supabase/functions/class-kit-manage-registrations/index.ts",
+        "class-kit-api/supabase/migrations/20260607134535_template_class_core.sql",
+        "class-kit-api/supabase/migrations/20260607160000_registration_engine.sql",
+        "class-kit-api/supabase/tests/member_auto_approve_registration.sql",
+        "class-kit-api/supabase/tests/pending_registration_cancellation.sql"
+      ]
+    },
+    {
+      "subject_id": "templates-schedules-attendance",
+      "wiki_path": "templates-schedules-and-attendance.md",
+      "title": "Templates, schedules, and attendance",
+      "purpose": "Defines template defaults, schedule recurrence/status, generated-class controls, skip rules, and attendance lifecycle and participant outcomes.",
+      "suggested_repo_paths": [
+        "class-kit-api/supabase/functions/class-kit-templates/index.ts",
+        "class-kit-api/supabase/functions/class-kit-schedules/index.ts",
+        "class-kit-api/supabase/functions/class-kit-schedule-generate/index.ts",
+        "class-kit-api/supabase/functions/class-kit-attendance/index.ts",
+        "class-kit-api/supabase/migrations/20260607143000_schedule_rule_model.sql",
+        "class-kit-api/supabase/migrations/20260607170000_attendance_engine.sql",
+        "class-kit-api/supabase/tests/schedule_generation_backfill.sql"
+      ]
+    },
+    {
+      "subject_id": "memberships-entitlements",
+      "wiki_path": "memberships-and-entitlements.md",
+      "title": "Memberships and entitlements",
+      "purpose": "Defines membership modes, grant and ledger states, stock/validity eligibility, and manager lifecycle operations.",
+      "suggested_repo_paths": [
+        "class-kit-api/supabase/functions/class-kit-memberships/index.ts",
+        "class-kit-api/supabase/migrations/20260607132920_membership_ledger.sql",
+        "class-kit-api/supabase/migrations/20260705110018_adjust_membership_remaining_stock_only.sql",
+        "class-kit-sdk/src/manager/manager-api.ts"
+      ]
+    },
+    {
+      "subject_id": "documents-signup-links",
+      "wiki_path": "product-documents-and-signup-links.md",
+      "title": "Product documents and signup links",
+      "purpose": "Defines document visibility/version/acceptance states and public or managed signup-link behavior.",
+      "suggested_repo_paths": [
+        "class-kit-api/supabase/functions/class-kit-product-documents/index.ts",
+        "class-kit-api/supabase/functions/class-kit-signup-links/index.ts",
+        "class-kit-api/supabase/migrations/20260705060042_product_documents.sql",
+        "class-kit-sdk/src/client/class-kit-client.ts"
+      ]
+    },
+    {
+      "subject_id": "product-administration-reset",
+      "wiki_path": "product-administration-and-reset.md",
+      "title": "Product administration and reset",
+      "purpose": "Defines platform administration of products, origins, auth policy/redirects, product users/roles, and irreversible truncation.",
+      "suggested_repo_paths": [
+        "class-kit-api/supabase/functions/class-kit-admin-products/index.ts",
+        "class-kit-api/supabase/functions/class-kit-admin-product-users/index.ts",
+        "class-kit-api/supabase/functions/class-kit-admin-product-roles/index.ts",
+        "class-kit-api/supabase/migrations/20260702120000_truncate_product_admin_action.sql",
+        "class-kit-api/supabase/tests/truncate_product_admin_action.sql",
+        "class-kit-sdk/src/admin/admin-api.ts"
+      ]
+    },
+    {
+      "subject_id": "change-requests-pm",
+      "wiki_path": "change-requests-and-pm-integration.md",
+      "title": "Change requests and project-management integration",
+      "purpose": "Defines request and attachment states, revision and soft-delete behavior, platform review, and Trello work-item lifecycle.",
+      "suggested_repo_paths": [
+        "class-kit-api/supabase/functions/class-kit-product-change-requests/index.ts",
+        "class-kit-api/supabase/functions/class-kit-admin-product-change-requests/index.ts",
+        "class-kit-api/supabase/functions/class-kit-admin-pm-integrations/index.ts",
+        "class-kit-api/supabase/functions/_shared/pm/types.ts",
+        "class-kit-api/supabase/migrations/20260707144646_product_change_requests.sql",
+        "class-kit-api/supabase/migrations/20260709072033_pm_board_snapshots.sql"
+      ]
+    },
+    {
+      "subject_id": "operator-workflows-local-apps",
+      "wiki_path": "operator-workflows-and-local-apps.md",
+      "title": "Operator workflows and local apps",
+      "purpose": "Defines local stack, verification and deployment workflows, SDK release, and the administrative and Demo2 application consumers.",
+      "suggested_repo_paths": [
+        "Makefile",
+        "class-kit-api/package.json",
+        "class-kit-api/scripts/deploy.sh",
+        "class-kit-sdk/package.json",
+        "class-kit-sdk/scripts/deploy.sh",
+        "apps/package.json",
+        "apps/class-kit-admin/src/App.tsx",
+        "apps/demo2/src/App.tsx"
+      ]
+    }
+  ]
+}

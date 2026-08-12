@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "subjects": [
+    {
+      "subject_id": "product-and-memory-model",
+      "wiki_path": "product-and-memory-model.md",
+      "title": "Product And Memory Model",
+      "purpose": "Explain Myelin's product purpose, memory layers, truth hierarchy, and durable boundaries between curated markdown, candidates, Experience Log evidence, and generated serving state.",
+      "suggested_repo_paths": [
+        "README.md",
+        "MYELIN.md",
+        "MY_VISION.md",
+        "CONTEXT.md",
+        "docs/README.md",
+        "docs/IMPLEMENTATION_ALIGNMENT.md",
+        "docs/adr/0021-keep-curated-project-memory-in-markdown.md",
+        "docs/adr/0050-adopt-myelin-product-name.md",
+        "docs/adr/0067-use-agent-authored-project-memory-documentation.md"
+      ]
+    },
+    {
+      "subject_id": "command-workflows",
+      "wiki_path": "command-workflows.md",
+      "title": "Command Workflows",
+      "purpose": "Document user-facing CLI and Make workflows, arguments, side effects, JSON modes, and the V2 command vocabulary.",
+      "suggested_repo_paths": [
+        "README.md",
+        "docs/CLI.md",
+        "Makefile",
+        "src/cli.ts",
+        "src/commands/registry.ts",
+        "src/commands/project.ts",
+        "src/commands/memory.ts",
+        "src/commands/ingest.ts",
+        "src/commands/schema.ts",
+        "src/commands/status.ts",
+        "src/commands/bootstrap.ts",
+        "src/commands/capture.ts",
+        "tests/commands/"
+      ]
+    },
+    {
+      "subject_id": "project-memory-lifecycle",
+      "wiki_path": "project-memory-lifecycle.md",
+      "title": "Project Memory Lifecycle",
+      "purpose": "Document Project Memory create and maintenance mode, packets, runtime inbox intake, source consumption, direct markdown authoring, draft promotion, candidate dispositions, and post-apply retrieval.",
+      "suggested_repo_paths": [
+        "docs/design/2026-07-06-project-memory-agent-authored-documentation/spec.md",
+        "docs/design/2026-07-06-project-memory-agent-authored-documentation/plan.md",
+        "docs/design/2026-07-06-project-memory-agent-authored-documentation/plans/",
+        "src/project/project-memory-curator-service.ts",
+        "src/project/project-memory-agent-create-service.ts",
+        "src/project/project-memory-agent-maintenance-service.ts",
+        "src/project/project-memory-agent-contracts.ts",
+        "src/project/project-memory-packet.ts",
+        "src/project/project-memory-candidate-intake-service.ts",
+        "src/project/project-memory-source-consumption-reconciler.ts",
+        "src/project/project-memory-draft-promotion.ts",
+        "src/project/project-reset-service.ts",
+        "tests/project/"
+      ]
+    },
+    {
+      "subject_id": "session-memory-and-ingest",
+      "wiki_path": "session-memory-and-ingest.md",
+      "title": "Session Memory And Ingest",
+      "purpose": "Document capture, Experience Log storage, detached ingest jobs, tombstone leases, Session Memory outputs, candidates, handoffs, branch context, and auto-maintenance.",
+      "suggested_repo_paths": [
+        "src/capture/facade.ts",
+        "src/capture/capture-service.ts",
+        "src/capture/git-context.ts",
+        "src/capture/providers/codex.ts",
+        "src/ingest/ingest-service.ts",
+        "src/ingest/worker.ts",
+        "src/ingest/jobs.ts",
+        "src/ingest/runtime.ts",
+        "src/ingest/reconciliation-context.ts",
+        "src/ingest/status.ts",
+        "src/maintenance/auto-memory-maintenance.ts",
+        "src/maintenance/worker.ts",
+        "src/memory/experience.ts",
+        "src/memory/session-memories.ts",
+        "src/memory/candidates.ts",
+        "src/memory/handoffs.ts",
+        "tests/capture/",
+        "tests/ingest/",
+        "tests/maintenance/"
+      ]
+    },
+    {
+      "subject_id": "storage-and-retrieval",
+      "wiki_path": "storage-and-retrieval.md",
+      "title": "Storage And Retrieval",
+      "purpose": "Document canonical project layout, root SQLite serving state, migrations, embeddings, Project Memory section and hint indexing, sqlite-vec, and query resolution.",
+      "suggested_repo_paths": [
+        "MYELIN.md",
+        "src/runtime/layout.ts",
+        "src/runtime/project-shell.ts",
+        "src/runtime/projects.ts",
+        "src/runtime/state.ts",
+        "src/memory/db.ts",
+        "src/memory/migrations.ts",
+        "src/memory/sqlite-runtime.ts",
+        "src/memory/sqlite-vec.ts",
+        "src/memory/session-memory-indexer.ts",
+        "src/memory/session-memory-query.ts",
+        "src/memory/project-memory-retrieval-storage.ts",
+        "src/memory/project-memory-retrieval-indexer.ts",
+        "src/memory/project-memory-retrieval-index-service.ts",
+        "src/project/project-memory-markdown-sections.ts",
+        "src/project/project-memory-hints.ts",
+        "src/query/memory-query-service.ts",
+        "src/query/project-memory-query-service.ts",
+        "tests/memory/",
+        "tests/query/"
+      ]
+    },
+    {
+      "subject_id": "runtime-and-provider-boundary",
+      "wiki_path": "runtime-and-provider-boundary.md",
+      "title": "Runtime And Provider Boundary",
+      "purpose": "Document runtime helpers, safe file boundaries, provider abstraction, file-authoring runners, run artifacts, sandbox modes, stubs, install hooks, and detached MCP contract discipline.",
+      "suggested_repo_paths": [
+        "src/runtime/fs.ts",
+        "src/runtime/json.ts",
+        "src/runtime/config.ts",
+        "src/runtime/process.ts",
+        "src/runtime/llm-client.ts",
+        "src/runtime/project-run-infrastructure.ts",
+        "src/runtime/file-authoring-agent.ts",
+        "src/runtime/bootstrap.ts",
+        "src/install/",
+        ".mcp.json",
+        "docs/adr/0011-keep-mcp-detached-as-agent-interface.md",
+        "docs/adr/0048-core-owns-query-mcp-consumes-via-contract.md",
+        "docs/adr/0051-preserve-multi-provider-byo-runner-abstraction.md",
+        "tests/runtime/",
+        "tests/install/"
+      ]
+    },
+    {
+      "subject_id": "schema-and-configuration",
+      "wiki_path": "schema-and-configuration.md",
+      "title": "Schema And Configuration",
+      "purpose": "Document global schema inputs, typed rule validation, generated schema context, freshness behavior, config/env precedence, embedding/model settings, and compatibility names.",
+      "suggested_repo_paths": [
+        "schema/global.md",
+        "schema/schema-context.md",
+        "schema/rules/page-taxonomy.json",
+        "schema/rules/memory-scopes.json",
+        "schema/rules/source-classification.json",
+        "src/schema/compiler.ts",
+        "src/schema/schema-service.ts",
+        "src/schema/validators.ts",
+        "src/schema/types.ts",
+        "src/commands/schema.ts",
+        "src/runtime/config.ts",
+        "myelin.config",
+        "docs/adr/0049-phase-0-ships-thin-global-only-schema.md",
+        "docs/adr/0050-adopt-myelin-product-name.md",
+        "tests/schema/"
+      ]
+    },
+    {
+      "subject_id": "testing-roadmap-and-current-gaps",
+      "wiki_path": "testing-roadmap-and-current-gaps.md",
+      "title": "Testing Roadmap And Current Gaps",
+      "purpose": "Document verification practices, test layout, fixture/stub strategy, roadmap status, active vision-quality gap, deferred work, and how current docs differ from archived designs.",
+      "suggested_repo_paths": [
+        "docs/ROADMAP.md",
+        "docs/IMPLEMENTATION_ALIGNMENT.md",
+        "docs/design/2026-07-06-project-memory-agent-authored-documentation/spec.md",
+        "docs/design/2026-07-06-project-memory-agent-authored-documentation/plan.md",
+        "docs/archive/README.md",
+        "package.json",
+        "bunfig.toml",
+        "tests/",
+        "tests/query/fixtures/",
+        "tests/memory/fixtures/",
+        "docs/adr/0065-require-independent-first-create-usefulness-critique.md",
+        "docs/adr/0067-use-agent-authored-project-memory-documentation.md"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+# Keep MCP detached as the agent interface
+
+The `/mcp` layer is the agent-facing interface for communicating with LLM Wiki, not part of the core product logic. It remains ignored and detached from the main repo by design. Core repo code must not import MCP source files, and MCP code must not become the owner of core product behavior. Integration happens through stable interface contracts: documented file layouts, schemas, JSON outputs, commands, `LLM_WIKI_ROOT`, and explicit project selection. This keeps the product runtime free to migrate to Bun/TypeScript while preserving the MCP layer as a separate API boundary.

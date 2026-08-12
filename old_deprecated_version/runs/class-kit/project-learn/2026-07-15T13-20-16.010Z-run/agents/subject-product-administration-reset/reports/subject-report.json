@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "product-administration-reset",
+  "wiki_path": "product-administration-and-reset.md",
+  "status": "complete_with_known_gaps",
+  "evidence_paths": [
+    "target-repo/class-kit-sdk/src/admin/admin-api.ts",
+    "target-repo/class-kit-sdk/src/client/class-kit-client.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-admin-products/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-admin-product-users/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-admin-product-roles/index.ts",
+    "target-repo/class-kit-api/supabase/migrations/20260702120000_truncate_product_admin_action.sql",
+    "target-repo/class-kit-api/supabase/tests/truncate_product_admin_action.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260705060042_product_documents.sql",
+    "target-repo/class-kit-api/supabase/functions/class-kit-admin-product-change-requests/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-memberships/index.ts",
+    "target-repo/apps/class-kit-admin/src/App.tsx",
+    "target-repo/apps/class-kit-admin/src/components/product-reset-panel.tsx",
+    "target-repo/apps/class-kit-admin/package.json",
+    "target-repo/apps/demo2/package.json",
+    "target-repo/docs/repositories/structure.md",
+    "repository-identity.json"
+  ],
+  "touched_paths": [
+    "draft-wiki/product-administration-and-reset.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "The focused SQL regression evidence covers truncation cleanup, preserved configuration/admin baseline, and cross-product isolation only.",
+    "No focused regression tests in this snapshot cover platform-admin authorization, split auth-policy permissions, origin/redirect default selection, user-access transitions, role-management safeguards, document-version pruning, soft-delete visibility, or PM integration behavior.",
+    "The SDK declares Apple redirect support, but the admin control UI evidence inspected here is centered on Google/Trello; UI coverage for every supported redirect provider was not verified."
+  ]
+}

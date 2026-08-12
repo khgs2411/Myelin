@@ -1,0 +1,3 @@
+# Adopt Bun and TypeScript as the V2 runtime direction
+
+LLM Wiki V2 should migrate the core repo to a Bun/TypeScript-first runtime instead of adding new Python runtime infrastructure. The current root repo is Python/Bash and the detached MCP interface is already Bun/TypeScript; this split should be handled with stable contracts rather than shared source ownership. The first V2 slice is a complete core runtime migration: root TypeScript package setup, shared project/config/state helpers, query/runtime helpers, pipeline orchestration, validation, measurement, inbox handling, and operator commands. Existing Python/Bash compile and update flows are temporary reference implementations during the port, not long-term compatibility surfaces. `/mcp` remains detached by design.

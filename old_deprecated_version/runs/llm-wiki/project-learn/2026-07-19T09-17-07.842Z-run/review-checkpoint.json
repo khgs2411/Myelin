@@ -1,0 +1,149 @@
+{
+  "canonical_wiki_artifacts": [
+    {
+      "path": "projects/llm-wiki/command-surface-and-operator-workflows.md",
+      "sha256": "sha256:12c2b8beecfdd1525d8755179bc6079e9817d6f4e5ad2aba073ebb758af6f60c"
+    },
+    {
+      "path": "projects/llm-wiki/index.md",
+      "sha256": "sha256:9316a16360c1333e7d8c6b76fcc4ccdffc1848643ba6088c4f422ba69a26f7e7"
+    },
+    {
+      "path": "projects/llm-wiki/product-and-memory-model.md",
+      "sha256": "sha256:759e6d9d7c49a54c61e91a9d2d8b2268a842fbe4b4ef5556e82b183d53cc38b4"
+    },
+    {
+      "path": "projects/llm-wiki/project-memory-creation-and-curation.md",
+      "sha256": "sha256:8c5b6744d86a9d2bae9aba7f1d25b4dd9d763e93e6a5dd290be5e91bb6d65eb8"
+    },
+    {
+      "path": "projects/llm-wiki/query-status-and-agent-interfaces.md",
+      "sha256": "sha256:210e5301edc99c1992791dde1d1b573f033ddeafdf04058f787ef673511809d2"
+    },
+    {
+      "path": "projects/llm-wiki/roadmap-adrs-and-design-history.md",
+      "sha256": "sha256:f9f4503f7bb09c204bf07eabb7f584fd165489afaac9e56be93819e9a6b022a7"
+    },
+    {
+      "path": "projects/llm-wiki/runtime-providers-and-project-layout.md",
+      "sha256": "sha256:22bce277757354dcab788ba2ac2152f6e97fd1651356ca793870a42dadb3c8cf"
+    },
+    {
+      "path": "projects/llm-wiki/schema-and-documentation-contracts.md",
+      "sha256": "sha256:b365a68aaf5c62f9d4ccfdbde86c7983f356605f93cb695f7b9d4ec180ae218b"
+    },
+    {
+      "path": "projects/llm-wiki/session-memory-and-experience-ingest.md",
+      "sha256": "sha256:a8db7a7cb79e5b4243cd31729cdfc8fd442bb39e071fa5528b0e3af330d0e384"
+    },
+    {
+      "path": "projects/llm-wiki/source-evidence-inbox-and-candidate-boundaries.md",
+      "sha256": "sha256:b5edaa29df523b9201a0b79d8958cc08fd57a38eae2b34fb44574872ef65cb38"
+    },
+    {
+      "path": "projects/llm-wiki/storage-sqlite-and-retrieval-indexes.md",
+      "sha256": "sha256:53627cdc4b0ff41d094bafb8b105fde443df8c61b1291c19f1c93d430ee2f25f"
+    },
+    {
+      "path": "projects/llm-wiki/testing-and-verification.md",
+      "sha256": "sha256:de4cb445a6a1b21dc57cacc99a7fdc79f36c14d28356e93bdc4b6727521d8b9c"
+    }
+  ],
+  "created_at": "2026-07-19T09:17:07.842Z",
+  "draft_wiki_files": [
+    "agents/maintenance/draft-wiki/command-surface-and-operator-workflows.md",
+    "agents/maintenance/draft-wiki/index.md",
+    "agents/maintenance/draft-wiki/product-and-memory-model.md",
+    "agents/maintenance/draft-wiki/project-memory-creation-and-curation.md",
+    "agents/maintenance/draft-wiki/query-status-and-agent-interfaces.md",
+    "agents/maintenance/draft-wiki/roadmap-adrs-and-design-history.md",
+    "agents/maintenance/draft-wiki/runtime-providers-and-project-layout.md",
+    "agents/maintenance/draft-wiki/schema-and-documentation-contracts.md",
+    "agents/maintenance/draft-wiki/session-memory-and-experience-ingest.md",
+    "agents/maintenance/draft-wiki/source-evidence-inbox-and-candidate-boundaries.md",
+    "agents/maintenance/draft-wiki/storage-sqlite-and-retrieval-indexes.md",
+    "agents/maintenance/draft-wiki/testing-and-verification.md"
+  ],
+  "input_packet_sha256": "sha256:ec4637af2938910d93e625591ee602e8c16736965cb25b5896f2d7cbf8b82620",
+  "project_key": "llm-wiki",
+  "repo_path": "/Users/liadgoren/Repositories/llm-wiki",
+  "review_artifacts": [
+    {
+      "path": "agents/maintenance/draft-wiki/command-surface-and-operator-workflows.md",
+      "sha256": "sha256:12c2b8beecfdd1525d8755179bc6079e9817d6f4e5ad2aba073ebb758af6f60c"
+    },
+    {
+      "path": "agents/maintenance/draft-wiki/index.md",
+      "sha256": "sha256:59dec19731c26de02b2a92e0d900ed4651acc9ac58b9174731698b6ad747f707"
+    },
+    {
+      "path": "agents/maintenance/draft-wiki/product-and-memory-model.md",
+      "sha256": "sha256:759e6d9d7c49a54c61e91a9d2d8b2268a842fbe4b4ef5556e82b183d53cc38b4"
+    },
+    {
+      "path": "agents/maintenance/draft-wiki/project-memory-creation-and-curation.md",
+      "sha256": "sha256:4762d93bc836c0efb3f6727ff0d2ea38c7aecb7aaae9a4d9f5bda010002cb226"
+    },
+    {
+      "path": "agents/maintenance/draft-wiki/query-status-and-agent-interfaces.md",
+      "sha256": "sha256:210e5301edc99c1992791dde1d1b573f033ddeafdf04058f787ef673511809d2"
+    },
+    {
+      "path": "agents/maintenance/draft-wiki/roadmap-adrs-and-design-history.md",
+      "sha256": "sha256:bb3c9facfadf9312ecdc5d82d67482c6ea8b7e077da0af9cfd3a378df6260791"
+    },
+    {
+      "path": "agents/maintenance/draft-wiki/runtime-providers-and-project-layout.md",
+      "sha256": "sha256:22bce277757354dcab788ba2ac2152f6e97fd1651356ca793870a42dadb3c8cf"
+    },
+    {
+      "path": "agents/maintenance/draft-wiki/schema-and-documentation-contracts.md",
+      "sha256": "sha256:b365a68aaf5c62f9d4ccfdbde86c7983f356605f93cb695f7b9d4ec180ae218b"
+    },
+    {
+      "path": "agents/maintenance/draft-wiki/session-memory-and-experience-ingest.md",
+      "sha256": "sha256:32dce07c931eeda14115f43661302fd7793d13e10dc6049a34494b295c85bf8b"
+    },
+    {
+      "path": "agents/maintenance/draft-wiki/source-evidence-inbox-and-candidate-boundaries.md",
+      "sha256": "sha256:5f49ee2ca2ef2bf9c76150f99f32110ad944e67d9b81e25f2c8a08d0165b72c1"
+    },
+    {
+      "path": "agents/maintenance/draft-wiki/storage-sqlite-and-retrieval-indexes.md",
+      "sha256": "sha256:53627cdc4b0ff41d094bafb8b105fde443df8c61b1291c19f1c93d430ee2f25f"
+    },
+    {
+      "path": "agents/maintenance/draft-wiki/testing-and-verification.md",
+      "sha256": "sha256:de4cb445a6a1b21dc57cacc99a7fdc79f36c14d28356e93bdc4b6727521d8b9c"
+    },
+    {
+      "path": "agents/maintenance/file-authoring-agent-result.json",
+      "sha256": "sha256:cef5421d018b84aa1d98d653c6570ac9b6f55cc3a825e14e116a03d9f819a28d"
+    },
+    {
+      "path": "canonical-publication-validation.json",
+      "sha256": "sha256:0744ca2babd34973f19cf6b5893cca03034268f22cb89004414b4a33c58165b8"
+    },
+    {
+      "path": "documentation-maintenance-result.json",
+      "sha256": "sha256:9307df2ec8db08c41a3f5986909cca8a0ec548059acd7792f4184fa75742cbf6"
+    },
+    {
+      "path": "input-packet.json",
+      "sha256": "sha256:d9ff23fdd0de19b05b597162d86d4259496306ffb4bf35c2812eef7a4d4ba164"
+    },
+    {
+      "path": "reports/documentation-maintenance-report.json",
+      "sha256": "sha256:ff5414860f594b9da847130e7b989ef5d3d3a21f8153e035957c70565855a99d"
+    },
+    {
+      "path": "repository-identity.json",
+      "sha256": "sha256:5e0dbb2e1f2c85e35ab635573600d2a1caf7839c882d4325c132dc8f58e1c5f8"
+    }
+  ],
+  "reviewed_sources_sha256": "sha256:f133cf7901b34739da17d4dad66740006177586ef3527fe5f237a41972a69dcf",
+  "runtime_contract_version": 1,
+  "schema_version": 1,
+  "source_run_dir": "runs/llm-wiki/project-learn/2026-07-19T09-17-07.842Z-run",
+  "target_repo_fingerprint": "sha256:d89a0bf49c6d5a4cf6a9c51044d8f3201836aa2c6a72ebd09dc1456046835c0c"
+}

@@ -1,0 +1,18 @@
+{
+  "current_branch": "version/1.2.0",
+  "diagnostics": [],
+  "head_commit": "af9729e27d627d710c6bdbcc89244008861af135",
+  "project_key": "class-kit",
+  "registered_repo_path": "/Users/liadgoren/Repositories/class-kit",
+  "remotes": [
+    {
+      "name": "origin",
+      "urls": [
+        "https://github.com/khgs2411/class-kit.git"
+      ]
+    }
+  ],
+  "repository_root": "/Users/liadgoren/Repositories/class-kit",
+  "schema_version": 1,
+  "status": "available"
+}

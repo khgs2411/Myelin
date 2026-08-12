@@ -1,0 +1,1000 @@
+{
+  "applied_at": "2026-07-19T09:32:28.887Z",
+  "curator_output_ref": "documentation-maintenance-result.json",
+  "file_changes": [
+    {
+      "after_sha256": "ab746bc719b8f3b1bc7326cad90807e515eafba37715a5d6cd462a483422ff54",
+      "before_sha256": "12c2b8beecfdd1525d8755179bc6079e9817d6f4e5ad2aba073ebb758af6f60c",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "command-surface-and-operator-workflows.md"
+      ],
+      "path": "projects/llm-wiki/command-surface-and-operator-workflows.md",
+      "staged_output_ref": "staged/001-wiki_page-command-surface-and-operator-workflows.md"
+    },
+    {
+      "after_sha256": "8cc696d03ab42d1fa4eef25b299adedc80d9049649d202fdfabcb07d67bfc4b8",
+      "before_sha256": "9316a16360c1333e7d8c6b76fcc4ccdffc1848643ba6088c4f422ba69a26f7e7",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "index.md"
+      ],
+      "path": "projects/llm-wiki/index.md",
+      "staged_output_ref": "staged/002-wiki_page-index.md"
+    },
+    {
+      "after_sha256": "759e6d9d7c49a54c61e91a9d2d8b2268a842fbe4b4ef5556e82b183d53cc38b4",
+      "before_sha256": "759e6d9d7c49a54c61e91a9d2d8b2268a842fbe4b4ef5556e82b183d53cc38b4",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "product-and-memory-model.md"
+      ],
+      "path": "projects/llm-wiki/product-and-memory-model.md",
+      "staged_output_ref": "staged/003-wiki_page-product-and-memory-model.md"
+    },
+    {
+      "after_sha256": "9ec5b81f00be3bf129c603594ece8658a31cd4176420569a9f352d3fd407ced5",
+      "before_sha256": "8c5b6744d86a9d2bae9aba7f1d25b4dd9d763e93e6a5dd290be5e91bb6d65eb8",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "project-memory-creation-and-curation.md"
+      ],
+      "path": "projects/llm-wiki/project-memory-creation-and-curation.md",
+      "staged_output_ref": "staged/004-wiki_page-project-memory-creation-and-curation.md"
+    },
+    {
+      "after_sha256": "aefb0c4e70344fedfe62bc6aa835b3ef06e089f774bfa7391357efa306d0c396",
+      "before_sha256": "210e5301edc99c1992791dde1d1b573f033ddeafdf04058f787ef673511809d2",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "query-status-and-agent-interfaces.md"
+      ],
+      "path": "projects/llm-wiki/query-status-and-agent-interfaces.md",
+      "staged_output_ref": "staged/005-wiki_page-query-status-and-agent-interfaces.md"
+    },
+    {
+      "after_sha256": "f9f4503f7bb09c204bf07eabb7f584fd165489afaac9e56be93819e9a6b022a7",
+      "before_sha256": "f9f4503f7bb09c204bf07eabb7f584fd165489afaac9e56be93819e9a6b022a7",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "roadmap-adrs-and-design-history.md"
+      ],
+      "path": "projects/llm-wiki/roadmap-adrs-and-design-history.md",
+      "staged_output_ref": "staged/006-wiki_page-roadmap-adrs-and-design-history.md"
+    },
+    {
+      "after_sha256": "22bce277757354dcab788ba2ac2152f6e97fd1651356ca793870a42dadb3c8cf",
+      "before_sha256": "22bce277757354dcab788ba2ac2152f6e97fd1651356ca793870a42dadb3c8cf",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "runtime-providers-and-project-layout.md"
+      ],
+      "path": "projects/llm-wiki/runtime-providers-and-project-layout.md",
+      "staged_output_ref": "staged/007-wiki_page-runtime-providers-and-project-layout.md"
+    },
+    {
+      "after_sha256": "b365a68aaf5c62f9d4ccfdbde86c7983f356605f93cb695f7b9d4ec180ae218b",
+      "before_sha256": "b365a68aaf5c62f9d4ccfdbde86c7983f356605f93cb695f7b9d4ec180ae218b",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "schema-and-documentation-contracts.md"
+      ],
+      "path": "projects/llm-wiki/schema-and-documentation-contracts.md",
+      "staged_output_ref": "staged/008-wiki_page-schema-and-documentation-contracts.md"
+    },
+    {
+      "after_sha256": "a8db7a7cb79e5b4243cd31729cdfc8fd442bb39e071fa5528b0e3af330d0e384",
+      "before_sha256": "a8db7a7cb79e5b4243cd31729cdfc8fd442bb39e071fa5528b0e3af330d0e384",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "session-memory-and-experience-ingest.md"
+      ],
+      "path": "projects/llm-wiki/session-memory-and-experience-ingest.md",
+      "staged_output_ref": "staged/009-wiki_page-session-memory-and-experience-ingest.md"
+    },
+    {
+      "after_sha256": "92d3868e43537dc48189c1736ba8b22da0aeafc66f841dfa8547a068613fec02",
+      "before_sha256": "b5edaa29df523b9201a0b79d8958cc08fd57a38eae2b34fb44574872ef65cb38",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "source-evidence-inbox-and-candidate-boundaries.md"
+      ],
+      "path": "projects/llm-wiki/source-evidence-inbox-and-candidate-boundaries.md",
+      "staged_output_ref": "staged/010-wiki_page-source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "after_sha256": "53627cdc4b0ff41d094bafb8b105fde443df8c61b1291c19f1c93d430ee2f25f",
+      "before_sha256": "53627cdc4b0ff41d094bafb8b105fde443df8c61b1291c19f1c93d430ee2f25f",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "storage-sqlite-and-retrieval-indexes.md"
+      ],
+      "path": "projects/llm-wiki/storage-sqlite-and-retrieval-indexes.md",
+      "staged_output_ref": "staged/011-wiki_page-storage-sqlite-and-retrieval-indexes.md"
+    },
+    {
+      "after_sha256": "de4cb445a6a1b21dc57cacc99a7fdc79f36c14d28356e93bdc4b6727521d8b9c",
+      "before_sha256": "de4cb445a6a1b21dc57cacc99a7fdc79f36c14d28356e93bdc4b6727521d8b9c",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "testing-and-verification.md"
+      ],
+      "path": "projects/llm-wiki/testing-and-verification.md",
+      "staged_output_ref": "staged/012-wiki_page-testing-and-verification.md"
+    },
+    {
+      "after_sha256": "e93a5c64904070103b939390211a027afd7528e909a27353c5d89bd56a3a1113",
+      "before_sha256": "a392f0a6eb65790614ae8ae46fb795cfdfc862bcedeb6a282822710dfc309e56",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [],
+      "path": "state/llm-wiki/project-memory-source-consumptions.json",
+      "staged_output_ref": "staged/013-source_consumption_state-project-memory-source-consumptions.json"
+    },
+    {
+      "after_sha256": "2846cec7a897f07166356930c43e1ab6f430ffc74a7a809c1da2aecf6f900a4f",
+      "before_sha256": "df2e345b096a14fcf7a4090c33c403214e0990f87fc5fabaf0422d97264a0db5",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [],
+      "path": "state/llm-wiki/project-memory.json",
+      "staged_output_ref": "staged/014-project_state-project-memory.json"
+    }
+  ],
+  "item_changes": [],
+  "packet_ref": {
+    "artifact": "input-packet.json",
+    "packet_schema_version": 1
+  },
+  "page_changes": [],
+  "project_key": "llm-wiki",
+  "risk": {
+    "level": "low",
+    "reasons": [],
+    "requires_quarantine": false
+  },
+  "run_dir": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+  "schema_version": 1,
+  "source_consumptions": [
+    {
+      "consumed_at": "2026-07-06T12:59:36.577Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-06T12-59-36.577Z-run",
+      "output_refs": [
+        "draft-wiki/storage-retrieval-and-query.md",
+        "draft-wiki/external-boundaries-and-integrations.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_oo_mcp_project_followup",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-06T12:59:36.577Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-06T12-59-36.577Z-run",
+      "output_refs": [
+        "draft-wiki/session-memory-and-experience-ingest.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_retry_failed_auto_ingest",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-06T12:59:36.577Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-06T12-59-36.577Z-run",
+      "output_refs": [
+        "draft-wiki/session-memory-and-experience-ingest.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_ingest_status_audit",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-07T09:39:59.138Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-07T09-39-59.138Z-run",
+      "output_refs": [
+        "draft-wiki/project-memory-creation-and-curation.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_quality_status_reconciliation",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-07T09:39:59.138Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-07T09-39-59.138Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_project_retrieval_algorithms_review",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-07T09:39:59.138Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-07T09-39-59.138Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_project_maintenance_benchmark",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-07T09:39:59.138Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-07T09-39-59.138Z-run",
+      "output_refs": [
+        "draft-wiki/session-memory-and-experience-ingest.md",
+        "draft-wiki/storage-sqlite-and-retrieval-indexes.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_continue_drain_and_retest",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-07T09:39:59.138Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-07T09-39-59.138Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_project_memory_retrieval_tuning",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-07T09:39:59.138Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-07T09-39-59.138Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_step56_implementation_planning",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-07T09:39:59.138Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-07T09-39-59.138Z-run",
+      "output_refs": [
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_step4_dogfood_archive",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-07T09:39:59.138Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-07T09-39-59.138Z-run",
+      "output_refs": [
+        "draft-wiki/storage-sqlite-and-retrieval-indexes.md",
+        "draft-wiki/session-memory-and-experience-ingest.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_index_pending_session_embeddings",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-07T09:39:59.138Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-07T09-39-59.138Z-run",
+      "output_refs": [
+        "draft-wiki/project-memory-creation-and-curation.md",
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_redesign_project_memory_shape",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-07T09:39:59.138Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-07T09-39-59.138Z-run",
+      "output_refs": [
+        "draft-wiki/project-memory-creation-and-curation.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_project_learn_boundary_fix_20260707",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-07T09:39:59.138Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-07T09-39-59.138Z-run",
+      "output_refs": [
+        "draft-wiki/source-evidence-inbox-and-candidate-boundaries.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_route_gaps_to_candidate_intake",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-07T09:39:59.138Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-07T09-39-59.138Z-run",
+      "output_refs": [
+        "draft-wiki/project-memory-creation-and-curation.md",
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_validate_curator_rewrite",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-10T08:09:06.510Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-10T08-09-06.510Z-run",
+      "output_refs": [
+        "draft-wiki/runtime-providers-and-project-layout.md",
+        "draft-wiki/query-status-and-agent-interfaces.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "project_inbox:llm-wiki:2026-07-10T08-07-27.992Z_a64a3b",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-10T08:09:06.510Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-10T08-09-06.510Z-run",
+      "output_refs": [
+        "draft-wiki/command-surface-and-operator-workflows.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "project_inbox:llm-wiki:2026-07-10T07-28-53.574Z_628ecf",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-10T08:09:06.510Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-10T08-09-06.510Z-run",
+      "output_refs": [
+        "draft-wiki/command-surface-and-operator-workflows.md",
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_research_queue_open_question",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-10T08:09:06.510Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-10T08-09-06.510Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_resume_main_mission_project_memory",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-10T08:09:06.510Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-10T08-09-06.510Z-run",
+      "output_refs": [
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_audit_current_status_pages_20260710",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [
+        "draft-wiki/schema-and-documentation-contracts.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_classkit_maintenance_report_schema_contract_20260715",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_step12_doc_contract_conflict_20260715",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [
+        "draft-wiki/storage-sqlite-and-retrieval-indexes.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_embedding_contract_lifecycle_20260713",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [
+        "draft-wiki/storage-sqlite-and-retrieval-indexes.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_embedding_contract_lifecycle_20260712",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_legacy_test_coverage_gap_20260712",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_dropletbot_clean_start_identity_20260710",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_classkit_execute_blockers_serially_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_classkit_progress_check_20260715",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_myelin_write_down_questions_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_myelin_progress_indication_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_classkit_project_memory_review_20260715",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_step12_contract_review_20260715",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_dropletbot_bootstrap_20260714",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_classkit_rebootstrap_20260714",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [
+        "draft-wiki/storage-sqlite-and-retrieval-indexes.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_embedding_contract_review_20260713",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_step12_external_dogfood_20260713",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [
+        "draft-wiki/storage-sqlite-and-retrieval-indexes.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_embedding_contract_fix_20260712",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_verify_refactor_coverage_20260712",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [
+        "draft-wiki/query-status-and-agent-interfaces.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_review_cleanup_20260712",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_step10_review_for_execution_20260710",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_step10_write_plans_20260710",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T07:41:06.542Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-15T07-41-06.542Z-run",
+      "output_refs": [
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_verify_dropletbot_identity_20260710",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [
+        "draft-wiki/index.md",
+        "draft-wiki/project-memory-creation-and-curation.md",
+        "draft-wiki/source-evidence-inbox-and-candidate-boundaries.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_project_docs_contract_update_20260719_0917",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [
+        "draft-wiki/source-evidence-inbox-and-candidate-boundaries.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_project_inbox_candidate_contracts_20260719",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [
+        "draft-wiki/command-surface-and-operator-workflows.md",
+        "draft-wiki/project-memory-creation-and-curation.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_review_promotion_workflow_20260719_0904",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [
+        "draft-wiki/project-memory-creation-and-curation.md",
+        "draft-wiki/source-evidence-inbox-and-candidate-boundaries.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_project_memory_contracts_20260719_0904",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_project_memory_docs_semantics_20260718_0848",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "project_inbox:llm-wiki:2026-07-18T08-47-39.250Z_17cd7d",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "project_inbox:llm-wiki:2026-07-18T08-47-39.237Z_48417e",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_maintenance_contract_update_20260718_0841",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_documentation_contract_update_20260718_0836",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_sessionstart_raw_count_contract_20260718",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_workflow_routing_20260718",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_operator_workflow_contract_20260718",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_review_routing_contract_20260718",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_ingest_contract_20260718",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_project_routing_fix_20260717",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [
+        "draft-wiki/query-status-and-agent-interfaces.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_preserve_curated_baseline_when_maintenance_degrades_20260717",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [
+        "draft-wiki/project-memory-creation-and-curation.md",
+        "draft-wiki/source-evidence-inbox-and-candidate-boundaries.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_candidate_lead_contract_20260717",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_legacy_path_consumer_risk_20260716",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_repo_identity_prose_policy_20260716",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_resources_root_naming_20260716",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [
+        "draft-wiki/command-surface-and-operator-workflows.md",
+        "draft-wiki/project-memory-creation-and-curation.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_verify_canonical_promotion_20260719_0917",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [
+        "draft-wiki/source-evidence-inbox-and-candidate-boundaries.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_verify_inbox_candidate_workflow_20260719",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_review_gate_gap_20260719",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_next_slice_review_20260718_0852",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_claimable_rows_labeling_20260718_0848",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_claimable_count_contract_20260718_0836",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_promote_sessionstart_contract_20260718",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_verify_raw_row_count_20260718",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_review_rerun_20260718",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_project_review_20260718",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_review_semantic_race_20260718",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_verify_droplet_bootstrap_20260717",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_implement_approved_fixes_20260717",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [
+        "draft-wiki/query-status-and-agent-interfaces.md",
+        "draft-wiki/project-memory-creation-and-curation.md",
+        "draft-wiki/source-evidence-inbox-and-candidate-boundaries.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_repair_project_memory_contracts_20260717",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_project_maintenance_dogfood_20260716_0844",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_legacy_path_audit_20260716",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_strip_identity_links_20260716",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_resources_root_naming_20260716",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_query_ranking_20260716",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-19T09:32:28.740Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-19T09-32-28.740Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_close_documentation_gaps_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    }
+  ],
+  "validation_ref": "curator-validation.json"
+}

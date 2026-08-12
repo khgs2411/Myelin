@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "stage_id": "subject-templates-schedules-and-generated-classes",
+  "status": "completed",
+  "provider_mode": "live",
+  "provider": "codex",
+  "model": "gpt-5.6-terra",
+  "sandbox": "workspace-write",
+  "cwd": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T11-02-08.762Z-run/agents/subject-templates-schedules-and-generated-classes",
+  "target_repo_snapshot": "target-repo (removed after invocation)",
+  "allowed_output_roots": [
+    {
+      "name": "draft_wiki",
+      "relativePath": "draft-wiki"
+    },
+    {
+      "name": "subject_reports",
+      "relativePath": "reports"
+    }
+  ],
+  "discovered_outputs": [
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/templates-schedules-and-generated-classes.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T11-02-08.762Z-run/agents/subject-templates-schedules-and-generated-classes/draft-wiki/templates-schedules-and-generated-classes.md",
+      "size_bytes": 9594
+    },
+    {
+      "root_name": "subject_reports",
+      "relative_path": "reports/subject-report.json",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T11-02-08.762Z-run/agents/subject-templates-schedules-and-generated-classes/reports/subject-report.json",
+      "size_bytes": 2001
+    }
+  ],
+  "result_ref": "file-authoring-agent-result.json"
+}

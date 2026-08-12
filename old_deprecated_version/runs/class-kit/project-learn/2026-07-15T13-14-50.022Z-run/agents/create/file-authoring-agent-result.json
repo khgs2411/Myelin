@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "stage_id": "create-planner",
+  "status": "completed",
+  "provider_mode": "live",
+  "provider": "codex",
+  "model": "gpt-5.6-terra",
+  "sandbox": "workspace-write",
+  "cwd": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T13-14-50.022Z-run/agents/create",
+  "target_repo_snapshot": "target-repo (removed after invocation)",
+  "allowed_output_roots": [
+    {
+      "name": "draft_wiki",
+      "relativePath": "draft-wiki"
+    },
+    {
+      "name": "planner_reports",
+      "relativePath": "reports"
+    }
+  ],
+  "discovered_outputs": [
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/access-gates-and-states.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T13-14-50.022Z-run/agents/create/draft-wiki/access-gates-and-states.md",
+      "size_bytes": 188
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/authorization.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T13-14-50.022Z-run/agents/create/draft-wiki/authorization.md",
+      "size_bytes": 176
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/class-and-attendance-states.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T13-14-50.022Z-run/agents/create/draft-wiki/class-and-attendance-states.md",
+      "size_bytes": 190
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/classes-and-registration.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T13-14-50.022Z-run/agents/create/draft-wiki/classes-and-registration.md",
+      "size_bytes": 185
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/deployment-and-releases.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T13-14-50.022Z-run/agents/create/draft-wiki/deployment-and-releases.md",
+      "size_bytes": 179
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/document-and-request-states.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T13-14-50.022Z-run/agents/create/draft-wiki/document-and-request-states.md",
+      "size_bytes": 185
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/documents-and-change-requests.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T13-14-50.022Z-run/agents/create/draft-wiki/documents-and-change-requests.md",
+      "size_bytes": 186
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/entitlement-and-schedule-states.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T13-14-50.022Z-run/agents/create/draft-wiki/entitlement-and-schedule-states.md",
+      "size_bytes": 193
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/index.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T13-14-50.022Z-run/agents/create/draft-wiki/index.md",
+      "size_bytes": 3500
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/memberships-and-users.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T13-14-50.022Z-run/agents/create/draft-wiki/memberships-and-users.md",
+      "size_bytes": 182
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/operational-class-delivery.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T13-14-50.022Z-run/agents/create/draft-wiki/operational-class-delivery.md",
+      "size_bytes": 143
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/platform-administration.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T13-14-50.022Z-run/agents/create/draft-wiki/platform-administration.md",
+      "size_bytes": 202
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/product-access.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T13-14-50.022Z-run/agents/create/draft-wiki/product-access.md",
+      "size_bytes": 193
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/repository-topology.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T13-14-50.022Z-run/agents/create/draft-wiki/repository-topology.md",
+      "size_bytes": 157
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/sdk-integration.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T13-14-50.022Z-run/agents/create/draft-wiki/sdk-integration.md",
+      "size_bytes": 167
+    },
+    {
+      "root_name": "planner_reports",
+      "relative_path": "reports/documentation-planner-report.json",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T13-14-50.022Z-run/agents/create/reports/documentation-planner-report.json",
+      "size_bytes": 9561
+    },
+    {
+      "root_name": "planner_reports",
+      "relative_path": "reports/documentation-subject-manifest.json",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T13-14-50.022Z-run/agents/create/reports/documentation-subject-manifest.json",
+      "size_bytes": 6003
+    }
+  ],
+  "result_ref": "file-authoring-agent-result.json"
+}

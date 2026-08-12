@@ -1,0 +1,1521 @@
+{
+  "generated_at": "2026-07-15T11:02:08.762Z",
+  "pages": [
+    {
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/wiki/authorization-roles-and-permissions.md",
+      "category": null,
+      "page_hash": "sha256:408aa16abad8adec8a9cd5758236d61a78a9e0766b2a202c8df92cd98ac62c4f",
+      "project_key": "class-kit",
+      "size_bytes": 8047,
+      "slug": "authorization-roles-and-permissions",
+      "title": "Authorization, roles, and permission evaluation",
+      "wiki_path": "wiki/authorization-roles-and-permissions.md"
+    },
+    {
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/wiki/class-discovery-visibility-and-lifecycle.md",
+      "category": null,
+      "page_hash": "sha256:2e21f301f4ee3c9a5275b6e82ec2cc45322b746b692251bd321221d32cfdcce8",
+      "project_key": "class-kit",
+      "size_bytes": 10439,
+      "slug": "class-discovery-visibility-and-lifecycle",
+      "title": "Class discovery, visibility, and lifecycle",
+      "wiki_path": "wiki/class-discovery-visibility-and-lifecycle.md"
+    },
+    {
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/wiki/documents-signup-links-and-change-requests.md",
+      "category": null,
+      "page_hash": "sha256:53214e90736db3914c5b23ff0bdf1b221a5086922ef62485a52d98afc91265bc",
+      "project_key": "class-kit",
+      "size_bytes": 9997,
+      "slug": "documents-signup-links-and-change-requests",
+      "title": "Documents, signup links, and product change requests",
+      "wiki_path": "wiki/documents-signup-links-and-change-requests.md"
+    },
+    {
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/wiki/index.md",
+      "category": null,
+      "page_hash": "sha256:d452b866ab9842aa6646c0913a608760b7024c9b0ffc1556f297f1ee74a5b48e",
+      "project_key": "class-kit",
+      "size_bytes": 2123,
+      "slug": "index",
+      "title": "ClassKit Project Memory",
+      "wiki_path": "wiki/index.md"
+    },
+    {
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/wiki/membership-entitlements-and-stock.md",
+      "category": null,
+      "page_hash": "sha256:778d83721818293ec69e4dfb630dbabfd6c14175b2288e2585318ef57a804086",
+      "project_key": "class-kit",
+      "size_bytes": 8987,
+      "slug": "membership-entitlements-and-stock",
+      "title": "Membership entitlements and stock",
+      "wiki_path": "wiki/membership-entitlements-and-stock.md"
+    },
+    {
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/wiki/platform-administration-and-product-configuration.md",
+      "category": null,
+      "page_hash": "sha256:35a03a2a27cbe6f6bbae208a64ad2717a7caa890193ca64b29a450adf10fefb9",
+      "project_key": "class-kit",
+      "size_bytes": 10495,
+      "slug": "platform-administration-and-product-configuration",
+      "title": "Platform administration and product configuration",
+      "wiki_path": "wiki/platform-administration-and-product-configuration.md"
+    },
+    {
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/wiki/product-management-software-integration.md",
+      "category": null,
+      "page_hash": "sha256:a4329792972bcbeb0fc497dea827a9d5a1fa8eaa3c2bb95c24aa11fa4aa01327",
+      "project_key": "class-kit",
+      "size_bytes": 9694,
+      "slug": "product-management-software-integration",
+      "title": "Product-management software integration",
+      "wiki_path": "wiki/product-management-software-integration.md"
+    },
+    {
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/wiki/product-resolution-auth-and-access.md",
+      "category": null,
+      "page_hash": "sha256:86c81215f41dbe9ba4b6618c71e9a5e923cb23a58b033a3da9f483309c19fec3",
+      "project_key": "class-kit",
+      "size_bytes": 10524,
+      "slug": "product-resolution-auth-and-access",
+      "title": "Product resolution, authentication, and access lifecycle",
+      "wiki_path": "wiki/product-resolution-auth-and-access.md"
+    },
+    {
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/wiki/registration-and-attendance-lifecycle.md",
+      "category": null,
+      "page_hash": "sha256:a74b4aa7c1974216029703d0a0b0927cff02375ffd95860a4e49d4d554d9fae6",
+      "project_key": "class-kit",
+      "size_bytes": 7629,
+      "slug": "registration-and-attendance-lifecycle",
+      "title": "Registration and attendance lifecycle",
+      "wiki_path": "wiki/registration-and-attendance-lifecycle.md"
+    },
+    {
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/wiki/repository-identity-and-boundaries.md",
+      "category": null,
+      "page_hash": "sha256:9d788e2389e6898b03f58d996c29ec9725d65336be7738adbd829f0a79416d0e",
+      "project_key": "class-kit",
+      "size_bytes": 6088,
+      "slug": "repository-identity-and-boundaries",
+      "title": "Repository identity and product boundaries",
+      "wiki_path": "wiki/repository-identity-and-boundaries.md"
+    },
+    {
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/wiki/sdk-facade-and-application-integration.md",
+      "category": null,
+      "page_hash": "sha256:05530a3f35e6899167e434d6fe6f65315211e7126586bb3f7c5a63bc511f68ad",
+      "project_key": "class-kit",
+      "size_bytes": 11793,
+      "slug": "sdk-facade-and-application-integration",
+      "title": "SDK facade and application integration",
+      "wiki_path": "wiki/sdk-facade-and-application-integration.md"
+    },
+    {
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/wiki/templates-schedules-and-generated-classes.md",
+      "category": null,
+      "page_hash": "sha256:abff88c8ad0937f8ffb91ce84f53b3c3b272fd674131ef91536ac1aafc9e08a6",
+      "project_key": "class-kit",
+      "size_bytes": 9594,
+      "slug": "templates-schedules-and-generated-classes",
+      "title": "Templates, schedules, and generated classes",
+      "wiki_path": "wiki/templates-schedules-and-generated-classes.md"
+    }
+  ],
+  "project_key": "class-kit",
+  "schema_version": 1,
+  "sections": [
+    {
+      "body_text": "`class_kit.permissions` is the global key catalog. A key has one of three scopes: `platform`, `product`, or `any`. Platform roles are global (`platform_roles` plus `platform_user_roles`); product roles are owned by one product (`product_roles` plus `product_user_roles`). Role-to-key joins are held separately in `platform_role_permissions` and `product_role_permissions`. The foundation migration enables RLS on all of these tables; permission helper functions are `security definer` and executable only by `service_role` (`class-kit-api/supabase/migrations/20260612120000_permission_layer_foundation.sql` (`repo:class-kit-api/supabase/migrations/20260612120000_permission_layer_foundation.sql`), `20260612121000_permission_helper_functions.sql` (`repo:class-kit-api/supabase/migrations/20260612121000_permission_helper_functions.sql`)).\n\nProduct membership is `class_kit.users`; it has a separate lifecycle from role assignment. A platform admin is not automatically a product member. That boundary is stated by ADR 0001 and is preserved by product-key evaluation: a platform assignment alone cannot satisfy a product permission key (`docs/adr/0001-scoped-product-permission-layer.md` (`repo:docs/adr/0001-scoped-product-permission-layer.md`)).",
+      "category": null,
+      "end_line": 10,
+      "heading_level": 2,
+      "heading_path": [
+        "Authorization, roles, and permission evaluation",
+        "Model and scopes"
+      ],
+      "heading_text": "Model and scopes",
+      "page_title": "Authorization, roles, and permission evaluation",
+      "project_key": "class-kit",
+      "section_hash": "sha256:914e565a7d85b9fea23a30654f679db6f90e3c1f87b235f7d01f42b050796282",
+      "section_id": "authorization-roles-and-permission-evaluation/model-and-scopes",
+      "snippet": "`class_kit.permissions` is the global key catalog. A key has one of three scopes: `platform`, `product`, or `any`. Platform roles are global (`platform_roles` plus `platform_user_roles`); product roles are owned by one product (`product_roles` plus `product_user_roles`). Role-to-key joins are held separately in `platform_role_permissions` and `product_role_permissions`. The foundation migration enables RLS on all of these tables; permission helper functions are `security definer` and executable ",
+      "start_line": 5,
+      "wiki_path": "wiki/authorization-roles-and-permissions.md"
+    },
+    {
+      "body_text": "Built-in roles are seeded and protected:\n\n| Scope | Role | Level | Default grant |\n| --- | --- | ---: | --- |\n| Platform | `platform_admin` | 100 | platform product/provider/origin management keys, plus `product_auth_redirects.manage` |\n| Product | `manager` | 75 | the manager product-key bundle below |\n| Product | `user` | 10 | no default permission-key grant |\n\nProduct roles are unique by `(product_id, key)` and may be custom. Role levels are non-negative in storage; the role-management endpoint further limits a custom role to an integer from 0 through 100. The endpoint treats `manager` as controlled (it cannot be edited or have grants changed through that API), although the stored `is_protected` flag is not itself the enforcement check in that function (`class-kit-api/supabase/functions/class-kit-product-roles/index.ts` (`repo:class-kit-api/supabase/functions/class-kit-product-roles/index.ts`)).\n\nA product-user-role row is `active` or `inactive`. The partial unique index permits at most one active role per `(product_id, user_id)`; inactive historical assignments may remain. Assigning a replacement role atomically inactivates the prior active row, then activates/upserts the target. It rejects a role change that would remove the product's last active holder of `product_user_roles.manage` (`class-kit-api/supabase/migrations/20260612124000_product_role_management_rpc.sql` (`repo:class-kit-api/supabase/migrations/20260612124000_product_role_management_rpc.sql`)). A product assignment also requires the target to be an existing `class_kit.users` member for that product, via the composite foreign key in the foundation migration.",
+      "category": null,
+      "end_line": 24,
+      "heading_level": 2,
+      "heading_path": [
+        "Authorization, roles, and permission evaluation",
+        "Roles and active assignments"
+      ],
+      "heading_text": "Roles and active assignments",
+      "page_title": "Authorization, roles, and permission evaluation",
+      "project_key": "class-kit",
+      "section_hash": "sha256:e0f7d0f54f76f15af89dd11fa2e70c1bb340f04b0b7588b7def6d348682511ba",
+      "section_id": "authorization-roles-and-permission-evaluation/roles-and-active-assignments",
+      "snippet": "Built-in roles are seeded and protected: | Scope | Role | Level | Default grant | | --- | --- | ---: | --- | | Platform | `platform_admin` | 100 | platform product/provider/origin management keys, plus `product_auth_redirects.manage` | | Product | `manager` | 75 | the manager product-key bundle below | | Product | `user` | 10 | no default permission-key grant | Product roles are unique by `(product_id, key)` and may be custom. Role levels are non-negative in storage; the role-management endpoint",
+      "start_line": 11,
+      "wiki_path": "wiki/authorization-roles-and-permissions.md"
+    },
+    {
+      "body_text": "The Edge Function helpers in `_shared/permissions.ts` (`repo:class-kit-api/supabase/functions/_shared/permissions.ts`) are the runtime contract. Missing scope defaults to platform.\n\n| Check | Product-role condition | Platform fallback | Result when absent |\n| --- | --- | --- | --- |\n| Product level, `requirePermissionByLevel(user, level, { scope: \"product\", productId })` | active assignment with role `level >= required_level` in that product | yes: an assigned platform role at or above the level passes | 403 `forbidden` |\n| Product key, `requirePermissionByKey(user, key, { scope: \"product\", productId })` | active product assignment whose role has that exact key | no | 403 `forbidden` |\n| Platform level/key, or omitted scope | corresponding platform role level or exact platform key | not applicable | 403 `forbidden` |\n\nThus numeric levels are hierarchical (`>=`), while keys are exact grants. A product-level fallback deliberately lets a platform operator pass manager-level product reads/operations without a product-membership row, but it does not turn a platform admin into a holder of product-specific keys. RPC errors produce a 500 `internal_error`, not an authorization denial. The authorization helper does not independently verify membership, approval, or resource state; action handlers must apply those gates before or after this permission decision. The catalog models four requirement types—`public`, `authenticated`, `level`, and `permission_key`—but it is declarative metadata; code guards are the execution source of truth (`20260612122000_permission_requirement_catalog.sql` (`repo:class-kit-api/supabase/migrations/20260612122000_permission_requirement_catalog.sql`)).",
+      "category": null,
+      "end_line": 36,
+      "heading_level": 2,
+      "heading_path": [
+        "Authorization, roles, and permission evaluation",
+        "Evaluation semantics and precedence"
+      ],
+      "heading_text": "Evaluation semantics and precedence",
+      "page_title": "Authorization, roles, and permission evaluation",
+      "project_key": "class-kit",
+      "section_hash": "sha256:89994e77e615d73fec170ba9b8a75a45387308d8478130cd4e455fde41064664",
+      "section_id": "authorization-roles-and-permission-evaluation/evaluation-semantics-and-precedence",
+      "snippet": "The Edge Function helpers in `_shared/permissions.ts` (`repo:class-kit-api/supabase/functions/_shared/permissions.ts`) are the runtime contract. Missing scope defaults to platform. | Check | Product-role condition | Platform fallback | Result when absent | | --- | --- | --- | --- | | Product level, `requirePermissionByLevel(user, level, { scope: \"product\", productId })` | active assignment with role `level >= required_level` in that product | yes: an assigned platform role at or above the level ",
+      "start_line": 25,
+      "wiki_path": "wiki/authorization-roles-and-permissions.md"
+    },
+    {
+      "body_text": "The latest `ensure_product_builtin_roles` definition grants `manager` these product keys for newly created products. Its trigger invokes the function when a product is inserted; the later migration does not re-run that function for every existing product:\n\n- Classes: `classes.create`, `classes.update`, `classes.cancel`, `classes.publish`, `classes.draft`, `classes.drafts.read`, `classes.extra_fields.read`, `class_signup_links.manage`.\n- Product and role administration: `product.auth_mode.update`, `product_roles.manage`, `product_role_permissions.manage`, `product_user_roles.manage`, `product_managers.manage`, `product_documents.manage`, `product_change_requests.manage`.\n- Users and operations: `users.read`, `users.manage`, `templates.manage`, `schedules.manage`, `memberships.manage`, `memberships.adjust_stock`, `registrations.manage`, `attendance.manage`.\n\nProduct role management accepts only catalog keys scoped `product` or `any`; it cannot grant platform-scoped keys. Assignment/list/revoke operations require `product_user_roles.manage`; custom-role creation and changes require level 75. Existing function actions use both styles: manager read/list/preview actions commonly require level 75, while mutations use their specific key (for example `classes.create`, `schedules.manage`, or `attendance.manage`). The requirement catalog captures the corresponding public/authenticated/level/key action classifications (`20260612122000_permission_requirement_catalog.sql` (`repo:class-kit-api/supabase/migrations/20260612122000_permission_requirement_catalog.sql`)).",
+      "category": null,
+      "end_line": 46,
+      "heading_level": 2,
+      "heading_path": [
+        "Authorization, roles, and permission evaluation",
+        "Built-in manager permission bundle"
+      ],
+      "heading_text": "Built-in manager permission bundle",
+      "page_title": "Authorization, roles, and permission evaluation",
+      "project_key": "class-kit",
+      "section_hash": "sha256:5c89391584acc6513f116941591120141cc9819cceb060017821d89b26e1d00c",
+      "section_id": "authorization-roles-and-permission-evaluation/built-in-manager-permission-bundle",
+      "snippet": "The latest `ensure_product_builtin_roles` definition grants `manager` these product keys for newly created products. Its trigger invokes the function when a product is inserted; the later migration does not re-run that function for every existing product: - Classes: `classes.create`, `classes.update`, `classes.cancel`, `classes.publish`, `classes.draft`, `classes.drafts.read`, `classes.extra_fields.read`, `class_signup_links.manage`. - Product and role administration: `product.auth_mode.update`,",
+      "start_line": 37,
+      "wiki_path": "wiki/authorization-roles-and-permissions.md"
+    },
+    {
+      "body_text": "- `users.metadata.manage` is inserted and granted to all existing manager roles by `20260705094533_product_user_metadata_permission.sql` (`repo:class-kit-api/supabase/migrations/20260705094533_product_user_metadata_permission.sql`), but the later final `ensure_product_builtin_roles` definition in `20260707144646_product_change_requests.sql` (`repo:class-kit-api/supabase/migrations/20260707144646_product_change_requests.sql`) omits it. Consequently, a product created after the later migration may have a manager role without the key required by `class-kit-product-users` `update_metadata`; this is a current migration-order contradiction needing repair.\n- The available SQL regression test covers preservation of custom roles and their grants during product-admin truncation, not the key-versus-level fallback boundary, inactive-assignment exclusion, or the last-grant-authority invariant. Those authorization semantics are implementation-backed but lack directly located regression coverage (`class-kit-api/supabase/tests/truncate_product_admin_action.sql` (`repo:class-kit-api/supabase/tests/truncate_product_admin_action.sql`)).\n- Some database RLS policies still use legacy role predicates such as `has_product_role(..., ['manager'])` or `is_platform_admin()` rather than the permission helpers. This page documents the Edge Function permission layer; equivalence between every RLS policy and every key guard has not been fully audited.",
+      "category": null,
+      "end_line": 52,
+      "heading_level": 2,
+      "heading_path": [
+        "Authorization, roles, and permission evaluation",
+        "Known gaps and contradictions"
+      ],
+      "heading_text": "Known gaps and contradictions",
+      "page_title": "Authorization, roles, and permission evaluation",
+      "project_key": "class-kit",
+      "section_hash": "sha256:dcd3b2284e1e7e682c6c354d00613e0dacbb2471bc167b98b1459831e150517d",
+      "section_id": "authorization-roles-and-permission-evaluation/known-gaps-and-contradictions",
+      "snippet": "- `users.metadata.manage` is inserted and granted to all existing manager roles by `20260705094533_product_user_metadata_permission.sql` (`repo:class-kit-api/supabase/migrations/20260705094533_product_user_metadata_permission.sql`), but the later final `ensure_product_builtin_roles` definition in `20260707144646_product_change_requests.sql` (`repo:class-kit-api/supabase/migrations/20260707144646_product_change_requests.sql`) omits it. Consequently, a product created after the later migration may",
+      "start_line": 47,
+      "wiki_path": "wiki/authorization-roles-and-permissions.md"
+    },
+    {
+      "body_text": "`class_kit.classes` requires a positive capacity and `ends_at > starts_at`. Its independently controlled state fields are:\n\n| Field | Supported values | Effect |\n| --- | --- | --- |\n| `status` | `draft`, `published` | A class is discoverable or registerable only when published. New API-created classes default to draft. |\n| `lifecycle_status` | `created`, `in_progress`, `completed`, `cancelled` | Drives operational lifecycle. Cancelled classes are excluded from current public/user discovery and cannot be registered. |\n| `visibility` | `public`, `hidden`, `members_only` | Determines intended audience and is also a registration gate. |\n| `registration_policy` | `auto_approve`, `member_auto_approve`, `approval_required` | Determines the initial registration outcome after eligibility succeeds. |\n| `membership_requirement` | `none`, `required` | Independently requires an active membership grant to register. |\n\nThe create action can override template defaults for these fields and otherwise uses the active template's defaults; without a template it defaults to `draft`, `public`, `member_auto_approve`, and `none`. Update can alter all five fields. `publish` and `draft` only change `status`; they do not reset lifecycle. Creation, update, publish, draft, and cancellation require their respective product permissions (`classes.create`, `classes.update`, `classes.publish`, `classes.draft`, and `classes.cancel`).",
+      "category": null,
+      "end_line": 18,
+      "heading_level": 2,
+      "heading_path": [
+        "Class discovery, visibility, and lifecycle",
+        "Core record and publication contract"
+      ],
+      "heading_text": "Core record and publication contract",
+      "page_title": "Class discovery, visibility, and lifecycle",
+      "project_key": "class-kit",
+      "section_hash": "sha256:3309d2cf21ae1800a492655c7734a34e053f549597a692c8dcf047696c898538",
+      "section_id": "class-discovery-visibility-and-lifecycle/core-record-and-publication-contract",
+      "snippet": "`class_kit.classes` requires a positive capacity and `ends_at > starts_at`. Its independently controlled state fields are: | Field | Supported values | Effect | | --- | --- | --- | | `status` | `draft`, `published` | A class is discoverable or registerable only when published. New API-created classes default to draft. | | `lifecycle_status` | `created`, `in_progress`, `completed`, `cancelled` | Drives operational lifecycle. Cancelled classes are excluded from current public/user discovery and ca",
+      "start_line": 5,
+      "wiki_path": "wiki/class-discovery-visibility-and-lifecycle.md"
+    },
+    {
+      "body_text": "The Edge Function has four externally meaningful listing shapes. All function queries use the service client, so handler filters—not table RLS—are the effective API boundary.\n\n| Route | Caller | Class filters | Response shape |\n| --- | --- | --- | --- |\n| `list` / `get` (the SDK user facade) | Anonymous product context is allowed | published; not cancelled; `public` or `members_only`; `list` defaults to the current UTC month, while `get` uses an ID | caller-safe `ClassSummary` / `ClassInformation` |\n| `list_public` | Anonymous product context | published, not cancelled, `public`, and `starts_at >= now()` | raw `classes` row plus `approved_count` and cancellation availability |\n| `list_user` | authenticated active product user | published, not cancelled, future; active members see `public` and `members_only`, other active users see `public` | raw `classes` row plus registration/cancellation availability |\n| `list_manager` / `get_manager` | product permission level 75+ | scoped only by product and optional range/ID; draft, hidden, cancelled, and historical classes remain visible | raw management row with derived temporal/read-only state and registration counts |\n\nThe current database RLS policy is stricter for direct table reads: anonymous callers receive only published, non-cancelled public classes; authenticated product users receive `members_only` classes only with an active membership. This is consistent with `list_public` and `list_user`, but not with `list`/`get`: those service-client handlers include `members_only` rows without first filtering the query by active membership. The same handler reports `canRegister` based on `membership_requirement`, but does not include `visibility = members_only` in that boolean. The registration RPC remains the final gate and rejects a non-member for a members-only class, so this is a discovery/availability-hint mismatch rather than a registration bypass.\n\n`hidden` is never returned by the user-facing routes and is rejected by the registration RPC. `members_only` means an active membership grant is required even if `membership_requirement` is `none`; `membership_requirement = required` adds that requirement to a public class as well. Eligibility therefore takes precedence over approval policy:\n\n1. The class must be published, neither cancelled/in-progress/completed, and start in the future; hidden classes fail as well.\n2. An active membership grant is required when either `visibility = members_only` or `membership_requirement = required`.\n3. `auto_approve` creates an approved registration; `member_auto_approve` approves only a member and otherwise creates pending; `approval_required` creates pending.\n\nThe SQL regression test covers the three approval-policy outcomes and the required-membership rejection. It does not cover the Edge Function's discovery filters.",
+      "category": null,
+      "end_line": 39,
+      "heading_level": 2,
+      "heading_path": [
+        "Class discovery, visibility, and lifecycle",
+        "Discovery routes and their actual filters"
+      ],
+      "heading_text": "Discovery routes and their actual filters",
+      "page_title": "Class discovery, visibility, and lifecycle",
+      "project_key": "class-kit",
+      "section_hash": "sha256:ddf4bed9a0ec2f5aae319c92f9a5dac871ca1438510d1db42c0e7fdc4e69da18",
+      "section_id": "class-discovery-visibility-and-lifecycle/discovery-routes-and-their-actual-filters",
+      "snippet": "The Edge Function has four externally meaningful listing shapes. All function queries use the service client, so handler filters—not table RLS—are the effective API boundary. | Route | Caller | Class filters | Response shape | | --- | --- | --- | --- | | `list` / `get` (the SDK user facade) | Anonymous product context is allowed | published; not cancelled; `public` or `members_only`; `list` defaults to the current UTC month, while `get` uses an ID | caller-safe `ClassSummary` / `ClassInformation",
+      "start_line": 19,
+      "wiki_path": "wiki/class-discovery-visibility-and-lifecycle.md"
+    },
+    {
+      "body_text": "The API derives a caller-facing temporal value rather than returning database lifecycle values directly:\n\n| Derived `temporalStatus` | Precedence / condition |\n| --- | --- |\n| `cancelled` | `lifecycle_status = cancelled` |\n| `started` | `lifecycle_status = in_progress`, otherwise current time is at or after `starts_at` |\n| `ended` | `lifecycle_status = completed`, otherwise current time is at or after `ends_at` |\n| `upcoming` | remaining case |\n\n`registrationOpen` is true only for a derived `upcoming` class that is published. Management responses additionally mark `started`, `ended`, and `cancelled` classes read-only, with that value as `read_only_reason`.\n\nAttendance starts a published `created` class by moving it to `in_progress`; starting an already in-progress class is allowed, while cancelled/completed and draft classes are rejected. Completion is permitted only from `in_progress` and writes `completed`. Cancellation calls `cancel_class_with_registration_restoration`: it cancels pending and approved registrations, restores consumed membership stock for approved registrations, then writes `cancelled`. The cancellation RPC has no lifecycle-state guard, so the current implementation permits cancellation of any existing product class, including one already in progress or completed.",
+      "category": null,
+      "end_line": 54,
+      "heading_level": 2,
+      "heading_path": [
+        "Class discovery, visibility, and lifecycle",
+        "Temporal and operational lifecycle"
+      ],
+      "heading_text": "Temporal and operational lifecycle",
+      "page_title": "Class discovery, visibility, and lifecycle",
+      "project_key": "class-kit",
+      "section_hash": "sha256:85ee1ef379a9c7011ce7b1492a5ce76c8f4d875713fa5cdd52c1df06c283e5ba",
+      "section_id": "class-discovery-visibility-and-lifecycle/temporal-and-operational-lifecycle",
+      "snippet": "The API derives a caller-facing temporal value rather than returning database lifecycle values directly: | Derived `temporalStatus` | Precedence / condition | | --- | --- | | `cancelled` | `lifecycle_status = cancelled` | | `started` | `lifecycle_status = in_progress`, otherwise current time is at or after `starts_at` | | `ended` | `lifecycle_status = completed`, otherwise current time is at or after `ends_at` | | `upcoming` | remaining case | `registrationOpen` is true only for a derived `upcom",
+      "start_line": 40,
+      "wiki_path": "wiki/class-discovery-visibility-and-lifecycle.md"
+    },
+    {
+      "body_text": "The SDK uses `list` and `get`, whose baseline summary is limited to identity, name, timing, location, capacity, registration policy, temporal/registration flags, and the caller's live registration. `get` always includes description and category; `list` includes them only when requested. The SDK types make the optional fields explicit in `class-kit-sdk/src/types.ts`.\n\n`fields` can request `description`, `category`, `membershipRequirement`, `cancellationCutoff`, `registeredUsersCount`, `registeredUsersRoster`, and `pendingRegistrationCount`. The handler treats description, category, cancellation cutoff, and pending count as permission-gated when explicitly requested; `classes.extra_fields.read` is required. The `get` default description/category exception means an anonymous caller can receive those two fields without requesting them.\n\nEach class has a JSON `public_field_policy` object. New API-created records default to `{ registeredUsersCount: true, registeredUsersRoster: false }`; the roster migration backfilled the latter false value. Its current effects in the safe routes are:\n\n| Field | Without `classes.extra_fields.read` | With permission |\n| --- | --- | --- |\n| `registeredUsersCount` | Included whenever policy permits it (default true), even if not requested | Included when policy permits, or when explicitly requested despite policy |\n| `registeredUsersRoster` | Included only when requested and policy allows it; entries contain `userId`, `displayName`, and `email: null` | Included when requested regardless of policy; email fallback may be populated |\n| `pendingRegistrationCount` | Never included | Included when requested |\n\nThe legacy `list_public` and `list_user` paths bypass this summary and return `select('*')` rows. They therefore do not enforce the public-field-policy shaping contract. Cancellation reason fields are persisted by the manager cancellation action, but the safe summary routes do not expose either the reason or its `expose_cancellation_reason_to_users` flag; no implemented user-facing rule was found that consumes that flag.",
+      "category": null,
+      "end_line": 70,
+      "heading_level": 2,
+      "heading_path": [
+        "Class discovery, visibility, and lifecycle",
+        "Caller-safe fields and roster policy"
+      ],
+      "heading_text": "Caller-safe fields and roster policy",
+      "page_title": "Class discovery, visibility, and lifecycle",
+      "project_key": "class-kit",
+      "section_hash": "sha256:c8c49d17c5d552417798bc31e5270d052df68e4bc2dcda114e167ebcb92218cd",
+      "section_id": "class-discovery-visibility-and-lifecycle/caller-safe-fields-and-roster-policy",
+      "snippet": "The SDK uses `list` and `get`, whose baseline summary is limited to identity, name, timing, location, capacity, registration policy, temporal/registration flags, and the caller's live registration. `get` always includes description and category; `list` includes them only when requested. The SDK types make the optional fields explicit in `class-kit-sdk/src/types.ts`. `fields` can request `description`, `category`, `membershipRequirement`, `cancellationCutoff`, `registeredUsersCount`, `registeredU",
+      "start_line": 55,
+      "wiki_path": "wiki/class-discovery-visibility-and-lifecycle.md"
+    },
+    {
+      "body_text": "- `class-kit-api/supabase/migrations/20260607134535_template_class_core.sql` defines the concrete-class state enums, constraints, defaults, and original RLS policies.\n- `class-kit-api/supabase/migrations/20260702121000_public_class_discovery_non_cancelled.sql` is the current RLS/index refinement: published, non-cancelled discovery and membership-conditioned `members_only` table access.\n- `class-kit-api/supabase/functions/class-kit-classes/index.ts` implements the route-specific service-client filters, caller-safe summary, public-field policy, derived temporal status, and lifecycle actions.\n- `class-kit-api/supabase/migrations/20260607160000_registration_engine.sql` and `20260701084833_fix_member_auto_approve_registration.sql` establish registration eligibility, membership precedence, approval outcomes, and cancellation restoration.\n- `class-kit-api/supabase/migrations/20260607170000_attendance_engine.sql` establishes the attendance lifecycle transitions.\n- `class-kit-api/supabase/migrations/20260622150445_class_api_pattern_foundation.sql` and `20260624090000_class_roster_public_field_policy.sql` establish and backfill field policy.\n- `class-kit-sdk/src/types.ts` and `class-kit-sdk/src/client/class-kit-client.ts` show the supported user and management caller contracts.\n- `class-kit-api/supabase/tests/member_auto_approve_registration.sql` corroborates approval and membership outcomes; `pending_registration_cancellation.sql` corroborates the different cancellation treatment for pending versus approved registrations.",
+      "category": null,
+      "end_line": 81,
+      "heading_level": 2,
+      "heading_path": [
+        "Class discovery, visibility, and lifecycle",
+        "Evidence"
+      ],
+      "heading_text": "Evidence",
+      "page_title": "Class discovery, visibility, and lifecycle",
+      "project_key": "class-kit",
+      "section_hash": "sha256:14a7a0e217d73b61c33dca778becb6cd8aa92a51c3dbd654fe6c13f9db26a475",
+      "section_id": "class-discovery-visibility-and-lifecycle/evidence",
+      "snippet": "- `class-kit-api/supabase/migrations/20260607134535_template_class_core.sql` defines the concrete-class state enums, constraints, defaults, and original RLS policies. - `class-kit-api/supabase/migrations/20260702121000_public_class_discovery_non_cancelled.sql` is the current RLS/index refinement: published, non-cancelled discovery and membership-conditioned `members_only` table access. - `class-kit-api/supabase/functions/class-kit-classes/index.ts` implements the route-specific service-client fi",
+      "start_line": 71,
+      "wiki_path": "wiki/class-discovery-visibility-and-lifecycle.md"
+    },
+    {
+      "body_text": "- No focused regression test was found for `list`, `get`, `list_public`, `list_user`, or the field-policy/roster response matrix. In particular, the generic service-client `list`/`get` inclusion of `members_only` classes for non-members, and its optimistic `canRegister` value, should be covered or reconciled with the RLS and registration contracts.\n- Raw `list_public` and `list_user` responses are not verified to be intentionally public-safe; they bypass the safe summary and `public_field_policy` shaping.\n- No tested or implemented safe-route behavior was found for `cancellation_reason` or `expose_cancellation_reason_to_users`; the flag's user-facing effect is therefore unknown.",
+      "category": null,
+      "end_line": 87,
+      "heading_level": 2,
+      "heading_path": [
+        "Class discovery, visibility, and lifecycle",
+        "Known gaps"
+      ],
+      "heading_text": "Known gaps",
+      "page_title": "Class discovery, visibility, and lifecycle",
+      "project_key": "class-kit",
+      "section_hash": "sha256:f57a46f7820b4d90301ec7a75915fe2f99a013090812ac9141c5a870e0906fb8",
+      "section_id": "class-discovery-visibility-and-lifecycle/known-gaps",
+      "snippet": "- No focused regression test was found for `list`, `get`, `list_public`, `list_user`, or the field-policy/roster response matrix. In particular, the generic service-client `list`/`get` inclusion of `members_only` classes for non-members, and its optimistic `canRegister` value, should be covered or reconciled with the RLS and registration contracts. - Raw `list_public` and `list_user` responses are not verified to be intentionally public-safe; they bypass the safe summary and `public_field_policy",
+      "start_line": 82,
+      "wiki_path": "wiki/class-discovery-visibility-and-lifecycle.md"
+    },
+    {
+      "body_text": "This snapshot does not contain the assigned Edge Function, migration, or regression-test files: `class-kit-api/supabase/functions/class-kit-product-documents/index.ts`, `class-kit-api/supabase/functions/class-kit-signup-links/index.ts`, `class-kit-api/supabase/functions/class-kit-product-change-requests/index.ts`, `20260705060042_product_documents.sql`, and `20260707144646_product_change_requests.sql` are absent from `target-repo/`. The behavior below is therefore documented-contract evidence from the current API map, SDK guide, backend guide, and changelog, not direct source verification. The supplied checkout identity identifies the registered repository as `class-kit` on `master` (`repository-identity.json`); the source snapshot is documentation-only.",
+      "category": null,
+      "end_line": 8,
+      "heading_level": 2,
+      "heading_path": [
+        "Documents, signup links, and product change requests",
+        "Evidence status"
+      ],
+      "heading_text": "Evidence status",
+      "page_title": "Documents, signup links, and product change requests",
+      "project_key": "class-kit",
+      "section_hash": "sha256:61caa9cfc17ac13547c374116fecce8aee24420eb1ba90f6ace604a13b79b395",
+      "section_id": "documents-signup-links-and-product-change-requests/evidence-status",
+      "snippet": "This snapshot does not contain the assigned Edge Function, migration, or regression-test files: `class-kit-api/supabase/functions/class-kit-product-documents/index.ts`, `class-kit-api/supabase/functions/class-kit-signup-links/index.ts`, `class-kit-api/supabase/functions/class-kit-product-change-requests/index.ts`, `20260705060042_product_documents.sql`, and `20260707144646_product_change_requests.sql` are absent from `target-repo/`. The behavior below is therefore documented-contract evidence fr",
+      "start_line": 5,
+      "wiki_path": "wiki/documents-signup-links-and-change-requests.md"
+    },
+    {
+      "body_text": "All three capabilities are product-scoped. Public lookups resolve the product through the normal browser origin or localhost product-key hint; they do not accept arbitrary cross-product access.\n\n| Capability | Public caller | Active product user | Product manager with explicit permission | Platform admin |\n| --- | --- | --- | --- | --- |\n| Signup-link resolution | May resolve a slug anonymously | May resolve it | Creates links with `class_signup_links.manage` | Not separately documented for this surface |\n| Published document reads | May list/get published content anonymously | Same reads; may accept | Versions/archives with `product_documents.manage` | Not separately documented for this surface |\n| Change requests | No public workflow | No ordinary user workflow documented | Creates, revises, lists, deletes with `product_change_requests.manage` | Lists across products, changes status, deletes, and issues attachment URLs |\n\nThe built-in product `manager` role is documented as receiving all three permission keys by default. Permission-key grants remain explicit; a role's numeric level alone does not satisfy a key-guarded operation (`docs/product-shape.md`, `docs/api/backend-api.md`).",
+      "category": null,
+      "end_line": 20,
+      "heading_level": 2,
+      "heading_path": [
+        "Documents, signup links, and product change requests",
+        "Ownership and access boundary"
+      ],
+      "heading_text": "Ownership and access boundary",
+      "page_title": "Documents, signup links, and product change requests",
+      "project_key": "class-kit",
+      "section_hash": "sha256:5e933aaa41ef94ce4522230b1764c7827dd9a2b5573aef9c7b12b521dc498afa",
+      "section_id": "documents-signup-links-and-product-change-requests/ownership-and-access-boundary",
+      "snippet": "All three capabilities are product-scoped. Public lookups resolve the product through the normal browser origin or localhost product-key hint; they do not accept arbitrary cross-product access. | Capability | Public caller | Active product user | Product manager with explicit permission | Platform admin | | --- | --- | --- | --- | --- | | Signup-link resolution | May resolve a slug anonymously | May resolve it | Creates links with `class_signup_links.manage` | Not separately documented for this ",
+      "start_line": 9,
+      "wiki_path": "wiki/documents-signup-links-and-change-requests.md"
+    },
+    {
+      "body_text": "Signup links are durable manager-created routes stored in `class_kit.class_signup_links`. A manager creates either:\n\n- a `class` target, which resolves to `target_type: \"class\"` with `class_id`; or\n- a `filter` target, which resolves to `target_type: \"filter\"` with the product-owned `filters` object (for example category or weekdays).\n\nCreation uses `class-kit-signup-links` action `create` through `management.signupLinks.create(input)` and requires `class_signup_links.manage`. Resolution uses `resolve` through `signupLinks.resolve(slug)` and is anonymous-safe. A consuming website should route the resolved class target to class detail or the filter target to discovery; it does not need direct table access. The documented precedence is product resolution first (origin or localhost hint), then slug lookup within that resolved product.",
+      "category": null,
+      "end_line": 29,
+      "heading_level": 2,
+      "heading_path": [
+        "Documents, signup links, and product change requests",
+        "Signup links"
+      ],
+      "heading_text": "Signup links",
+      "page_title": "Documents, signup links, and product change requests",
+      "project_key": "class-kit",
+      "section_hash": "sha256:bb3121f2b5a7e8a0e3990b88c47475496a6466ce8063bc2f494903fe5e4f0478",
+      "section_id": "documents-signup-links-and-product-change-requests/signup-links",
+      "snippet": "Signup links are durable manager-created routes stored in `class_kit.class_signup_links`. A manager creates either: - a `class` target, which resolves to `target_type: \"class\"` with `class_id`; or - a `filter` target, which resolves to `target_type: \"filter\"` with the product-owned `filters` object (for example category or weekdays). Creation uses `class-kit-signup-links` action `create` through `management.signupLinks.create(input)` and requires `class_signup_links.manage`. Resolution uses `res",
+      "start_line": 21,
+      "wiki_path": "wiki/documents-signup-links-and-change-requests.md"
+    },
+    {
+      "body_text": "Documents are immutable, versioned product content for terms, policies, waivers, agreements, and similar material. Current documentation names `class_kit.product_documents` for versions and `class_kit.product_document_acceptances` for acceptance snapshots.",
+      "category": null,
+      "end_line": 33,
+      "heading_level": 2,
+      "heading_path": [
+        "Documents, signup links, and product change requests",
+        "Product documents and acceptance history"
+      ],
+      "heading_text": "Product documents and acceptance history",
+      "page_title": "Documents, signup links, and product change requests",
+      "project_key": "class-kit",
+      "section_hash": "sha256:5dcadff281ca2cc6b7461fc70570e17a0cde0ec5d006a397615f1276355447e7",
+      "section_id": "documents-signup-links-and-product-change-requests/product-documents-and-acceptance-history",
+      "snippet": "Documents are immutable, versioned product content for terms, policies, waivers, agreements, and similar material. Current documentation names `class_kit.product_documents` for versions and `class_kit.product_document_acceptances` for acceptance snapshots.",
+      "start_line": 30,
+      "wiki_path": "wiki/documents-signup-links-and-change-requests.md"
+    },
+    {
+      "body_text": "`management.productDocuments.upsert(input)` inserts a new version; it does not update an existing row. A manager supplies a document type, locale, title, markdown content, status, and optional effective time. When a version is published, the prior published version for the same product, type, and locale is archived. `management.productDocuments.archive(documentId)` archives one specific version. The documented retention trigger prunes older non-published versions beyond the newest five for that product/type/locale.\n\n| State/operation | Public `list`/`get` outcome | Manager outcome |\n| --- | --- | --- |\n| Published | Eligible for public reads | A later publish archives it for the same type/locale |\n| Non-published | Not returned publicly | Retained unless older than the five-version non-published limit |\n| Archived | Not returned publicly | Remains an archived historical version |\n| New upsert | Cannot replace an existing version | Creates a distinct immutable version |\n\nThe documentation does not enumerate the exact persisted status enum beyond the public/archived behavior above; direct migration verification is required before treating additional status values or exact transition validation as complete.",
+      "category": null,
+      "end_line": 46,
+      "heading_level": 3,
+      "heading_path": [
+        "Documents, signup links, and product change requests",
+        "Product documents and acceptance history",
+        "Version and publication state"
+      ],
+      "heading_text": "Version and publication state",
+      "page_title": "Documents, signup links, and product change requests",
+      "project_key": "class-kit",
+      "section_hash": "sha256:008a9edbda18a6de3985d4f8fecb531a8703e51544cdc30b9f88d00f1a2c71cb",
+      "section_id": "documents-signup-links-and-product-change-requests/product-documents-and-acceptance-history/version-and-publication-state",
+      "snippet": "`management.productDocuments.upsert(input)` inserts a new version; it does not update an existing row. A manager supplies a document type, locale, title, markdown content, status, and optional effective time. When a version is published, the prior published version for the same product, type, and locale is archived. `management.productDocuments.archive(documentId)` archives one specific version. The documented retention trigger prunes older non-published versions beyond the newest five for that ",
+      "start_line": 34,
+      "wiki_path": "wiki/documents-signup-links-and-change-requests.md"
+    },
+    {
+      "body_text": "`productDocuments.list(options?)` is anonymous-safe and returns published summaries without `content_markdown`. `productDocuments.get(documentType, options?)` returns markdown content for the latest published version matching the requested type and locale. If the requested locale has no published version, it may fall back to `fallbackLocale`. Both calls are product-scoped, set public cache headers at the backend boundary, and successful SDK responses are cached in memory and `localStorage` for five minutes. Management writes clear that SDK read cache.",
+      "category": null,
+      "end_line": 50,
+      "heading_level": 3,
+      "heading_path": [
+        "Documents, signup links, and product change requests",
+        "Product documents and acceptance history",
+        "Public reads and locale selection"
+      ],
+      "heading_text": "Public reads and locale selection",
+      "page_title": "Documents, signup links, and product change requests",
+      "project_key": "class-kit",
+      "section_hash": "sha256:862c2cccf5fb63fc18e96f937eae198f5e76c72f832f1f99335ea1864fb9db24",
+      "section_id": "documents-signup-links-and-product-change-requests/product-documents-and-acceptance-history/public-reads-and-locale-selection",
+      "snippet": "`productDocuments.list(options?)` is anonymous-safe and returns published summaries without `content_markdown`. `productDocuments.get(documentType, options?)` returns markdown content for the latest published version matching the requested type and locale. If the requested locale has no published version, it may fall back to `fallbackLocale`. Both calls are product-scoped, set public cache headers at the backend boundary, and successful SDK responses are cached in memory and `localStorage` for f",
+      "start_line": 47,
+      "wiki_path": "wiki/documents-signup-links-and-change-requests.md"
+    },
+    {
+      "body_text": "`productDocuments.accept(documentType, input?)` requires an authenticated **active product user**. It records the accepted document id, type, locale, version, title, markdown content, and optional context; SDK documentation says context defaults to `\"general\"` and can distinguish flows such as `\"signup\"` or `\"checkout\"`. Because the content is copied into the acceptance record, later document edits or later publications do not rewrite prior acceptances. The documented gate order is: resolve product, identify/authenticate caller, confirm active product-user membership, resolve the published document/version and locale, then create the snapshot. Exact error and idempotency behavior are unverified in this snapshot.",
+      "category": null,
+      "end_line": 54,
+      "heading_level": 3,
+      "heading_path": [
+        "Documents, signup links, and product change requests",
+        "Product documents and acceptance history",
+        "Acceptance gate and snapshot"
+      ],
+      "heading_text": "Acceptance gate and snapshot",
+      "page_title": "Documents, signup links, and product change requests",
+      "project_key": "class-kit",
+      "section_hash": "sha256:fd3cd81a57c7e850f66caf8544f7397d5a7dee09e34986d7e23a958e2d2588ba",
+      "section_id": "documents-signup-links-and-product-change-requests/product-documents-and-acceptance-history/acceptance-gate-and-snapshot",
+      "snippet": "`productDocuments.accept(documentType, input?)` requires an authenticated **active product user**. It records the accepted document id, type, locale, version, title, markdown content, and optional context; SDK documentation says context defaults to `\"general\"` and can distinguish flows such as `\"signup\"` or `\"checkout\"`. Because the content is copied into the acceptance record, later document edits or later publications do not rewrite prior acceptances. The documented gate order is: resolve prod",
+      "start_line": 51,
+      "wiki_path": "wiki/documents-signup-links-and-change-requests.md"
+    },
+    {
+      "body_text": "Product change requests are the internal manager-facing ticket surface for website fixes, content changes, issues, and features. They are stored in `class_kit.product_change_requests`; attachment metadata is stored in `class_kit.product_change_request_attachments`, while file bytes reside in the private `product-change-request-attachments` Storage bucket.",
+      "category": null,
+      "end_line": 58,
+      "heading_level": 2,
+      "heading_path": [
+        "Documents, signup links, and product change requests",
+        "Product change requests"
+      ],
+      "heading_text": "Product change requests",
+      "page_title": "Documents, signup links, and product change requests",
+      "project_key": "class-kit",
+      "section_hash": "sha256:a6ea626c9949a0c4ade5c966f4a04ed0c31b42dee62ebb6727ce364750f37de0",
+      "section_id": "documents-signup-links-and-product-change-requests/product-change-requests",
+      "snippet": "Product change requests are the internal manager-facing ticket surface for website fixes, content changes, issues, and features. They are stored in `class_kit.product_change_requests`; attachment metadata is stored in `class_kit.product_change_request_attachments`, while file bytes reside in the private `product-change-request-attachments` Storage bucket.",
+      "start_line": 55,
+      "wiki_path": "wiki/documents-signup-links-and-change-requests.md"
+    },
+    {
+      "body_text": "The documented request types are `issue` and `feature_request`. The complete documented status vocabulary is `open`, `in_progress`, `done`, and `closed`.\n\n| Operation | Result |\n| --- | --- |\n| Create | Adds a current-product request with type, title, description, and optional app-owned JSON `context` |\n| Update | Appends a new revision in the same `thread_id`, increments `version_number`, and points `previous_request_id` at the prior latest revision |\n| List | Returns the latest visible revision for each thread with attachment metadata and visible history in `revisions` |\n| Delete | Soft-deletes the entire thread from manager and admin list surfaces while retaining the database audit trail |\n| Admin status update | Sets a request to one of the documented status values; exact transition restrictions are not source-verified |\n\nClassKit stores `context` as a JSON object without interpreting view, label, path, URL, or route semantics. Managers use `management.changeRequests.create/update/delete/list`; all require `product_change_requests.manage` according to the backend/API map. The platform-admin surface uses `admin.changeRequests.list({ productKey })`, `updateStatus`, and `delete`, permitting cross-product review through an explicit product key where applicable.",
+      "category": null,
+      "end_line": 72,
+      "heading_level": 3,
+      "heading_path": [
+        "Documents, signup links, and product change requests",
+        "Product change requests",
+        "Request states and revision model"
+      ],
+      "heading_text": "Request states and revision model",
+      "page_title": "Documents, signup links, and product change requests",
+      "project_key": "class-kit",
+      "section_hash": "sha256:881b87967e9c5e28adf2165375b126f79a036b7d78f8ac09bd33927789ebe83e",
+      "section_id": "documents-signup-links-and-product-change-requests/product-change-requests/request-states-and-revision-model",
+      "snippet": "The documented request types are `issue` and `feature_request`. The complete documented status vocabulary is `open`, `in_progress`, `done`, and `closed`. | Operation | Result | | --- | --- | | Create | Adds a current-product request with type, title, description, and optional app-owned JSON `context` | | Update | Appends a new revision in the same `thread_id`, increments `version_number`, and points `previous_request_id` at the prior latest revision | | List | Returns the latest visible revision",
+      "start_line": 59,
+      "wiki_path": "wiki/documents-signup-links-and-change-requests.md"
+    },
+    {
+      "body_text": "Attachments never travel in the JSON API response as broad public Storage access. The normal manager SDK `uploadAttachment(requestId, input)` flow is:\n\n1. The backend creates attachment metadata and returns a signed upload URL (`create_attachment_upload`).\n2. The SDK uploads the file directly to the private Storage bucket.\n3. The SDK marks the attachment uploaded (`complete_attachment_upload`).\n\nCustom UIs may call the lower-level create/complete methods. Platform admins obtain a short-lived signed URL only when opening an attachment: the default is download behavior, and `{ download: false }` requests an inline-preview URL. Product websites receive no broad Storage permission. Exact upload status values, expiry, file validation, and recovery behavior require the missing function/migration sources.",
+      "category": null,
+      "end_line": 82,
+      "heading_level": 3,
+      "heading_path": [
+        "Documents, signup links, and product change requests",
+        "Product change requests",
+        "Private attachment workflow"
+      ],
+      "heading_text": "Private attachment workflow",
+      "page_title": "Documents, signup links, and product change requests",
+      "project_key": "class-kit",
+      "section_hash": "sha256:eca60487efa793714e9d2d8f2504e986c192d80eb6faa783dadb89973c138355",
+      "section_id": "documents-signup-links-and-product-change-requests/product-change-requests/private-attachment-workflow",
+      "snippet": "Attachments never travel in the JSON API response as broad public Storage access. The normal manager SDK `uploadAttachment(requestId, input)` flow is: 1. The backend creates attachment metadata and returns a signed upload URL (`create_attachment_upload`). 2. The SDK uploads the file directly to the private Storage bucket. 3. The SDK marks the attachment uploaded (`complete_attachment_upload`). Custom UIs may call the lower-level create/complete methods. Platform admins obtain a short-lived signe",
+      "start_line": 73,
+      "wiki_path": "wiki/documents-signup-links-and-change-requests.md"
+    },
+    {
+      "body_text": "The optional Trello integration is platform-admin-only and mirrors this internal ticket system; product websites and manager dashboards should continue to use `management.changeRequests.*` and should not need Trello knowledge. Admin code can create or detach an external card and sync its status. Documented mapping is `todo -> open`, `in_progress -> in_progress`, `blocked -> in_progress`, `done -> done`; an `unknown` external state causes no ClassKit status mutation. This integration is described in `docs/changelog.md` and `docs/sdk/client-sdk.md`, but its implementation is outside this subject's assigned source paths.",
+      "category": null,
+      "end_line": 86,
+      "heading_level": 2,
+      "heading_path": [
+        "Documents, signup links, and product change requests",
+        "External work-item boundary"
+      ],
+      "heading_text": "External work-item boundary",
+      "page_title": "Documents, signup links, and product change requests",
+      "project_key": "class-kit",
+      "section_hash": "sha256:531659680e87911b66ddc01b3f6e7d892886a22d7de2c729708eba2a70e6d53b",
+      "section_id": "documents-signup-links-and-product-change-requests/external-work-item-boundary",
+      "snippet": "The optional Trello integration is platform-admin-only and mirrors this internal ticket system; product websites and manager dashboards should continue to use `management.changeRequests.*` and should not need Trello knowledge. Admin code can create or detach an external card and sync its status. Documented mapping is `todo -> open`, `in_progress -> in_progress`, `blocked -> in_progress`, `done -> done`; an `unknown` external state causes no ClassKit status mutation. This integration is described",
+      "start_line": 83,
+      "wiki_path": "wiki/documents-signup-links-and-change-requests.md"
+    },
+    {
+      "body_text": "- Direct confirmation of database schemas, enum/check constraints, RLS policies, and triggers is unavailable because both assigned migrations are absent.\n- Direct confirmation of action request/response shapes, error ordering, authorization precedence, locale fallback edge cases, acceptance idempotency, and cache-control values is unavailable because the assigned Edge Functions are absent.\n- No regression tests are mounted, so the documented lifecycle and authorization behavior has no test corroboration in this snapshot.\n- The exact document status enum and the allowed/blocked change-request status transitions must be verified from source before this subject can be considered a complete implementation contract.",
+      "category": null,
+      "end_line": 93,
+      "heading_level": 2,
+      "heading_path": [
+        "Documents, signup links, and product change requests",
+        "Known gaps"
+      ],
+      "heading_text": "Known gaps",
+      "page_title": "Documents, signup links, and product change requests",
+      "project_key": "class-kit",
+      "section_hash": "sha256:d37137f3ffc571274905647a95902d300f6b35cbecf34913a4bebafadd0230d9",
+      "section_id": "documents-signup-links-and-product-change-requests/known-gaps",
+      "snippet": "- Direct confirmation of database schemas, enum/check constraints, RLS policies, and triggers is unavailable because both assigned migrations are absent. - Direct confirmation of action request/response shapes, error ordering, authorization precedence, locale fallback edge cases, acceptance idempotency, and cache-control values is unavailable because the assigned Edge Functions are absent. - No regression tests are mounted, so the documented lifecycle and authorization behavior has no test corro",
+      "start_line": 87,
+      "wiki_path": "wiki/documents-signup-links-and-change-requests.md"
+    },
+    {
+      "body_text": "Sanitized checkout evidence identifies this project as `class-kit`, registered at `/Users/liadgoren/Repositories/class-kit`, on `master`, with `origin` `https://github.com/khgs2411/class-kit.git` (`repository-identity.json`). The mounted `repo:.git` instead reports a Myelin `origin` and a different HEAD. This is a snapshot-metadata contradiction; repository identity is documented from the supplied deterministic evidence, while implementation claims are grounded in the mounted source tree.",
+      "category": null,
+      "end_line": 8,
+      "heading_level": 2,
+      "heading_path": [
+        "ClassKit Project Memory",
+        "Repository identity"
+      ],
+      "heading_text": "Repository identity",
+      "page_title": "ClassKit Project Memory",
+      "project_key": "class-kit",
+      "section_hash": "sha256:a1373513b68473fa913acf07127fdcd8a56a0c96d577b92a14407d764e39b014",
+      "section_id": "classkit-project-memory/repository-identity",
+      "snippet": "Sanitized checkout evidence identifies this project as `class-kit`, registered at `/Users/liadgoren/Repositories/class-kit`, on `master`, with `origin` `https://github.com/khgs2411/class-kit.git` (`repository-identity.json`). The mounted `repo:.git` instead reports a Myelin `origin` and a different HEAD. This is a snapshot-metadata contradiction; repository identity is documented from the supplied deterministic evidence, while implementation claims are grounded in the mounted source tree.",
+      "start_line": 5,
+      "wiki_path": "wiki/index.md"
+    },
+    {
+      "body_text": "- [Repository identity and product boundaries](repository-identity-and-boundaries.md)\n- [Product resolution, authentication, and access lifecycle](product-resolution-auth-and-access.md)\n- [Authorization, roles, and permission evaluation](authorization-roles-and-permissions.md)\n- [Class discovery, visibility, and lifecycle](class-discovery-visibility-and-lifecycle.md)\n- [Registration and attendance lifecycle](registration-and-attendance-lifecycle.md)\n- [Membership entitlements and stock](membership-entitlements-and-stock.md)\n- [Templates, schedules, and generated classes](templates-schedules-and-generated-classes.md)\n- [SDK facade and application integration](sdk-facade-and-application-integration.md)\n- [Platform administration and product configuration](platform-administration-and-product-configuration.md)\n- [Documents, signup links, and product change requests](documents-signup-links-and-change-requests.md)\n- [Product-management software integration](product-management-software-integration.md)",
+      "category": null,
+      "end_line": 22,
+      "heading_level": 2,
+      "heading_path": [
+        "ClassKit Project Memory",
+        "Planned canonical subjects"
+      ],
+      "heading_text": "Planned canonical subjects",
+      "page_title": "ClassKit Project Memory",
+      "project_key": "class-kit",
+      "section_hash": "sha256:a5d1b05e601deeb07ba8c6d1cb4b20e0569a372b23a6ea6cd1be551f18ba4f2f",
+      "section_id": "classkit-project-memory/planned-canonical-subjects",
+      "snippet": "- [Repository identity and product boundaries](repository-identity-and-boundaries.md) - [Product resolution, authentication, and access lifecycle](product-resolution-auth-and-access.md) - [Authorization, roles, and permission evaluation](authorization-roles-and-permissions.md) - [Class discovery, visibility, and lifecycle](class-discovery-visibility-and-lifecycle.md) - [Registration and attendance lifecycle](registration-and-attendance-lifecycle.md) - [Membership entitlements and stock](membersh",
+      "start_line": 9,
+      "wiki_path": "wiki/index.md"
+    },
+    {
+      "body_text": "The eventual pages should treat migrations, Edge Functions, and SDK types as the current implementation contract. SQL regression tests corroborate only the behavior they exercise; historical design plans and existing prose may explain intent but do not establish current behavior on their own.",
+      "category": null,
+      "end_line": 26,
+      "heading_level": 2,
+      "heading_path": [
+        "ClassKit Project Memory",
+        "Evidence standard"
+      ],
+      "heading_text": "Evidence standard",
+      "page_title": "ClassKit Project Memory",
+      "project_key": "class-kit",
+      "section_hash": "sha256:0f9669b07bc4ad3b31216a32d9b8d62afb57d761ae33f2a9b30f39af97f24fe5",
+      "section_id": "classkit-project-memory/evidence-standard",
+      "snippet": "The eventual pages should treat migrations, Edge Functions, and SDK types as the current implementation contract. SQL regression tests corroborate only the behavior they exercise; historical design plans and existing prose may explain intent but do not establish current behavior on their own.",
+      "start_line": 23,
+      "wiki_path": "wiki/index.md"
+    },
+    {
+      "body_text": "`class_kit.membership_types` is a product-scoped, reusable definition. It has an immutable `mode`, optional positive `default_stock`, optional positive `default_duration_days`, and `active` or `inactive` status. `class_kit.membership_grants` snapshots the type mode and resolved validity/stock values for a particular active product user; it supports `active`, `inactive`, `revoked`, `replaced`, and `expired` statuses. A partial unique index permits only one `active` grant per `(product_id, user_id)`. The user must already be an active product user when a grant is created or replaced. See `class-kit-api/supabase/migrations/20260607132920_membership_ledger.sql`.\n\nThe mode determines which values must resolve at grant time:\n\n| Mode | Validity | Stock | Resolution |\n| --- | --- | --- | --- |\n| `stock` | No expiry requirement | Required, positive | Request `total_stock`, otherwise the type default; initializes `remaining_stock` to that amount. |\n| `limited_stock` | Required | Required, positive | Valid-until is supplied or calculated from the type duration; stock resolves as for `stock`. |\n| `limited` | Required | None | Valid-until is supplied or calculated from the type duration; stock fields are cleared. |\n| `infinite` | No expiry requirement | None | Stock fields are cleared; no validity end is required. |\n\nThe resolver rejects a stock mode without a positive resolved stock and a limited mode without an explicit or default-derived end date. The API only accepts positive integer defaults and overrides; type create/update clears fields that do not apply to the chosen immutable mode. Mode cannot be changed after type creation, and deactivation only prevents future grant selection—the active-grant lookup does not require the underlying type to remain active. `class-kit-memberships` exposes `create_type`, `update_type`, and `deactivate_type` under `memberships.manage`.",
+      "category": null,
+      "end_line": 19,
+      "heading_level": 2,
+      "heading_path": [
+        "Membership entitlements and stock",
+        "Data model and modes"
+      ],
+      "heading_text": "Data model and modes",
+      "page_title": "Membership entitlements and stock",
+      "project_key": "class-kit",
+      "section_hash": "sha256:4b4bc51f6725673bf0bac980091d24548cc30f800dd5eab55dcd9f93851af48a",
+      "section_id": "membership-entitlements-and-stock/data-model-and-modes",
+      "snippet": "`class_kit.membership_types` is a product-scoped, reusable definition. It has an immutable `mode`, optional positive `default_stock`, optional positive `default_duration_days`, and `active` or `inactive` status. `class_kit.membership_grants` snapshots the type mode and resolved validity/stock values for a particular active product user; it supports `active`, `inactive`, `revoked`, `replaced`, and `expired` statuses. A partial unique index permits only one `active` grant per `(product_id, user_id",
+      "start_line": 5,
+      "wiki_path": "wiki/membership-entitlements-and-stock.md"
+    },
+    {
+      "body_text": "`get_active_membership_grant(product_id, user_id)` returns a grant only when all of the following are true:\n\n1. It belongs to that product and user.\n2. Its `status` is `active`.\n3. `valid_until` is absent or strictly later than `now()`.\n4. `remaining_stock` is absent or greater than zero.\n\nThis predicate is the single active-membership resolver used by registration, public/product context, and profile responses. An expired or depleted grant can remain stored with `status = 'active'`, but is not an entitlement. Conversely, the current SQL does **not** compare `valid_from` with `now()`: a future `valid_from` is stored but does not delay active-entitlement resolution. This is current implementation behavior, not an inferred product rule. See `class-kit-api/supabase/migrations/20260607132920_membership_ledger.sql` and `class-kit-api/supabase/functions/class-kit-profile/index.ts`.",
+      "category": null,
+      "end_line": 30,
+      "heading_level": 2,
+      "heading_path": [
+        "Membership entitlements and stock",
+        "Active entitlement predicate"
+      ],
+      "heading_text": "Active entitlement predicate",
+      "page_title": "Membership entitlements and stock",
+      "project_key": "class-kit",
+      "section_hash": "sha256:7450ae3ce93270ec2d5230fb051677b7b6480970d37a99cae03465aa2108d9b0",
+      "section_id": "membership-entitlements-and-stock/active-entitlement-predicate",
+      "snippet": "`get_active_membership_grant(product_id, user_id)` returns a grant only when all of the following are true: 1. It belongs to that product and user. 2. Its `status` is `active`. 3. `valid_until` is absent or strictly later than `now()`. 4. `remaining_stock` is absent or greater than zero. This predicate is the single active-membership resolver used by registration, public/product context, and profile responses. An expired or depleted grant can remain stored with `status = 'active'`, but is not an",
+      "start_line": 20,
+      "wiki_path": "wiki/membership-entitlements-and-stock.md"
+    },
+    {
+      "body_text": "Managers with `memberships.manage` can invoke `grant`, `upgrade`, `set_for_user`, and `revoke` through `class-kit-memberships`; each operation is product-scoped and is executed through service-role RPCs.\n\n- **Grant** inserts a new active grant and a `membership_granted` ledger entry. It conflicts if an active grant already exists.\n- **Upgrade** requires an existing active grant and a strictly higher mode rank. The current rank is `stock` (1) < `limited_stock` (2) < `limited` (3) < `infinite` (4). It marks the prior grant `replaced`, creates a new grant, and records `membership_upgraded` with prior grant/type metadata. It cannot move sideways or down the rank order.\n- **Set for user** is the corrective/replacement path. With the same type it updates the existing active grant in place; with a different type it marks the old one `replaced` and inserts a new active grant. It records `membership_set`, including prior and resulting validity and stock values, and uses the change in `remaining_stock` as `stock_delta`.\n- **Revoke** requires an active grant, marks it `revoked`, and records `membership_revoked`. Its ledger delta is the negative remaining balance, or zero for non-stock modes.\n\nAn inactive type cannot be newly selected by these RPCs. The schema permits `inactive` and `expired` grant statuses, but the inspected membership entrypoint supplies no actions that transition a grant to either status; expiry is enforced by the active predicate instead.",
+      "category": null,
+      "end_line": 41,
+      "heading_level": 2,
+      "heading_path": [
+        "Membership entitlements and stock",
+        "Grant lifecycle and ranking"
+      ],
+      "heading_text": "Grant lifecycle and ranking",
+      "page_title": "Membership entitlements and stock",
+      "project_key": "class-kit",
+      "section_hash": "sha256:8983b84751aa3405149e1ea40f3d8f9b46b6e8e04efd6c2c3b21b73e25a9773a",
+      "section_id": "membership-entitlements-and-stock/grant-lifecycle-and-ranking",
+      "snippet": "Managers with `memberships.manage` can invoke `grant`, `upgrade`, `set_for_user`, and `revoke` through `class-kit-memberships`; each operation is product-scoped and is executed through service-role RPCs. - **Grant** inserts a new active grant and a `membership_granted` ledger entry. It conflicts if an active grant already exists. - **Upgrade** requires an existing active grant and a strictly higher mode rank. The current rank is `stock` (1) < `limited_stock` (2) < `limited` (3) < `infinite` (4).",
+      "start_line": 31,
+      "wiki_path": "wiki/membership-entitlements-and-stock.md"
+    },
+    {
+      "body_text": "Membership eligibility is evaluated after the class and caller's active product-user record are checked, and after class capacity is checked. For a `membership_requirement = 'required'` class or a `members_only` class, a missing active grant raises `membership_required`. A class with `member_auto_approve` approves only when that active grant exists; `auto_approve` approves regardless, while other cases become `pending`. A registration persists the chosen `membership_grant_id` and its `stock_consumed` count.\n\nApproved registrations consume one unit only for `stock` and `limited_stock` grants. The consumption update locks the grant, requires its active status and unexpired validity, and atomically updates only when `remaining_stock > 0`; otherwise it fails with `membership_stock_depleted`. `limited` and `infinite` grants consume zero stock. Pending registrations do not consume stock until manager approval; approval again uses the registration's saved grant and therefore can fail if it is no longer active, valid, or funded. `class-kit-api/supabase/migrations/20260701084833_fix_member_auto_approve_registration.sql` and `class-kit-api/supabase/migrations/20260609090000_registration_rejection_recovery.sql` contain the final registration and approval definitions.\n\nPublished `members_only` classes are also filtered at row-level security by the same active conditions, in addition to requiring an authenticated product role. `class-kit-api/supabase/migrations/20260608010000_security_rls_membership_visibility.sql` therefore makes membership both a listing/visibility gate and a registration gate where the class contract requires it.\n\nCancellation restores consumed stock only for an approved registration with positive consumption when the class has not started, unless a manager uses forced restoration. User cancellation is blocked after the product-defined cancellation cutoff for approved registrations unless forced; pending registrations can still be cancelled. Manager cancellation restores under the same pre-start condition. Class cancellation restores all consumed approved-registration stock. Each cancellation path records its outcome even when no stock is restored.",
+      "category": null,
+      "end_line": 51,
+      "heading_level": 2,
+      "heading_path": [
+        "Membership entitlements and stock",
+        "Registration, visibility, and stock consumption"
+      ],
+      "heading_text": "Registration, visibility, and stock consumption",
+      "page_title": "Membership entitlements and stock",
+      "project_key": "class-kit",
+      "section_hash": "sha256:485e20c22fa3d2638acdf1911e0f0046c46b6140979d9bd3549476cb4c04ecc3",
+      "section_id": "membership-entitlements-and-stock/registration-visibility-and-stock-consumption",
+      "snippet": "Membership eligibility is evaluated after the class and caller's active product-user record are checked, and after class capacity is checked. For a `membership_requirement = 'required'` class or a `members_only` class, a missing active grant raises `membership_required`. A class with `member_auto_approve` approves only when that active grant exists; `auto_approve` approves regardless, while other cases become `pending`. A registration persists the chosen `membership_grant_id` and its `stock_cons",
+      "start_line": 42,
+      "wiki_path": "wiki/membership-entitlements-and-stock.md"
+    },
+    {
+      "body_text": "`adjust_stock` requires the distinct `memberships.adjust_stock` permission. It accepts a non-zero integer only for an active `stock` or `limited_stock` grant with initialized balances; it changes `remaining_stock` only and rejects a result below zero. It emits `manager_adjustment`. The built-in manager role receives both membership permissions in the current role-bootstrap migrations.\n\nThe operational evidence table is `class_kit.membership_ledger`, scoped to product and user. Each row records the optional grant, event type, signed `stock_delta`, optional class/registration linkage, arbitrary metadata, creator, and timestamp. The current event vocabulary is:\n\n- `membership_granted`, `membership_upgraded`, `membership_revoked`, `membership_set`, and `manager_adjustment` for lifecycle/manager changes;\n- `class_registration` for a registration attempt or approval (zero for non-stock/pending cases, negative for consumption);\n- `registration_cancelled` and `class_cancelled_restore` for cancellation outcomes and any positive restoration.\n\nManagers at product permission level 75 can list types, a user's grants, and ledger evidence; the ledger action defaults to 50 newest entries, permits a user filter, and caps the caller-supplied limit at 100. The profile endpoint exposes every grant plus the resolver-selected `active_grant` and `has_active_membership`, but it requires the caller's own active product access.",
+      "category": null,
+      "end_line": 63,
+      "heading_level": 2,
+      "heading_path": [
+        "Membership entitlements and stock",
+        "Adjustments and ledger evidence"
+      ],
+      "heading_text": "Adjustments and ledger evidence",
+      "page_title": "Membership entitlements and stock",
+      "project_key": "class-kit",
+      "section_hash": "sha256:e4055fb2741cbc225860a7e35cfd51d91fdc0129f08a91f9f4a7edfb105672ca",
+      "section_id": "membership-entitlements-and-stock/adjustments-and-ledger-evidence",
+      "snippet": "`adjust_stock` requires the distinct `memberships.adjust_stock` permission. It accepts a non-zero integer only for an active `stock` or `limited_stock` grant with initialized balances; it changes `remaining_stock` only and rejects a result below zero. It emits `manager_adjustment`. The built-in manager role receives both membership permissions in the current role-bootstrap migrations. The operational evidence table is `class_kit.membership_ledger`, scoped to product and user. Each row records th",
+      "start_line": 52,
+      "wiki_path": "wiki/membership-entitlements-and-stock.md"
+    },
+    {
+      "body_text": "- The snapshot contains no membership/registration automated regression tests, so lifecycle, locking, and cancellation behavior is verified from current migrations and function code rather than exercised test evidence.\n- `valid_from` is persisted and can be set through the API, but the active-membership SQL does not check it. No current source establishes whether immediate entitlement for future-dated grants is intended.\n- No inspected job or API action transitions a grant to `expired` or `inactive`; those supported statuses may be reserved for external/manual maintenance and need coverage or ownership clarification.",
+      "category": null,
+      "end_line": 69,
+      "heading_level": 2,
+      "heading_path": [
+        "Membership entitlements and stock",
+        "Known gaps"
+      ],
+      "heading_text": "Known gaps",
+      "page_title": "Membership entitlements and stock",
+      "project_key": "class-kit",
+      "section_hash": "sha256:3a69dd6acaa7478b56104679478466d74a7d94b54f3120133b8e1ec9f10433d2",
+      "section_id": "membership-entitlements-and-stock/known-gaps",
+      "snippet": "- The snapshot contains no membership/registration automated regression tests, so lifecycle, locking, and cancellation behavior is verified from current migrations and function code rather than exercised test evidence. - `valid_from` is persisted and can be set through the API, but the active-membership SQL does not check it. No current source establishes whether immediate entitlement for future-dated grants is intended. - No inspected job or API action transitions a grant to `expired` or `inact",
+      "start_line": 64,
+      "wiki_path": "wiki/membership-entitlements-and-stock.md"
+    },
+    {
+      "body_text": "The implemented request gate is a valid bearer token whose user has platform permission level 100 (`requirePlatformAdminRequest` in `class-kit-api/supabase/functions/_shared/admin_api.ts`). The built-in protected `platform_admin` role is level 100 (`class-kit-api/supabase/migrations/20260612120000_permission_layer_foundation.sql`). Except for `update_auth_policy`, every action in both admin functions passes through this gate before dispatch.\n\n`update_auth_policy` is intentionally different: it accepts any authenticated user first, then evaluates each supplied field separately after resolving the product.\n\n| Requested field | Runtime authorization | Result |\n| --- | --- | --- |\n| `auth_mode` | `product.auth_mode.update` in the target product at level 75 or above; the level helper also permits a platform role at that level | Changes signup mode only. |\n| `email_password_enabled` | platform permission `product.email_password_enabled.update` | Enables or disables email/password sign-in for the product. |\n| `google_oauth_enabled` | platform permission `product.google_oauth_enabled.update` | Enables or disables Google OAuth for the product. |\n\nAt least one of those fields is required. Supported auth modes are `open` and `invite_only`; the two provider flags are booleans. The product itself has `active` or `inactive` status and a `generation_horizon_weeks` integer from 1 through 52. Provisioning defaults are `active`, 8 weeks, `open`, email/password enabled, and Google OAuth disabled (`class-kit-api/supabase/functions/class-kit-admin-products/index.ts`).\n\nThe `function_permission_requirements` catalog contains narrower, product-scoped entries for several administration actions, including product-user assignment and origin changes (`20260612122000_permission_requirement_catalog.sql`). Those entries are not consulted by these handlers: current code still calls the platform-admin gate first. Treat the catalog entries as conflicting/stale authorization metadata until the handlers and catalog are reconciled.",
+      "category": null,
+      "end_line": 20,
+      "heading_level": 2,
+      "heading_path": [
+        "Platform administration and product configuration",
+        "Administrative boundary"
+      ],
+      "heading_text": "Administrative boundary",
+      "page_title": "Platform administration and product configuration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:6b37fc78ff62023dc489e9882455f925023b4bf05a953af16c4538ccbeb04d6c",
+      "section_id": "platform-administration-and-product-configuration/administrative-boundary",
+      "snippet": "The implemented request gate is a valid bearer token whose user has platform permission level 100 (`requirePlatformAdminRequest` in `class-kit-api/supabase/functions/_shared/admin_api.ts`). The built-in protected `platform_admin` role is level 100 (`class-kit-api/supabase/migrations/20260612120000_permission_layer_foundation.sql`). Except for `update_auth_policy`, every action in both admin functions passes through this gate before dispatch. `update_auth_policy` is intentionally different: it ac",
+      "start_line": 5,
+      "wiki_path": "wiki/platform-administration-and-product-configuration.md"
+    },
+    {
+      "body_text": "`create_product` requires non-empty `product_key`, `name`, and `origin`. It creates the product and then its initial allowed-origin record. If origin insertion fails, the handler deletes the newly inserted product and reports a conflict, so a successful response has both records. Duplicate keys or an origin conflict are reported as `409`.\n\n`list_products` returns products with their allowed origins and auth redirects. `product_key` is unique; each allowed origin is unique within its product (`product_id, origin`). The older global origin uniqueness index was explicitly dropped in `20260612061409_allow_shared_origin_product_hints.sql`, so the schema permits the same configured origin for multiple products.",
+      "category": null,
+      "end_line": 26,
+      "heading_level": 2,
+      "heading_path": [
+        "Platform administration and product configuration",
+        "Provisioning and product inventory"
+      ],
+      "heading_text": "Provisioning and product inventory",
+      "page_title": "Platform administration and product configuration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:a80821fcb60ffe253d09d80cbc90074b50e8d6b8c516076658f49cf3e515511f",
+      "section_id": "platform-administration-and-product-configuration/provisioning-and-product-inventory",
+      "snippet": "`create_product` requires non-empty `product_key`, `name`, and `origin`. It creates the product and then its initial allowed-origin record. If origin insertion fails, the handler deletes the newly inserted product and reports a conflict, so a successful response has both records. Duplicate keys or an origin conflict are reported as `409`. `list_products` returns products with their allowed origins and auth redirects. `product_key` is unique; each allowed origin is unique within its product (`pro",
+      "start_line": 21,
+      "wiki_path": "wiki/platform-administration-and-product-configuration.md"
+    },
+    {
+      "body_text": "Allowed origins are `http` or `https` URLs. Administrative normalization removes query strings and fragments; a root URL is stored as its URL origin, while a pathful URL is retained. An origin record is labelled `development` or `production`, defaulting to `production` for admin writes.\n\nProduct context resolution considers only active products. A root origin matches the root request origin and requests below it; a pathful origin matches that path or its descendants. The longest matching configured origin wins. When the request does not nominate a product and the longest match is shared by more than one product, context resolution rejects it as ambiguous; local development can use `CLASS_KIT_LOCAL_PRODUCT_KEY` to disambiguate. No match produces `403 Product is not allowed for this origin.` (`_shared/context.ts` and `20260629121334_root_origin_matches_paths.sql`).\n\n`add_origin` upserts a product-origin pair. `remove_origin` deletes that pair. Removing an origin cascades deletion of redirects bound to that origin through the `(product_id, origin)` foreign key. The handler itself does not require an origin to remain, so an administrator can leave a product without allowed origins; it will then be unreachable through product-context resolution.",
+      "category": null,
+      "end_line": 34,
+      "heading_level": 2,
+      "heading_path": [
+        "Platform administration and product configuration",
+        "Origin resolution and browser configuration"
+      ],
+      "heading_text": "Origin resolution and browser configuration",
+      "page_title": "Platform administration and product configuration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:1153da9496201c3dfe00e910855430561d6257d5c44cbb919b8a26f3f3c01d84",
+      "section_id": "platform-administration-and-product-configuration/origin-resolution-and-browser-configuration",
+      "snippet": "Allowed origins are `http` or `https` URLs. Administrative normalization removes query strings and fragments; a root URL is stored as its URL origin, while a pathful URL is retained. An origin record is labelled `development` or `production`, defaulting to `production` for admin writes. Product context resolution considers only active products. A root origin matches the root request origin and requests below it; a pathful origin matches that path or its descendants. The longest matching configur",
+      "start_line": 27,
+      "wiki_path": "wiki/platform-administration-and-product-configuration.md"
+    },
+    {
+      "body_text": "Redirect providers are `google` and `apple`; redirect environments are `development` and `production`; redirect status is `active` or `inactive` at the schema boundary. The current admin actions only create or reactivate `active` redirects. Redirect URLs must be `http` or `https`; root URLs are normalized to remove the trailing slash.\n\nA redirect can be bound to an allowed origin or can be an environment-scoped fallback (`origin: null`). Supplying an origin to add, remove, or select a default first verifies that it is an allowed origin for that product; its stored environment then controls the redirect row. Bound redirects take precedence for the matched request origin. If none exist for that origin, product context returns only unbound fallback redirects; it never blends origin-specific and fallback lists.\n\nFor a product/provider/scope, the first active redirect becomes default unless `is_default` is explicitly supplied. Adding or selecting a default clears the prior default in that scope. Removing the default promotes the oldest remaining active redirect in the same scope. Database partial unique indexes enforce at most one active default for each `(product, provider, bound origin)` and for each `(product, provider, environment)` fallback scope (`20260629103250_bind_auth_redirects_to_origins.sql`).",
+      "category": null,
+      "end_line": 42,
+      "heading_level": 2,
+      "heading_path": [
+        "Platform administration and product configuration",
+        "OAuth redirect configuration"
+      ],
+      "heading_text": "OAuth redirect configuration",
+      "page_title": "Platform administration and product configuration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:9e9bbac7faa8917ddfd49bed77947fd2810b6688aeb37eb49c308ae0c336677d",
+      "section_id": "platform-administration-and-product-configuration/oauth-redirect-configuration",
+      "snippet": "Redirect providers are `google` and `apple`; redirect environments are `development` and `production`; redirect status is `active` or `inactive` at the schema boundary. The current admin actions only create or reactivate `active` redirects. Redirect URLs must be `http` or `https`; root URLs are normalized to remove the trailing slash. A redirect can be bound to an allowed origin or can be an environment-scoped fallback (`origin: null`). Supplying an origin to add, remove, or select a default fir",
+      "start_line": 35,
+      "wiki_path": "wiki/platform-administration-and-product-configuration.md"
+    },
+    {
+      "body_text": "All actions below currently require the platform-admin request gate, even though some catalog metadata describes them as product-scoped.\n\n`create_user` creates an Auth user and profile, then assigns it to the named product as `manager` or `user` (default `user`) with an active role assignment. Duplicate-email detection is delegated directly to Supabase Auth `admin.createUser`; recognized duplicate errors map to `409 conflict`, rather than scanning `auth.admin.listUsers`. If profile or membership assignment fails after Auth-user creation, it returns an error but does not roll back the Auth user; this is an operational recovery case (`_shared/auth_users.ts` (`repo:class-kit-api/supabase/functions/_shared/auth_users.ts`), `class-kit-admin-product-users/index.ts` (`repo:class-kit-api/supabase/functions/class-kit-admin-product-users/index.ts`)).\n\n`assign_product_user` and `update_product_user` operate on product membership. Roles are `manager` or `user`; status is `active` or `inactive`. Active role assignment uses the role system; inactive assignment writes the legacy `users` membership row. A platform administrator cannot use these product-membership actions to mutate their own authority. The underlying membership trigger also prevents removal or deactivation of a product's last active manager (`20260607112136_product_role_foundation.sql`).\n\nThe access-entry state machine records a normalized email, optional Auth user, role, source, and decision. Its supported values are:\n\n| Contract | Values and outcomes |\n| --- | --- |\n| Source | `admin_invite` is created or refreshed by `invite_product_user`; `self_request` is created when an invite-only user without an entry asks for access. |\n| Status | `invited` activates when the user is attached; `pending` waits for explicit approval; `active` has product membership; `rejected` is denied; `inactive` is representable but is not produced by these admin decision actions. |\n| Approval | `approve_product_access` activates the entry only after it has a `user_id`; otherwise it returns `409`. Activation assigns the entry's role and marks it active. |\n| Rejection | `reject_product_access` marks a non-active entry rejected. An active entry must instead be deactivated through product-user mutation. |\n\nIn `open` mode, an authenticated non-member is assigned immediately, using any attached access entry's role or `user` by default; an attached entry is marked active. In `invite_only` mode, no entry creates a pending self-request, while an attached `invited` or `active` entry activates immediately. Existing `pending`, `rejected`, or `inactive` entries do not grant membership. Platform admins are deliberately excluded from this self-service path and must be explicitly assigned product membership (`_shared/context.ts`).\n\n`add_platform_admin` maintains both the legacy `platform_admins` compatibility row and the `platform_user_roles` assignment to `platform_admin`. `remove_platform_admin` refuses self-removal and refuses to remove the last user holding that role; otherwise it deletes both records.",
+      "category": null,
+      "end_line": 63,
+      "heading_level": 2,
+      "heading_path": [
+        "Platform administration and product configuration",
+        "Product users, access decisions, and platform administrators"
+      ],
+      "heading_text": "Product users, access decisions, and platform administrators",
+      "page_title": "Platform administration and product configuration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:68cdb9b04616158b1fe51d9d63d2a0b6cffe15e92969cdaef31b3a4ad26812f5",
+      "section_id": "platform-administration-and-product-configuration/product-users-access-decisions-and-platform-administrators",
+      "snippet": "All actions below currently require the platform-admin request gate, even though some catalog metadata describes them as product-scoped. `create_user` creates an Auth user and profile, then assigns it to the named product as `manager` or `user` (default `user`) with an active role assignment. Duplicate-email detection is delegated directly to Supabase Auth `admin.createUser`; recognized duplicate errors map to `409 conflict`, rather than scanning `auth.admin.listUsers`. If profile or membership ",
+      "start_line": 43,
+      "wiki_path": "wiki/platform-administration-and-product-configuration.md"
+    },
+    {
+      "body_text": "`truncate_product` is a platform-admin-only reset action. The RPC takes the product and acting admin IDs, serializes concurrent resets with a transaction advisory lock, confirms that both exist, and ensures builtin product roles. It then establishes exactly one active manager membership and role assignment for the acting admin, deleting other product-user roles.\n\nThe reset deletes the target product's participants, registrations, schedule skips, classes, schedules, membership ledger and grants, membership types, templates, access entries, and non-admin membership rows. It preserves the product record, allowed origins, auth redirects, product roles and role permissions, and the acting admin's manager baseline. The SQL regression test also verifies that another product's data remains untouched (`class-kit-api/supabase/tests/truncate_product_admin_action.sql`).",
+      "category": null,
+      "end_line": 69,
+      "heading_level": 2,
+      "heading_path": [
+        "Platform administration and product configuration",
+        "Product truncation/reset"
+      ],
+      "heading_text": "Product truncation/reset",
+      "page_title": "Platform administration and product configuration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:0f28ae50304c0afa607bdc2acca3cb062707f1380ad14134b429570aefdcd8ea",
+      "section_id": "platform-administration-and-product-configuration/product-truncation-reset",
+      "snippet": "`truncate_product` is a platform-admin-only reset action. The RPC takes the product and acting admin IDs, serializes concurrent resets with a transaction advisory lock, confirms that both exist, and ensures builtin product roles. It then establishes exactly one active manager membership and role assignment for the acting admin, deleting other product-user roles. The reset deletes the target product's participants, registrations, schedule skips, classes, schedules, membership ledger and grants, m",
+      "start_line": 64,
+      "wiki_path": "wiki/platform-administration-and-product-configuration.md"
+    },
+    {
+      "body_text": "- There is direct SQL regression coverage for truncation, but no located automated handler-level coverage for the admin Edge Function authorization split, origin deletion behavior, redirect-default repair, or access-entry transitions.\n- `inactive` redirect and access-entry statuses are schema-supported but are not exposed as explicit transition actions in the inspected handlers; the operational path for setting them needs confirmation.\n- The runtime uses configured origins as path-prefix match rules even though browser `Origin` headers normally contain only scheme, host, and port. The intended client/header contract for pathful values should be verified with integration coverage.",
+      "category": null,
+      "end_line": 75,
+      "heading_level": 2,
+      "heading_path": [
+        "Platform administration and product configuration",
+        "Known gaps"
+      ],
+      "heading_text": "Known gaps",
+      "page_title": "Platform administration and product configuration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:2854bded4e84c7f78241861b29e8e34a42991b18f1bd209efac646f028d4c9e6",
+      "section_id": "platform-administration-and-product-configuration/known-gaps",
+      "snippet": "- There is direct SQL regression coverage for truncation, but no located automated handler-level coverage for the admin Edge Function authorization split, origin deletion behavior, redirect-default repair, or access-entry transitions. - `inactive` redirect and access-entry statuses are schema-supported but are not exposed as explicit transition actions in the inspected handlers; the operational path for setting them needs confirmation. - The runtime uses configured origins as path-prefix match r",
+      "start_line": 70,
+      "wiki_path": "wiki/platform-administration-and-product-configuration.md"
+    },
+    {
+      "body_text": "`class-kit-api/supabase/functions/class-kit-admin-pm-integrations/index.ts` is the admin Edge Function boundary. Every supported action calls `requirePlatformAdminRequest` before dispatch, so configuration, snapshots, card creation, detachment, and synchronization are not product-manager or ordinary-user operations.\n\nThe provider abstraction in `class-kit-api/supabase/functions/_shared/pm/types.ts` defines create, attachment-upload, status-fetch, board-snapshot, and connection-test capabilities. `class-kit-api/supabase/functions/_shared/pm/factory.ts` currently instantiates only `TrelloProductManagementProvider`; the provider and database checks accept only `trello`. Trello credentials are server environment variables `TRELLO_API_KEY` and `TRELLO_TOKEN`; a missing value returns an internal-error response before provider use.\n\n`admin_pm_integration_settings` is a singleton (`singleton_key = 'global'`), not a per-product connection. A saved configuration requires non-blank board and all four list IDs:\n\n| Route | Meaning | Initial-card / sync effect |\n| --- | --- | --- |\n| `todo_list_id` | To do | New cards are created here; mapped to ClassKit `open`. |\n| `in_progress_list_id` | In progress | Maps to `in_progress`. |\n| `blocked_list_id` | Blocked | Maps to `in_progress`. |\n| `done_list_id` | Done | Maps to `done`. |\n\nThe `enabled` flag gates card creation and linked-card synchronization. `test_connection` still requires a saved configuration, but uses the provider test directly; it verifies that the board can be read and reports each configured route as `found` or `missing`. Board-snapshot refresh can instead use an explicit `board_id` and constructs a provider with disabled routing, so snapshot retrieval is not gated by `enabled`.",
+      "category": null,
+      "end_line": 21,
+      "heading_level": 2,
+      "heading_path": [
+        "Product-management software integration",
+        "Boundary and configuration"
+      ],
+      "heading_text": "Boundary and configuration",
+      "page_title": "Product-management software integration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:f2d183a234f0089e41a9a12c834ef54193005aa05fd554e5c671f5acf6774a5e",
+      "section_id": "product-management-software-integration/boundary-and-configuration",
+      "snippet": "`class-kit-api/supabase/functions/class-kit-admin-pm-integrations/index.ts` is the admin Edge Function boundary. Every supported action calls `requirePlatformAdminRequest` before dispatch, so configuration, snapshots, card creation, detachment, and synchronization are not product-manager or ordinary-user operations. The provider abstraction in `class-kit-api/supabase/functions/_shared/pm/types.ts` defines create, attachment-upload, status-fetch, board-snapshot, and connection-test capabilities. ",
+      "start_line": 5,
+      "wiki_path": "wiki/product-management-software-integration.md"
+    },
+    {
+      "body_text": "The SDK exposes the same boundary as `client.admin.pmIntegrations` in `class-kit-sdk/src/client/class-kit-client.ts`:\n\n| Action | Result |\n| --- | --- |\n| `get_config` | Reads the global configuration and mappings for its configured board. |\n| `update_config` | Upserts the singleton configuration and replaces that board's label mappings. Empty mappings are allowed; duplicate provider-label IDs are de-duplicated. |\n| `test_connection` | Reads the configured Trello board and validates all four configured list IDs. |\n| `get_board_snapshot` | Returns the last persisted snapshot for an explicit or configured board, or `null`. |\n| `sync_board_snapshot` | Fetches Trello board metadata and upserts the snapshot. |\n| `create_work_item` | Creates or returns a linked Trello card for a change-request thread. |\n| `detach_work_item` | Deletes only the ClassKit link; it does not delete the Trello card. |\n| `sync_work_item` | Refreshes one link from Trello, updates its status and mapped labels, and may update the latest request. |\n| `sync_linked_work_items` | Refreshes all Trello links, optionally restricted by `product_key`; returns per-link outcomes and totals. |",
+      "category": null,
+      "end_line": 37,
+      "heading_level": 2,
+      "heading_path": [
+        "Product-management software integration",
+        "Admin operations"
+      ],
+      "heading_text": "Admin operations",
+      "page_title": "Product-management software integration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:8b76a0f7c7a2ddb034e4a371196fe72a0d39c60eba009ec063387180e430ea37",
+      "section_id": "product-management-software-integration/admin-operations",
+      "snippet": "The SDK exposes the same boundary as `client.admin.pmIntegrations` in `class-kit-sdk/src/client/class-kit-client.ts`: | Action | Result | | --- | --- | | `get_config` | Reads the global configuration and mappings for its configured board. | | `update_config` | Upserts the singleton configuration and replaces that board's label mappings. Empty mappings are allowed; duplicate provider-label IDs are de-duplicated. | | `test_connection` | Reads the configured Trello board and validates all four conf",
+      "start_line": 22,
+      "wiki_path": "wiki/product-management-software-integration.md"
+    },
+    {
+      "body_text": "`admin_pm_integration_board_snapshots` stores one JSON snapshot per `(provider, board_id)`, with `synced_at`; `class-kit-api/supabase/migrations/20260709072033_pm_board_snapshots.sql` requires the value to be a JSON object. A fresh Trello snapshot contains board ID, name, URL, and closed state; lists (ID, name, closed, position) sorted by position; labels (ID, name, color) sorted by name; and members (ID, username, full name, initials, avatar URL) sorted by full name. Snapshot data is cached state, not a live read from `get_board_snapshot`.\n\nConfigured label mappings live in `admin_pm_integration_label_mappings` and are scoped to the selected board. Card creation accepts mapping IDs only; IDs that are unknown, from another board, or otherwise not configured fail with `bad_request`. The provider sends the associated Trello label IDs on creation. Link labels in `product_change_request_pm_link_labels` preserve only labels that match the current configured mapping; unconfigured labels present on a Trello card are not surfaced as ClassKit link labels.",
+      "category": null,
+      "end_line": 43,
+      "heading_level": 2,
+      "heading_path": [
+        "Product-management software integration",
+        "Board snapshots and labels"
+      ],
+      "heading_text": "Board snapshots and labels",
+      "page_title": "Product-management software integration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:7f84a6c7096dbd0a9fd364ffeab7a32228a2e62e6ddc78854faf7f40ef4aa0d7",
+      "section_id": "product-management-software-integration/board-snapshots-and-labels",
+      "snippet": "`admin_pm_integration_board_snapshots` stores one JSON snapshot per `(provider, board_id)`, with `synced_at`; `class-kit-api/supabase/migrations/20260709072033_pm_board_snapshots.sql` requires the value to be a JSON object. A fresh Trello snapshot contains board ID, name, URL, and closed state; lists (ID, name, closed, position) sorted by position; labels (ID, name, color) sorted by name; and members (ID, username, full name, initials, avatar URL) sorted by full name. Snapshot data is cached sta",
+      "start_line": 38,
+      "wiki_path": "wiki/product-management-software-integration.md"
+    },
+    {
+      "body_text": "Creation loads the requested change request's complete non-deleted product/thread revision history, treats the highest version as the latest revision, and includes uploaded attachments from every revision. The Trello card name is `[product_key] Issue|Feature request: title`; without a title it uses the first eight description words. Its description includes request/thread IDs, product, type, current ClassKit status, version, optional admin URL, description, JSON context, revision list, and attachment inventory.\n\nThere is one persisted link per `(provider, product_id, request_thread_id)` and one link per provider card. If a link already exists, ordinary creation returns the existing link, associated attachment links, and labels without creating a card. `force_new` creates a new card, then deletes the existing ClassKit link (and its cascading attachment/label rows) before saving the replacement. This does not delete the old Trello card.\n\n`product_change_request_pm_links` records the provider board/card/list and card URL, observed provider status, mapped ClassKit status, last-sync time, and aggregate attachment state. Per-attachment rows preserve provider attachment ID/URL, `uploaded`, `failed`, or `skipped` result, and error text. The provider reads each source object from Supabase Storage and uploads it individually after the card is created. A failed attachment does not roll back card creation: creation returns an `attachment_upload_failed` warning and aggregate state is `complete` when all upload, `partial` when some upload, `failed` when none upload, or `not_started` when there were no uploaded source attachments.",
+      "category": null,
+      "end_line": 51,
+      "heading_level": 2,
+      "heading_path": [
+        "Product-management software integration",
+        "Work-item creation, links, and attachments"
+      ],
+      "heading_text": "Work-item creation, links, and attachments",
+      "page_title": "Product-management software integration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:766af045099acde0c8b744572318683e308ee275e7dbc7b0a39b81ab6ec7af17",
+      "section_id": "product-management-software-integration/work-item-creation-links-and-attachments",
+      "snippet": "Creation loads the requested change request's complete non-deleted product/thread revision history, treats the highest version as the latest revision, and includes uploaded attachments from every revision. The Trello card name is `[product_key] Issue|Feature request: title`; without a title it uses the first eight description words. Its description includes request/thread IDs, product, type, current ClassKit status, version, optional admin URL, description, JSON context, revision list, and attac",
+      "start_line": 44,
+      "wiki_path": "wiki/product-management-software-integration.md"
+    },
+    {
+      "body_text": "Synchronization reads the Trello card's current list, labels, and `dateLastActivity`. It updates the link's list/status/mapped status and `last_synced_at` to the ClassKit sync time, then replaces mapped link labels. If Trello returns 404, ClassKit detaches the link locally and reports it as detached; it does not recreate or delete a Trello resource. Batch synchronization continues after individual failures and reports `total`, `synced`, `detached`, and `failed` counts.\n\n| Trello card condition | Provider status | Mapped ClassKit change-request status | Sync outcome |\n| --- | --- | --- | --- |\n| In configured To do list | `todo` | `open` | Updates the latest non-deleted revision only when its status differs. |\n| In configured In progress list | `in_progress` | `in_progress` | Updates the latest non-deleted revision only when it differs. |\n| In configured Blocked list | `blocked` | `in_progress` | Updates the latest non-deleted revision only when it differs. |\n| In configured Done list | `done` | `done` | Updates the latest non-deleted revision only when it differs. |\n| Card has no list or is in any unconfigured list | `unknown` | `null` | Updates link observation but does not change the ClassKit request. |\n| Card is absent (Trello 404) | n/a | n/a | Deletes the ClassKit link and reports `detached`. |\n\nThe integration never maps a Trello list to ClassKit `closed`; ordinary status synchronization also does not create a new revision, it mutates the current latest revision's status. Creation persists `open` only for an initial `todo` card; other initial provider statuses are stored with a null mapped status, though cards are normally created into the configured To do list.",
+      "category": null,
+      "end_line": 66,
+      "heading_level": 2,
+      "heading_path": [
+        "Product-management software integration",
+        "Synchronization and status contract"
+      ],
+      "heading_text": "Synchronization and status contract",
+      "page_title": "Product-management software integration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:a5ad6ed5ce25b9d2d4d2f013b5df611c9f346c4bc92922349911ed49e9b8754e",
+      "section_id": "product-management-software-integration/synchronization-and-status-contract",
+      "snippet": "Synchronization reads the Trello card's current list, labels, and `dateLastActivity`. It updates the link's list/status/mapped status and `last_synced_at` to the ClassKit sync time, then replaces mapped link labels. If Trello returns 404, ClassKit detaches the link locally and reports it as detached; it does not recreate or delete a Trello resource. Batch synchronization continues after individual failures and reports `total`, `synced`, `detached`, and `failed` counts. | Trello card condition | ",
+      "start_line": 52,
+      "wiki_path": "wiki/product-management-software-integration.md"
+    },
+    {
+      "body_text": "The Trello REST client converts rate limit responses to a 429 `bad_request`, missing resources to 404 `not_found`, and other non-success responses to a 502-style internal error. In the current provider implementation, the only emitted warning code is `attachment_upload_failed`. The shared SDK/types also reserve `attachment_skipped`, `provider_rate_limited`, and `provider_partial_response`, but no current code emits them. An incomplete board response (missing ID, name, or URL) is rejected; incomplete individual list, label, or member records are omitted or defaulted as implemented by the snapshot normalizer.",
+      "category": null,
+      "end_line": 70,
+      "heading_level": 2,
+      "heading_path": [
+        "Product-management software integration",
+        "Provider responses and warnings"
+      ],
+      "heading_text": "Provider responses and warnings",
+      "page_title": "Product-management software integration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:7e1466eb7045402178f980927aa9a3348c7fe62148c3228c8d77c6b6b990ddde",
+      "section_id": "product-management-software-integration/provider-responses-and-warnings",
+      "snippet": "The Trello REST client converts rate limit responses to a 429 `bad_request`, missing resources to 404 `not_found`, and other non-success responses to a 502-style internal error. In the current provider implementation, the only emitted warning code is `attachment_upload_failed`. The shared SDK/types also reserve `attachment_skipped`, `provider_rate_limited`, and `provider_partial_response`, but no current code emits them. An incomplete board response (missing ID, name, or URL) is rejected; incomp",
+      "start_line": 67,
+      "wiki_path": "wiki/product-management-software-integration.md"
+    },
+    {
+      "body_text": "The integration migration `class-kit-api/supabase/migrations/20260708110703_pm_software_integrations.sql` enables RLS on settings, link, and attachment-link tables and grants CRUD to `service_role`; the label and snapshot migrations do the same for their tables. The Edge Function uses `serviceClient`, while request authorization is enforced before it is used. No end-user RLS policy is defined in these migrations.",
+      "category": null,
+      "end_line": 74,
+      "heading_level": 2,
+      "heading_path": [
+        "Product-management software integration",
+        "Persistence and access controls"
+      ],
+      "heading_text": "Persistence and access controls",
+      "page_title": "Product-management software integration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:81b20e7b94a06632948e1c5a0f35f15cd4ba18dc4dd2c403080325fe97045420",
+      "section_id": "product-management-software-integration/persistence-and-access-controls",
+      "snippet": "The integration migration `class-kit-api/supabase/migrations/20260708110703_pm_software_integrations.sql` enables RLS on settings, link, and attachment-link tables and grants CRUD to `service_role`; the label and snapshot migrations do the same for their tables. The Edge Function uses `serviceClient`, while request authorization is enforced before it is used. No end-user RLS policy is defined in these migrations.",
+      "start_line": 71,
+      "wiki_path": "wiki/product-management-software-integration.md"
+    },
+    {
+      "body_text": "- No PM/Trello-focused Supabase or SDK regression tests were found in the snapshot, so the documented runtime behavior is grounded in current Edge Function, provider, SDK, and migration code rather than exercised test coverage.\n- There is no webhook, polling scheduler, retry queue, or automatic synchronization mechanism in the inspected integration code; synchronization occurs only through the exposed admin actions.\n- The current provider boundary has one implementation and one allowed enum value (`trello`); multi-provider behavior is not implemented or verifiable.\n- The integration code does not validate that configured list IDs are mutually distinct, nor does `update_config` force a connection test before enabling; invalid routes are surfaced by `test_connection` or produce `unknown` status during sync.",
+      "category": null,
+      "end_line": 81,
+      "heading_level": 2,
+      "heading_path": [
+        "Product-management software integration",
+        "Known gaps"
+      ],
+      "heading_text": "Known gaps",
+      "page_title": "Product-management software integration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:cfff3ab774c24c83edd1792619583c0e74ae036921b59a947103eb0ee11a88eb",
+      "section_id": "product-management-software-integration/known-gaps",
+      "snippet": "- No PM/Trello-focused Supabase or SDK regression tests were found in the snapshot, so the documented runtime behavior is grounded in current Edge Function, provider, SDK, and migration code rather than exercised test coverage. - There is no webhook, polling scheduler, retry queue, or automatic synchronization mechanism in the inspected integration code; synchronization occurs only through the exposed admin actions. - The current provider boundary has one implementation and one allowed enum valu",
+      "start_line": 75,
+      "wiki_path": "wiki/product-management-software-integration.md"
+    },
+    {
+      "body_text": "Every context-aware Edge Function obtains a site URL from `Origin`. The header is required. A caller may send `x-class-kit-site-url` to retain a path (useful for hosted products below a path), but it must be an HTTP(S) URL whose URL origin equals `Origin`; query and fragment are stripped. Without that header, the site URL is exactly `Origin` (`cors.ts` (`repo:class-kit-api/supabase/functions/_shared/cors.ts`)).\n\nOnly products with `products.status = 'active'` can resolve. A configured allowed origin matches the exact site URL, or a path beneath it. A host-only origin such as `https://example.test` matches paths below that host; a configured path matches itself and descendants, with a trailing slash meaning a raw prefix. The database resolver returns only the longest matching configured origin (`20260629121334_root_origin_matches_paths.sql` (`repo:class-kit-api/supabase/migrations/20260629121334_root_origin_matches_paths.sql`)); `context.ts` repeats the same longest-match rule when it selects redirect configuration.\n\nProduction resolution is origin-only. Supplying `product_key` outside localhost/loopback is rejected with `400`; on localhost, the request key takes precedence and otherwise `CLASS_KIT_LOCAL_PRODUCT_KEY` is used. The keyed resolver still requires that the selected product allow the origin. If origin-only resolution produces more than one equally specific product, the request fails with `400` rather than selecting one; no match fails with `403` (`context.ts` (`repo:class-kit-api/supabase/functions/_shared/context.ts`)).",
+      "category": null,
+      "end_line": 12,
+      "heading_level": 2,
+      "heading_path": [
+        "Product resolution, authentication, and access lifecycle",
+        "Resolution boundary"
+      ],
+      "heading_text": "Resolution boundary",
+      "page_title": "Product resolution, authentication, and access lifecycle",
+      "project_key": "class-kit",
+      "section_hash": "sha256:a4edd657d9074ec0ea9586120a61839ff09731874ee75014a2fa35ea274b114d",
+      "section_id": "product-resolution-authentication-and-access-lifecycle/resolution-boundary",
+      "snippet": "Every context-aware Edge Function obtains a site URL from `Origin`. The header is required. A caller may send `x-class-kit-site-url` to retain a path (useful for hosted products below a path), but it must be an HTTP(S) URL whose URL origin equals `Origin`; query and fragment are stripped. Without that header, the site URL is exactly `Origin` (`cors.ts` (`repo:class-kit-api/supabase/functions/_shared/cors.ts`)). Only products with `products.status = 'active'` can resolve. A configured allowed ori",
+      "start_line": 5,
+      "wiki_path": "wiki/product-resolution-auth-and-access.md"
+    },
+    {
+      "body_text": "Each product has three policy fields, configured by platform-admin APIs (`20260612073150_product_auth_policy.sql` (`repo:class-kit-api/supabase/migrations/20260612073150_product_auth_policy.sql`), `class-kit-admin-products/index.ts` (`repo:class-kit-api/supabase/functions/class-kit-admin-products/index.ts`)).\n\n| Field | Supported values | Runtime effect |\n| --- | --- | --- |\n| `auth_mode` | `open`, `invite_only` | Determines whether a signed-in, otherwise unassigned person is automatically made a product user or becomes/remains an access request. Email/password signup is allowed only for `open`. |\n| `email_password_enabled` | boolean, default `true` | Allows email-password signup and authenticated users whose resolved provider is `email` (or absent provider metadata). |\n| `google_oauth_enabled` | boolean, default `false` | Allows authenticated Google users. |\n\nAfter resolving the product, context loading validates an optional bearer token. An anonymous request, including one bearing the public Supabase API key, is allowed only where the endpoint itself permits anonymous context. An invalid token is `401`. For an authenticated caller, provider policy is enforced before access lifecycle processing: email/no provider requires `email_password_enabled`; Google requires `google_oauth_enabled`; Apple and every other provider are unsupported and receive `403` (`context.ts` (`repo:class-kit-api/supabase/functions/_shared/context.ts`)).\n\n`class-kit-product-signup` is deliberately narrower than sign-in: it requires `open` plus email/password enabled, creates the auth user, then assigns the built-in `user` role. It does not create an access entry. If the role assignment fails after auth-user creation, the function reports `500`; the source logs that the auth user was already created (`class-kit-product-signup/index.ts` (`repo:class-kit-api/supabase/functions/class-kit-product-signup/index.ts`)).\n\nOAuth redirects are active `product_auth_redirects` rows for `google` or `apple`. Resolution returns redirects attached to the most-specific matched allowed origin when any exist; otherwise it returns origin-null redirects. Redirects are constrained to an allowed origin when origin-scoped, and at most one active default exists per product/provider/origin (or per product/provider/environment for origin-null redirects) (`20260629103250_bind_auth_redirects_to_origins.sql` (`repo:class-kit-api/supabase/migrations/20260629103250_bind_auth_redirects_to_origins.sql`)). Redirect availability is configuration returned by product context; provider authorization is governed by the two product policy booleans above.",
+      "category": null,
+      "end_line": 28,
+      "heading_level": 2,
+      "heading_path": [
+        "Product resolution, authentication, and access lifecycle",
+        "Product authentication policy"
+      ],
+      "heading_text": "Product authentication policy",
+      "page_title": "Product resolution, authentication, and access lifecycle",
+      "project_key": "class-kit",
+      "section_hash": "sha256:20dbbfa65bbbe627988cbe8fffc05767a15f806f746daedc25d89ac7daab678f",
+      "section_id": "product-resolution-authentication-and-access-lifecycle/product-authentication-policy",
+      "snippet": "Each product has three policy fields, configured by platform-admin APIs (`20260612073150_product_auth_policy.sql` (`repo:class-kit-api/supabase/migrations/20260612073150_product_auth_policy.sql`), `class-kit-admin-products/index.ts` (`repo:class-kit-api/supabase/functions/class-kit-admin-products/index.ts`)). | Field | Supported values | Runtime effect | | --- | --- | --- | | `auth_mode` | `open`, `invite_only` | Determines whether a signed-in, otherwise unassigned person is automatically made a",
+      "start_line": 13,
+      "wiki_path": "wiki/product-resolution-auth-and-access.md"
+    },
+    {
+      "body_text": "`product_user_roles` is the live membership/role source: a caller is a product user only if it has an `active` assignment, and there can be one active role per product and user. Assigning a role deactivates the prior active role and creates/reactivates the target assignment (`20260612120000_permission_layer_foundation.sql` (`repo:class-kit-api/supabase/migrations/20260612120000_permission_layer_foundation.sql`), `20260612124000_product_role_management_rpc.sql` (`repo:class-kit-api/supabase/migrations/20260612124000_product_role_management_rpc.sql`)). The older `class_kit.users` row is updated as a compatibility row by the assignment helper; it is not the context lookup source.\n\n`product_access_entries` is one normalized email-based access record per product, with a second uniqueness constraint for a non-null `(product_id, user_id)`. It retains the requested role, source, decision actor/time, and timestamps (`20260629133541_product_access_entries.sql` (`repo:class-kit-api/supabase/migrations/20260629133541_product_access_entries.sql`)). Supported stored values are:\n\n| Field | Values | Meaning in the current functions |\n| --- | --- | --- |\n| `role` | `manager`, `user` | Role granted on activation; admin invitation can change it. |\n| `source` | `admin_invite`, `self_request` | Admin-created/reissued invite versus automatic request made by an invite-only caller. |\n| `status` | `invited`, `pending`, `active`, `rejected`, `inactive` | `invited`, `pending`, `active`, and `rejected` have function behavior below. `inactive` is permitted by the schema but no transition that writes it was found in the current Edge Functions. |\n\nFor a signed-in caller, access lookup is by normalized email first and then by user ID. A matched email record is attached to the current user ID. The effective order is:\n\n1. A platform administrator is not implicitly a product member. `ensureProductAccess` rejects it with `403`; the product-context endpoint intentionally skips that helper for platform admins and reports only any explicit product membership/access record.\n2. An existing active product-role assignment wins: the caller is returned as a product user even if an access entry is absent or in a different state.\n3. Without active membership, `open` assigns the entry's role, or `user` when no entry exists. A matching entry is marked `active`; no-entry open access is represented only by a synthetic active summary, not a database access row.\n4. Without active membership, `invite_only` creates a `pending`/`self_request` entry when none exists. An `invited` or `active` entry activates the corresponding role; `pending`, `rejected`, and `inactive` return no product user and retain their state.\n\nThis makes active membership the product-access gate. More specific business gates, such as active membership entitlements or a class's visibility/approval rules, are downstream and do not alter this state machine.",
+      "category": null,
+      "end_line": 49,
+      "heading_level": 2,
+      "heading_path": [
+        "Product resolution, authentication, and access lifecycle",
+        "Access data and precedence"
+      ],
+      "heading_text": "Access data and precedence",
+      "page_title": "Product resolution, authentication, and access lifecycle",
+      "project_key": "class-kit",
+      "section_hash": "sha256:33ed1f7e129fd9a5c2fdfb00f74f4eb8c8dd561c9fed4ba387e9f0f37ab40974",
+      "section_id": "product-resolution-authentication-and-access-lifecycle/access-data-and-precedence",
+      "snippet": "`product_user_roles` is the live membership/role source: a caller is a product user only if it has an `active` assignment, and there can be one active role per product and user. Assigning a role deactivates the prior active role and creates/reactivates the target assignment (`20260612120000_permission_layer_foundation.sql` (`repo:class-kit-api/supabase/migrations/20260612120000_permission_layer_foundation.sql`), `20260612124000_product_role_management_rpc.sql` (`repo:class-kit-api/supabase/migra",
+      "start_line": 29,
+      "wiki_path": "wiki/product-resolution-auth-and-access.md"
+    },
+    {
+      "body_text": "The state machine is enforced by service-role Edge Function code, not by a database transition constraint.\n\n| Event | Prior condition | Result |\n| --- | --- | --- |\n| Invite-only signed-in visitor reaches an access-enforcing endpoint | No entry and no active product role | Insert `pending`, `user`, `self_request`, linked to the caller; deny product-user access. |\n| Admin `invite_product_user` | No entry | Insert `invited`, requested role, `admin_invite`; user ID remains null until a matching user signs in. |\n| Admin re-invites | Existing non-active entry | Change role, source to `admin_invite`, and status to `invited`; this includes a previously rejected request. |\n| Admin re-invites | Existing active entry | Keep `active`, update role/source; if it has a user ID, immediately reassign/activate that role. |\n| Caller reaches access enforcement with `invited` or `active` entry | Entry is linked to a user ID | Assign requested role, mark entry `active`, set decision actor/time. |\n| Admin `approve_product_access` | Any entry with a user ID | Performs the same activation regardless of its previous status. Without a user ID, it returns `409`; an invitation must first be claimed by sign-in. |\n| Admin `reject_product_access` | Any non-active entry | Mark `rejected` and record decision actor/time. Active entries are rejected with `409` and the API directs the operator to deactivate product membership instead. |\n\nAdmin user/access actions require platform-admin authority through `requireAdminBody`, rather than mere product-manager status (`admin_api.ts` (`repo:class-kit-api/supabase/functions/_shared/admin_api.ts`), `class-kit-admin-product-users/index.ts` (`repo:class-kit-api/supabase/functions/class-kit-admin-product-users/index.ts`)). Product-context returns the resolved policy, explicit `product_user`, explicit/synthetic `product_access`, active membership-entitlement flag, and permissions/dashboard capabilities; it does not treat an access request as an entitlement.",
+      "category": null,
+      "end_line": 65,
+      "heading_level": 2,
+      "heading_path": [
+        "Product resolution, authentication, and access lifecycle",
+        "Entry transitions and administrative control"
+      ],
+      "heading_text": "Entry transitions and administrative control",
+      "page_title": "Product resolution, authentication, and access lifecycle",
+      "project_key": "class-kit",
+      "section_hash": "sha256:2b1d459516bf73a95d081f2e067f7cbacb5a17c97f274faa2b39d1507d038243",
+      "section_id": "product-resolution-authentication-and-access-lifecycle/entry-transitions-and-administrative-control",
+      "snippet": "The state machine is enforced by service-role Edge Function code, not by a database transition constraint. | Event | Prior condition | Result | | --- | --- | --- | | Invite-only signed-in visitor reaches an access-enforcing endpoint | No entry and no active product role | Insert `pending`, `user`, `self_request`, linked to the caller; deny product-user access. | | Admin `invite_product_user` | No entry | Insert `invited`, requested role, `admin_invite`; user ID remains null until a matching user",
+      "start_line": 50,
+      "wiki_path": "wiki/product-resolution-auth-and-access.md"
+    },
+    {
+      "body_text": "- The snapshot contains no regression test focused on origin resolution, provider-policy rejection, or `product_access_entries` transitions; the SQL tests present cover registration and product truncation instead. The behavior above is therefore current source/migration evidence, not end-to-end test-confirmed behavior.\n- `inactive` is a valid access-entry status, but no current Edge Function transition writes it, and the supplied migration does not define a transition matrix. Its intended operator behavior needs review.\n- The admin `update_product_user` inactive path updates the legacy `users` compatibility row, while context membership is read from active `product_user_roles`; the supplied code does not demonstrate a matching role deactivation. This is a high-impact access-lifecycle ambiguity that needs a regression test and ownership decision before documenting deactivation as effective.",
+      "category": null,
+      "end_line": 71,
+      "heading_level": 2,
+      "heading_path": [
+        "Product resolution, authentication, and access lifecycle",
+        "Known gaps"
+      ],
+      "heading_text": "Known gaps",
+      "page_title": "Product resolution, authentication, and access lifecycle",
+      "project_key": "class-kit",
+      "section_hash": "sha256:5a3e2208f196b29352099a137b01ddbeeb2c5b12a0920c4e617e7e2b4ddecf7c",
+      "section_id": "product-resolution-authentication-and-access-lifecycle/known-gaps",
+      "snippet": "- The snapshot contains no regression test focused on origin resolution, provider-policy rejection, or `product_access_entries` transitions; the SQL tests present cover registration and product truncation instead. The behavior above is therefore current source/migration evidence, not end-to-end test-confirmed behavior. - `inactive` is a valid access-entry status, but no current Edge Function transition writes it, and the supplied migration does not define a transition matrix. Its intended operat",
+      "start_line": 66,
+      "wiki_path": "wiki/product-resolution-auth-and-access.md"
+    },
+    {
+      "body_text": "The self-service `class-kit-register-class` function first requires resolved, authenticated product context with an active product user. Its `register` and `cancel` actions always use that caller's user ID, so a caller cannot operate on another person's registration (`class-kit-register-class/index.ts` (`repo:class-kit-api/supabase/functions/class-kit-register-class/index.ts`)).\n\n`register_for_class` locks the class and applies these gates in order:\n\n1. The class must exist in the resolved product, be `published`, visible (not `hidden`), have lifecycle other than `cancelled`, `in_progress`, or `completed`, and start in the future.\n2. The caller must have an active legacy product-user row. The Edge Function independently enforces the active product-context membership gate before invoking the RPC.\n3. Approved registrations must be fewer than capacity. Pending registrations do not count.\n4. An active membership grant is required when `membership_requirement = required` or `visibility = members_only`.\n5. Registration policy determines the initial state. A partial unique index permits only one live (`pending` or `approved`) registration per class/user.\n\nThe stored registration states are `pending`, `approved`, `rejected`, and `cancelled`. Only `approved` registrations count toward capacity. The supported policy outcomes are:\n\n| `registration_policy` | Active membership grant | Initial result |\n| --- | --- | --- |\n| `auto_approve` | either | `approved` |\n| `member_auto_approve` | yes | `approved` |\n| `member_auto_approve` | no | `pending` |\n| `approval_required` | either | `pending` |\n\nFor an approved registration with an active grant, `stock` and `limited_stock` modes consume one unit; other grant modes consume none. A missing, inactive, expired, or depleted grant causes the relevant membership/stock error rather than a successful approval. This implementation order means capacity is checked before membership eligibility, while approval policy is evaluated only after both gates (`20260701084833_fix_member_auto_approve_registration.sql` (`repo:class-kit-api/supabase/migrations/20260701084833_fix_member_auto_approve_registration.sql`)). The member-auto-approval regression test verifies the member/non-member outcomes and required-membership rejection (`member_auto_approve_registration.sql` (`repo:class-kit-api/supabase/tests/member_auto_approve_registration.sql`)).",
+      "category": null,
+      "end_line": 27,
+      "heading_level": 2,
+      "heading_path": [
+        "Registration and attendance lifecycle",
+        "Registration contract and gate order"
+      ],
+      "heading_text": "Registration contract and gate order",
+      "page_title": "Registration and attendance lifecycle",
+      "project_key": "class-kit",
+      "section_hash": "sha256:d68afb1ba2ae8c1bce47fe0add385e2e7755a9dbcf4240fb7b5db99de5be538a",
+      "section_id": "registration-and-attendance-lifecycle/registration-contract-and-gate-order",
+      "snippet": "The self-service `class-kit-register-class` function first requires resolved, authenticated product context with an active product user. Its `register` and `cancel` actions always use that caller's user ID, so a caller cannot operate on another person's registration (`class-kit-register-class/index.ts` (`repo:class-kit-api/supabase/functions/class-kit-register-class/index.ts`)). `register_for_class` locks the class and applies these gates in order: 1. The class must exist in the resolved product",
+      "start_line": 5,
+      "wiki_path": "wiki/registration-and-attendance-lifecycle.md"
+    },
+    {
+      "body_text": "Self-cancellation accepts only the caller's own `pending` or `approved` registration. A pending registration can cancel regardless of the product cancellation cutoff. An approved registration is rejected when `now() >= starts_at - products.registration_cancellation_cutoff_hours`; the public function never enables its internal force-restore option. Cancellation writes `cancelled`; it restores consumed stock only when the class has not started. The pending-after-cutoff behavior is covered by regression evidence (`20260702055851_allow_pending_registration_cancellation_after_cutoff.sql` (`repo:class-kit-api/supabase/migrations/20260702055851_allow_pending_registration_cancellation_after_cutoff.sql`), `pending_registration_cancellation.sql` (`repo:class-kit-api/supabase/tests/pending_registration_cancellation.sql`)).\n\n`class-kit-manage-registrations` requires product level 75 for list actions and the exact `registrations.manage` key for mutations. Its public actions are `list_pending`, `list_registered`, `list_class`, `approve`, `reject`, `cancel`, `approve_rejected`, and `allow_reregister`. Before a mutation it requires an open class (upcoming and published), except that it permits only `reject` of a `pending` registration when a class is ended or cancelled. `list_pending` first rejects such stale pending rows and then returns the refreshed queue.\n\nAt the underlying RPC boundary, `approve` requires `pending`; `approve_rejected` requires `rejected`; both reject a live replacement, re-run registerability and capacity checks, and consume membership stock when applicable. `reject` accepts `pending` or `approved`; rejecting an approved row records its decision and restores stock only before class start. `cancel` accepts `pending` or `approved`; `allow_reregister` requires `rejected` and records recovery metadata without itself changing the state. The Edge Function maps an `approve` request for a rejected row to `approve_rejected` (`class-kit-manage-registrations/index.ts` (`repo:class-kit-api/supabase/functions/class-kit-manage-registrations/index.ts`), `20260622150445_class_api_pattern_foundation.sql` (`repo:class-kit-api/supabase/migrations/20260622150445_class_api_pattern_foundation.sql`)).",
+      "category": null,
+      "end_line": 35,
+      "heading_level": 2,
+      "heading_path": [
+        "Registration and attendance lifecycle",
+        "Cancellation and manager review"
+      ],
+      "heading_text": "Cancellation and manager review",
+      "page_title": "Registration and attendance lifecycle",
+      "project_key": "class-kit",
+      "section_hash": "sha256:e664d8b36db7a07f94bf2e7247a804e91829f34abc9d9303cbc13b4206e3e7ac",
+      "section_id": "registration-and-attendance-lifecycle/cancellation-and-manager-review",
+      "snippet": "Self-cancellation accepts only the caller's own `pending` or `approved` registration. A pending registration can cancel regardless of the product cancellation cutoff. An approved registration is rejected when `now() >= starts_at - products.registration_cancellation_cutoff_hours`; the public function never enables its internal force-restore option. Cancellation writes `cancelled`; it restores consumed stock only when the class has not started. The pending-after-cutoff behavior is covered by regre",
+      "start_line": 28,
+      "wiki_path": "wiki/registration-and-attendance-lifecycle.md"
+    },
+    {
+      "body_text": "All attendance actions require resolved product context. `list_class` requires product level 75; `start`, `update_attendance`, `add_walk_in`, `add_trial`, and `complete` require the exact `attendance.manage` key. The participant model has `registered`, `walk_in`, and `trial` kinds, and each participant's attendance status is either `present` or `absent`.\n\n| Action | Preconditions and outcome |\n| --- | --- |\n| `start` | Class must be `published` and lifecycle `created` or `in_progress`; `created` becomes `in_progress`. It upserts one registered participant for every approved registration, with requested default status `present` or `absent` (default `absent`). It rejects cancelled or completed classes. Repeating start refreshes existing registered participants to the requested default. |\n| `update_attendance` | Participant must belong to the product and its class must be `in_progress` or `completed`; sets its status to `present` or `absent`. |\n| `add_walk_in` | Class must be `in_progress`; user must be an active product user and have no pending or approved registration for the class. It creates one walk-in participant with requested status (default `present`). |\n| `add_trial` | Class must be `in_progress`; a nonblank trial name is required. It creates a trial participant with status `present`; the optional contact is normalized to null when blank. |\n| `complete` | Class must be `in_progress`; changes lifecycle to `completed`. |\n\nThe database prevents duplicate registered participants by registration and duplicate registered/walk-in user participants by class. Attendance operations lock the relevant class or participant, so class lifecycle is the transition gate that follows permission/access evaluation (`class-kit-attendance/index.ts` (`repo:class-kit-api/supabase/functions/class-kit-attendance/index.ts`), `20260607170000_attendance_engine.sql` (`repo:class-kit-api/supabase/migrations/20260607170000_attendance_engine.sql`)).",
+      "category": null,
+      "end_line": 49,
+      "heading_level": 2,
+      "heading_path": [
+        "Registration and attendance lifecycle",
+        "Attendance lifecycle"
+      ],
+      "heading_text": "Attendance lifecycle",
+      "page_title": "Registration and attendance lifecycle",
+      "project_key": "class-kit",
+      "section_hash": "sha256:c3a4e586eefed06e043c5c6c14af7bfad5772b34f4a8520233ad8268dab48156",
+      "section_id": "registration-and-attendance-lifecycle/attendance-lifecycle",
+      "snippet": "All attendance actions require resolved product context. `list_class` requires product level 75; `start`, `update_attendance`, `add_walk_in`, `add_trial`, and `complete` require the exact `attendance.manage` key. The participant model has `registered`, `walk_in`, and `trial` kinds, and each participant's attendance status is either `present` or `absent`. | Action | Preconditions and outcome | | --- | --- | | `start` | Class must be `published` and lifecycle `created` or `in_progress`; `created` ",
+      "start_line": 36,
+      "wiki_path": "wiki/registration-and-attendance-lifecycle.md"
+    },
+    {
+      "body_text": "- The snapshot has registration regression tests but no located automated test for attendance authorization, transition boundaries, participant uniqueness, roster refresh on repeated start, or post-completion updates. The attendance contract is current function/migration evidence, not regression-test-confirmed behavior.\n- Manager mutation gating is enforced both in the Edge Function's open-class check and in the RPC's status-specific checks; no regression test in this snapshot exercises their combined precedence.\n- The explicit cutoff comparison is verified in source and the pending-cancellation regression, but no located test covers the exact equality boundary for approved cancellations or force restoration.",
+      "category": null,
+      "end_line": 55,
+      "heading_level": 2,
+      "heading_path": [
+        "Registration and attendance lifecycle",
+        "Known gaps"
+      ],
+      "heading_text": "Known gaps",
+      "page_title": "Registration and attendance lifecycle",
+      "project_key": "class-kit",
+      "section_hash": "sha256:db54fc33aff7f4b4fcbecde91767a88a1f35c7b619d0b1cdb65cdcfd1b7d4d2d",
+      "section_id": "registration-and-attendance-lifecycle/known-gaps",
+      "snippet": "- The snapshot has registration regression tests but no located automated test for attendance authorization, transition boundaries, participant uniqueness, roster refresh on repeated start, or post-completion updates. The attendance contract is current function/migration evidence, not regression-test-confirmed behavior. - Manager mutation gating is enforced both in the Edge Function's open-class check and in the RPC's status-specific checks; no regression test in this snapshot exercises their co",
+      "start_line": 50,
+      "wiki_path": "wiki/registration-and-attendance-lifecycle.md"
+    },
+    {
+      "body_text": "The deterministic checkout record identifies the project as `class-kit`, registered at `/Users/liadgoren/Repositories/class-kit`, with branch `master`, commit `4f55d94506f181d179f705173ecd54606b44c90c`, and `origin` `https://github.com/khgs2411/class-kit.git` ([`repository-identity.json`](../repository-identity.json)). Use that record for this Project Memory's repository identity.\n\nThe mounted source snapshot conflicts with that record: `repo:.git` reports branch `master`, commit `afa43fe26e113ee4f0195eb3c474a077a2b1b17e`, and origin `https://github.com/khgs2411/Myelin.git`. The same Myelin origin is reported when querying the mounted `class-kit-api`, `class-kit-sdk`, and `apps` folders. This is snapshot metadata, not evidence that the documented ClassKit source layout has changed.\n\nThere is a second, narrower conflict in authored documentation: `docs/repositories/structure.md` (`repo:docs/repositories/structure.md`) says the parent documentation folder is local-only and should not have an origin, whereas the deterministic record supplies a ClassKit GitHub origin. The authoritative resolution is **needs review**: retain the deterministic record for identity, but do not infer the intended remote policy from the mounted Git metadata or the stale/conflicting prose.",
+      "category": null,
+      "end_line": 12,
+      "heading_level": 2,
+      "heading_path": [
+        "Repository identity and product boundaries",
+        "Repository identity and snapshot caveat"
+      ],
+      "heading_text": "Repository identity and snapshot caveat",
+      "page_title": "Repository identity and product boundaries",
+      "project_key": "class-kit",
+      "section_hash": "sha256:7b64085814201d8fd6ac6e03b4eb0de09a5d692b9fbac3d3148da71fb34da236",
+      "section_id": "repository-identity-and-product-boundaries/repository-identity-and-snapshot-caveat",
+      "snippet": "The deterministic checkout record identifies the project as `class-kit`, registered at `/Users/liadgoren/Repositories/class-kit`, with branch `master`, commit `4f55d94506f181d179f705173ecd54606b44c90c`, and `origin` `https://github.com/khgs2411/class-kit.git` ([`repository-identity.json`](../repository-identity.json)). Use that record for this Project Memory's repository identity. The mounted source snapshot conflicts with that record: `repo:.git` reports branch `master`, commit `afa43fe26e113ee",
+      "start_line": 5,
+      "wiki_path": "wiki/repository-identity-and-boundaries.md"
+    },
+    {
+      "body_text": "The supported browser path is:\n\n```text\nfrontend app -> @class-kit/react -> class-kit-* Edge Functions -> class_kit schema\n```\n\n`README.md` (`repo:README.md`) and `docs/getting-started.md` (`repo:docs/getting-started.md`) make the boundary explicit: browser applications use `@class-kit/react`; they must not query ClassKit tables or RPCs directly. The ClassKit product boundary is the SDK plus API. Applications consume, exercise, or administer that product boundary; they are not product source.",
+      "category": null,
+      "end_line": 22,
+      "heading_level": 2,
+      "heading_path": [
+        "Repository identity and product boundaries",
+        "Product boundary"
+      ],
+      "heading_text": "Product boundary",
+      "page_title": "Repository identity and product boundaries",
+      "project_key": "class-kit",
+      "section_hash": "sha256:06592c89d29e3a8ca0254f8651a4436a9361478184203614e98dc9b1b07f7367",
+      "section_id": "repository-identity-and-product-boundaries/product-boundary",
+      "snippet": "The supported browser path is: ```text frontend app -> @class-kit/react -> class-kit-* Edge Functions -> class_kit schema ``` `README.md` (`repo:README.md`) and `docs/getting-started.md` (`repo:docs/getting-started.md`) make the boundary explicit: browser applications use `@class-kit/react`; they must not query ClassKit tables or RPCs directly. The ClassKit product boundary is the SDK plus API. Applications consume, exercise, or administer that product boundary; they are not product source.",
+      "start_line": 13,
+      "wiki_path": "wiki/repository-identity-and-boundaries.md"
+    },
+    {
+      "body_text": "| Layer / location | Owns | Does not own |\n| --- | --- | --- |\n| Parent `README.md` and `docs/` | The canonical, cross-layer documentation entrypoint and durable design/usage/deployment notes. | Runtime product logic. |\n| `class-kit-api/supabase` | Supabase migrations, database/RPC behavior, Edge Functions, RLS and security backstops, validation, product resolution, authorization, permissions, and product policy. | Website presentation or a browser-facing dependency on raw Supabase contracts. |\n| `class-kit-sdk` / `@class-kit/react` | Typed client methods, React provider/context, auth and session facade behavior, request/response normalization, and hiding Edge Function names/actions from websites. | Packaged visual components, UI adapters, or styleless workflow components; that prior direction is deprecated. |\n| `apps/demo2` | Client-facing site layout, routes, copy, visual design, and interaction polish. | ClassKit table/RPC access, Edge Function action strings, or authorization policy. |\n| `apps/class-kit-admin` | The administrative control-panel experience that operates ClassKit. Its manifest consumes the tagged `@class-kit/react` SDK. | The ClassKit API/SDK product source itself. |\n\nThis ownership model is stated in `docs/product-shape.md` (`repo:docs/product-shape.md`) and `docs/getting-started.md` (`repo:docs/getting-started.md`). Current manifests corroborate the executable split: `class-kit-sdk/package.json` (`repo:class-kit-sdk/package.json`) publishes `@class-kit/react`; `class-kit-api/package.json` (`repo:class-kit-api/package.json`) owns Supabase operations; and both application manifests depend on the tagged SDK.",
+      "category": null,
+      "end_line": 34,
+      "heading_level": 2,
+      "heading_path": [
+        "Repository identity and product boundaries",
+        "System layout and ownership"
+      ],
+      "heading_text": "System layout and ownership",
+      "page_title": "Repository identity and product boundaries",
+      "project_key": "class-kit",
+      "section_hash": "sha256:616ecf7a7b06ceaba483fcaaf5d98fabf608738210e89579390cf9fb373d49f1",
+      "section_id": "repository-identity-and-product-boundaries/system-layout-and-ownership",
+      "snippet": "| Layer / location | Owns | Does not own | | --- | --- | --- | | Parent `README.md` and `docs/` | The canonical, cross-layer documentation entrypoint and durable design/usage/deployment notes. | Runtime product logic. | | `class-kit-api/supabase` | Supabase migrations, database/RPC behavior, Edge Functions, RLS and security backstops, validation, product resolution, authorization, permissions, and product policy. | Website presentation or a browser-facing dependency on raw Supabase contracts. | ",
+      "start_line": 23,
+      "wiki_path": "wiki/repository-identity-and-boundaries.md"
+    },
+    {
+      "body_text": "ClassKit treats Supabase as the identity and platform runtime layer, while ClassKit owns product access and authorization semantics. The backend remains authoritative for product resolution, membership eligibility, policy, and permission checks. In particular, Edge Functions using a service-role client must still perform explicit ClassKit permission checks because that client bypasses ordinary user RLS (`docs/product-shape.md` (`repo:docs/product-shape.md`)).\n\nFor changes, the repository's documented routing rule is:\n\n- Presentation and experience work belongs in the relevant website.\n- Client behavior and facade changes belong in `class-kit-sdk`.\n- Product logic and authority belong in `class-kit-api/supabase`.\n\nIf a website requires a Supabase detail, Edge Function action, permission rule, or backend payload shape that is not presentation-specific, that is an extraction signal toward the SDK or backend rather than a reason to expand the website boundary.",
+      "category": null,
+      "end_line": 46,
+      "heading_level": 2,
+      "heading_path": [
+        "Repository identity and product boundaries",
+        "Operating boundary"
+      ],
+      "heading_text": "Operating boundary",
+      "page_title": "Repository identity and product boundaries",
+      "project_key": "class-kit",
+      "section_hash": "sha256:26cb29ac78c3b7a7a86c788bf9809cea4fd422dee66246b32dd722cbdd50dc27",
+      "section_id": "repository-identity-and-product-boundaries/operating-boundary",
+      "snippet": "ClassKit treats Supabase as the identity and platform runtime layer, while ClassKit owns product access and authorization semantics. The backend remains authoritative for product resolution, membership eligibility, policy, and permission checks. In particular, Edge Functions using a service-role client must still perform explicit ClassKit permission checks because that client bypasses ordinary user RLS (`docs/product-shape.md` (`repo:docs/product-shape.md`)). For changes, the repository's docume",
+      "start_line": 35,
+      "wiki_path": "wiki/repository-identity-and-boundaries.md"
+    },
+    {
+      "body_text": "The authored structure says the parent folder contains the single active documentation source (`README.md -> docs/getting-started.md -> docs/*`) and that API, SDK, and applications should not carry durable repo-local documentation. It also assigns deployment to `class-kit-api`, SDK release tags to `class-kit-sdk`, and local app development to `apps/` (`docs/repositories/structure.md` (`repo:docs/repositories/structure.md`)).\n\nTreat those ownership statements as current product documentation, but treat branch/remote claims in that document as **conflicting or stale** until the snapshot-identity discrepancy is resolved.",
+      "category": null,
+      "end_line": 52,
+      "heading_level": 2,
+      "heading_path": [
+        "Repository identity and product boundaries",
+        "Documentation and repository boundaries"
+      ],
+      "heading_text": "Documentation and repository boundaries",
+      "page_title": "Repository identity and product boundaries",
+      "project_key": "class-kit",
+      "section_hash": "sha256:f58374a76639eb739b680544a5df35f769b8e1eaae0b17180ff5f3798efbcf51",
+      "section_id": "repository-identity-and-product-boundaries/documentation-and-repository-boundaries",
+      "snippet": "The authored structure says the parent folder contains the single active documentation source (`README.md -> docs/getting-started.md -> docs/*`) and that API, SDK, and applications should not carry durable repo-local documentation. It also assigns deployment to `class-kit-api`, SDK release tags to `class-kit-sdk`, and local app development to `apps/` (`docs/repositories/structure.md` (`repo:docs/repositories/structure.md`)). Treat those ownership statements as current product documentation, but ",
+      "start_line": 47,
+      "wiki_path": "wiki/repository-identity-and-boundaries.md"
+    },
+    {
+      "body_text": "- The supplied evidence cannot establish why the mounted snapshot and its nested Git metadata identify Myelin rather than ClassKit, nor whether the recorded ClassKit commit remains reachable from the canonical remote.\n- The deterministic record and authored repository-structure document disagree about whether the parent documentation repository should have an origin. This requires operator review before changing remote or repository-topology guidance.\n- This subject documents boundaries, not feature-level behavior. It does not independently validate every Edge Function, RLS policy, or SDK method behind the stated ownership model.",
+      "category": null,
+      "end_line": 58,
+      "heading_level": 2,
+      "heading_path": [
+        "Repository identity and product boundaries",
+        "Known gaps"
+      ],
+      "heading_text": "Known gaps",
+      "page_title": "Repository identity and product boundaries",
+      "project_key": "class-kit",
+      "section_hash": "sha256:296f5cf9a4e490b52bfe7328412faf271a86fe29318f7603e0395994df1abf41",
+      "section_id": "repository-identity-and-product-boundaries/known-gaps",
+      "snippet": "- The supplied evidence cannot establish why the mounted snapshot and its nested Git metadata identify Myelin rather than ClassKit, nor whether the recorded ClassKit commit remains reachable from the canonical remote. - The deterministic record and authored repository-structure document disagree about whether the parent documentation repository should have an origin. This requires operator review before changing remote or repository-topology guidance. - This subject documents boundaries, not fea",
+      "start_line": 53,
+      "wiki_path": "wiki/repository-identity-and-boundaries.md"
+    },
+    {
+      "body_text": "The package is published as `@class-kit/react` (currently package version `0.1.18`) with React, React DOM, and `@supabase/supabase-js` as peer dependencies (`class-kit-sdk/package.json`). Its root export in `class-kit-sdk/src/index.ts` exposes:\n\n- client construction and transport types: `createClassKitClient`, `hasClassKitClientConfig`, `ClassKitClient`, `ClassKitTransport`, and Vite configuration types;\n- the React context surface: `ProductProvider`, `ProductContext`, `useProductContext`, and `useClassKitClient`;\n- product-facing helpers retained for compatibility: `getProductContext`, `getProductProfile`, `listClasses`, `getClassInformation`, `registerForClass`, and `cancelClassRegistration`;\n- typed public data and error contracts, including product context, access, auth, class, registration, and profile types; and\n- the `admin` and `management` facade types and methods.\n\nNew work should use the client facade and provider, not the compatibility helpers (`docs/sdk/client-sdk.md`). The mounted Demo2 app follows this shape: it constructs one Vite client with a product-specific auth storage key and renders its root inside `ProductProvider` (`apps/demo2/src/class-kit-client.ts`, `apps/demo2/src/main.tsx`).\n\n```tsx\nconst client = createClassKitClient(import.meta.env, {\n  authStorageKey: \"my-product-class-kit-auth\",\n});\n\ncreateRoot(root).render(\n  <ProductProvider client={client}><App /></ProductProvider>,\n);\n```",
+      "category": null,
+      "end_line": 26,
+      "heading_level": 2,
+      "heading_path": [
+        "SDK facade and application integration",
+        "Package and integration shape"
+      ],
+      "heading_text": "Package and integration shape",
+      "page_title": "SDK facade and application integration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:45890072a87ef0e02217679281b6466ea88f3b2ca00b8a7c0dbd25b3d92a3272",
+      "section_id": "sdk-facade-and-application-integration/package-and-integration-shape",
+      "snippet": "The package is published as `@class-kit/react` (currently package version `0.1.18`) with React, React DOM, and `@supabase/supabase-js` as peer dependencies (`class-kit-sdk/package.json`). Its root export in `class-kit-sdk/src/index.ts` exposes: - client construction and transport types: `createClassKitClient`, `hasClassKitClientConfig`, `ClassKitClient`, `ClassKitTransport`, and Vite configuration types; - the React context surface: `ProductProvider`, `ProductContext`, `useProductContext`, and `",
+      "start_line": 5,
+      "wiki_path": "wiki/sdk-facade-and-application-integration.md"
+    },
+    {
+      "body_text": "`createClassKitClient` has two supported forms (`class-kit-sdk/src/client/class-kit-client.ts`):\n\n- **Vite form:** `createClassKitClient(import.meta.env, { authStorageKey, debug? })`. `authStorageKey` is mandatory and missing it throws. The default target is the shared remote Supabase project. `VITE_CLASS_KIT_TARGET=local` selects `VITE_CLASS_KIT_LOCAL_SUPABASE_URL` and `VITE_CLASS_KIT_LOCAL_SUPABASE_PUBLISHABLE_KEY`; if either is absent, construction returns `null`.\n- **Explicit form:** `createClassKitClient({ supabaseUrl, supabasePublishableKey, supabaseClient?, productKey?, authStorageKey?, debug? })`. It returns `null` unless supplied either a Supabase client or both URL and publishable key. An injected client is intended for non-Vite consumers and tests.\n\nThe SDK assigns the Supabase auth storage key supplied by the app (or, in the explicit form only, falls back to `class-kit-<productKey|domain>-auth`). Apps should give each product a stable, distinct key so browser sessions do not share a namespace.\n\nProduct identity is enforced by the backend, not trusted from the app. For every function call, the transport sends `x-class-kit-site-url` from the current browser URL after removing query and fragment (`class-kit-sdk/src/client/product-api.ts`). The backend requires that header to have the request `Origin`, accepts only HTTP(S), and resolves the product against that origin or path-aware site URL (`class-kit-api/supabase/functions/_shared/cors.ts`, `class-kit-api/supabase/functions/_shared/context.ts`).\n\nThe optional `product_key` request value is deliberately narrower:\n\n| Condition | SDK behavior | Backend outcome |\n| --- | --- | --- |\n| Browser is `localhost`, `127.0.0.1`, or `::1` and client has `productKey` | Adds `product_key` to the request body. In the Vite form this comes from `VITE_CLASS_KIT_LOCAL_PRODUCT_KEY` only while `DEV` is true. | Uses the hint (or `CLASS_KIT_LOCAL_PRODUCT_KEY`) to disambiguate local origins. |\n| Any non-local browser origin | Does not add a product key. | Rejects a supplied `product_key` with `bad_request`; origin/site URL must identify the product. |\n| No matched product | Calls still carry the origin/site URL. | Fails with `forbidden` rather than selecting an arbitrary product. |\n| Multiple matches without a local hint | No implicit product selection. | Fails with `bad_request` as ambiguous. |\n\nThis is the important integration boundary: an application may configure local development, but it cannot select a production product by request payload. A path-aware header is also not an escape hatch because the backend verifies its origin before product resolution.",
+      "category": null,
+      "end_line": 48,
+      "heading_level": 2,
+      "heading_path": [
+        "SDK facade and application integration",
+        "Client construction and product identification"
+      ],
+      "heading_text": "Client construction and product identification",
+      "page_title": "SDK facade and application integration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:90fbe5490df13c8a0defa3dfe69f21f5d5aec133bf2498deebdbc3ab861ce24c",
+      "section_id": "sdk-facade-and-application-integration/client-construction-and-product-identification",
+      "snippet": "`createClassKitClient` has two supported forms (`class-kit-sdk/src/client/class-kit-client.ts`): - **Vite form:** `createClassKitClient(import.meta.env, { authStorageKey, debug? })`. `authStorageKey` is mandatory and missing it throws. The default target is the shared remote Supabase project. `VITE_CLASS_KIT_TARGET=local` selects `VITE_CLASS_KIT_LOCAL_SUPABASE_URL` and `VITE_CLASS_KIT_LOCAL_SUPABASE_PUBLISHABLE_KEY`; if either is absent, construction returns `null`. - **Explicit form:** `createC",
+      "start_line": 27,
+      "wiki_path": "wiki/sdk-facade-and-application-integration.md"
+    },
+    {
+      "body_text": "All facade calls go through `invokeProductFunction` (`class-kit-sdk/src/client/product-api.ts`). It prefixes the function name with `class-kit-`, forwards the current Supabase authentication state through the client, adds the browser site header, and returns a product-facing envelope:\n\n```ts\ntype ApiResponse<T> =\n  | { data: T; error: null }\n  | { data: null; error: { code: \"bad_request\" | \"unauthorized\" | \"forbidden\" | \"not_found\" | \"conflict\" | \"internal_error\"; message: string } };\n```\n\nTransport failures and empty responses are normalized to `internal_error`. The product-facing namespaces preserve this envelope: `product`, `profile`, `classes`, `signupLinks`, and `productDocuments`. `management.*` and `admin.*` instead unwrap the envelope and throw `Error` on backend errors (`class-kit-sdk/src/manager/manager-api.ts`, `class-kit-sdk/src/admin/admin-api.ts`); dashboard and control-plane UI must catch those mutations.\n\nThe public client groups the supported surface by audience:\n\n| Namespace | Intended caller and backend route family |\n| --- | --- |\n| `product.getContext`, `profile.get/update/updateMetadata`, `classes.list/get/register/cancelRegistration` | Product site reads and self-service operations; calls `class-kit-product-context`, `class-kit-profile`, `class-kit-classes`, and `class-kit-register-class`. |\n| `auth` | Browser Supabase session operations plus ClassKit product signup. Password signup calls `class-kit-product-signup`; password sign-in/out use the Supabase client. |\n| `signupLinks`, `productDocuments` | Product-scoped signup link resolution and published-document reads/acceptance through their Edge Functions. Document list/get results are cached in SDK memory and `localStorage` for five minutes. |\n| `management.*` | Product-context operational dashboard methods for classes, templates, schedules, registrations, attendance, memberships, signup links, documents, change requests, roles, users, and product auth mode. The backend, not the facade, evaluates the relevant product permissions. |\n| `admin.*` | Platform/control-plane product, user, role, change-request, and PM-integration methods. These are not product-site signup or self-service primitives. |\n\nThe facade is a routing and typed-contract layer, not an authorization layer. Direct Edge Function, database, and RPC calls are outside the documented application contract (`docs/sdk/client-sdk.md`); even SDK context capabilities are only UI hints and backend functions remain the final authority.",
+      "category": null,
+      "end_line": 72,
+      "heading_level": 2,
+      "heading_path": [
+        "SDK facade and application integration",
+        "Facade-to-backend boundary"
+      ],
+      "heading_text": "Facade-to-backend boundary",
+      "page_title": "SDK facade and application integration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:6cf1a3d6948fd5cccfea2597791078aa82e9bbe276ae2167f89b95dbaca42f7e",
+      "section_id": "sdk-facade-and-application-integration/facade-to-backend-boundary",
+      "snippet": "All facade calls go through `invokeProductFunction` (`class-kit-sdk/src/client/product-api.ts`). It prefixes the function name with `class-kit-`, forwards the current Supabase authentication state through the client, adds the browser site header, and returns a product-facing envelope: ```ts type ApiResponse<T> = | { data: T; error: null } | { data: null; error: { code: \"bad_request\" | \"unauthorized\" | \"forbidden\" | \"not_found\" | \"conflict\" | \"internal_error\"; message: string } }; ``` Transport f",
+      "start_line": 49,
+      "wiki_path": "wiki/sdk-facade-and-application-integration.md"
+    },
+    {
+      "body_text": "`client.product.getContext()` returns four product-scoped facts (`class-kit-sdk/src/types.ts`):\n\n- `product`: key, name, `auth_mode`, provider flags, and managed OAuth redirects;\n- `product_user`: active/inactive product assignment and role, or `null`;\n- `product_access`: the access-record status and source, or `null`; and\n- `capabilities`: granted permission keys plus dashboard navigation flags.\n\nThe currently supported values exposed to app UI are:\n\n| Contract | Values | Application meaning |\n| --- | --- | --- |\n| `auth_mode` | `open`, `invite_only` | An open product may offer signup only if the provider is also enabled. Invite-only UI should offer sign-in, not open signup. The signup function independently rejects non-open products. |\n| Product user status | `active`, `inactive` | Use to explain product membership state; do not infer authorization from it alone. |\n| Product access status | `invited`, `pending`, `active`, `rejected`, `inactive` | Use to render an invitation/request outcome when an authenticated identity does not yet have an active product assignment. |\n| Product access source | `admin_invite`, `self_request` | Explains how the access record originated; it is not an authority grant. |\n| Auth redirect environment | `development`, `production` | The client prefers a redirect matching the browser environment, then a configured default, then the first available redirect. |\n\n`ProductProvider` initializes the Supabase session, then fetches product context; it subscribes to Supabase auth state changes and schedules a context refresh after every event other than `INITIAL_SESSION` (`class-kit-sdk/src/context/product-provider.tsx`). A stale refresh-token error clears the configured local-storage session key. If context retrieval fails, the provider clears product, product user, product access, and capabilities, exposes the error, and stops loading. Signed-out context therefore preserves product policy but receives empty permissions and all dashboard flags false from the backend (`class-kit-api/supabase/functions/class-kit-product-context/index.ts`).\n\n`useProductContext()` throws outside a provider. Inside it, consumers receive the client, resolved product key, context facts, `session`, `loading`, `error`, `refreshProductContext`, and provider wrappers for password sign-in/sign-up, Google sign-in, and sign-out. `useClassKitClient()` is the narrow client accessor.",
+      "category": null,
+      "end_line": 95,
+      "heading_level": 2,
+      "heading_path": [
+        "SDK facade and application integration",
+        "Product context and provider lifecycle"
+      ],
+      "heading_text": "Product context and provider lifecycle",
+      "page_title": "SDK facade and application integration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:90af006603a651169187b837851cadb600e58edf63119741537e8f3cf8342044",
+      "section_id": "sdk-facade-and-application-integration/product-context-and-provider-lifecycle",
+      "snippet": "`client.product.getContext()` returns four product-scoped facts (`class-kit-sdk/src/types.ts`): - `product`: key, name, `auth_mode`, provider flags, and managed OAuth redirects; - `product_user`: active/inactive product assignment and role, or `null`; - `product_access`: the access-record status and source, or `null`; and - `capabilities`: granted permission keys plus dashboard navigation flags. The currently supported values exposed to app UI are: | Contract | Values | Application meaning | | -",
+      "start_line": 73,
+      "wiki_path": "wiki/sdk-facade-and-application-integration.md"
+    },
+    {
+      "body_text": "Apps use product context to choose UI, while backend policy determines the result:\n\n- Show password sign-in only when `email_password_enabled` is true; show password signup only when it is also `auth_mode: \"open\"`. The backend enforces both gates before it creates the auth user and assigns the product `user` role (`class-kit-api/supabase/functions/class-kit-product-signup/index.ts`).\n- `signInWithGoogle()` fetches product context first. It selects a product-managed Google redirect for the browser environment; without one it returns an error and does not start OAuth. Apps do not supply arbitrary redirect URLs.\n- Use `product_user` and `product_access` for denied, invite, pending, rejected, and inactive experiences. Use `capabilities.permissions` and `capabilities.dashboard` to render navigation, but retain backend error handling because frontend visibility never grants a permission.\n- Use `profile` only for the caller's self-service profile. Its methods take no `userId`; product resolution plus JWT select the record. Management user and membership methods are separate permission-gated dashboard operations.",
+      "category": null,
+      "end_line": 104,
+      "heading_level": 2,
+      "heading_path": [
+        "SDK facade and application integration",
+        "Auth and application responsibilities"
+      ],
+      "heading_text": "Auth and application responsibilities",
+      "page_title": "SDK facade and application integration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:132db2423beb586151c3723ec1f4410da78dddab30ff6de239d3865de9ad793c",
+      "section_id": "sdk-facade-and-application-integration/auth-and-application-responsibilities",
+      "snippet": "Apps use product context to choose UI, while backend policy determines the result: - Show password sign-in only when `email_password_enabled` is true; show password signup only when it is also `auth_mode: \"open\"`. The backend enforces both gates before it creates the auth user and assigns the product `user` role (`class-kit-api/supabase/functions/class-kit-product-signup/index.ts`). - `signInWithGoogle()` fetches product context first. It selects a product-managed Google redirect for the browser",
+      "start_line": 96,
+      "wiki_path": "wiki/sdk-facade-and-application-integration.md"
+    },
+    {
+      "body_text": "Deterministic checkout evidence identifies the registered repository as `class-kit` at `/Users/liadgoren/Repositories/class-kit`, on `master`, with origin `https://github.com/khgs2411/class-kit.git` (`repository-identity.json`). This subject's behavior claims are grounded in the mounted SDK and Edge Function sources rather than the mounted repository's `.git` metadata.",
+      "category": null,
+      "end_line": 108,
+      "heading_level": 2,
+      "heading_path": [
+        "SDK facade and application integration",
+        "Repository identity and evidence"
+      ],
+      "heading_text": "Repository identity and evidence",
+      "page_title": "SDK facade and application integration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:982d83741eba0eccfc5898e229d2649426ec4451a55dc124861286761f023ab2",
+      "section_id": "sdk-facade-and-application-integration/repository-identity-and-evidence",
+      "snippet": "Deterministic checkout evidence identifies the registered repository as `class-kit` at `/Users/liadgoren/Repositories/class-kit`, on `master`, with origin `https://github.com/khgs2411/class-kit.git` (`repository-identity.json`). This subject's behavior claims are grounded in the mounted SDK and Edge Function sources rather than the mounted repository's `.git` metadata.",
+      "start_line": 105,
+      "wiki_path": "wiki/sdk-facade-and-application-integration.md"
+    },
+    {
+      "body_text": "- No dedicated SDK unit/integration tests for client construction, browser-header forwarding, local product-key gating, or `ProductProvider` refresh/error behavior were found in the supplied snapshot. The code was inspected, but the documented client lifecycle is not regression-test corroborated here.\n- The package publishes `src` alongside `dist`, while the package entrypoint is `dist/index.js`; this snapshot was not built or compared against a packed artifact, so source exports are the verified contract and release-artifact parity remains unverified.\n- Backend source verifies origin and local-hint constraints, but no deployed environment or end-to-end browser run was available to confirm current allowed-origin and OAuth-redirect configuration.",
+      "category": null,
+      "end_line": 114,
+      "heading_level": 2,
+      "heading_path": [
+        "SDK facade and application integration",
+        "Known gaps"
+      ],
+      "heading_text": "Known gaps",
+      "page_title": "SDK facade and application integration",
+      "project_key": "class-kit",
+      "section_hash": "sha256:90989ff3f1c207ae6a36c5a427eabbbc6302412f62312b3dec0210d33707571f",
+      "section_id": "sdk-facade-and-application-integration/known-gaps",
+      "snippet": "- No dedicated SDK unit/integration tests for client construction, browser-header forwarding, local product-key gating, or `ProductProvider` refresh/error behavior were found in the supplied snapshot. The code was inspected, but the documented client lifecycle is not regression-test corroborated here. - The package publishes `src` alongside `dist`, while the package entrypoint is `dist/index.js`; this snapshot was not built or compared against a packed artifact, so source exports are the verifie",
+      "start_line": 109,
+      "wiki_path": "wiki/sdk-facade-and-application-integration.md"
+    },
+    {
+      "body_text": "All records are product-scoped. A schedule's `(template_id, product_id)` foreign key requires its template to belong to the same product; generated-class integrity also requires its schedule, template, and product to agree. The management Edge Functions resolve product context before every operation:\n\n- Template and schedule `list`, `get`, and schedule `preview` require product permission level 75.\n- Template mutations require `templates.manage`; schedule mutations and the separate generate endpoint require `schedules.manage`.\n- The database's direct authenticated read policies are manager-or-platform-admin policies, while Edge Functions use a service client after their own permission checks.",
+      "category": null,
+      "end_line": 12,
+      "heading_level": 2,
+      "heading_path": [
+        "Templates, schedules, and generated classes",
+        "Scope and authority"
+      ],
+      "heading_text": "Scope and authority",
+      "page_title": "Templates, schedules, and generated classes",
+      "project_key": "class-kit",
+      "section_hash": "sha256:63514ec19bac16231673eef6b9790f6f7bf3dcd27820a2470be840cc5760ea61",
+      "section_id": "templates-schedules-and-generated-classes/scope-and-authority",
+      "snippet": "All records are product-scoped. A schedule's `(template_id, product_id)` foreign key requires its template to belong to the same product; generated-class integrity also requires its schedule, template, and product to agree. The management Edge Functions resolve product context before every operation: - Template and schedule `list`, `get`, and schedule `preview` require product permission level 75. - Template mutations require `templates.manage`; schedule mutations and the separate generate endpo",
+      "start_line": 5,
+      "wiki_path": "wiki/templates-schedules-and-generated-classes.md"
+    },
+    {
+      "body_text": "`class_kit.class_templates` owns a name, optional description/category/location/notes, positive `default_capacity`, default visibility, registration policy, membership requirement, custom-field schema/defaults, and an `active` or `inactive` status. Creating a template applies these defaults when omitted:\n\n| Default | Supported values / behavior |\n| --- | --- |\n| `default_visibility` | `public` (default), `hidden`, or `members_only` |\n| `default_registration_policy` | `auto_approve`, `member_auto_approve` (default), or `approval_required` |\n| `default_membership_requirement` | `none` (default) or `required` |\n| `default_capacity` | Required positive integer |\n\n`class-kit-templates` supports `list`, `get`, `create`, `update`, and `deactivate`; deactivation sets `status` to `inactive` rather than deleting the row. Listing does not filter out inactive templates. A template must be active for template-backed manual class creation, and schedule generation includes only active templates. Schedule creation/update merely confirms same-product existence, so an inactive template can still be selected for a schedule but will not generate classes.\n\nFor a manual class created with an active `template_id`, omitted ordinary values are copied from the template at create time; provided values override them. The resulting class remains standalone: it has no schedule source fields. Later template edits do not rewrite existing classes.",
+      "category": null,
+      "end_line": 27,
+      "heading_level": 2,
+      "heading_path": [
+        "Templates, schedules, and generated classes",
+        "Templates: reusable defaults, not class instances"
+      ],
+      "heading_text": "Templates: reusable defaults, not class instances",
+      "page_title": "Templates, schedules, and generated classes",
+      "project_key": "class-kit",
+      "section_hash": "sha256:3dffb935f9484b817f124496a5d2a8655d0d67e0c4504611120a6a9c1060f041",
+      "section_id": "templates-schedules-and-generated-classes/templates-reusable-defaults-not-class-instances",
+      "snippet": "`class_kit.class_templates` owns a name, optional description/category/location/notes, positive `default_capacity`, default visibility, registration policy, membership requirement, custom-field schema/defaults, and an `active` or `inactive` status. Creating a template applies these defaults when omitted: | Default | Supported values / behavior | | --- | --- | | `default_visibility` | `public` (default), `hidden`, or `members_only` | | `default_registration_policy` | `auto_approve`, `member_auto_",
+      "start_line": 13,
+      "wiki_path": "wiki/templates-schedules-and-generated-classes.md"
+    },
+    {
+      "body_text": "Templates declare `custom_fields` and `custom_defaults`, both JSON-backed values. The application validates the richer contract before storing them:\n\n- Each field has a unique key matching `^[A-Za-z][A-Za-z0-9_]*$`, a non-empty label, and one type: `text`, `long text`, `number`, `boolean`, `select`, `multi-select`, `date`, or `URL`.\n- `required` is true only when supplied as boolean `true`; `visible` and `searchable` are optional boolean flags.\n- `select` and `multi-select` require at least one non-empty string option (duplicates are removed). `select` values must be an option; `multi-select` values must be arrays whose entries are options.\n- Text, number, boolean, URL, and date values are type-checked; URLs must parse successfully and dates must be parseable strings. Field-level defaults and `custom_defaults` must match their declared field type, and `custom_defaults` cannot name an undefined field.\n\nWhen a concrete class has a template, its `custom_data` is `{...custom_defaults, ...requestData}`. Unknown request keys and invalid types are rejected; every required field must be present after that merge and must not be `undefined`, `null`, or `\"\"`. A manual class without a template accepts an object as custom data without this field-schema validation. On class update, supplied custom data merges with existing custom data and is revalidated against the class's resulting active template.",
+      "category": null,
+      "end_line": 38,
+      "heading_level": 2,
+      "heading_path": [
+        "Templates, schedules, and generated classes",
+        "Custom fields and custom data"
+      ],
+      "heading_text": "Custom fields and custom data",
+      "page_title": "Templates, schedules, and generated classes",
+      "project_key": "class-kit",
+      "section_hash": "sha256:aa5ccc9ddd58528e460e85bf84d7718ee7cb158bf931bca55167da398703fa47",
+      "section_id": "templates-schedules-and-generated-classes/custom-fields-and-custom-data",
+      "snippet": "Templates declare `custom_fields` and `custom_defaults`, both JSON-backed values. The application validates the richer contract before storing them: - Each field has a unique key matching `^[A-Za-z][A-Za-z0-9_]*$`, a non-empty label, and one type: `text`, `long text`, `number`, `boolean`, `select`, `multi-select`, `date`, or `URL`. - `required` is true only when supplied as boolean `true`; `visible` and `searchable` are optional boolean flags. - `select` and `multi-select` require at least one n",
+      "start_line": 28,
+      "wiki_path": "wiki/templates-schedules-and-generated-classes.md"
+    },
+    {
+      "body_text": "`class_kit.schedules` references exactly one same-product template and has status, recurrence, dates, local time, duration, and an IANA timezone. Its supported states are `draft` (default), `active`, `paused`, and `archived`. The API has explicit `pause` and `archive` actions, and its general `update` action can set any supported status; there is no schedule-delete action in the current Edge Function.\n\n| Recurrence type | Required form |\n| --- | --- |\n| `one_time` | `starts_on` only; `weekdays` must be empty and `ends_on` must be null |\n| `weekly` | At least one unique weekday, numbered `0` (Sunday) through `6` (Saturday); optional `ends_on` cannot precede `starts_on` |\n\n`starts_on`, `ends_on`, skip dates, and preview bounds use `YYYY-MM-DD`. `start_time` accepts `HH:MM` or `HH:MM:SS`, normalizes to seconds, and `duration_minutes` is an integer from 1 through 1440. Timezones are verified through `Intl.DateTimeFormat`; previews calculate UTC start/end timestamps from the local date, time, and timezone. Preview returns candidate occurrences, including `skipped: true` entries, for the requested range; it does not require the schedule to be active and does not create classes.",
+      "category": null,
+      "end_line": 49,
+      "heading_level": 2,
+      "heading_path": [
+        "Templates, schedules, and generated classes",
+        "Schedule rule contract"
+      ],
+      "heading_text": "Schedule rule contract",
+      "page_title": "Templates, schedules, and generated classes",
+      "project_key": "class-kit",
+      "section_hash": "sha256:6a273f74a8a9291d53e1fcbb00c2f7713fec9860a64bdef6381b0c8da6b6d4ec",
+      "section_id": "templates-schedules-and-generated-classes/schedule-rule-contract",
+      "snippet": "`class_kit.schedules` references exactly one same-product template and has status, recurrence, dates, local time, duration, and an IANA timezone. Its supported states are `draft` (default), `active`, `paused`, and `archived`. The API has explicit `pause` and `archive` actions, and its general `update` action can set any supported status; there is no schedule-delete action in the current Edge Function. | Recurrence type | Required form | | --- | --- | | `one_time` | `starts_on` only; `weekdays` m",
+      "start_line": 39,
+      "wiki_path": "wiki/templates-schedules-and-generated-classes.md"
+    },
+    {
+      "body_text": "A `schedule_skips` row is unique for `(schedule_id, skip_date)`, with an optional reason. `create_skip` is an upsert, so repeating it replaces the stored reason; `delete_skip` removes that date's skip. A skip suppresses generation but remains visible as a skipped preview occurrence. Adding a skip does not cancel an already-generated class, and removing one does not itself generate a class.\n\nGeneration can run through `class-kit-schedule-generate`, or as part of schedule create/update when the resulting status is `active`. A draft, paused, or archived schedule returns `generation: null` from create/update; the dedicated endpoint instead rejects a named non-active schedule with `409 conflict`. Generation ignores inactive templates even if their schedule is active.\n\nThe optional `generation_count` must be an integer 1–52. If omitted, the database uses the product's `generation_horizon_weeks`, defaulting to 8. Current SQL enumerates occurrences from `starts_on` through `ends_on` (or one year after `starts_on`), ranks them from the beginning, and limits to the first count before filtering skips or checking existing classes. Thus the count bounds candidate occurrence positions, not newly created future classes; repeated calls can report existing/skipped rows without advancing past that initial occurrence range.\n\nFor each remaining candidate the generator converts local schedule time to UTC, copies the template's ordinary defaults and `custom_defaults`, and inserts a concrete class as `published` with lifecycle `created`. The result returns `created_count`, `existing_count`, and `skipped_count`. Idempotency is enforced by unique `(product_id, schedule_id, generated_for_date, starts_at)`; it does not refresh an already-generated class when the template or schedule changes.",
+      "category": null,
+      "end_line": 59,
+      "heading_level": 2,
+      "heading_path": [
+        "Templates, schedules, and generated classes",
+        "Skips and materialization"
+      ],
+      "heading_text": "Skips and materialization",
+      "page_title": "Templates, schedules, and generated classes",
+      "project_key": "class-kit",
+      "section_hash": "sha256:1076e0be3065d4c6a78e9fb1deb7a690e84ba5616fad24eeef0a3bcd1a776216",
+      "section_id": "templates-schedules-and-generated-classes/skips-and-materialization",
+      "snippet": "A `schedule_skips` row is unique for `(schedule_id, skip_date)`, with an optional reason. `create_skip` is an upsert, so repeating it replaces the stored reason; `delete_skip` removes that date's skip. A skip suppresses generation but remains visible as a skipped preview occurrence. Adding a skip does not cancel an already-generated class, and removing one does not itself generate a class. Generation can run through `class-kit-schedule-generate`, or as part of schedule create/update when the res",
+      "start_line": 50,
+      "wiki_path": "wiki/templates-schedules-and-generated-classes.md"
+    },
+    {
+      "body_text": "Every generated class stores all of:\n\n- `schedule_id`\n- `template_id`\n- `generated_for_date`\n- `source_timezone`\n\nThe database requires these fields as a complete set: standalone classes have all three schedule source fields null, while generated classes have non-null provenance and a template that matches the source schedule in the same product. Schedule and template references are `on delete restrict` for generated provenance, preserving the source chain; template deletion otherwise sets a standalone class's `template_id` to null.\n\n`class-kit-classes` rejects caller-provided `schedule_id`, `generated_for_date`, and `source_timezone` on both create and update. It also prevents changing `template_id` on a generated class. Other class updates are not categorically blocked by this endpoint, so generation should be understood as insert-only provenance creation, not a synchronization or immutable-instance system.",
+      "category": null,
+      "end_line": 72,
+      "heading_level": 2,
+      "heading_path": [
+        "Templates, schedules, and generated classes",
+        "Generated-class provenance and edit boundary"
+      ],
+      "heading_text": "Generated-class provenance and edit boundary",
+      "page_title": "Templates, schedules, and generated classes",
+      "project_key": "class-kit",
+      "section_hash": "sha256:6adcb189e2f196a5e2340317b3fd7ed907ca93d7d5678593fa5b79ff076b81db",
+      "section_id": "templates-schedules-and-generated-classes/generated-class-provenance-and-edit-boundary",
+      "snippet": "Every generated class stores all of: - `schedule_id` - `template_id` - `generated_for_date` - `source_timezone` The database requires these fields as a complete set: standalone classes have all three schedule source fields null, while generated classes have non-null provenance and a template that matches the source schedule in the same product. Schedule and template references are `on delete restrict` for generated provenance, preserving the source chain; template deletion otherwise sets a stand",
+      "start_line": 60,
+      "wiki_path": "wiki/templates-schedules-and-generated-classes.md"
+    },
+    {
+      "body_text": "- The snapshot has no focused schedule/template regression tests to confirm database execution, daylight-saving edge cases, state transitions, or count behavior against a migrated Supabase instance.\n- Existing operational documentation describes generated classes as candidates for later refresh/protection, but the current generator only inserts on conflict and does not reconcile schedule/template edits, skips added after creation, or paused/archived schedules with classes already created.\n- Generation's count window starts at `starts_on`, including past and already-existing occurrences. This is current source behavior, but whether it is the intended long-running scheduler policy needs product review.",
+      "category": null,
+      "end_line": 78,
+      "heading_level": 2,
+      "heading_path": [
+        "Templates, schedules, and generated classes",
+        "Known gaps"
+      ],
+      "heading_text": "Known gaps",
+      "page_title": "Templates, schedules, and generated classes",
+      "project_key": "class-kit",
+      "section_hash": "sha256:d5094fb46ff15d2eaabdc6c78825c858fe8d17c489797509beda6fbe4444bfee",
+      "section_id": "templates-schedules-and-generated-classes/known-gaps",
+      "snippet": "- The snapshot has no focused schedule/template regression tests to confirm database execution, daylight-saving edge cases, state transitions, or count behavior against a migrated Supabase instance. - Existing operational documentation describes generated classes as candidates for later refresh/protection, but the current generator only inserts on conflict and does not reconcile schedule/template edits, skips added after creation, or paused/archived schedules with classes already created. - Gene",
+      "start_line": 73,
+      "wiki_path": "wiki/templates-schedules-and-generated-classes.md"
+    },
+    {
+      "body_text": "- `class-kit-api/supabase/functions/_shared/class_schema.ts`\n- `class-kit-api/supabase/functions/class-kit-templates/index.ts`\n- `class-kit-api/supabase/functions/class-kit-schedules/index.ts`\n- `class-kit-api/supabase/functions/class-kit-schedule-generate/index.ts`\n- `class-kit-api/supabase/functions/class-kit-classes/index.ts`\n- `class-kit-api/supabase/migrations/20260607134535_template_class_core.sql`\n- `class-kit-api/supabase/migrations/20260607143000_schedule_rule_model.sql`\n- `class-kit-api/supabase/migrations/20260607153000_schedule_generation_engine.sql`\n- `class-kit-api/supabase/migrations/20260608030000_generated_class_source_integrity.sql`\n- `class-kit-api/supabase/migrations/20260609120000_schedule_generation_count.sql`\n- `class-kit-api/supabase/migrations/20260623080614_backfill_schedule_generation_from_start.sql`",
+      "category": null,
+      "end_line": 92,
+      "heading_level": 2,
+      "heading_path": [
+        "Templates, schedules, and generated classes",
+        "Evidence"
+      ],
+      "heading_text": "Evidence",
+      "page_title": "Templates, schedules, and generated classes",
+      "project_key": "class-kit",
+      "section_hash": "sha256:43917d435b8a0a56aad7866dbf917af0a55071478ab61aa23a9d5e413004989e",
+      "section_id": "templates-schedules-and-generated-classes/evidence",
+      "snippet": "- `class-kit-api/supabase/functions/_shared/class_schema.ts` - `class-kit-api/supabase/functions/class-kit-templates/index.ts` - `class-kit-api/supabase/functions/class-kit-schedules/index.ts` - `class-kit-api/supabase/functions/class-kit-schedule-generate/index.ts` - `class-kit-api/supabase/functions/class-kit-classes/index.ts` - `class-kit-api/supabase/migrations/20260607134535_template_class_core.sql` - `class-kit-api/supabase/migrations/20260607143000_schedule_rule_model.sql` - `class-kit-ap",
+      "start_line": 79,
+      "wiki_path": "wiki/templates-schedules-and-generated-classes.md"
+    }
+  ],
+  "warnings": []
+}

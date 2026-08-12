@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "subject_id": "product-memory-model",
+  "wiki_path": "product-memory-model.md",
+  "status": "completed",
+  "evidence_paths": [
+    "README.md",
+    "MYELIN.md",
+    "CONTEXT.md",
+    "MY_VISION.md",
+    "docs/README.md",
+    "docs/ROADMAP.md",
+    "docs/IMPLEMENTATION_ALIGNMENT.md",
+    "docs/adr/0050-adopt-myelin-product-name.md",
+    "docs/adr/0021-keep-curated-project-memory-in-markdown.md",
+    "docs/adr/0022-use-karpathy-llm-wiki-pattern-as-taxonomy-origin.md"
+  ],
+  "touched_paths": [
+    "draft-wiki/product-memory-model.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "This page summarizes product model and boundaries only; command-level operator workflows, runtime layout, storage/query internals, and lifecycle mechanics belong to separate assigned subject pages.",
+    "The current implementation is in active transition; the page distinguishes target design from current boundaries using docs/IMPLEMENTATION_ALIGNMENT.md and docs/ROADMAP.md rather than claiming every target facade is fully implemented.",
+    "No source files under target-repo/src were inspected because the assignment suggested product and ADR documents for this subject, and those canonical docs already describe the current implementation boundaries."
+  ]
+}

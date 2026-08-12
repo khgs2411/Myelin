@@ -1,0 +1,14 @@
+{
+  "blocking": false,
+  "created_candidate_ids": [],
+  "degraded": false,
+  "degraded_reasons": [],
+  "existing_candidate_ids": [
+    "project_inbox:class-kit:2026-07-15T08-14-06.014Z_e5b6b2"
+  ],
+  "invalid_source_refs": [],
+  "project_key": "class-kit",
+  "skipped_source_refs": [],
+  "terminal_duplicate_candidate_ids": [],
+  "unsupported_source_refs": []
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subjects": [
+    {"subject_id":"architecture-integration","wiki_path":"architecture-and-integration.md","title":"Architecture and integration boundary","purpose":"Explain the supported website, SDK, and backend ownership boundary.","suggested_repo_paths":["README.md","docs/product-shape.md","docs/shared/context.md"]},
+    {"subject_id":"product-access-authentication","wiki_path":"product-access-and-authentication.md","title":"Product access and authentication","purpose":"Document product resolution, policy values, redirects, and access-state gates.","suggested_repo_paths":["docs/api/backend-api.md","docs/sdk/client-sdk.md","docs/shared/authentication.md","docs/product-shape.md"]},
+    {"subject_id":"roles-permissions-authority","wiki_path":"roles-permissions-and-authority.md","title":"Roles, permissions, and operational authority","purpose":"Document role scopes, level/key guard precedence, and capability flags.","suggested_repo_paths":["docs/product-shape.md","docs/adr/0001-scoped-product-permission-layer.md","docs/api/backend-api.md"]},
+    {"subject_id":"classes-registrations-attendance","wiki_path":"classes-registrations-and-attendance.md","title":"Classes, registrations, and attendance","purpose":"Document class, registration, and attendance stateful workflows.","suggested_repo_paths":["docs/api/class-api-map.md","docs/sdk/client-sdk.md","docs/api/backend-api.md"]},
+    {"subject_id":"templates-schedules-generated-classes","wiki_path":"templates-schedules-and-generated-classes.md","title":"Templates, schedules, and generated classes","purpose":"Document class creation sources, recurrence contracts, and generation gates.","suggested_repo_paths":["docs/api/class-api-map.md","docs/sdk/client-sdk.md","docs/shared/context.md"]},
+    {"subject_id":"memberships-entitlements","wiki_path":"memberships-and-entitlements.md","title":"Memberships and entitlements","purpose":"Document membership modes, grant changes, stock, and eligibility.","suggested_repo_paths":["docs/sdk/client-sdk.md","docs/api/class-api-map.md","docs/api/backend-api.md"]},
+    {"subject_id":"product-documents","wiki_path":"product-documents.md","title":"Product documents","purpose":"Document immutable document versions, publication, and acceptance.","suggested_repo_paths":["docs/sdk/client-sdk.md","docs/api/class-api-map.md","docs/changelog.md"]},
+    {"subject_id":"product-change-requests-trello","wiki_path":"product-change-requests-and-trello.md","title":"Product change requests and Trello links","purpose":"Document request revisions, attachment handling, and PM integration state.","suggested_repo_paths":["docs/sdk/client-sdk.md","docs/api/class-api-map.md","docs/changelog.md"]},
+    {"subject_id":"sdk-api-surface","wiki_path":"sdk-and-api-surface.md","title":"SDK and API surface","purpose":"Map public, management, and admin façade contracts to documented backend operations.","suggested_repo_paths":["docs/api/backend-api.md","docs/api/class-api-map.md","docs/sdk/client-sdk.md"]}
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "eligible_item_ids": [],
+  "global_findings": [
+    {
+      "category": "provider",
+      "code": "project_memory_maintenance_failed",
+      "message": "maintenance report agents/maintenance/reports/documentation-maintenance-report.json does not satisfy agents/maintenance/contracts/project-memory-maintenance-report.schema.json: maintenance report applied output_ref is not listed in touched_paths: repository-identity.json",
+      "severity": "blocker"
+    }
+  ],
+  "item_results": [],
+  "mode": "maintain",
+  "noop_refs": [],
+  "ok": false,
+  "project_key": "llm-wiki",
+  "quarantined_item_ids": [],
+  "rejected_item_ids": []
+}

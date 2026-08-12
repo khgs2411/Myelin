@@ -1,0 +1,1876 @@
+{
+  "category": null,
+  "entries": [
+    {
+      "aliases": [
+        "supported architecture",
+        "website SDK backend ownership"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "SDK facade",
+        "browser API boundary",
+        "Edge Functions",
+        "direct database access",
+        "authorization boundary"
+      ],
+      "query_phrases": [
+        "how should a website call ClassKit",
+        "can a frontend query ClassKit tables directly",
+        "where is authorization enforced"
+      ],
+      "section_hash": "sha256:fded067f03383aa5ad689d34f2662660bd99206863fad3e9d356227cdb5bc550",
+      "section_id": "architecture-and-supported-api-surface/ownership-and-supported-boundary",
+      "topics": [
+        "architecture",
+        "API boundaries",
+        "browser integration"
+      ],
+      "wiki_path": "wiki/architecture-and-api-surface.md"
+    },
+    {
+      "aliases": [
+        "SDK request routing",
+        "local product key hint"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "createClassKitClient",
+        "invokeProductFunction",
+        "productKey",
+        "localhost",
+        "origin resolution",
+        "permission helpers"
+      ],
+      "query_phrases": [
+        "how does the SDK route Edge Function calls",
+        "when is productKey accepted",
+        "how does ClassKit resolve product context"
+      ],
+      "section_hash": "sha256:e21181f0d66d670a95425a7ca472e416cdc362cc5188a2d4251cfda8e30d54b2",
+      "section_id": "architecture-and-supported-api-surface/request-routing-and-product-context",
+      "topics": [
+        "SDK transport",
+        "product context",
+        "local development"
+      ],
+      "wiki_path": "wiki/architecture-and-api-surface.md"
+    },
+    {
+      "aliases": [
+        "browser SDK namespaces",
+        "ClassKit client facade"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "@class-kit/react",
+        "product",
+        "auth",
+        "profile",
+        "classes",
+        "management",
+        "admin"
+      ],
+      "query_phrases": [
+        "what methods does the ClassKit browser SDK expose",
+        "which SDK namespace should I use",
+        "what is the difference between management and admin"
+      ],
+      "section_hash": "sha256:fadd3de6f970606fd05ccf7212186b850c8af0d66ff32934234bd7e950f3eec6",
+      "section_id": "architecture-and-supported-api-surface/browser-sdk-facade",
+      "topics": [
+        "SDK API",
+        "React integration",
+        "public methods"
+      ],
+      "wiki_path": "wiki/architecture-and-api-surface.md"
+    },
+    {
+      "aliases": [
+        "operational namespaces",
+        "control plane"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "management",
+        "admin",
+        "capabilities",
+        "custom roles",
+        "lifecycle commands",
+        "platform operations"
+      ],
+      "query_phrases": [
+        "what belongs in management versus admin",
+        "can custom roles use management operations",
+        "why are lifecycle commands explicit"
+      ],
+      "section_hash": "sha256:77e352d3b8290d8a0b5c1b84f7d265ecefdd09e2b899f456e831606e1a9c8ce4",
+      "section_id": "architecture-and-supported-api-surface/browser-sdk-facade/operational-and-control-plane-namespaces",
+      "topics": [
+        "authorization",
+        "management workflows",
+        "admin API"
+      ],
+      "wiki_path": "wiki/architecture-and-api-surface.md"
+    },
+    {
+      "aliases": [
+        "backend authority",
+        "server API layering"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "Edge Functions",
+        "database RPCs",
+        "validation",
+        "permission checks",
+        "state invariants"
+      ],
+      "query_phrases": [
+        "what belongs in Edge Functions versus database RPCs",
+        "where are ClassKit invariants enforced"
+      ],
+      "section_hash": "sha256:fcf35369d607bb291fe97671c0831266ab073c4572854c8639966c6c03eec4a2",
+      "section_id": "architecture-and-supported-api-surface/backend-api-and-data-authority",
+      "topics": [
+        "backend architecture",
+        "data integrity",
+        "authorization"
+      ],
+      "wiki_path": "wiki/architecture-and-api-surface.md"
+    },
+    {
+      "aliases": [
+        "implementation evidence",
+        "checkout evidence"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "repository identity",
+        "class-kit-client.ts",
+        "permissions.ts",
+        "SQL regression tests"
+      ],
+      "query_phrases": [
+        "where is the ClassKit implementation",
+        "which files implement the SDK and permissions",
+        "what SQL regressions exist"
+      ],
+      "section_hash": "sha256:4fed81f39f3b49bd3b7d1373d047a0e467cdfd82027a74eab31f432ba5971548",
+      "section_id": "architecture-and-supported-api-surface/repository-identity-and-evidence",
+      "topics": [
+        "source evidence",
+        "repository layout",
+        "test coverage"
+      ],
+      "wiki_path": "wiki/architecture-and-api-surface.md"
+    },
+    {
+      "aliases": [
+        "architecture verification gaps",
+        "facade coverage gaps"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "SDK contract tests",
+        "Edge Function mapping",
+        "response shape",
+        "test coverage gaps"
+      ],
+      "query_phrases": [
+        "is every SDK method tested against a live Edge Function",
+        "what architecture contracts lack test coverage"
+      ],
+      "section_hash": "sha256:93af7f5e71251e51b9f71ba24e21694a6002b2e08f686a62f0870b720cf2e261",
+      "section_id": "architecture-and-supported-api-surface/known-gaps",
+      "topics": [
+        "testing",
+        "known gaps",
+        "SDK contracts"
+      ],
+      "wiki_path": "wiki/architecture-and-api-surface.md"
+    },
+    {
+      "aliases": [
+        "attendance access control",
+        "attendance permissions"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "attendance",
+        "management.attendance",
+        "attendance.manage",
+        "level 75",
+        "participants"
+      ],
+      "query_phrases": [
+        "who can manage attendance",
+        "what permission is required to start attendance",
+        "who can list class participants"
+      ],
+      "section_hash": "sha256:6ccb09089d49828bb34f8cf2a04f0feedb31699789276504d4ec328be3624753",
+      "section_id": "attendance/supported-surface-and-access-gates",
+      "topics": [
+        "attendance",
+        "authorization",
+        "management API"
+      ],
+      "wiki_path": "wiki/attendance.md"
+    },
+    {
+      "aliases": [
+        "attendance roster",
+        "participant kinds"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "class_participants",
+        "registered",
+        "walk_in",
+        "trial",
+        "present",
+        "absent"
+      ],
+      "query_phrases": [
+        "what kinds of attendance participants exist",
+        "what attendance statuses are valid",
+        "how are walk-ins and trials stored"
+      ],
+      "section_hash": "sha256:df8ba3f93fb9d0181003df3e0886c01b3896e75264edd817975d97cad50c0304",
+      "section_id": "attendance/participants-and-attendance-values",
+      "topics": [
+        "attendance",
+        "data model",
+        "roster"
+      ],
+      "wiki_path": "wiki/attendance.md"
+    },
+    {
+      "aliases": [
+        "class attendance state machine",
+        "attendance transitions"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "attendance lifecycle",
+        "start",
+        "complete",
+        "in_progress",
+        "completed",
+        "class lifecycle"
+      ],
+      "query_phrases": [
+        "when can attendance start",
+        "can attendance restart after completion",
+        "what happens when attendance completes"
+      ],
+      "section_hash": "sha256:86e44c7679a541b4517330d2ab0c7eba978054400a87f198f7ed7c7ab73134ef",
+      "section_id": "attendance/class-attendance-lifecycle",
+      "topics": [
+        "attendance",
+        "lifecycle",
+        "class operations"
+      ],
+      "wiki_path": "wiki/attendance.md"
+    },
+    {
+      "aliases": [
+        "attendance SDK example",
+        "attendance workflow"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "start attendance",
+        "updateParticipant",
+        "addWalkIn",
+        "addTrial",
+        "complete attendance"
+      ],
+      "query_phrases": [
+        "how do I use client.management.attendance",
+        "how do I add a trial participant",
+        "how do I mark attendance present"
+      ],
+      "section_hash": "sha256:b2d3b85db8eb72cdc08e629bc49861ef32d2336d44f8b6d72c7175f49297cf42",
+      "section_id": "attendance/operational-use",
+      "topics": [
+        "SDK usage",
+        "attendance",
+        "operations"
+      ],
+      "wiki_path": "wiki/attendance.md"
+    },
+    {
+      "aliases": [
+        "attendance evidence",
+        "attendance test gaps"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "attendance tests",
+        "repeated start",
+        "SDK deployment",
+        "known gaps"
+      ],
+      "query_phrases": [
+        "what attendance behavior is not regression tested",
+        "is repeated attendance start tested"
+      ],
+      "section_hash": "sha256:93fe5094eadbe8d6db456aaff6478ba0b00c02e7820c1b7b706528870c8a6695",
+      "section_id": "attendance/evidence-and-known-gaps",
+      "topics": [
+        "testing",
+        "attendance",
+        "verification"
+      ],
+      "wiki_path": "wiki/attendance.md"
+    },
+    {
+      "aliases": [
+        "permission precedence",
+        "authorization matrix"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "platform level",
+        "product level",
+        "permission key",
+        "active roles",
+        "permissions.ts"
+      ],
+      "query_phrases": [
+        "how do platform and product permission checks differ",
+        "does a high role level imply a permission key",
+        "do inactive roles grant access"
+      ],
+      "section_hash": "sha256:8fe08375767dfc6cf2d4acaf9f5cf3875c1d82f7bc70a933960286932df4aeed",
+      "section_id": "authorization-and-operational-capabilities/authorization-model",
+      "topics": [
+        "authorization",
+        "roles",
+        "permissions"
+      ],
+      "wiki_path": "wiki/authorization-and-capabilities.md"
+    },
+    {
+      "aliases": [
+        "built-in roles",
+        "ClassKit role model"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "platform_admin",
+        "manager",
+        "user",
+        "custom roles",
+        "role assignment",
+        "is_protected"
+      ],
+      "query_phrases": [
+        "what built-in roles does ClassKit have",
+        "can I create custom product roles",
+        "can the manager role be modified"
+      ],
+      "section_hash": "sha256:5b58c665dc662f1a50ecf85b0edde8d66ba89a62561cb96fe7861f3e76893597",
+      "section_id": "authorization-and-operational-capabilities/roles-and-assignments",
+      "topics": [
+        "authorization",
+        "product roles",
+        "role management"
+      ],
+      "wiki_path": "wiki/authorization-and-capabilities.md"
+    },
+    {
+      "aliases": [
+        "permission keys",
+        "built-in permission grants"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "permission catalog",
+        "manager bundle",
+        "classes.create",
+        "attendance.manage",
+        "platform_admin grants"
+      ],
+      "query_phrases": [
+        "what permission keys exist in ClassKit",
+        "what permissions does the manager role get",
+        "which platform permissions are granted"
+      ],
+      "section_hash": "sha256:50cda9330a9bea1db8c7669c13942ebde357852ecf4283f1a02c47970061abee",
+      "section_id": "authorization-and-operational-capabilities/permission-catalog-and-active-built-in-grants",
+      "topics": [
+        "permissions",
+        "role bundles",
+        "authorization"
+      ],
+      "wiki_path": "wiki/authorization-and-capabilities.md"
+    },
+    {
+      "aliases": [
+        "endpoint authorization patterns",
+        "read versus mutation gates"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "level gates",
+        "permission key gates",
+        "auth policy updates",
+        "product auth mode",
+        "provider toggles"
+      ],
+      "query_phrases": [
+        "why do reads use role level while writes use permission keys",
+        "what permissions update product auth settings"
+      ],
+      "section_hash": "sha256:62c8000099b7c72edb9a1bf7582d2843b4a3fc0d250503ce5fa05b3835edcb16",
+      "section_id": "authorization-and-operational-capabilities/operational-endpoint-patterns",
+      "topics": [
+        "authorization",
+        "endpoint design",
+        "product settings"
+      ],
+      "wiki_path": "wiki/authorization-and-capabilities.md"
+    },
+    {
+      "aliases": [
+        "platform user creation",
+        "admin provisioning"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "admin.users.create",
+        "create_user",
+        "duplicate email",
+        "partial failure",
+        "provisioning"
+      ],
+      "query_phrases": [
+        "how does admin.users.create provision a user",
+        "what happens for a duplicate email",
+        "is platform user provisioning atomic"
+      ],
+      "section_hash": "sha256:9e6d843f60a73b6fa9f35cceaa2734d3538942335b1892053c557d69350437df",
+      "section_id": "authorization-and-operational-capabilities/platform-user-provisioning",
+      "topics": [
+        "admin API",
+        "user provisioning",
+        "failure handling"
+      ],
+      "wiki_path": "wiki/authorization-and-capabilities.md"
+    },
+    {
+      "aliases": [
+        "capability projection",
+        "UI routing capabilities"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "product context",
+        "ProductProvider",
+        "dashboard capabilities",
+        "can_enter",
+        "product permissions"
+      ],
+      "query_phrases": [
+        "what capabilities does product.getContext return",
+        "why can a platform admin have empty product capabilities",
+        "does ProductProvider authorize requests"
+      ],
+      "section_hash": "sha256:ef0730990f0e6dec2f6afbc8d68589e6934944bad5d48c1017489dd09fa474b9",
+      "section_id": "authorization-and-operational-capabilities/product-context-capabilities",
+      "topics": [
+        "product context",
+        "UI authorization",
+        "SDK provider"
+      ],
+      "wiki_path": "wiki/authorization-and-capabilities.md"
+    },
+    {
+      "aliases": [
+        "authorization test gaps",
+        "permission model gaps"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "permission tests",
+        "manager initializer",
+        "platform permission grants",
+        "role protection",
+        "provisioning tests"
+      ],
+      "query_phrases": [
+        "what authorization behavior lacks tests",
+        "are platform-admin permission grants complete",
+        "is the user built-in role protected"
+      ],
+      "section_hash": "sha256:c283fbc4fe13c4450fca075691177ca05d3b6a5d2437f3473dd5011e68014b22",
+      "section_id": "authorization-and-operational-capabilities/evidence-and-known-gaps",
+      "topics": [
+        "testing",
+        "authorization",
+        "known gaps"
+      ],
+      "wiki_path": "wiki/authorization-and-capabilities.md"
+    },
+    {
+      "aliases": [
+        "change request access",
+        "Trello authorization"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "product change requests",
+        "product_change_requests.manage",
+        "Trello",
+        "platform triage",
+        "PM integrations"
+      ],
+      "query_phrases": [
+        "who can create product change requests",
+        "can managers configure Trello",
+        "who can triage requests across products"
+      ],
+      "section_hash": "sha256:e50f4c8645165afae65520b244cd2fce64656c8b883305501f2cc94e2d7b515d",
+      "section_id": "product-change-requests-and-trello-synchronization/access-and-request-scope",
+      "topics": [
+        "change requests",
+        "authorization",
+        "PM integration"
+      ],
+      "wiki_path": "wiki/change-requests-and-pm-sync.md"
+    },
+    {
+      "aliases": [
+        "request revision model",
+        "change request history"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "change request thread",
+        "revisions",
+        "thread_id",
+        "version_number",
+        "soft delete"
+      ],
+      "query_phrases": [
+        "are product change request edits in place",
+        "how are change request revisions stored",
+        "how are request threads listed"
+      ],
+      "section_hash": "sha256:6ccb36176704cc649a5acc867a9016953135f0e7071b5f8ec3af1979ab246746",
+      "section_id": "product-change-requests-and-trello-synchronization/thread-and-revision-model",
+      "topics": [
+        "change requests",
+        "data model",
+        "revisions"
+      ],
+      "wiki_path": "wiki/change-requests-and-pm-sync.md"
+    },
+    {
+      "aliases": [
+        "change request statuses",
+        "thread-wide deletion"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "open",
+        "in_progress",
+        "done",
+        "closed",
+        "update_status",
+        "soft deletion"
+      ],
+      "query_phrases": [
+        "what statuses can a change request have",
+        "does triage create a revision",
+        "what does deleting a change request do"
+      ],
+      "section_hash": "sha256:2f339d23b6854851adb0519cbdae38fce0b39f9e97010512355e7103c903c4ed",
+      "section_id": "product-change-requests-and-trello-synchronization/request-status-and-deletion",
+      "topics": [
+        "change requests",
+        "status lifecycle",
+        "deletion"
+      ],
+      "wiki_path": "wiki/change-requests-and-pm-sync.md"
+    },
+    {
+      "aliases": [
+        "change request file uploads",
+        "attachment upload flow"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "attachments",
+        "signed upload URL",
+        "pending",
+        "uploaded",
+        "10 MiB",
+        "Trello mirroring"
+      ],
+      "query_phrases": [
+        "how do change request attachment uploads work",
+        "what files can be attached",
+        "does completion verify the storage object"
+      ],
+      "section_hash": "sha256:d91ced5da6e8c5ac579c3721b34428ed23a5066f3145c56ee3c3bb0558acac31",
+      "section_id": "product-change-requests-and-trello-synchronization/attachment-lifecycle",
+      "topics": [
+        "change requests",
+        "storage",
+        "attachments"
+      ],
+      "wiki_path": "wiki/change-requests-and-pm-sync.md"
+    },
+    {
+      "aliases": [
+        "Trello routing",
+        "PM work item creation"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "Trello configuration",
+        "board ID",
+        "list mappings",
+        "force_new",
+        "detach work item"
+      ],
+      "query_phrases": [
+        "how is Trello configured for ClassKit",
+        "what does force_new do for a work item",
+        "does detaching delete the Trello card"
+      ],
+      "section_hash": "sha256:9da81b94fba13ff486312dc65bad379892d56125cc49076d8690354e272f8330",
+      "section_id": "product-change-requests-and-trello-synchronization/trello-configuration-and-routing",
+      "topics": [
+        "Trello",
+        "PM integration",
+        "change requests"
+      ],
+      "wiki_path": "wiki/change-requests-and-pm-sync.md"
+    },
+    {
+      "aliases": [
+        "Trello synchronization",
+        "linked work item sync"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "sync_work_item",
+        "sync_linked_work_items",
+        "Trello status mapping",
+        "blocked",
+        "missing card"
+      ],
+      "query_phrases": [
+        "how does Trello status map to a request status",
+        "what happens if a linked Trello card is deleted",
+        "does sync create a new request revision"
+      ],
+      "section_hash": "sha256:668ab4cc3c10a8da00f8be999f60eb0218ebf43daa9d0c8f24d4d365313d9692",
+      "section_id": "product-change-requests-and-trello-synchronization/synchronization-and-status-mapping",
+      "topics": [
+        "Trello",
+        "status synchronization",
+        "change requests"
+      ],
+      "wiki_path": "wiki/change-requests-and-pm-sync.md"
+    },
+    {
+      "aliases": [
+        "change request verification gaps",
+        "Trello test gaps"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "PM sync tests",
+        "attachment verification",
+        "scheduled sync",
+        "known gaps"
+      ],
+      "query_phrases": [
+        "is change request synchronization regression tested",
+        "does ClassKit run Trello sync automatically"
+      ],
+      "section_hash": "sha256:da6acbc1afaf1d348b94592fe39973e3a9387196d8b40b7bb6e0700e869ad472",
+      "section_id": "product-change-requests-and-trello-synchronization/known-gaps",
+      "topics": [
+        "testing",
+        "Trello",
+        "known gaps"
+      ],
+      "wiki_path": "wiki/change-requests-and-pm-sync.md"
+    },
+    {
+      "aliases": [
+        "change request source evidence",
+        "PM integration implementation"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "class-kit-product-change-requests",
+        "pm-integrations",
+        "trello_provider",
+        "migrations"
+      ],
+      "query_phrases": [
+        "which files implement change requests and Trello synchronization"
+      ],
+      "section_hash": "sha256:407d968e3e4c963b21dbb68ea88761cded183d1ea6a4109cb7c5e71cac7eff03",
+      "section_id": "product-change-requests-and-trello-synchronization/evidence",
+      "topics": [
+        "source evidence",
+        "change requests",
+        "Trello"
+      ],
+      "wiki_path": "wiki/change-requests-and-pm-sync.md"
+    },
+    {
+      "aliases": [
+        "class model",
+        "template-backed classes"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "concrete classes",
+        "templates",
+        "schedules",
+        "generated classes",
+        "schedule provenance"
+      ],
+      "query_phrases": [
+        "what is a concrete class",
+        "does a template create a live linked class",
+        "can a normal class update schedule provenance"
+      ],
+      "section_hash": "sha256:cb6c20f4ef7cdc1cc4fe3d13219a477d0eba6255f8dc236aef89ca094ca3de10",
+      "section_id": "classes-discovery-and-lifecycle/concrete-class-model",
+      "topics": [
+        "classes",
+        "data model",
+        "schedules"
+      ],
+      "wiki_path": "wiki/classes-discovery-and-lifecycle.md"
+    },
+    {
+      "aliases": [
+        "class state dimensions",
+        "class statuses"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "publication status",
+        "lifecycle_status",
+        "visibility",
+        "registration policy",
+        "membership requirement"
+      ],
+      "query_phrases": [
+        "what statuses does a ClassKit class have",
+        "what is the difference between published and lifecycle status",
+        "what are the default class policies"
+      ],
+      "section_hash": "sha256:0f830851aede9e5d30dc6176a40123e1929e4cbe895c6b1470e18ae9e4459b49",
+      "section_id": "classes-discovery-and-lifecycle/independent-state-dimensions",
+      "topics": [
+        "classes",
+        "lifecycle",
+        "registration"
+      ],
+      "wiki_path": "wiki/classes-discovery-and-lifecycle.md"
+    },
+    {
+      "aliases": [
+        "class discovery API",
+        "customer class reads"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "classes.list",
+        "classes.get",
+        "customer-safe response",
+        "public_field_policy",
+        "registeredUsersRoster"
+      ],
+      "query_phrases": [
+        "what fields does classes.list return",
+        "can customers see a class roster",
+        "how do I request class details"
+      ],
+      "section_hash": "sha256:11d5aa3445ce1e7083eb298a913ceb855825ee6fb769fd83d439747739e545c3",
+      "section_id": "classes-discovery-and-lifecycle/discovery-and-customer-safe-reads",
+      "topics": [
+        "classes",
+        "SDK API",
+        "privacy"
+      ],
+      "wiki_path": "wiki/classes-discovery-and-lifecycle.md"
+    },
+    {
+      "aliases": [
+        "member-only visibility contradiction",
+        "class visibility gap"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "members_only",
+        "class discovery privacy",
+        "list_user",
+        "RLS",
+        "service role"
+      ],
+      "query_phrases": [
+        "can anonymous users discover members-only classes",
+        "does SDK class discovery match RLS",
+        "is member-only class visibility private"
+      ],
+      "section_hash": "sha256:0108da3f2233ac86933b45e88b69d56f3276d23e173f1c8c5a16a49fd9b07360",
+      "section_id": "classes-discovery-and-lifecycle/discovery-and-customer-safe-reads/current-visibility-behavior",
+      "topics": [
+        "classes",
+        "privacy",
+        "known behavior"
+      ],
+      "wiki_path": "wiki/classes-discovery-and-lifecycle.md"
+    },
+    {
+      "aliases": [
+        "registration gate order",
+        "registration precedence"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "register_for_class",
+        "capacity",
+        "membership_required",
+        "auto_approve",
+        "member_auto_approve",
+        "canRegister"
+      ],
+      "query_phrases": [
+        "what checks run before class registration",
+        "when does member auto approve create pending registration",
+        "is canRegister authoritative"
+      ],
+      "section_hash": "sha256:15690349699dcdea729e31054573be5e593231f9e12d92264a3633f51a1f87f7",
+      "section_id": "classes-discovery-and-lifecycle/registration-availability-and-precedence",
+      "topics": [
+        "registration",
+        "classes",
+        "eligibility"
+      ],
+      "wiki_path": "wiki/classes-discovery-and-lifecycle.md"
+    },
+    {
+      "aliases": [
+        "manager class operations",
+        "class lifecycle commands"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "management.classes",
+        "publish",
+        "draft",
+        "cancel",
+        "class update",
+        "attendance lifecycle"
+      ],
+      "query_phrases": [
+        "what can management.classes do",
+        "does publishing cancel registrations",
+        "who controls class lifecycle transitions"
+      ],
+      "section_hash": "sha256:72f6bc881d3632b266c34b002744b80db1a70f96d3d84962a2a9e5e8a552d07a",
+      "section_id": "classes-discovery-and-lifecycle/management-operations",
+      "topics": [
+        "classes",
+        "management API",
+        "lifecycle"
+      ],
+      "wiki_path": "wiki/classes-discovery-and-lifecycle.md"
+    },
+    {
+      "aliases": [
+        "class contract gaps",
+        "discovery privacy risk"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "class discovery tests",
+        "cancellation reason",
+        "members_only privacy",
+        "known gaps"
+      ],
+      "query_phrases": [
+        "what class behavior lacks tests",
+        "is cancellation reason exposed to customers",
+        "what is the members-only discovery risk"
+      ],
+      "section_hash": "sha256:793837c8625be93e6252b002e63f5b7bdbc7be0e688dce925bf95dda149e5193",
+      "section_id": "classes-discovery-and-lifecycle/known-gaps",
+      "topics": [
+        "testing",
+        "classes",
+        "privacy"
+      ],
+      "wiki_path": "wiki/classes-discovery-and-lifecycle.md"
+    },
+    {
+      "aliases": [
+        "ClassKit wiki index",
+        "documentation map"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "ClassKit documentation",
+        "canonical wiki",
+        "architecture",
+        "registrations",
+        "memberships",
+        "schedules"
+      ],
+      "query_phrases": [
+        "where is the ClassKit canonical documentation",
+        "which wiki page explains registrations",
+        "where can I find ClassKit architecture docs"
+      ],
+      "section_hash": "sha256:3eadbc726a34973cfeb1e1cc9e1cec4088346e5699bf3dc1408f040944d7ef89",
+      "section_id": "classkit/canonical-documentation",
+      "topics": [
+        "documentation",
+        "ClassKit",
+        "navigation"
+      ],
+      "wiki_path": "wiki/index.md"
+    },
+    {
+      "aliases": [
+        "membership access control",
+        "membership manager API"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "management.memberships",
+        "memberships.manage",
+        "memberships.adjust_stock",
+        "active product user",
+        "membership type"
+      ],
+      "query_phrases": [
+        "who can manage memberships",
+        "what permission adjusts membership stock",
+        "can inactive product users receive a membership"
+      ],
+      "section_hash": "sha256:d5ecb4c85da9e60a59edede9a986bca3c72320206684cf573ac3bf8cff336652",
+      "section_id": "membership-types-grants-and-ledger/ownership-and-access",
+      "topics": [
+        "memberships",
+        "authorization",
+        "management API"
+      ],
+      "wiki_path": "wiki/memberships-and-ledger.md"
+    },
+    {
+      "aliases": [
+        "membership type modes",
+        "grant modes"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "membership modes",
+        "stock",
+        "limited_stock",
+        "limited",
+        "infinite",
+        "default_stock"
+      ],
+      "query_phrases": [
+        "what membership modes are supported",
+        "which memberships require stock",
+        "which memberships require an expiration date"
+      ],
+      "section_hash": "sha256:056c432101df225de0e1daf3120213efbbaafd6775d18609fddb15a75244491d",
+      "section_id": "membership-types-grants-and-ledger/types-and-modes",
+      "topics": [
+        "memberships",
+        "entitlements",
+        "stock"
+      ],
+      "wiki_path": "wiki/memberships-and-ledger.md"
+    },
+    {
+      "aliases": [
+        "effective grant lookup",
+        "membership grant state"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "membership grant",
+        "effective membership",
+        "valid_until",
+        "remaining_stock",
+        "active grant",
+        "valid_from"
+      ],
+      "query_phrases": [
+        "when is a membership grant effective",
+        "can a user have multiple active grants",
+        "does valid_from delay membership access"
+      ],
+      "section_hash": "sha256:f38fe9903e98f58d95d2b2cc217cf6bbe47745b531a16397046542797c6ed4ab",
+      "section_id": "membership-types-grants-and-ledger/grant-state-and-effective-membership",
+      "topics": [
+        "memberships",
+        "eligibility",
+        "grant lifecycle"
+      ],
+      "wiki_path": "wiki/memberships-and-ledger.md"
+    },
+    {
+      "aliases": [
+        "membership mutations",
+        "grant replacement workflow"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "grant",
+        "upgrade",
+        "setForUser",
+        "revoke",
+        "adjustStock",
+        "mode rank"
+      ],
+      "query_phrases": [
+        "how do I replace a user's membership",
+        "can memberships be downgraded",
+        "what does adjustStock change"
+      ],
+      "section_hash": "sha256:2f95158df62ac9122352dc8e472fa1d2ab463568e83d0777a539733a7443d7d0",
+      "section_id": "membership-types-grants-and-ledger/grant-state-and-effective-membership/grant-upgrade-set-revoke-and-adjust",
+      "topics": [
+        "memberships",
+        "grant management",
+        "stock"
+      ],
+      "wiki_path": "wiki/memberships-and-ledger.md"
+    },
+    {
+      "aliases": [
+        "membership registration effects",
+        "membership eligibility"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "membership_required",
+        "member_auto_approve",
+        "stock consumption",
+        "registration policy",
+        "effective grant"
+      ],
+      "query_phrases": [
+        "how does membership affect registration approval",
+        "when is membership stock consumed",
+        "can someone without a membership register"
+      ],
+      "section_hash": "sha256:47da061dc56f6f10ede78e66d0d27f87ab37e15a0109f390642f8fed2a8ba3fb",
+      "section_id": "membership-types-grants-and-ledger/registration-eligibility-and-stock-precedence",
+      "topics": [
+        "memberships",
+        "registration",
+        "stock"
+      ],
+      "wiki_path": "wiki/memberships-and-ledger.md"
+    },
+    {
+      "aliases": [
+        "membership stock restoration",
+        "registration cancellation rules"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "registration cancellation",
+        "stock restoration",
+        "cancellation cutoff",
+        "ledger",
+        "pending registration"
+      ],
+      "query_phrases": [
+        "when is membership stock restored after cancellation",
+        "can pending registrations be cancelled after cutoff",
+        "what happens to stock when a class is cancelled"
+      ],
+      "section_hash": "sha256:4dbe0cfb27c79d357d97adb78a4ea51dff4a362c2f9271c08282355f2fed620c",
+      "section_id": "membership-types-grants-and-ledger/registration-eligibility-and-stock-precedence/cancellation-and-restoration",
+      "topics": [
+        "memberships",
+        "registration",
+        "cancellation"
+      ],
+      "wiki_path": "wiki/memberships-and-ledger.md"
+    },
+    {
+      "aliases": [
+        "membership audit ledger",
+        "membership events"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "membership_ledger",
+        "membership_set",
+        "stock_delta",
+        "append-only",
+        "ledger event types"
+      ],
+      "query_phrases": [
+        "what events appear in the membership ledger",
+        "is the membership ledger append-only",
+        "what does membership_set mean"
+      ],
+      "section_hash": "sha256:a8cdb7d8d40f0619a456d1f1198267a3da499fe877ade56b8c842a2f897f2088",
+      "section_id": "membership-types-grants-and-ledger/ledger",
+      "topics": [
+        "memberships",
+        "audit trail",
+        "stock"
+      ],
+      "wiki_path": "wiki/memberships-and-ledger.md"
+    },
+    {
+      "aliases": [
+        "membership source evidence",
+        "membership implementation"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "membership migrations",
+        "class-kit-memberships",
+        "membership evidence",
+        "SDK implementation"
+      ],
+      "query_phrases": [
+        "which migrations implement membership behavior",
+        "where is the membership manager endpoint implemented"
+      ],
+      "section_hash": "sha256:ff2eb471c4ad3bda9af1d362592372c8ece693a5dffbfadffb19de0f8fb5327c",
+      "section_id": "membership-types-grants-and-ledger/evidence-and-confidence",
+      "topics": [
+        "source evidence",
+        "memberships",
+        "verification"
+      ],
+      "wiki_path": "wiki/memberships-and-ledger.md"
+    },
+    {
+      "aliases": [
+        "membership verification gaps",
+        "membership type mismatch"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "membership tests",
+        "MembershipEventType",
+        "membership_set",
+        "valid_from",
+        "known gaps"
+      ],
+      "query_phrases": [
+        "what membership behavior lacks tests",
+        "does the SDK type include every membership ledger event",
+        "is valid_from enforced"
+      ],
+      "section_hash": "sha256:493dbb3f54fcc7648a1d3c9e9d789ab309902c01ffb3e3744b604a4e3c0ccaad",
+      "section_id": "membership-types-grants-and-ledger/known-gaps",
+      "topics": [
+        "testing",
+        "memberships",
+        "SDK types"
+      ],
+      "wiki_path": "wiki/memberships-and-ledger.md"
+    },
+    {
+      "aliases": [
+        "product documents API",
+        "terms documents"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "productDocuments",
+        "list",
+        "get",
+        "accept",
+        "upsert",
+        "archive",
+        "product_documents.manage"
+      ],
+      "query_phrases": [
+        "how do I list or accept product documents",
+        "who can publish product documents",
+        "are product documents public"
+      ],
+      "section_hash": "sha256:f00723810f5e0c3a803e7299f928216778dc21751e8131759e54c90108d6027a",
+      "section_id": "product-documents/supported-surface",
+      "topics": [
+        "product documents",
+        "SDK API",
+        "authorization"
+      ],
+      "wiki_path": "wiki/product-documents.md"
+    },
+    {
+      "aliases": [
+        "product document versions",
+        "localized documents"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "document_type",
+        "locale",
+        "published",
+        "draft",
+        "archived",
+        "versioning",
+        "fallbackLocale"
+      ],
+      "query_phrases": [
+        "how are product documents versioned",
+        "what happens when a document is published",
+        "how does locale fallback work"
+      ],
+      "section_hash": "sha256:c9bae4dcbfa08eeca744504cc471b94835e3d697aacdae4741fffff264ce406d",
+      "section_id": "product-documents/document-and-locale-contract",
+      "topics": [
+        "product documents",
+        "localization",
+        "publication"
+      ],
+      "wiki_path": "wiki/product-documents.md"
+    },
+    {
+      "aliases": [
+        "terms acceptance",
+        "document acknowledgement"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "document acceptance",
+        "acceptance snapshot",
+        "context",
+        "product_document_acceptances",
+        "idempotency"
+      ],
+      "query_phrases": [
+        "what does accepting a product document store",
+        "is document acceptance idempotent",
+        "can a non-member accept a document"
+      ],
+      "section_hash": "sha256:8600f4af4842672ac4dc26712a7e0be59ecc47a010e7b99913260b5c3b54fe28",
+      "section_id": "product-documents/acceptance-snapshots",
+      "topics": [
+        "product documents",
+        "compliance",
+        "acceptance"
+      ],
+      "wiki_path": "wiki/product-documents.md"
+    },
+    {
+      "aliases": [
+        "product document caching",
+        "SDK document cache"
+      ],
+      "confidence": "medium",
+      "keywords": [
+        "Cache-Control",
+        "ETag",
+        "localStorage",
+        "document cache",
+        "five minutes"
+      ],
+      "query_phrases": [
+        "how long are product documents cached",
+        "does publishing clear the SDK document cache",
+        "are document caches an authorization boundary"
+      ],
+      "section_hash": "sha256:b31128ee549c10687cb966c72aa904afa8af0d66ff32934234bd7e950f3eec6",
+      "section_id": "product-documents/caching-and-response-shape",
+      "topics": [
+        "product documents",
+        "caching",
+        "SDK"
+      ],
+      "wiki_path": "wiki/product-documents.md"
+    },
+    {
+      "aliases": [
+        "product document verification gaps",
+        "document test coverage"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "product document tests",
+        "locale fallback tests",
+        "acceptance tests",
+        "known coverage gap"
+      ],
+      "query_phrases": [
+        "are product documents covered by automated tests",
+        "what product document behavior is untested"
+      ],
+      "section_hash": "sha256:ed13a7937523ceda398810402aad0352c957168926959c78b9d3b920a6dac404",
+      "section_id": "product-documents/evidence-and-confidence",
+      "topics": [
+        "testing",
+        "product documents",
+        "known gaps"
+      ],
+      "wiki_path": "wiki/product-documents.md"
+    },
+    {
+      "aliases": [
+        "origin resolution",
+        "product context resolution"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "Origin",
+        "x-class-kit-site-url",
+        "product resolution",
+        "localhost",
+        "allowed origins",
+        "ambiguous origin"
+      ],
+      "query_phrases": [
+        "how does ClassKit resolve a product from a website origin",
+        "what is x-class-kit-site-url",
+        "why does ClassKit say product is not allowed for this origin"
+      ],
+      "section_hash": "sha256:8d9ce5895bf2fc1d03eb51d6c48a8f39990174faaa79944e933cd0aee2e428d3",
+      "section_id": "product-resolution-and-access/resolution-boundary",
+      "topics": [
+        "product resolution",
+        "security",
+        "local development"
+      ],
+      "wiki_path": "wiki/product-resolution-and-access.md"
+    },
+    {
+      "aliases": [
+        "product authentication policy",
+        "provider policy"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "auth_mode",
+        "invite_only",
+        "email_password_enabled",
+        "google_oauth_enabled",
+        "product signup"
+      ],
+      "query_phrases": [
+        "how does invite-only mode work",
+        "can a product disable email password sign-in",
+        "is Apple authentication supported"
+      ],
+      "section_hash": "sha256:687dd6dd94a36c1dedfd892e0617cc3bd00975257dcdba70f43129a39e92a11b",
+      "section_id": "product-resolution-and-access/authentication-policy",
+      "topics": [
+        "authentication",
+        "product access",
+        "signup"
+      ],
+      "wiki_path": "wiki/product-resolution-and-access.md"
+    },
+    {
+      "aliases": [
+        "invite records",
+        "product access requests"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "product_access_entries",
+        "invited",
+        "pending",
+        "active",
+        "rejected",
+        "admin_invite"
+      ],
+      "query_phrases": [
+        "what are product access entry statuses",
+        "what happens when an admin reinvites a user",
+        "how are invite-only access records stored"
+      ],
+      "section_hash": "sha256:819a778e066422f4d13406921ae7e352f0c23c379c9b24e166631b85884d66c5",
+      "section_id": "product-resolution-and-access/product-access-entries",
+      "topics": [
+        "product access",
+        "invitations",
+        "user lifecycle"
+      ],
+      "wiki_path": "wiki/product-resolution-and-access.md"
+    },
+    {
+      "aliases": [
+        "automatic product access",
+        "membership creation"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "ensureProductAccess",
+        "open product",
+        "invite_only",
+        "self request",
+        "platform admin",
+        "product membership"
+      ],
+      "query_phrases": [
+        "does open auth mode automatically create membership",
+        "what happens to an invite-only self request",
+        "are platform admins automatically enrolled in products"
+      ],
+      "section_hash": "sha256:cc68888208a868a481c586ce897786151aaba9bec30fa36e00f42bb24e257d29",
+      "section_id": "product-resolution-and-access/membership-creation-outcomes",
+      "topics": [
+        "product access",
+        "authentication",
+        "membership"
+      ],
+      "wiki_path": "wiki/product-resolution-and-access.md"
+    },
+    {
+      "aliases": [
+        "product access failures",
+        "invite-only gate order"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "gate precedence",
+        "Product access requires an invitation",
+        "ensureProductUser",
+        "pending invite",
+        "stale documentation"
+      ],
+      "query_phrases": [
+        "why does a pending invite fail product workflows",
+        "what is the order of product access checks",
+        "does invite-only require existing membership"
+      ],
+      "section_hash": "sha256:eaf56165dbdf40256ca05266bf7d909cdd3c1694042a9d44ab0782449de9003c",
+      "section_id": "product-resolution-and-access/gate-precedence-and-user-visible-failures",
+      "topics": [
+        "product access",
+        "errors",
+        "gate ordering"
+      ],
+      "wiki_path": "wiki/product-resolution-and-access.md"
+    },
+    {
+      "aliases": [
+        "product access verification gaps",
+        "resolution coverage"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "product resolver tests",
+        "provider enablement tests",
+        "access state transitions",
+        "known gaps"
+      ],
+      "query_phrases": [
+        "what product resolution behavior lacks tests",
+        "are invite-only access transitions tested"
+      ],
+      "section_hash": "sha256:a534a8b3577026329526dac27fb3d33ffd0983ec0af814894585caa0789c74b6",
+      "section_id": "product-resolution-and-access/evidence-and-confidence",
+      "topics": [
+        "testing",
+        "product resolution",
+        "known gaps"
+      ],
+      "wiki_path": "wiki/product-resolution-and-access.md"
+    },
+    {
+      "aliases": [
+        "class registration API",
+        "registration status model"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "class_registrations",
+        "pending",
+        "approved",
+        "rejected",
+        "cancelled",
+        "manage registrations"
+      ],
+      "query_phrases": [
+        "what statuses can a class registration have",
+        "how do customers register or cancel",
+        "what manager registration actions are supported"
+      ],
+      "section_hash": "sha256:12c459af1d206ed84a5f6fb43fb0bb4964990171251677ec1dbfdd89e8e04cf8",
+      "section_id": "registrations-and-eligibility/registration-record-and-entry-points",
+      "topics": [
+        "registrations",
+        "SDK API",
+        "management"
+      ],
+      "wiki_path": "wiki/registrations-and-eligibility.md"
+    },
+    {
+      "aliases": [
+        "registration decision order",
+        "customer registration gates"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "register_for_class",
+        "eligibility gates",
+        "capacity",
+        "membership",
+        "approval policy",
+        "stock"
+      ],
+      "query_phrases": [
+        "in what order does class registration validate eligibility",
+        "what blocks a customer from registering",
+        "when is stock consumed during registration"
+      ],
+      "section_hash": "sha256:2ccd8bd19c483ff7145b8072171c0cc915660617307499412f19e25666dedc29",
+      "section_id": "registrations-and-eligibility/ordered-customer-eligibility-gates",
+      "topics": [
+        "registrations",
+        "eligibility",
+        "classes"
+      ],
+      "wiki_path": "wiki/registrations-and-eligibility.md"
+    },
+    {
+      "aliases": [
+        "registration policy matrix",
+        "class approval policy"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "auto_approve",
+        "member_auto_approve",
+        "approval_required",
+        "registration outcomes",
+        "stock"
+      ],
+      "query_phrases": [
+        "how does each class registration policy behave",
+        "does member_auto_approve approve non-members",
+        "when do registrations become pending"
+      ],
+      "section_hash": "sha256:0b45aa12e423264a63e2d54bc09fb52599b3219bd297f324c7ab75763cf7c8c3",
+      "section_id": "registrations-and-eligibility/class-policy-values-and-outcomes",
+      "topics": [
+        "registrations",
+        "approval",
+        "membership"
+      ],
+      "wiki_path": "wiki/registrations-and-eligibility.md"
+    },
+    {
+      "aliases": [
+        "registration stock effects",
+        "grant consumption"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "active grant",
+        "stock depletion",
+        "membership_ledger",
+        "atomic registration",
+        "limited_stock"
+      ],
+      "query_phrases": [
+        "which membership grants consume registration stock",
+        "what happens when membership stock is exhausted",
+        "does stock failure roll back registration"
+      ],
+      "section_hash": "sha256:0089394b93a27fc3eb14e53291ba3c65d1e34c44acac60632293802581e57acb",
+      "section_id": "registrations-and-eligibility/membership-and-stock-effects",
+      "topics": [
+        "registrations",
+        "memberships",
+        "transactions"
+      ],
+      "wiki_path": "wiki/registrations-and-eligibility.md"
+    },
+    {
+      "aliases": [
+        "registration manager transitions",
+        "registration recovery"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "approve",
+        "reject",
+        "cancel",
+        "approve_rejected",
+        "allow_reregister",
+        "manager registration"
+      ],
+      "query_phrases": [
+        "how can a manager approve or reject registrations",
+        "what is approve_rejected",
+        "how can a rejected user register again"
+      ],
+      "section_hash": "sha256:52cf7e698db4d4645b07932d20e621e2efeadcb82c3eff085694b5d4662329f3",
+      "section_id": "registrations-and-eligibility/manager-transitions-and-recovery",
+      "topics": [
+        "registrations",
+        "management",
+        "lifecycle"
+      ],
+      "wiki_path": "wiki/registrations-and-eligibility.md"
+    },
+    {
+      "aliases": [
+        "customer cancellation rules",
+        "class-wide cancellation"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "registration cancellation cutoff",
+        "pending cancellation",
+        "approved cancellation",
+        "stock restoration",
+        "class cancellation"
+      ],
+      "query_phrases": [
+        "can a customer cancel after the cancellation cutoff",
+        "does cancellation restore membership stock",
+        "what happens to registrations when a class is cancelled"
+      ],
+      "section_hash": "sha256:f21657d85eec38d3b81b3ab5c6c4118e481d1825e6094f26187425bd4f5f531b",
+      "section_id": "registrations-and-eligibility/customer-cancellation-and-class-cancellation",
+      "topics": [
+        "registrations",
+        "cancellation",
+        "memberships"
+      ],
+      "wiki_path": "wiki/registrations-and-eligibility.md"
+    },
+    {
+      "aliases": [
+        "registration verification gaps",
+        "registration test gaps"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "registration tests",
+        "capacity races",
+        "stock rollback",
+        "stale pending",
+        "cancelled display"
+      ],
+      "query_phrases": [
+        "what registration behavior lacks automated coverage",
+        "are capacity races tested",
+        "does manager API expose cancelled registrations accurately"
+      ],
+      "section_hash": "sha256:baf0ca480a485f3c8d9bbb0361d5a4982c57105efa07d41ebfe09ed9ed50f38c",
+      "section_id": "registrations-and-eligibility/known-gaps",
+      "topics": [
+        "testing",
+        "registrations",
+        "known gaps"
+      ],
+      "wiki_path": "wiki/registrations-and-eligibility.md"
+    },
+    {
+      "aliases": [
+        "template schedule permissions",
+        "schedule management access"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "templates",
+        "schedules",
+        "templates.manage",
+        "schedules.manage",
+        "level 75",
+        "generation"
+      ],
+      "query_phrases": [
+        "who can manage templates and schedules",
+        "what permission generates scheduled classes",
+        "are templates registration targets"
+      ],
+      "section_hash": "sha256:ab445236a67d0da3611a007ebf8632043fd64d6bfa6a399c8c15ccf29bdc5105",
+      "section_id": "templates-and-schedules/ownership-and-access",
+      "topics": [
+        "templates",
+        "schedules",
+        "authorization"
+      ],
+      "wiki_path": "wiki/templates-and-schedules.md"
+    },
+    {
+      "aliases": [
+        "reusable class defaults",
+        "template propagation"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "class templates",
+        "default_capacity",
+        "template defaults",
+        "active template",
+        "manual creation"
+      ],
+      "query_phrases": [
+        "do template changes update existing classes",
+        "what defaults do class templates provide",
+        "can an inactive template create a class"
+      ],
+      "section_hash": "sha256:bb068ec9c225e069484210efbb6c027bdfcc63d63b64aa603171707ac47657e8",
+      "section_id": "templates-and-schedules/templates-reusable-defaults-not-live-class-state",
+      "topics": [
+        "templates",
+        "classes",
+        "defaults"
+      ],
+      "wiki_path": "wiki/templates-and-schedules.md"
+    },
+    {
+      "aliases": [
+        "schedule rules",
+        "recurrence contract"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "schedule recurrence",
+        "one_time",
+        "weekly",
+        "weekdays",
+        "timezone",
+        "duration",
+        "starts_on"
+      ],
+      "query_phrases": [
+        "how do ClassKit schedule recurrence rules work",
+        "what weekdays values are accepted",
+        "what happens when a schedule is paused"
+      ],
+      "section_hash": "sha256:0924a27956f68faf85b069af5a950d7652bf775cd93d4d2945fac76ebd07a679",
+      "section_id": "templates-and-schedules/schedule-rule-and-recurrence-contract",
+      "topics": [
+        "schedules",
+        "recurrence",
+        "time zones"
+      ],
+      "wiki_path": "wiki/templates-and-schedules.md"
+    },
+    {
+      "aliases": [
+        "schedule generation workflow",
+        "schedule skip behavior"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "schedule preview",
+        "schedule skips",
+        "generation_count",
+        "generation horizon",
+        "idempotent generation"
+      ],
+      "query_phrases": [
+        "how do I preview schedule occurrences",
+        "how do schedule skips work",
+        "how are generated classes created"
+      ],
+      "section_hash": "sha256:08bee5b2feb793bafcfb97641c645349e8f59e51d561825ebf877e273f7de3da",
+      "section_id": "templates-and-schedules/preview-skips-and-generation",
+      "topics": [
+        "schedules",
+        "generation",
+        "operations"
+      ],
+      "wiki_path": "wiki/templates-and-schedules.md"
+    },
+    {
+      "aliases": [
+        "generated class ownership",
+        "schedule update effects"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "generated classes",
+        "schedule provenance",
+        "template update",
+        "pause schedule",
+        "existing occurrences"
+      ],
+      "query_phrases": [
+        "what happens to existing generated classes when a schedule changes",
+        "can generated classes be edited normally",
+        "does pausing a schedule remove existing classes"
+      ],
+      "section_hash": "sha256:d524d6feb693641f5e8cefa1456f4dc1ae6fa745a6a086738f09e829903453c0",
+      "section_id": "templates-and-schedules/generated-class-boundary-and-update-effects",
+      "topics": [
+        "schedules",
+        "classes",
+        "provenance"
+      ],
+      "wiki_path": "wiki/templates-and-schedules.md"
+    },
+    {
+      "aliases": [
+        "schedule verification gaps",
+        "schedule lifecycle gaps"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "schedule test gaps",
+        "DST parity",
+        "generation idempotence",
+        "historical design"
+      ],
+      "query_phrases": [
+        "what schedule behavior lacks regression tests",
+        "is schedule preview timezone behavior tested",
+        "are safe refresh semantics supported"
+      ],
+      "section_hash": "sha256:316bd1770284058ab099b3d056f83e6ae7dfb4f8417d421297279505782bb6c0",
+      "section_id": "templates-and-schedules/known-gaps",
+      "topics": [
+        "testing",
+        "schedules",
+        "known gaps"
+      ],
+      "wiki_path": "wiki/templates-and-schedules.md"
+    },
+    {
+      "aliases": [
+        "schedule source evidence",
+        "schedule implementation files"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "schedule migrations",
+        "schedule generation engine",
+        "template class core",
+        "repository evidence"
+      ],
+      "query_phrases": [
+        "which migrations implement schedule generation",
+        "where is the schedule schema defined"
+      ],
+      "section_hash": "sha256:4f9a5c68844d29c5c5548ece473a82e9593f6b3ae61fbabcf8939ae9b3111999",
+      "section_id": "templates-and-schedules/repository-evidence",
+      "topics": [
+        "source evidence",
+        "schedules",
+        "templates"
+      ],
+      "wiki_path": "wiki/templates-and-schedules.md"
+    }
+  ],
+  "project_key": "class-kit",
+  "schema_version": 1
+}

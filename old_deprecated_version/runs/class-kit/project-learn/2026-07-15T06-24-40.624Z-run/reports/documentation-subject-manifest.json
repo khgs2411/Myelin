@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subjects": [
+    {
+      "subject_id": "architecture-and-repository-boundaries",
+      "wiki_path": "architecture-and-repository-boundaries.md",
+      "title": "Architecture and Repository Boundaries",
+      "purpose": "Explain the ClassKit product boundary and ownership split between the documentation shell, backend API, SDK facade, and consuming applications.",
+      "suggested_repo_paths": [
+        "README.md",
+        "docs/getting-started.md",
+        "docs/repositories/structure.md",
+        "docs/product-shape.md",
+        "docs/shared/context.md"
+      ]
+    },
+    {
+      "subject_id": "sdk-integration",
+      "wiki_path": "sdk-integration.md",
+      "title": "SDK Integration",
+      "purpose": "Document the supported browser-facing @class-kit/react installation, configuration, React provider, product context, and public facade usage.",
+      "suggested_repo_paths": [
+        "docs/sdk/client-sdk.md",
+        "docs/getting-started.md",
+        "docs/changelog.md"
+      ]
+    },
+    {
+      "subject_id": "backend-api-and-data-contracts",
+      "wiki_path": "backend-api-and-data-contracts.md",
+      "title": "Backend API and Data Contracts",
+      "purpose": "Capture Edge Function ownership, request and response contracts, function/action map, schema responsibilities, and backend change expectations.",
+      "suggested_repo_paths": [
+        "docs/api/backend-api.md",
+        "docs/api/class-api-map.md",
+        "docs/product-shape.md"
+      ]
+    },
+    {
+      "subject_id": "identity-product-access-and-authorization",
+      "wiki_path": "identity-product-access-and-authorization.md",
+      "title": "Identity, Product Access, and Authorization",
+      "purpose": "Describe the separation of Supabase identity from product access and the role, permission, origin, and auth-policy enforcement model.",
+      "suggested_repo_paths": [
+        "docs/shared/authentication.md",
+        "docs/product-shape.md",
+        "docs/adr/0001-scoped-product-permission-layer.md",
+        "docs/api/backend-api.md"
+      ]
+    },
+    {
+      "subject_id": "class-operations-and-lifecycle",
+      "wiki_path": "class-operations-and-lifecycle.md",
+      "title": "Class Operations and Lifecycle",
+      "purpose": "Document customer class flows and management lifecycle semantics for classes, registrations, attendance, templates, schedules, and generated classes.",
+      "suggested_repo_paths": [
+        "docs/api/class-api-map.md",
+        "docs/sdk/client-sdk.md",
+        "docs/api/backend-api.md",
+        "docs/design/2026-06-25-schedule-lifecycle-management/spec.md"
+      ]
+    },
+    {
+      "subject_id": "product-operations",
+      "wiki_path": "product-operations.md",
+      "title": "Product Operations",
+      "purpose": "Cover operational product capabilities outside the core class lifecycle: memberships, documents, signup links, and change requests.",
+      "suggested_repo_paths": [
+        "docs/sdk/client-sdk.md",
+        "docs/api/backend-api.md",
+        "docs/api/class-api-map.md",
+        "docs/changelog.md"
+      ]
+    },
+    {
+      "subject_id": "platform-administration-and-pm-integration",
+      "wiki_path": "platform-administration-and-pm-integration.md",
+      "title": "Platform Administration and PM Integration",
+      "purpose": "Separate platform-admin product control operations from product-manager workflows and record the admin-only external PM integration boundary.",
+      "suggested_repo_paths": [
+        "docs/sdk/client-sdk.md",
+        "docs/api/backend-api.md",
+        "docs/changelog.md",
+        "docs/design/2026-07-08-pm-software-integration/pseudocode/README.md",
+        "docs/design/2026-07-08-pm-software-integration/pseudocode/AgreedImplementationShape.md"
+      ]
+    },
+    {
+      "subject_id": "deployment-and-releases",
+      "wiki_path": "deployment-and-releases.md",
+      "title": "Deployment and Releases",
+      "purpose": "Record shared Supabase deployment ownership, private SDK tag consumption, static-host deploy-key requirements, and local/remote environment boundaries.",
+      "suggested_repo_paths": [
+        "docs/shared/deployment.md",
+        "docs/repositories/structure.md",
+        "docs/getting-started.md",
+        "docs/changelog.md"
+      ]
+    },
+    {
+      "subject_id": "product-integration-roadmap",
+      "wiki_path": "product-integration-roadmap.md",
+      "title": "Product Integration Roadmap",
+      "purpose": "Preserve the reusable ordered roadmap for integrating a product website without bypassing the SDK or backend authority boundaries.",
+      "suggested_repo_paths": [
+        "docs/shared/product_implementation_roadmap.md",
+        "docs/getting-started.md",
+        "docs/sdk/client-sdk.md"
+      ]
+    },
+    {
+      "subject_id": "design-history-and-unresolved-proposals",
+      "wiki_path": "design-history-and-unresolved-proposals.md",
+      "title": "Design History and Unresolved Proposals",
+      "purpose": "Provide a controlled entrypoint to archived designs, pseudocode, and plans, distinguishing accepted durable decisions from drafts and unfinished proposals.",
+      "suggested_repo_paths": [
+        "docs/design/2026-06-22-class-kit-api-pattern/spec.md",
+        "docs/design/2026-06-23-product-permission-bundle-views/pseudocode/README.md",
+        "docs/design/2026-06-25-schedule-lifecycle-management/spec.md",
+        "docs/design/2026-07-08-pm-software-integration/pseudocode/README.md"
+      ]
+    }
+  ]
+}

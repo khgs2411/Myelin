@@ -1,0 +1,11 @@
+{
+  "accepted_entries": 73,
+  "category": null,
+  "degraded": true,
+  "degraded_reason": "some generated hints were rejected",
+  "project_key": "class-kit",
+  "rejected_entries": 1,
+  "required": false,
+  "run_ref": "projects/class-kit/runs/project-memory-hints/2026-07-15T13-20-16.010Z-run",
+  "status": "completed"
+}

@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "stage_id": "create-planner",
+  "status": "completed",
+  "provider_mode": "live",
+  "provider": "codex",
+  "model": "gpt-5.6-terra",
+  "sandbox": "workspace-write",
+  "cwd": "/Users/liadgoren/Repositories/llm-wiki/runs/llm-wiki/project-learn/2026-07-16T08-44-28.059Z-run/agents/create",
+  "target_repo_snapshot": "target-repo (removed after invocation)",
+  "allowed_output_roots": [
+    {
+      "name": "draft_wiki",
+      "relativePath": "draft-wiki"
+    },
+    {
+      "name": "planner_reports",
+      "relativePath": "reports"
+    }
+  ],
+  "discovered_outputs": [
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/behavior-states-and-gates.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/runs/llm-wiki/project-learn/2026-07-16T08-44-28.059Z-run/agents/create/draft-wiki/behavior-states-and-gates.md",
+      "size_bytes": 5769
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/cli-and-json-contracts.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/runs/llm-wiki/project-learn/2026-07-16T08-44-28.059Z-run/agents/create/draft-wiki/cli-and-json-contracts.md",
+      "size_bytes": 328
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/destructive-operations.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/runs/llm-wiki/project-learn/2026-07-16T08-44-28.059Z-run/agents/create/draft-wiki/destructive-operations.md",
+      "size_bytes": 1835
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/index.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/runs/llm-wiki/project-learn/2026-07-16T08-44-28.059Z-run/agents/create/draft-wiki/index.md",
+      "size_bytes": 3031
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/ingest-and-session-memory.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/runs/llm-wiki/project-learn/2026-07-16T08-44-28.059Z-run/agents/create/draft-wiki/ingest-and-session-memory.md",
+      "size_bytes": 355
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/installation-and-capture.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/runs/llm-wiki/project-learn/2026-07-16T08-44-28.059Z-run/agents/create/draft-wiki/installation-and-capture.md",
+      "size_bytes": 312
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/product-model.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/runs/llm-wiki/project-learn/2026-07-16T08-44-28.059Z-run/agents/create/draft-wiki/product-model.md",
+      "size_bytes": 319
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/project-memory-lifecycle.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/runs/llm-wiki/project-learn/2026-07-16T08-44-28.059Z-run/agents/create/draft-wiki/project-memory-lifecycle.md",
+      "size_bytes": 330
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/retrieval-and-embedding-lifecycle.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/runs/llm-wiki/project-learn/2026-07-16T08-44-28.059Z-run/agents/create/draft-wiki/retrieval-and-embedding-lifecycle.md",
+      "size_bytes": 336
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/schema-and-runtime-inbox.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/runs/llm-wiki/project-learn/2026-07-16T08-44-28.059Z-run/agents/create/draft-wiki/schema-and-runtime-inbox.md",
+      "size_bytes": 370
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/status-and-maintenance.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/runs/llm-wiki/project-learn/2026-07-16T08-44-28.059Z-run/agents/create/draft-wiki/status-and-maintenance.md",
+      "size_bytes": 334
+    },
+    {
+      "root_name": "planner_reports",
+      "relative_path": "reports/documentation-planner-report.json",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/runs/llm-wiki/project-learn/2026-07-16T08-44-28.059Z-run/agents/create/reports/documentation-planner-report.json",
+      "size_bytes": 8725
+    },
+    {
+      "root_name": "planner_reports",
+      "relative_path": "reports/documentation-subject-manifest.json",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/runs/llm-wiki/project-learn/2026-07-16T08-44-28.059Z-run/agents/create/reports/documentation-subject-manifest.json",
+      "size_bytes": 4798
+    }
+  ],
+  "result_ref": "file-authoring-agent-result.json"
+}

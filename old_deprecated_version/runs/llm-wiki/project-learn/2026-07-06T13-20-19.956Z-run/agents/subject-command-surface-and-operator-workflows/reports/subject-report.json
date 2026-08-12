@@ -1,0 +1,44 @@
+{
+  "schema_version": "1",
+  "project_key": "llm-wiki",
+  "subject_id": "command-surface-and-operator-workflows",
+  "wiki_path": "command-surface-and-operator-workflows.md",
+  "status": "completed",
+  "evidence_paths": [
+    "README.md",
+    "docs/CLI.md",
+    "Makefile",
+    "src/cli.ts",
+    "src/commands/registry.ts",
+    "src/commands/status.ts",
+    "src/commands/bootstrap.ts",
+    "src/commands/schema.ts",
+    "src/commands/project.ts",
+    "src/commands/ingest.ts",
+    "src/commands/memory.ts",
+    "src/commands/session.ts",
+    "src/commands/install.ts",
+    "src/commands/capture.ts",
+    "tests/commands/status.test.ts",
+    "tests/commands/bootstrap.test.ts",
+    "tests/commands/schema.test.ts",
+    "tests/commands/project.test.ts",
+    "tests/commands/ingest.test.ts",
+    "tests/commands/memory.test.ts",
+    "tests/commands/session.test.ts",
+    "tests/commands/install.test.ts",
+    "tests/commands/capture.test.ts",
+    "docs/adr/0017-use-learn-ingest-query-session-cli-verbs.md",
+    "docs/adr/0048-core-owns-query-mcp-consumes-via-contract.md"
+  ],
+  "touched_paths": [
+    "draft-wiki/command-surface-and-operator-workflows.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "README.md references make onboard / myelin project onboard, but the inspected Makefile and src/commands/project.ts do not expose that command.",
+    "docs/adr/0017-use-learn-ingest-query-session-cli-verbs.md uses older project ingest vocabulary; current docs, code, and tests use top-level ingest and explicitly reject project ingest.",
+    "Some implemented operator/admin commands, including project list, project packet, project reset, and memory index project, are not all represented in the quick-start Makefile or docs/CLI.md.",
+    "src/commands/project.ts accepts project learn --recreate, but docs/CLI.md does not list that option."
+  ]
+}

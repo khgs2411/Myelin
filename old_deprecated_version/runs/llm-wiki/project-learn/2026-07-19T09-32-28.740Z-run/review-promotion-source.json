@@ -1,0 +1,7 @@
+{
+  "project_key": "llm-wiki",
+  "promoted_at": "2026-07-19T09:32:28.740Z",
+  "schema_version": 1,
+  "source_checkpoint_ref": "runs/llm-wiki/project-learn/2026-07-19T09-26-38.405Z-run/review-checkpoint.json",
+  "source_run_dir": "runs/llm-wiki/project-learn/2026-07-19T09-26-38.405Z-run"
+}

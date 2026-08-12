@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "architecture-and-repository-boundaries",
+  "wiki_path": "architecture-and-repository-boundaries.md",
+  "status": "completed",
+  "evidence_paths": [
+    "README.md",
+    "docs/getting-started.md",
+    "docs/repositories/structure.md",
+    "docs/product-shape.md",
+    "docs/shared/context.md"
+  ],
+  "touched_paths": [
+    "draft-wiki/architecture-and-repository-boundaries.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "The snapshot documents ownership and supported integration boundaries, but does not include the separate class-kit-api or class-kit-sdk source repositories for implementation-level verification."
+  ]
+}

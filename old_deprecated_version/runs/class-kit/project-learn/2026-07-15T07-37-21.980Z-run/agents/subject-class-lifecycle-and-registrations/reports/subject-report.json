@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "class-lifecycle-and-registrations",
+  "wiki_path": "class-lifecycle-and-registrations.md",
+  "status": "complete_with_known_gaps",
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/docs/api/class-api-map.md",
+    "target-repo/docs/api/backend-api.md",
+    "target-repo/docs/sdk/client-sdk.md",
+    "target-repo/class-kit-api/supabase/migrations/20260607134535_template_class_core.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260607160000_registration_engine.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260607170000_attendance_engine.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260609110000_registration_cancellation_cutoff.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260622150445_class_api_pattern_foundation.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260701084833_fix_member_auto_approve_registration.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260702055851_allow_pending_registration_cancellation_after_cutoff.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260702121000_public_class_discovery_non_cancelled.sql",
+    "target-repo/class-kit-api/supabase/functions/class-kit-classes/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-register-class/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-manage-registrations/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-attendance/index.ts",
+    "target-repo/class-kit-api/supabase/tests/member_auto_approve_registration.sql",
+    "target-repo/class-kit-api/supabase/tests/pending_registration_cancellation.sql"
+  ],
+  "touched_paths": [
+    "draft-wiki/class-lifecycle-and-registrations.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "No targeted regression tests for the complete registration-gate precedence, management transition/recovery behavior, class cancellation restoration, or attendance lifecycle invariants.",
+    "No evidence of a full local migration/test run or deployed database function definitions in the supplied snapshot.",
+    "Class create/update accepts status directly while documentation describes publish/draft as explicit lifecycle commands; this contract conflict needs review."
+  ]
+}

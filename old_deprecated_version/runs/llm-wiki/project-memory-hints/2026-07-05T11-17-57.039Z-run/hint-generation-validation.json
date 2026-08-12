@@ -1,0 +1,568 @@
+{
+  "status_entries": [
+    {
+      "reason": null,
+      "section_id": "command-workflows/overview",
+      "status": "valid",
+      "wiki_path": "wiki/command-workflows.md"
+    },
+    {
+      "reason": null,
+      "section_id": "command-workflows/operational-details",
+      "status": "valid",
+      "wiki_path": "wiki/command-workflows.md"
+    },
+    {
+      "reason": null,
+      "section_id": "command-workflows/evidence-and-boundaries",
+      "status": "valid",
+      "wiki_path": "wiki/command-workflows.md"
+    },
+    {
+      "reason": null,
+      "section_id": "curation-and-apply-lifecycle/overview",
+      "status": "valid",
+      "wiki_path": "wiki/curation-apply-lifecycle.md"
+    },
+    {
+      "reason": null,
+      "section_id": "curation-and-apply-lifecycle/operational-details",
+      "status": "valid",
+      "wiki_path": "wiki/curation-apply-lifecycle.md"
+    },
+    {
+      "reason": null,
+      "section_id": "curation-and-apply-lifecycle/evidence-and-boundaries",
+      "status": "valid",
+      "wiki_path": "wiki/curation-apply-lifecycle.md"
+    },
+    {
+      "reason": null,
+      "section_id": "current-work-roadmap-and-decisions/overview",
+      "status": "valid",
+      "wiki_path": "wiki/current-work-roadmap-decisions.md"
+    },
+    {
+      "reason": null,
+      "section_id": "current-work-roadmap-and-decisions/operational-details",
+      "status": "valid",
+      "wiki_path": "wiki/current-work-roadmap-decisions.md"
+    },
+    {
+      "reason": null,
+      "section_id": "current-work-roadmap-and-decisions/evidence-and-boundaries",
+      "status": "valid",
+      "wiki_path": "wiki/current-work-roadmap-decisions.md"
+    },
+    {
+      "reason": null,
+      "section_id": "evidence-provenance-and-candidates/overview",
+      "status": "valid",
+      "wiki_path": "wiki/evidence-provenance-candidates.md"
+    },
+    {
+      "reason": null,
+      "section_id": "evidence-provenance-and-candidates/operational-details",
+      "status": "valid",
+      "wiki_path": "wiki/evidence-provenance-candidates.md"
+    },
+    {
+      "reason": null,
+      "section_id": "evidence-provenance-and-candidates/evidence-and-boundaries",
+      "status": "valid",
+      "wiki_path": "wiki/evidence-provenance-candidates.md"
+    },
+    {
+      "reason": null,
+      "section_id": "project-memory-index/overview",
+      "status": "valid",
+      "wiki_path": "wiki/index.md"
+    },
+    {
+      "reason": null,
+      "section_id": "project-memory-index/operational-details",
+      "status": "valid",
+      "wiki_path": "wiki/index.md"
+    },
+    {
+      "reason": null,
+      "section_id": "project-memory-index/evidence-and-boundaries",
+      "status": "valid",
+      "wiki_path": "wiki/index.md"
+    },
+    {
+      "reason": null,
+      "section_id": "storage-and-retrieval/overview",
+      "status": "valid",
+      "wiki_path": "wiki/storage-retrieval.md"
+    },
+    {
+      "reason": null,
+      "section_id": "storage-and-retrieval/operational-details",
+      "status": "valid",
+      "wiki_path": "wiki/storage-retrieval.md"
+    },
+    {
+      "reason": null,
+      "section_id": "storage-and-retrieval/evidence-and-boundaries",
+      "status": "valid",
+      "wiki_path": "wiki/storage-retrieval.md"
+    }
+  ],
+  "valid_entries": [
+    {
+      "aliases": [
+        "Command Workflows Overview",
+        "Command Workflows"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "command",
+        "workflows",
+        "overview"
+      ],
+      "query_phrases": [
+        "How does Command Workflows Overview work?",
+        "Where is Command Workflows documented?"
+      ],
+      "section_hash": "sha256:09e8818316ca7d9013f5f2c6a3b6a41bc300b2fe957b85f0f27cf19560e7d400",
+      "section_id": "command-workflows/overview",
+      "topics": [
+        "command workflows",
+        "overview"
+      ],
+      "wiki_path": "wiki/command-workflows.md"
+    },
+    {
+      "aliases": [
+        "Command Workflows Operational Details",
+        "Command Workflows"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "command",
+        "workflows",
+        "operational",
+        "details"
+      ],
+      "query_phrases": [
+        "How does Command Workflows Operational Details work?",
+        "Where is Command Workflows documented?"
+      ],
+      "section_hash": "sha256:03b639981262dc7a2542f468f9bee8782e7872f822cc19362a5296191524fc5a",
+      "section_id": "command-workflows/operational-details",
+      "topics": [
+        "command workflows",
+        "operational details"
+      ],
+      "wiki_path": "wiki/command-workflows.md"
+    },
+    {
+      "aliases": [
+        "Command Workflows Evidence And Boundaries",
+        "Command Workflows"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "command",
+        "workflows",
+        "evidence",
+        "and",
+        "boundaries"
+      ],
+      "query_phrases": [
+        "How does Command Workflows Evidence And Boundaries work?",
+        "Where is Command Workflows documented?"
+      ],
+      "section_hash": "sha256:babf81a6f93fc762eaa58d8ec1cde1ac83bfed0fd019d54b03a773e9e13bd9b4",
+      "section_id": "command-workflows/evidence-and-boundaries",
+      "topics": [
+        "command workflows",
+        "evidence and boundaries"
+      ],
+      "wiki_path": "wiki/command-workflows.md"
+    },
+    {
+      "aliases": [
+        "Curation And Apply Lifecycle Overview",
+        "Curation And Apply Lifecycle"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "curation",
+        "and",
+        "apply",
+        "lifecycle",
+        "overview"
+      ],
+      "query_phrases": [
+        "How does Curation And Apply Lifecycle Overview work?",
+        "Where is Curation And Apply Lifecycle documented?"
+      ],
+      "section_hash": "sha256:87fc4edb52c941723768d405d91b30c82119822209da08df7224dc027f079cc8",
+      "section_id": "curation-and-apply-lifecycle/overview",
+      "topics": [
+        "curation and apply lifecycle",
+        "overview"
+      ],
+      "wiki_path": "wiki/curation-apply-lifecycle.md"
+    },
+    {
+      "aliases": [
+        "Curation And Apply Lifecycle Operational Details",
+        "Curation And Apply Lifecycle"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "curation",
+        "and",
+        "apply",
+        "lifecycle",
+        "operational",
+        "details"
+      ],
+      "query_phrases": [
+        "How does Curation And Apply Lifecycle Operational Details work?",
+        "Where is Curation And Apply Lifecycle documented?"
+      ],
+      "section_hash": "sha256:59f7dc4833b06de873660e2a96e80af9541a2160ecdd5cb6b1d19b00c1c14c2d",
+      "section_id": "curation-and-apply-lifecycle/operational-details",
+      "topics": [
+        "curation and apply lifecycle",
+        "operational details"
+      ],
+      "wiki_path": "wiki/curation-apply-lifecycle.md"
+    },
+    {
+      "aliases": [
+        "Curation And Apply Lifecycle Evidence And Boundaries",
+        "Curation And Apply Lifecycle"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "curation",
+        "and",
+        "apply",
+        "lifecycle",
+        "evidence",
+        "boundaries"
+      ],
+      "query_phrases": [
+        "How does Curation And Apply Lifecycle Evidence And Boundaries work?",
+        "Where is Curation And Apply Lifecycle documented?"
+      ],
+      "section_hash": "sha256:99efded5b53d0bc85d70ca98e0a189b70d3cfc797b2c39351095104e56e5d803",
+      "section_id": "curation-and-apply-lifecycle/evidence-and-boundaries",
+      "topics": [
+        "curation and apply lifecycle",
+        "evidence and boundaries"
+      ],
+      "wiki_path": "wiki/curation-apply-lifecycle.md"
+    },
+    {
+      "aliases": [
+        "Current Work Roadmap And Decisions Overview",
+        "Current Work Roadmap And Decisions"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "current",
+        "work",
+        "roadmap",
+        "and",
+        "decisions",
+        "overview"
+      ],
+      "query_phrases": [
+        "How does Current Work Roadmap And Decisions Overview work?",
+        "Where is Current Work Roadmap And Decisions documented?"
+      ],
+      "section_hash": "sha256:c608bc3ce28ef9bdc2c81dd9b133a32c791cd7472740d7887146a7b21c070435",
+      "section_id": "current-work-roadmap-and-decisions/overview",
+      "topics": [
+        "current work roadmap and decisions",
+        "overview"
+      ],
+      "wiki_path": "wiki/current-work-roadmap-decisions.md"
+    },
+    {
+      "aliases": [
+        "Current Work Roadmap And Decisions Operational Details",
+        "Current Work Roadmap And Decisions"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "current",
+        "work",
+        "roadmap",
+        "and",
+        "decisions",
+        "operational",
+        "details"
+      ],
+      "query_phrases": [
+        "How does Current Work Roadmap And Decisions Operational Details work?",
+        "Where is Current Work Roadmap And Decisions documented?"
+      ],
+      "section_hash": "sha256:912925b14e3a20cd9fdd654b75e5b68529ba43bf664107833ac94486861d8da4",
+      "section_id": "current-work-roadmap-and-decisions/operational-details",
+      "topics": [
+        "current work roadmap and decisions",
+        "operational details"
+      ],
+      "wiki_path": "wiki/current-work-roadmap-decisions.md"
+    },
+    {
+      "aliases": [
+        "Current Work Roadmap And Decisions Evidence And Boundaries",
+        "Current Work Roadmap And Decisions"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "current",
+        "work",
+        "roadmap",
+        "and",
+        "decisions",
+        "evidence",
+        "boundaries"
+      ],
+      "query_phrases": [
+        "How does Current Work Roadmap And Decisions Evidence And Boundaries work?",
+        "Where is Current Work Roadmap And Decisions documented?"
+      ],
+      "section_hash": "sha256:fcea55ed126e0afcd2851fa352c3e5e0c5e9aeb3d38da32f48cd174136bb16f5",
+      "section_id": "current-work-roadmap-and-decisions/evidence-and-boundaries",
+      "topics": [
+        "current work roadmap and decisions",
+        "evidence and boundaries"
+      ],
+      "wiki_path": "wiki/current-work-roadmap-decisions.md"
+    },
+    {
+      "aliases": [
+        "Evidence Provenance And Candidates Overview",
+        "Evidence Provenance And Candidates"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "evidence",
+        "provenance",
+        "and",
+        "candidates",
+        "overview"
+      ],
+      "query_phrases": [
+        "How does Evidence Provenance And Candidates Overview work?",
+        "Where is Evidence Provenance And Candidates documented?"
+      ],
+      "section_hash": "sha256:105b94595be2ce4caa1f7733a63ff7486a9e62ef19523d2909c40966622736f8",
+      "section_id": "evidence-provenance-and-candidates/overview",
+      "topics": [
+        "evidence provenance and candidates",
+        "overview"
+      ],
+      "wiki_path": "wiki/evidence-provenance-candidates.md"
+    },
+    {
+      "aliases": [
+        "Evidence Provenance And Candidates Operational Details",
+        "Evidence Provenance And Candidates"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "evidence",
+        "provenance",
+        "and",
+        "candidates",
+        "operational",
+        "details"
+      ],
+      "query_phrases": [
+        "How does Evidence Provenance And Candidates Operational Details work?",
+        "Where is Evidence Provenance And Candidates documented?"
+      ],
+      "section_hash": "sha256:5c1191f8c1ed1f8942288ca4ddb19e76d772401fb5c4041c535aa028ba29d143",
+      "section_id": "evidence-provenance-and-candidates/operational-details",
+      "topics": [
+        "evidence provenance and candidates",
+        "operational details"
+      ],
+      "wiki_path": "wiki/evidence-provenance-candidates.md"
+    },
+    {
+      "aliases": [
+        "Evidence Provenance And Candidates Evidence And Boundaries",
+        "Evidence Provenance And Candidates"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "evidence",
+        "provenance",
+        "and",
+        "candidates",
+        "boundaries"
+      ],
+      "query_phrases": [
+        "How does Evidence Provenance And Candidates Evidence And Boundaries work?",
+        "Where is Evidence Provenance And Candidates documented?"
+      ],
+      "section_hash": "sha256:44df1406d46c2675f5dda03d771e06732f838dae21ff248410b77063097e5475",
+      "section_id": "evidence-provenance-and-candidates/evidence-and-boundaries",
+      "topics": [
+        "evidence provenance and candidates",
+        "evidence and boundaries"
+      ],
+      "wiki_path": "wiki/evidence-provenance-candidates.md"
+    },
+    {
+      "aliases": [
+        "Project Memory Index Overview",
+        "Project Memory Index"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "project",
+        "memory",
+        "index",
+        "overview"
+      ],
+      "query_phrases": [
+        "How does Project Memory Index Overview work?",
+        "Where is Project Memory Index documented?"
+      ],
+      "section_hash": "sha256:b683605fb066d2a272410305ce68719d29c5c8eb15046b08461914fd28a6fbe8",
+      "section_id": "project-memory-index/overview",
+      "topics": [
+        "project memory index",
+        "overview"
+      ],
+      "wiki_path": "wiki/index.md"
+    },
+    {
+      "aliases": [
+        "Project Memory Index Operational Details",
+        "Project Memory Index"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "project",
+        "memory",
+        "index",
+        "operational",
+        "details"
+      ],
+      "query_phrases": [
+        "How does Project Memory Index Operational Details work?",
+        "Where is Project Memory Index documented?"
+      ],
+      "section_hash": "sha256:1f3919a3a3ca98d4f8b034c7ed459751fa97b5ff0aca134b1803b7be539eb62f",
+      "section_id": "project-memory-index/operational-details",
+      "topics": [
+        "project memory index",
+        "operational details"
+      ],
+      "wiki_path": "wiki/index.md"
+    },
+    {
+      "aliases": [
+        "Project Memory Index Evidence And Boundaries",
+        "Project Memory Index"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "project",
+        "memory",
+        "index",
+        "evidence",
+        "and",
+        "boundaries"
+      ],
+      "query_phrases": [
+        "How does Project Memory Index Evidence And Boundaries work?",
+        "Where is Project Memory Index documented?"
+      ],
+      "section_hash": "sha256:75e52dde03b253df5e76713380747e9b8053e7b4e2a8807a7bb423a8bcc762ce",
+      "section_id": "project-memory-index/evidence-and-boundaries",
+      "topics": [
+        "project memory index",
+        "evidence and boundaries"
+      ],
+      "wiki_path": "wiki/index.md"
+    },
+    {
+      "aliases": [
+        "Storage And Retrieval Overview",
+        "Storage And Retrieval"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "storage",
+        "and",
+        "retrieval",
+        "overview"
+      ],
+      "query_phrases": [
+        "How does Storage And Retrieval Overview work?",
+        "Where is Storage And Retrieval documented?"
+      ],
+      "section_hash": "sha256:bb6d0c17f95459879958536e90b944b74a67ac7086575c724f0728e744e34f5a",
+      "section_id": "storage-and-retrieval/overview",
+      "topics": [
+        "storage and retrieval",
+        "overview"
+      ],
+      "wiki_path": "wiki/storage-retrieval.md"
+    },
+    {
+      "aliases": [
+        "Storage And Retrieval Operational Details",
+        "Storage And Retrieval"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "storage",
+        "and",
+        "retrieval",
+        "operational",
+        "details"
+      ],
+      "query_phrases": [
+        "How does Storage And Retrieval Operational Details work?",
+        "Where is Storage And Retrieval documented?"
+      ],
+      "section_hash": "sha256:3e854634d7a305df69e7c313ef27720e37b3c5290efe932ccfb257f03957b92c",
+      "section_id": "storage-and-retrieval/operational-details",
+      "topics": [
+        "storage and retrieval",
+        "operational details"
+      ],
+      "wiki_path": "wiki/storage-retrieval.md"
+    },
+    {
+      "aliases": [
+        "Storage And Retrieval Evidence And Boundaries",
+        "Storage And Retrieval"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "storage",
+        "and",
+        "retrieval",
+        "evidence",
+        "boundaries"
+      ],
+      "query_phrases": [
+        "How does Storage And Retrieval Evidence And Boundaries work?",
+        "Where is Storage And Retrieval documented?"
+      ],
+      "section_hash": "sha256:3a983a410b8129c443174f285e3722ac4d78e950b9bc1c2420cc1b93ada9b98e",
+      "section_id": "storage-and-retrieval/evidence-and-boundaries",
+      "topics": [
+        "storage and retrieval",
+        "evidence and boundaries"
+      ],
+      "wiki_path": "wiki/storage-retrieval.md"
+    }
+  ]
+}

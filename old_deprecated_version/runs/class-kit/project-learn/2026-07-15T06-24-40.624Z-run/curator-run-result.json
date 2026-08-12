@@ -1,0 +1,53 @@
+{
+  "artifacts": {
+    "curator_output": "documentation-maintenance-result.json",
+    "curator_run_result": "curator-run-result.json",
+    "curator_validation": "curator-validation.json",
+    "file_authoring_runs": [
+      "agents/create/file-authoring-agent-result.json",
+      "agents/subject-architecture-and-repository-boundaries/file-authoring-agent-result.json",
+      "agents/subject-backend-api-and-data-contracts/file-authoring-agent-result.json",
+      "agents/subject-class-operations-and-lifecycle/file-authoring-agent-result.json",
+      "agents/subject-deployment-and-releases/file-authoring-agent-result.json",
+      "agents/subject-design-history-and-unresolved-proposals/file-authoring-agent-result.json",
+      "agents/subject-identity-product-access-and-authorization/file-authoring-agent-result.json",
+      "agents/subject-platform-administration-and-pm-integration/file-authoring-agent-result.json",
+      "agents/subject-product-integration-roadmap/file-authoring-agent-result.json",
+      "agents/subject-product-operations/file-authoring-agent-result.json",
+      "agents/subject-sdk-integration/file-authoring-agent-result.json",
+      "agents/maintenance/file-authoring-agent-result.json"
+    ],
+    "input_packet": "input-packet.json",
+    "maintenance_report": "reports/documentation-maintenance-report.json",
+    "planner_report": "reports/documentation-planner-report.json",
+    "pre_maintenance_wiki": "pre-maintenance-wiki",
+    "runtime_inbox_intake": "runtime-inbox-intake.json",
+    "subject_manifest": "reports/documentation-subject-manifest.json",
+    "subject_reports": [
+      "agents/subject-architecture-and-repository-boundaries/reports/subject-report.json",
+      "agents/subject-backend-api-and-data-contracts/reports/subject-report.json",
+      "agents/subject-class-operations-and-lifecycle/reports/subject-report.json",
+      "agents/subject-deployment-and-releases/reports/subject-report.json",
+      "agents/subject-design-history-and-unresolved-proposals/reports/subject-report.json",
+      "agents/subject-identity-product-access-and-authorization/reports/subject-report.json",
+      "agents/subject-platform-administration-and-pm-integration/reports/subject-report.json",
+      "agents/subject-product-integration-roadmap/reports/subject-report.json",
+      "agents/subject-product-operations/reports/subject-report.json",
+      "agents/subject-sdk-integration/reports/subject-report.json"
+    ],
+    "summary": "summary.md"
+  },
+  "content_quality_status": "trusted",
+  "curation_kind": "agent_authored",
+  "dry_run": false,
+  "mode": "create",
+  "project_key": "class-kit",
+  "review": false,
+  "run_dir": "projects/class-kit/runs/project-learn/2026-07-15T06-24-40.624Z-run",
+  "run_id": "2026-07-15T06-24-40.624Z-run",
+  "run_kind": "create_then_maintenance",
+  "status": "failed",
+  "stopped_before_writes": true,
+  "stopped_reason": "maintenance report schema_version must be 1",
+  "validation_ok": false
+}

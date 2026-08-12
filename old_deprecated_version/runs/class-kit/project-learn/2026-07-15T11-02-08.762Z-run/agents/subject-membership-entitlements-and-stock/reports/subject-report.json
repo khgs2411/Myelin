@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "membership-entitlements-and-stock",
+  "wiki_path": "membership-entitlements-and-stock.md",
+  "status": "complete_with_gaps",
+  "evidence_paths": [
+    "class-kit-api/supabase/functions/class-kit-memberships/index.ts",
+    "class-kit-api/supabase/functions/class-kit-profile/index.ts",
+    "class-kit-api/supabase/functions/class-kit-product-context/index.ts",
+    "class-kit-api/supabase/migrations/20260607132920_membership_ledger.sql",
+    "class-kit-api/supabase/migrations/20260607160000_registration_engine.sql",
+    "class-kit-api/supabase/migrations/20260608010000_security_rls_membership_visibility.sql",
+    "class-kit-api/supabase/migrations/20260608020000_membership_cancellation_audit.sql",
+    "class-kit-api/supabase/migrations/20260609090000_registration_rejection_recovery.sql",
+    "class-kit-api/supabase/migrations/20260701084833_fix_member_auto_approve_registration.sql",
+    "class-kit-api/supabase/migrations/20260702055851_allow_pending_registration_cancellation_after_cutoff.sql",
+    "class-kit-api/supabase/migrations/20260705110018_adjust_membership_remaining_stock_only.sql",
+    "class-kit-api/supabase/migrations/20260705111440_set_membership_manager_entrypoint.sql",
+    "class-kit-api/supabase/migrations/20260612122000_permission_requirement_catalog.sql",
+    "class-kit-api/supabase/migrations/20260705094533_product_user_metadata_permission.sql"
+  ],
+  "touched_paths": [
+    "draft-wiki/membership-entitlements-and-stock.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "No membership or registration automated regression tests were found in the supplied snapshot.",
+    "The active-grant resolver does not check valid_from; source does not establish whether future-dated grants should be inactive until that time.",
+    "No inspected API action or scheduled process transitions grants to expired or inactive status."
+  ]
+}

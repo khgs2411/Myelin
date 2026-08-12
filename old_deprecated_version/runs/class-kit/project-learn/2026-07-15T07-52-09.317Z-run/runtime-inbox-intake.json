@@ -1,0 +1,12 @@
+{
+  "blocking": false,
+  "created_candidate_ids": [],
+  "degraded": false,
+  "degraded_reasons": [],
+  "existing_candidate_ids": [],
+  "invalid_source_refs": [],
+  "project_key": "class-kit",
+  "skipped_source_refs": [],
+  "terminal_duplicate_candidate_ids": [],
+  "unsupported_source_refs": []
+}

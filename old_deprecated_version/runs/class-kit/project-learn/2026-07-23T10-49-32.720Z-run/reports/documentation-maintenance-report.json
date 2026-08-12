@@ -1,0 +1,115 @@
+{
+  "dispositions": [
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md",
+        "draft-wiki/templates-schedules-and-attendance.md",
+        "draft-wiki/sdk-and-product-api.md"
+      ],
+      "reason": "Current SDK source implements ClassListFilters, maps template/custom-data filters and opt-in customData projection for customer and manager lists, and has focused SDK regression source. The candidate commit and branch wording are run evidence only; repository-identity.json records a different current head and was not promoted to canonical prose.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_sdk_searchable_custom_data"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [],
+      "reason": "The existing memberships documentation already records nullable template binding, all four membership modes, eligibility outcomes, registration-gate precedence, current SDK-source availability, and focused API/SDK regression evidence. The cited merge snapshot is not a durable policy fact.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_sdk_membership_template_support"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md"
+      ],
+      "reason": "Current class handler, canonical API/SDK documentation, and SDK regression source verify exact template filtering, its composition with custom-data filtering, backend-owned visibility and membership gates, and empty-result handling for unknown or incompatible selectors. The candidate's downstream-card status remains transient and was not documented.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260722_api_docs_contract_update"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/operator-workflows-and-local-apps.md",
+        "draft-wiki/architecture-and-boundaries.md",
+        "draft-wiki/product-administration-and-reset.md"
+      ],
+      "reason": "The root Makefile, source switcher, and Admin Pages workflow verify the four commands, latest stable release-tag pinning, manifest/lockfile rollback behavior, app build gate, and deployment rejection of local or unpinned dependencies.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_project_sdk_source_switcher"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/architecture-and-boundaries.md",
+        "draft-wiki/sdk-and-product-api.md"
+      ],
+      "reason": "Demo2 and ClassKit Admin customer-management components, the SDK customer facade and tests, and API handler tests verify the customer-management and ghost-merge browser behavior. The local SDK manifests confirm source consumption; deployed Edge Function state cannot be established from this snapshot and was not claimed as a current documentation fact.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260722_demo2_admin_customers_rollout"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "This is a request to review or advance a future Symphony implementation card, not durable current project behavior. Current membership-template behavior is already documented from repository evidence.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260722_sdk_binding_next"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "This is a live implementation-review request for a Symphony card. It does not itself establish a durable documentation fact.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260722_sdk_review_01"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md"
+      ],
+      "reason": "Current product-settings handler, SDK facade, canonical API documentation, and focused API/SDK/SQL regression source verify the product-owned cancellation-policy contract and its relationship to user cancellation outcomes.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_docs_after_merges"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "This is a request to assess the readiness of a downstream Symphony task, not evidence of implemented durable repository behavior.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260722_next_api_registration"
+    }
+  ],
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/class-kit-sdk/src/types.ts",
+    "target-repo/class-kit-sdk/src/client/class-list-filters.ts",
+    "target-repo/class-kit-sdk/src/client/class-kit-client.ts",
+    "target-repo/class-kit-sdk/tests/class-custom-data-discovery.test.mjs",
+    "target-repo/class-kit-sdk/tests/membership-template-binding.test.mjs",
+    "target-repo/class-kit-sdk/tests/customers.test.mjs",
+    "target-repo/class-kit-sdk/tests/product-cancellation-policy.test.mjs",
+    "target-repo/class-kit-api/supabase/functions/class-kit-classes/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-product-settings/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-product-settings/index.test.ts",
+    "target-repo/class-kit-api/supabase/tests/product_cancellation_policy.sql",
+    "target-repo/scripts/class-kit-sdk-source.mjs",
+    "target-repo/Makefile",
+    "target-repo/apps/class-kit-admin/.github/workflows/deploy-pages.yml",
+    "target-repo/apps/demo2/src/customer-management.tsx",
+    "target-repo/apps/class-kit-admin/src/components/product-customers-panel.tsx",
+    "target-repo/docs/api/backend-api.md",
+    "target-repo/docs/sdk/client-sdk.md"
+  ],
+  "known_gaps": [],
+  "project_key": "class-kit",
+  "schema_version": 1,
+  "status": "completed",
+  "touched_paths": [
+    "draft-wiki/classes-and-registrations.md",
+    "draft-wiki/architecture-and-boundaries.md",
+    "draft-wiki/operator-workflows-and-local-apps.md",
+    "draft-wiki/templates-schedules-and-attendance.md",
+    "draft-wiki/sdk-and-product-api.md",
+    "draft-wiki/product-administration-and-reset.md"
+  ]
+}

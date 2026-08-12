@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "class-discovery-registration-and-lifecycle",
+  "wiki_path": "class-discovery-registration-and-lifecycle.md",
+  "status": "complete",
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/class-kit-api/supabase/migrations/20260607134535_template_class_core.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260607160000_registration_engine.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260607170000_attendance_engine.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260622150445_class_api_pattern_foundation.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260623163000_member_auto_approve_product_users.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260701084833_fix_member_auto_approve_registration.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260702055851_allow_pending_registration_cancellation_after_cutoff.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260702121000_public_class_discovery_non_cancelled.sql",
+    "target-repo/class-kit-api/supabase/functions/class-kit-classes/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-register-class/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-manage-registrations/index.ts",
+    "target-repo/class-kit-api/supabase/tests/member_auto_approve_registration.sql",
+    "target-repo/class-kit-api/supabase/tests/pending_registration_cancellation.sql"
+  ],
+  "touched_paths": [
+    "draft-wiki/class-discovery-registration-and-lifecycle.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "No broad SQL regression coverage in this snapshot for every discovery visibility combination, hidden-class direct registration, concurrent capacity contention, manager recovery actions, or the full attendance lifecycle.",
+    "The caller-aware list/get surface returns members_only rows before registration enforces membership, unlike list_user; the distinction lacks targeted regression coverage.",
+    "Documentation is based on static current-snapshot evidence; no live Supabase database or full migration/test run was available."
+  ]
+}

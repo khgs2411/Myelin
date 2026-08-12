@@ -1,0 +1,11 @@
+{
+  "dispositions": [],
+  "evidence_paths": [],
+  "known_gaps": [
+    "agent wrote outside allowed output roots: documentation-maintenance-report.json"
+  ],
+  "project_key": "class-kit",
+  "schema_version": 1,
+  "status": "failed",
+  "touched_paths": []
+}

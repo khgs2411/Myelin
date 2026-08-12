@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "sdk-integration",
+  "wiki_path": "sdk-integration.md",
+  "status": "complete",
+  "evidence_paths": [
+    "docs/sdk/client-sdk.md",
+    "docs/getting-started.md",
+    "docs/changelog.md",
+    "docs/api/class-api-map.md",
+    "docs/product-shape.md",
+    "docs/shared/authentication.md",
+    "docs/shared/deployment.md",
+    "docs/shared/product_implementation_roadmap.md"
+  ],
+  "touched_paths": [
+    "draft-wiki/sdk-integration.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "The snapshot's canonical SDK integration contract is documentation-led; this subject does not independently inspect the separate private class-kit-sdk implementation or release repository."
+  ]
+}

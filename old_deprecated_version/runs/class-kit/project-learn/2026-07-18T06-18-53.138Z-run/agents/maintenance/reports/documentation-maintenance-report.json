@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "status": "completed",
+  "dispositions": [
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_sdk_agents_governance",
+      "disposition": "applied_to_project_memory",
+      "reason": "The SDK-local contributor guide and its tracked-distribution/npm workflow are durable repository guidance; the canonical architecture page now records its boundary without treating it as product-contract evidence.",
+      "output_refs": [
+        "draft-wiki/architecture-and-boundaries.md"
+      ]
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_repo_agents_guidance",
+      "disposition": "applied_to_project_memory",
+      "reason": "The API and SDK repository-local guides are durable contributor workflow facts and clarify that source-repository governance complements the root documentation authority.",
+      "output_refs": [
+        "draft-wiki/architecture-and-boundaries.md"
+      ]
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260717_cancellation_window_workflow",
+      "disposition": "insufficient_evidence",
+      "reason": "The supplied checkout has neither the cited cancellation-window design directory nor the API sibling checkout, so the claimed merge, governing plan, and implement-mode contract cannot be verified as current durable project state.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260717_planning_spec_gate",
+      "disposition": "insufficient_evidence",
+      "reason": "No card identifiers, card records, or project-local workflow policy in the supplied checkout establishes whether this was a project-wide rule or a temporary prerequisite for four cards.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260717_geolocation_sdk_contract_review",
+      "disposition": "insufficient_evidence",
+      "reason": "The source describes an unresolved proposal and the checkout contains no implementation, accepted decision, or regression evidence for geolocation autocomplete, normalized snapshots, navigation links, or free-text behavior.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260718_create_agents_md",
+      "disposition": "already_covered",
+      "reason": "The durable outcome of this completed handoff is covered by the applied repository-local contributor-guide documentation.",
+      "output_refs": [
+        "draft-wiki/architecture-and-boundaries.md"
+      ]
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260718_review_next_plan_only_card",
+      "disposition": "not_durable",
+      "reason": "This is a future, isolated review commitment rather than durable repository or product behavior.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260718_identify_reverted_batch",
+      "disposition": "not_durable",
+      "reason": "This is a contingent reconciliation task and does not establish a reusable project contract.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_cancellation_window_implementation",
+      "disposition": "not_durable",
+      "reason": "The handoff requests future implementation; it is not evidence that a cancellation-window contract has landed in the supplied snapshot.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_cancellation_window_decision_review",
+      "disposition": "not_durable",
+      "reason": "The handoff asks for unresolved decisions to be reviewed and therefore cannot establish their recommended options as durable current behavior.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_cancellation_window_triage",
+      "disposition": "not_durable",
+      "reason": "This is an upstream triage request, not a verified product or repository workflow rule.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_review_finalized_work",
+      "disposition": "not_durable",
+      "reason": "This is a future review sequence contingent on orchestration output, not durable project documentation.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_move_planning_cards_to_todo",
+      "disposition": "not_durable",
+      "reason": "This is a one-time board movement request, not a project-memory subject.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_google_geo_provider_compare",
+      "disposition": "not_durable",
+      "reason": "The handoff requests a comparison but supplies no completed comparison or accepted provider decision to preserve.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_confirm_freetext_choice",
+      "disposition": "not_durable",
+      "reason": "This is an open decision request; it does not confirm a free-text fallback rule or SDK contract.",
+      "output_refs": []
+    }
+  ],
+  "touched_paths": [
+    "draft-wiki/architecture-and-boundaries.md",
+    "reports/documentation-maintenance-report.json"
+  ],
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/AGENTS.md",
+    "target-repo/README.md",
+    "target-repo/docs/repositories/structure.md",
+    "target-repo/docs/sdk/client-sdk.md",
+    "target-repo/docs/api/backend-api.md"
+  ],
+  "known_gaps": [
+    "The supplied root checkout excludes the ignored class-kit-api and class-kit-sdk working trees, so their new AGENTS.md files and their native verification commands could not be independently inspected.",
+    "The cited cancellation-window design artifacts and implementation branch state are absent from the supplied checkout; no cancellation-window behavior or workflow contract was added to Project Memory.",
+    "No implementation, accepted decision, or regression evidence for geolocation autocomplete or the free-text fallback rule is present in this snapshot."
+  ]
+}

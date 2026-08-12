@@ -1,0 +1,40 @@
+{
+  "schema_version": 2,
+  "project_key": "class-kit",
+  "status": "curated",
+  "source_run_dir": "runs/class-kit/project-learn/2026-07-18T09-48-14.555Z-run",
+  "updated_at": "2026-07-18T09:48:14.555Z",
+  "provider_mode": "live",
+  "curation_kind": "agent_authored",
+  "run_kind": "maintenance",
+  "create": {
+    "status": "skipped",
+    "planner_status": "completed",
+    "subject_writer_status": "completed",
+    "subject_count": 0,
+    "subject_writer_concurrency_limit": 0,
+    "subject_writer_retry_limit": 0,
+    "subject_report_refs": []
+  },
+  "maintenance": {
+    "status": "degraded",
+    "report_ref": "reports/documentation-maintenance-report.json",
+    "dispositions_count": 5,
+    "applied_count": 2,
+    "already_covered_count": 2,
+    "degraded_reason": "The supplied root snapshot excludes class-kit-api implementation, migration, and regression-test sources. The structured-location behavior is consistently documented in current canonical sources but was not independently checked against code or focused regression tests in this pass.",
+    "degraded_reasons": [
+      "The supplied root snapshot excludes class-kit-api implementation, migration, and regression-test sources. The structured-location behavior is consistently documented in current canonical sources but was not independently checked against code or focused regression tests in this pass.",
+      "The claimed custom-data discovery change could not be verified against current class-kit-api code or regression tests; current canonical documentation still states that class-list custom-data filtering and projection are unsupported."
+    ]
+  },
+  "retrieval_readiness": {
+    "status": "pending",
+    "checked_at": "2026-07-18T09:48:14.555Z",
+    "reason": "retrieval lifecycle has not completed yet"
+  },
+  "content_quality": {
+    "status": "not_evaluated",
+    "reason": "agent_authored_documentation_has_no_schema_quality_gate"
+  }
+}

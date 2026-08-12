@@ -1,0 +1,2405 @@
+{
+  "status_entries": [
+    {
+      "reason": null,
+      "section_id": "command-surface-and-operator-workflows/command-vocabulary",
+      "status": "valid",
+      "wiki_path": "wiki/command-surface-and-operator-workflows.md"
+    },
+    {
+      "reason": null,
+      "section_id": "command-surface-and-operator-workflows/makefile-aliases",
+      "status": "valid",
+      "wiki_path": "wiki/command-surface-and-operator-workflows.md"
+    },
+    {
+      "reason": null,
+      "section_id": "command-surface-and-operator-workflows/operator-workflows",
+      "status": "valid",
+      "wiki_path": "wiki/command-surface-and-operator-workflows.md"
+    },
+    {
+      "reason": null,
+      "section_id": "command-surface-and-operator-workflows/json-facing-contracts",
+      "status": "valid",
+      "wiki_path": "wiki/command-surface-and-operator-workflows.md"
+    },
+    {
+      "reason": null,
+      "section_id": "command-surface-and-operator-workflows/side-effect-boundaries",
+      "status": "valid",
+      "wiki_path": "wiki/command-surface-and-operator-workflows.md"
+    },
+    {
+      "reason": null,
+      "section_id": "command-surface-and-operator-workflows/known-conflicts-and-gaps",
+      "status": "valid",
+      "wiki_path": "wiki/command-surface-and-operator-workflows.md"
+    },
+    {
+      "reason": null,
+      "section_id": "llm-wiki-project-memory-draft-index/documentation-subjects",
+      "status": "valid",
+      "wiki_path": "wiki/index.md"
+    },
+    {
+      "reason": null,
+      "section_id": "llm-wiki-project-memory-draft-index/primary-evidence",
+      "status": "valid",
+      "wiki_path": "wiki/index.md"
+    },
+    {
+      "reason": null,
+      "section_id": "llm-wiki-project-memory-draft-index/known-draft-gaps",
+      "status": "valid",
+      "wiki_path": "wiki/index.md"
+    },
+    {
+      "reason": null,
+      "section_id": "product-and-memory-model/product-purpose",
+      "status": "valid",
+      "wiki_path": "wiki/product-and-memory-model.md"
+    },
+    {
+      "reason": null,
+      "section_id": "product-and-memory-model/memory-layer-hierarchy",
+      "status": "valid",
+      "wiki_path": "wiki/product-and-memory-model.md"
+    },
+    {
+      "reason": null,
+      "section_id": "product-and-memory-model/source-of-truth-model",
+      "status": "valid",
+      "wiki_path": "wiki/product-and-memory-model.md"
+    },
+    {
+      "reason": null,
+      "section_id": "product-and-memory-model/promotion-flow",
+      "status": "valid",
+      "wiki_path": "wiki/product-and-memory-model.md"
+    },
+    {
+      "reason": null,
+      "section_id": "product-and-memory-model/project-memory-quality-bar",
+      "status": "valid",
+      "wiki_path": "wiki/product-and-memory-model.md"
+    },
+    {
+      "reason": null,
+      "section_id": "product-and-memory-model/current-implementation-state",
+      "status": "valid",
+      "wiki_path": "wiki/product-and-memory-model.md"
+    },
+    {
+      "reason": null,
+      "section_id": "product-and-memory-model/evidence",
+      "status": "valid",
+      "wiki_path": "wiki/product-and-memory-model.md"
+    },
+    {
+      "reason": null,
+      "section_id": "project-memory-creation-and-curation/current-creation-model",
+      "status": "valid",
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "reason": null,
+      "section_id": "project-memory-creation-and-curation/maintenance-model",
+      "status": "valid",
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "reason": null,
+      "section_id": "project-memory-creation-and-curation/file-authoring-boundary",
+      "status": "valid",
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "reason": null,
+      "section_id": "project-memory-creation-and-curation/apply-and-promotion",
+      "status": "valid",
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "reason": null,
+      "section_id": "project-memory-creation-and-curation/packets-evidence-maps-and-older-curator-contracts",
+      "status": "valid",
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "reason": null,
+      "section_id": "project-memory-creation-and-curation/quality-gates",
+      "status": "valid",
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "reason": null,
+      "section_id": "project-memory-creation-and-curation/retrieval-after-apply",
+      "status": "valid",
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "reason": null,
+      "section_id": "project-memory-creation-and-curation/run-artifacts-and-state",
+      "status": "valid",
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "reason": null,
+      "section_id": "project-memory-creation-and-curation/tests-that-define-the-contract",
+      "status": "valid",
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "reason": null,
+      "section_id": "project-memory-creation-and-curation/practical-guidance",
+      "status": "valid",
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "reason": null,
+      "section_id": "query-status-and-agent-interfaces/current-interface-shape",
+      "status": "valid",
+      "wiki_path": "wiki/query-status-and-agent-interfaces.md"
+    },
+    {
+      "reason": null,
+      "section_id": "query-status-and-agent-interfaces/memory-query-facade",
+      "status": "valid",
+      "wiki_path": "wiki/query-status-and-agent-interfaces.md"
+    },
+    {
+      "reason": null,
+      "section_id": "query-status-and-agent-interfaces/degradation-and-citation-rules",
+      "status": "valid",
+      "wiki_path": "wiki/query-status-and-agent-interfaces.md"
+    },
+    {
+      "reason": null,
+      "section_id": "query-status-and-agent-interfaces/status-facade",
+      "status": "valid",
+      "wiki_path": "wiki/query-status-and-agent-interfaces.md"
+    },
+    {
+      "reason": null,
+      "section_id": "query-status-and-agent-interfaces/agent-and-mcp-boundary",
+      "status": "valid",
+      "wiki_path": "wiki/query-status-and-agent-interfaces.md"
+    },
+    {
+      "reason": null,
+      "section_id": "query-status-and-agent-interfaces/known-gaps-and-cautions",
+      "status": "valid",
+      "wiki_path": "wiki/query-status-and-agent-interfaces.md"
+    },
+    {
+      "reason": null,
+      "section_id": "roadmap-adrs-and-design-history/canonical-reading-path",
+      "status": "valid",
+      "wiki_path": "wiki/roadmap-adrs-and-design-history.md"
+    },
+    {
+      "reason": null,
+      "section_id": "roadmap-adrs-and-design-history/roadmap-status-model",
+      "status": "valid",
+      "wiki_path": "wiki/roadmap-adrs-and-design-history.md"
+    },
+    {
+      "reason": null,
+      "section_id": "roadmap-adrs-and-design-history/adr-decision-boundaries",
+      "status": "valid",
+      "wiki_path": "wiki/roadmap-adrs-and-design-history.md"
+    },
+    {
+      "reason": null,
+      "section_id": "roadmap-adrs-and-design-history/active-design-docs",
+      "status": "valid",
+      "wiki_path": "wiki/roadmap-adrs-and-design-history.md"
+    },
+    {
+      "reason": null,
+      "section_id": "roadmap-adrs-and-design-history/archive-boundaries",
+      "status": "valid",
+      "wiki_path": "wiki/roadmap-adrs-and-design-history.md"
+    },
+    {
+      "reason": null,
+      "section_id": "roadmap-adrs-and-design-history/conflict-resolution-rules",
+      "status": "valid",
+      "wiki_path": "wiki/roadmap-adrs-and-design-history.md"
+    },
+    {
+      "reason": null,
+      "section_id": "roadmap-adrs-and-design-history/practical-orientation-for-future-agents",
+      "status": "valid",
+      "wiki_path": "wiki/roadmap-adrs-and-design-history.md"
+    },
+    {
+      "reason": null,
+      "section_id": "runtime-providers-and-project-layout/runtime-helpers",
+      "status": "valid",
+      "wiki_path": "wiki/runtime-providers-and-project-layout.md"
+    },
+    {
+      "reason": null,
+      "section_id": "runtime-providers-and-project-layout/config-precedence",
+      "status": "valid",
+      "wiki_path": "wiki/runtime-providers-and-project-layout.md"
+    },
+    {
+      "reason": null,
+      "section_id": "runtime-providers-and-project-layout/provider-abstraction",
+      "status": "valid",
+      "wiki_path": "wiki/runtime-providers-and-project-layout.md"
+    },
+    {
+      "reason": null,
+      "section_id": "runtime-providers-and-project-layout/project-discovery-and-shell-layout",
+      "status": "valid",
+      "wiki_path": "wiki/runtime-providers-and-project-layout.md"
+    },
+    {
+      "reason": null,
+      "section_id": "runtime-providers-and-project-layout/install-and-capture-boundaries",
+      "status": "valid",
+      "wiki_path": "wiki/runtime-providers-and-project-layout.md"
+    },
+    {
+      "reason": null,
+      "section_id": "runtime-providers-and-project-layout/run-artifacts",
+      "status": "valid",
+      "wiki_path": "wiki/runtime-providers-and-project-layout.md"
+    },
+    {
+      "reason": null,
+      "section_id": "runtime-providers-and-project-layout/known-gaps",
+      "status": "valid",
+      "wiki_path": "wiki/runtime-providers-and-project-layout.md"
+    },
+    {
+      "reason": null,
+      "section_id": "schema-and-documentation-contracts/schema-layer",
+      "status": "valid",
+      "wiki_path": "wiki/schema-and-documentation-contracts.md"
+    },
+    {
+      "reason": null,
+      "section_id": "schema-and-documentation-contracts/schema-check-and-build",
+      "status": "valid",
+      "wiki_path": "wiki/schema-and-documentation-contracts.md"
+    },
+    {
+      "reason": null,
+      "section_id": "schema-and-documentation-contracts/typed-global-rules",
+      "status": "valid",
+      "wiki_path": "wiki/schema-and-documentation-contracts.md"
+    },
+    {
+      "reason": null,
+      "section_id": "schema-and-documentation-contracts/documentation-contract",
+      "status": "valid",
+      "wiki_path": "wiki/schema-and-documentation-contracts.md"
+    },
+    {
+      "reason": null,
+      "section_id": "schema-and-documentation-contracts/quality-and-provenance-expectations",
+      "status": "valid",
+      "wiki_path": "wiki/schema-and-documentation-contracts.md"
+    },
+    {
+      "reason": null,
+      "section_id": "schema-and-documentation-contracts/known-gaps-and-conflicts",
+      "status": "valid",
+      "wiki_path": "wiki/schema-and-documentation-contracts.md"
+    },
+    {
+      "reason": null,
+      "section_id": "session-memory-and-experience-ingest/boundary",
+      "status": "valid",
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "reason": null,
+      "section_id": "session-memory-and-experience-ingest/capture-flow",
+      "status": "valid",
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "reason": null,
+      "section_id": "session-memory-and-experience-ingest/experience-log-tables",
+      "status": "valid",
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "reason": null,
+      "section_id": "session-memory-and-experience-ingest/detached-ingest-jobs",
+      "status": "valid",
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "reason": null,
+      "section_id": "session-memory-and-experience-ingest/worker-prompt-and-outputs",
+      "status": "valid",
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "reason": null,
+      "section_id": "session-memory-and-experience-ingest/session-memory-records",
+      "status": "valid",
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "reason": null,
+      "section_id": "session-memory-and-experience-ingest/candidates-and-handoffs",
+      "status": "valid",
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "reason": null,
+      "section_id": "session-memory-and-experience-ingest/status-and-recovery",
+      "status": "valid",
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "reason": null,
+      "section_id": "session-memory-and-experience-ingest/auto-maintenance",
+      "status": "valid",
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "reason": null,
+      "section_id": "session-memory-and-experience-ingest/verification-evidence",
+      "status": "valid",
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "reason": null,
+      "section_id": "source-evidence-inbox-and-candidate-boundaries/boundary-model",
+      "status": "valid",
+      "wiki_path": "wiki/source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "reason": null,
+      "section_id": "source-evidence-inbox-and-candidate-boundaries/source-classification",
+      "status": "valid",
+      "wiki_path": "wiki/source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "reason": null,
+      "section_id": "source-evidence-inbox-and-candidate-boundaries/gap-and-repair-inbox",
+      "status": "valid",
+      "wiki_path": "wiki/source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "reason": null,
+      "section_id": "source-evidence-inbox-and-candidate-boundaries/runtime-inbox-source-proposals",
+      "status": "valid",
+      "wiki_path": "wiki/source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "reason": null,
+      "section_id": "source-evidence-inbox-and-candidate-boundaries/candidates-are-leads",
+      "status": "valid",
+      "wiki_path": "wiki/source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "reason": null,
+      "section_id": "source-evidence-inbox-and-candidate-boundaries/project-learn-flow",
+      "status": "valid",
+      "wiki_path": "wiki/source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "reason": null,
+      "section_id": "source-evidence-inbox-and-candidate-boundaries/source-consumption-reconciliation",
+      "status": "valid",
+      "wiki_path": "wiki/source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "reason": null,
+      "section_id": "source-evidence-inbox-and-candidate-boundaries/provenance-and-repair-rules",
+      "status": "valid",
+      "wiki_path": "wiki/source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "reason": null,
+      "section_id": "source-evidence-inbox-and-candidate-boundaries/current-gaps-and-cautions",
+      "status": "valid",
+      "wiki_path": "wiki/source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "reason": null,
+      "section_id": "storage-sqlite-and-retrieval-indexes/root-sqlite-state",
+      "status": "valid",
+      "wiki_path": "wiki/storage-sqlite-and-retrieval-indexes.md"
+    },
+    {
+      "reason": null,
+      "section_id": "storage-sqlite-and-retrieval-indexes/migrations-and-tables",
+      "status": "valid",
+      "wiki_path": "wiki/storage-sqlite-and-retrieval-indexes.md"
+    },
+    {
+      "reason": null,
+      "section_id": "storage-sqlite-and-retrieval-indexes/sqlite-runtime-and-sqlite-vec",
+      "status": "valid",
+      "wiki_path": "wiki/storage-sqlite-and-retrieval-indexes.md"
+    },
+    {
+      "reason": null,
+      "section_id": "storage-sqlite-and-retrieval-indexes/session-memory-indexing",
+      "status": "valid",
+      "wiki_path": "wiki/storage-sqlite-and-retrieval-indexes.md"
+    },
+    {
+      "reason": null,
+      "section_id": "storage-sqlite-and-retrieval-indexes/project-memory-retrieval-indexing",
+      "status": "valid",
+      "wiki_path": "wiki/storage-sqlite-and-retrieval-indexes.md"
+    },
+    {
+      "reason": null,
+      "section_id": "storage-sqlite-and-retrieval-indexes/freshness-rebuild-and-degradation-rules",
+      "status": "valid",
+      "wiki_path": "wiki/storage-sqlite-and-retrieval-indexes.md"
+    },
+    {
+      "reason": null,
+      "section_id": "storage-sqlite-and-retrieval-indexes/verification-coverage",
+      "status": "valid",
+      "wiki_path": "wiki/storage-sqlite-and-retrieval-indexes.md"
+    },
+    {
+      "reason": null,
+      "section_id": "storage-sqlite-and-retrieval-indexes/operational-notes",
+      "status": "valid",
+      "wiki_path": "wiki/storage-sqlite-and-retrieval-indexes.md"
+    },
+    {
+      "reason": null,
+      "section_id": "testing-and-verification/standard-verification-commands",
+      "status": "valid",
+      "wiki_path": "wiki/testing-and-verification.md"
+    },
+    {
+      "reason": null,
+      "section_id": "testing-and-verification/test-suite-organization",
+      "status": "valid",
+      "wiki_path": "wiki/testing-and-verification.md"
+    },
+    {
+      "reason": null,
+      "section_id": "testing-and-verification/contract-tests-that-matter",
+      "status": "valid",
+      "wiki_path": "wiki/testing-and-verification.md"
+    },
+    {
+      "reason": null,
+      "section_id": "testing-and-verification/typecheck-expectations",
+      "status": "valid",
+      "wiki_path": "wiki/testing-and-verification.md"
+    },
+    {
+      "reason": null,
+      "section_id": "testing-and-verification/high-risk-areas-requiring-evidence",
+      "status": "valid",
+      "wiki_path": "wiki/testing-and-verification.md"
+    },
+    {
+      "reason": null,
+      "section_id": "testing-and-verification/practical-verification-pattern",
+      "status": "valid",
+      "wiki_path": "wiki/testing-and-verification.md"
+    }
+  ],
+  "valid_entries": [
+    {
+      "aliases": [
+        "CLI vocabulary",
+        "command reference"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "myelin CLI",
+        "V2 commands",
+        "operator verbs"
+      ],
+      "query_phrases": [
+        "what are the current Myelin commands"
+      ],
+      "section_hash": "sha256:0b847ada1826aa0580696693815c42bd22fea6b17fb0d9b215a56bd20768a66d",
+      "section_id": "command-surface-and-operator-workflows/command-vocabulary",
+      "topics": [
+        "operator workflows",
+        "command surface"
+      ],
+      "wiki_path": "wiki/command-surface-and-operator-workflows.md"
+    },
+    {
+      "aliases": [
+        "make aliases",
+        "Make targets"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "Makefile",
+        "make status",
+        "make query"
+      ],
+      "query_phrases": [
+        "which Makefile targets wrap Myelin commands"
+      ],
+      "section_hash": "sha256:a7ca68c16560b64dc8a3b71b7dc3d718fca14845f39de92ac3dbf589bddc97c4",
+      "section_id": "command-surface-and-operator-workflows/makefile-aliases",
+      "topics": [
+        "CLI wrappers",
+        "automation"
+      ],
+      "wiki_path": "wiki/command-surface-and-operator-workflows.md"
+    },
+    {
+      "aliases": [
+        "operator recipes",
+        "daily workflow"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "bootstrap",
+        "project learn",
+        "index session",
+        "inbox intake"
+      ],
+      "query_phrases": [
+        "how do I bootstrap learn and query a project"
+      ],
+      "section_hash": "sha256:031d724480cc932b505655d56b6fcc993521448c7651b2889929cb6c2e166ff1",
+      "section_id": "command-surface-and-operator-workflows/operator-workflows",
+      "topics": [
+        "project lifecycle",
+        "curation workflow"
+      ],
+      "wiki_path": "wiki/command-surface-and-operator-workflows.md"
+    },
+    {
+      "aliases": [
+        "JSON APIs",
+        "machine-readable commands"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "--json",
+        "structured output",
+        "CLI contract"
+      ],
+      "query_phrases": [
+        "which Myelin commands support JSON output"
+      ],
+      "section_hash": "sha256:ab35e86c618d58e70f146f58361d34c464c43b3da5f3c0e5bd976ad1b8acfa74",
+      "section_id": "command-surface-and-operator-workflows/json-facing-contracts",
+      "topics": [
+        "operator contracts",
+        "CLI JSON"
+      ],
+      "wiki_path": "wiki/command-surface-and-operator-workflows.md"
+    },
+    {
+      "aliases": [
+        "mutation boundaries",
+        "command safety"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "read-only",
+        "write commands",
+        "side effects"
+      ],
+      "query_phrases": [
+        "which Myelin commands modify state"
+      ],
+      "section_hash": "sha256:3794815bb1f2d1f1db24fee8f2965bb0b8a3fbe8d206b99650a13c17d0e69866",
+      "section_id": "command-surface-and-operator-workflows/side-effect-boundaries",
+      "topics": [
+        "CLI safety",
+        "operator behavior"
+      ],
+      "wiki_path": "wiki/command-surface-and-operator-workflows.md"
+    },
+    {
+      "aliases": [
+        "CLI conflicts",
+        "documentation gaps"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "project ingest",
+        "onboard",
+        "--recreate",
+        "stale docs"
+      ],
+      "query_phrases": [
+        "which documented Myelin commands are stale or missing"
+      ],
+      "section_hash": "sha256:56af73de25b810d6f1ab6142b5dbe77c36bfb6ee7563d378c54c679656bbe5a0",
+      "section_id": "command-surface-and-operator-workflows/known-conflicts-and-gaps",
+      "topics": [
+        "command drift",
+        "current implementation"
+      ],
+      "wiki_path": "wiki/command-surface-and-operator-workflows.md"
+    },
+    {
+      "aliases": [
+        "documentation map",
+        "wiki topics"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "wiki index",
+        "documentation subjects",
+        "Project Memory"
+      ],
+      "query_phrases": [
+        "where can I find documentation about Myelin subsystems"
+      ],
+      "section_hash": "sha256:3684861fa7df83c31ae93823deb6c18ae7bdde670ccebac4f88835c893dc90a4",
+      "section_id": "llm-wiki-project-memory-draft-index/documentation-subjects",
+      "topics": [
+        "knowledge navigation",
+        "project orientation"
+      ],
+      "wiki_path": "wiki/index.md"
+    },
+    {
+      "aliases": [
+        "authoritative files",
+        "repo evidence"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "primary evidence",
+        "source layout",
+        "tests"
+      ],
+      "query_phrases": [
+        "which files are primary evidence for Myelin behavior"
+      ],
+      "section_hash": "sha256:be30e68dabe29ca4a1c14fe6e6673339eb34fc4b80a5e019bfb9ba9c38c8656b",
+      "section_id": "llm-wiki-project-memory-draft-index/primary-evidence",
+      "topics": [
+        "documentation sources",
+        "implementation evidence"
+      ],
+      "wiki_path": "wiki/index.md"
+    },
+    {
+      "aliases": [
+        "wiki limitations",
+        "draft caveats"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "draft gaps",
+        "historical docs",
+        "authority"
+      ],
+      "query_phrases": [
+        "what limitations apply to this Project Memory draft"
+      ],
+      "section_hash": "sha256:08c65eacbe3b20eb0b1d47e181ba284ae50042a038041b4cb7fb24e1b348c57d",
+      "section_id": "llm-wiki-project-memory-draft-index/known-draft-gaps",
+      "topics": [
+        "documentation freshness",
+        "evidence authority"
+      ],
+      "wiki_path": "wiki/index.md"
+    },
+    {
+      "aliases": [
+        "product vision",
+        "what is Myelin"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "Myelin purpose",
+        "LLM Wiki Pattern",
+        "project memory"
+      ],
+      "query_phrases": [
+        "what is Myelin designed to do"
+      ],
+      "section_hash": "sha256:c1857acd49aaa567cb892104e11feb89d8c6a1ee1f2cbfce1601315ab55b1ba4",
+      "section_id": "product-and-memory-model/product-purpose",
+      "topics": [
+        "product definition",
+        "durable knowledge"
+      ],
+      "wiki_path": "wiki/product-and-memory-model.md"
+    },
+    {
+      "aliases": [
+        "memory layers",
+        "memory hierarchy"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "Project Memory",
+        "Session Memory",
+        "Experience Log"
+      ],
+      "query_phrases": [
+        "what are Myelin memory layers and their roles"
+      ],
+      "section_hash": "sha256:64f54eb865162c78326c451d18b872256b5dc907b4bc5ac51592bdd3609270b3",
+      "section_id": "product-and-memory-model/memory-layer-hierarchy",
+      "topics": [
+        "memory model",
+        "promotion policy"
+      ],
+      "wiki_path": "wiki/product-and-memory-model.md"
+    },
+    {
+      "aliases": [
+        "source of truth",
+        "canonical boundary"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "markdown truth",
+        "SQLite serving state",
+        "sources"
+      ],
+      "query_phrases": [
+        "is markdown or SQLite canonical Project Memory"
+      ],
+      "section_hash": "sha256:a4dfec3bd54f2cf76cb89074a05128ad3bbff060d207ea6330b77f8e30fd692a",
+      "section_id": "product-and-memory-model/source-of-truth-model",
+      "topics": [
+        "data ownership",
+        "memory architecture"
+      ],
+      "wiki_path": "wiki/product-and-memory-model.md"
+    },
+    {
+      "aliases": [
+        "memory promotion",
+        "capture to curation"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "promotion flow",
+        "candidates",
+        "curated markdown"
+      ],
+      "query_phrases": [
+        "how does evidence become curated Project Memory"
+      ],
+      "section_hash": "sha256:3019152c98e674b00056af207a9f4a1a34c60851875bb3c1c15fd8215527ac99",
+      "section_id": "product-and-memory-model/promotion-flow",
+      "topics": [
+        "memory lifecycle",
+        "trust boundaries"
+      ],
+      "wiki_path": "wiki/product-and-memory-model.md"
+    },
+    {
+      "aliases": [
+        "quality bar",
+        "useful documentation"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "memory quality",
+        "answerability",
+        "usefulness"
+      ],
+      "query_phrases": [
+        "how is Project Memory quality judged"
+      ],
+      "section_hash": "sha256:7866fd740e9f4331eb9f20bdafbe014ac2ea5732ff2faf9f190d3b38a5cd8f9f",
+      "section_id": "product-and-memory-model/project-memory-quality-bar",
+      "topics": [
+        "Project Memory quality",
+        "retrieval value"
+      ],
+      "wiki_path": "wiki/product-and-memory-model.md"
+    },
+    {
+      "aliases": [
+        "current build status",
+        "foundation state"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "Bun CLI",
+        "implementation state",
+        "dogfood"
+      ],
+      "query_phrases": [
+        "what Myelin functionality is currently implemented"
+      ],
+      "section_hash": "sha256:dce6aac2970791a7c242b0f8f45e4483470a96094b00b3c121043f6d2d323c07",
+      "section_id": "product-and-memory-model/current-implementation-state",
+      "topics": [
+        "product maturity",
+        "roadmap orientation"
+      ],
+      "wiki_path": "wiki/product-and-memory-model.md"
+    },
+    {
+      "aliases": [
+        "product evidence",
+        "design authorities"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "MYELIN.md",
+        "CONTEXT.md",
+        "ROADMAP.md",
+        "ADR 0067"
+      ],
+      "query_phrases": [
+        "which documents define Myelin's product model"
+      ],
+      "section_hash": "sha256:e15392f0c6d2bd274b03240432b899742936be956b262b52c4a453d79149e280",
+      "section_id": "product-and-memory-model/evidence",
+      "topics": [
+        "documentation authority",
+        "product design"
+      ],
+      "wiki_path": "wiki/product-and-memory-model.md"
+    },
+    {
+      "aliases": [
+        "first Project Memory run",
+        "curation creation"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "agent-authored documentation",
+        "create mode",
+        "subject writers"
+      ],
+      "query_phrases": [
+        "how does first-run Project Memory creation work"
+      ],
+      "section_hash": "sha256:f67640537c530fb0672897bb240d8c7ed7256d16e5834419dea6d04c0e025de2",
+      "section_id": "project-memory-creation-and-curation/current-creation-model",
+      "topics": [
+        "Project Memory creation",
+        "authoring orchestration"
+      ],
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "aliases": [
+        "ongoing curation",
+        "source consumption"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "maintenance mode",
+        "candidate dispositions",
+        "handoffs"
+      ],
+      "query_phrases": [
+        "how are candidates processed in Project Memory maintenance"
+      ],
+      "section_hash": "sha256:f60f107e26f1d96d7d88f027b6feec4b0558b573d32c67b5304104e336f6e309",
+      "section_id": "project-memory-creation-and-curation/maintenance-model",
+      "topics": [
+        "Project Memory maintenance",
+        "candidate lifecycle"
+      ],
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "aliases": [
+        "writer sandbox",
+        "draft write boundary"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "file authoring",
+        "run-local workspace",
+        "output roots"
+      ],
+      "query_phrases": [
+        "can Project Memory agents write canonical wiki files directly"
+      ],
+      "section_hash": "sha256:a7e68d34ccb22beadc52684f439753f177587d6d17b425f6469e2af819a3823f",
+      "section_id": "project-memory-creation-and-curation/file-authoring-boundary",
+      "topics": [
+        "authoring safety",
+        "provider execution"
+      ],
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "aliases": [
+        "markdown apply",
+        "promotion safety"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "draft promotion",
+        "apply journal",
+        "canonical writes"
+      ],
+      "query_phrases": [
+        "how are draft wiki changes promoted safely"
+      ],
+      "section_hash": "sha256:cce523ca76166ce03f79f38010cb5bab68ae30b04f0a3cfd80065a0901f5f84c",
+      "section_id": "project-memory-creation-and-curation/apply-and-promotion",
+      "topics": [
+        "write safety",
+        "Project Memory publishing"
+      ],
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "aliases": [
+        "curation context",
+        "older JSON flow"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "input packet",
+        "evidence map",
+        "legacy curator"
+      ],
+      "query_phrases": [
+        "what curation packet and legacy contracts remain active"
+      ],
+      "section_hash": "sha256:6b64e34d52de98ebe793769e764579a5ad42794f1cbb009a45dd70b3fa4f2302",
+      "section_id": "project-memory-creation-and-curation/packets-evidence-maps-and-older-curator-contracts",
+      "topics": [
+        "curator inputs",
+        "legacy compatibility"
+      ],
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "aliases": [
+        "curation validation",
+        "quality contract"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "mechanical gates",
+        "content_quality",
+        "agent-authored"
+      ],
+      "query_phrases": [
+        "which quality gates apply to agent-authored Project Memory"
+      ],
+      "section_hash": "sha256:d088e8e16898bd13cc2ea7e8c5c6214d66858b1809be2499410c7516ab02f7da",
+      "section_id": "project-memory-creation-and-curation/quality-gates",
+      "topics": [
+        "promotion checks",
+        "documentation quality"
+      ],
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "aliases": [
+        "post-apply index",
+        "derived retrieval"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "retrieval indexing",
+        "semantic hints",
+        "retrieval readiness"
+      ],
+      "query_phrases": [
+        "what happens to retrieval indexes after markdown promotion"
+      ],
+      "section_hash": "sha256:27b23bcd982f51d302ef6417eb45b034e86a9ba515df27ce4259c38524ce7321",
+      "section_id": "project-memory-creation-and-curation/retrieval-after-apply",
+      "topics": [
+        "Project Memory serving state",
+        "index lifecycle"
+      ],
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "aliases": [
+        "curation artifacts",
+        "run state"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "project-learn artifacts",
+        "project-memory.json",
+        "run reports"
+      ],
+      "query_phrases": [
+        "which artifacts does a project learn run produce"
+      ],
+      "section_hash": "sha256:7978844f0e0c7c80f712329e4e15a069c269b08704332e8c47b04de347eafdbc",
+      "section_id": "project-memory-creation-and-curation/run-artifacts-and-state",
+      "topics": [
+        "auditability",
+        "Project Memory state"
+      ],
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "aliases": [
+        "Project Memory test coverage",
+        "contract tests"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "curator tests",
+        "draft promotion tests",
+        "file authoring tests"
+      ],
+      "query_phrases": [
+        "which tests define Project Memory curation behavior"
+      ],
+      "section_hash": "sha256:884b62e877c8f153f77e07014cde4d58dd7cf18b1ec777c3ea719108b2fc3e53",
+      "section_id": "project-memory-creation-and-curation/tests-that-define-the-contract",
+      "topics": [
+        "verification",
+        "curation contracts"
+      ],
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "aliases": [
+        "curation implementation guide",
+        "Project Memory guidance"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "curator service",
+        "ADR 0067",
+        "candidate verification"
+      ],
+      "query_phrases": [
+        "where should I start when changing Project Memory curation"
+      ],
+      "section_hash": "sha256:abb2a151f9f24cce113bc538294e4d0d5a79ce22a499dfdc71f6c0e83e7fa9e2",
+      "section_id": "project-memory-creation-and-curation/practical-guidance",
+      "topics": [
+        "implementation orientation",
+        "safety rules"
+      ],
+      "wiki_path": "wiki/project-memory-creation-and-curation.md"
+    },
+    {
+      "aliases": [
+        "query interface",
+        "response shape"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "memory query",
+        "status facade",
+        "JSON envelope"
+      ],
+      "query_phrases": [
+        "what JSON shape does Myelin query return"
+      ],
+      "section_hash": "sha256:b167563430ea0f19fe44030a6247ed18a61a7f9c24059cd46d6d22d2eadcb4b8",
+      "section_id": "query-status-and-agent-interfaces/current-interface-shape",
+      "topics": [
+        "CLI interfaces",
+        "agent contracts"
+      ],
+      "wiki_path": "wiki/query-status-and-agent-interfaces.md"
+    },
+    {
+      "aliases": [
+        "query CLI",
+        "retrieval facade"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "memory query flags",
+        "--layer",
+        "Session Memory",
+        "Project Memory"
+      ],
+      "query_phrases": [
+        "how does myelin memory query select retrieval layers"
+      ],
+      "section_hash": "sha256:4a1efe37710988539246abc2657bc496ba638cad782e8a1f601834a9fe9711c9",
+      "section_id": "query-status-and-agent-interfaces/memory-query-facade",
+      "topics": [
+        "semantic retrieval",
+        "query routing"
+      ],
+      "wiki_path": "wiki/query-status-and-agent-interfaces.md"
+    },
+    {
+      "aliases": [
+        "fail closed",
+        "query reliability"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "degraded queries",
+        "citations",
+        "retrieval confidence"
+      ],
+      "query_phrases": [
+        "when does Myelin query degrade and how are citations formatted"
+      ],
+      "section_hash": "sha256:096db0575dc4b2b962285072c3c26ed048b8af1e5aefe74dbf488e1174014bcb",
+      "section_id": "query-status-and-agent-interfaces/degradation-and-citation-rules",
+      "topics": [
+        "retrieval degradation",
+        "citation format"
+      ],
+      "wiki_path": "wiki/query-status-and-agent-interfaces.md"
+    },
+    {
+      "aliases": [
+        "status command",
+        "project briefing"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "myelin status",
+        "project state",
+        "freshness"
+      ],
+      "query_phrases": [
+        "what information does myelin status report"
+      ],
+      "section_hash": "sha256:cccb51b2a45609716489caae44cfbf3364ecf561ccc18a72ff3349bb325684a7",
+      "section_id": "query-status-and-agent-interfaces/status-facade",
+      "topics": [
+        "current project state",
+        "status interface"
+      ],
+      "wiki_path": "wiki/query-status-and-agent-interfaces.md"
+    },
+    {
+      "aliases": [
+        "MCP integration",
+        "agent facade"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "MCP boundary",
+        "detached MCP",
+        "CLI JSON contract"
+      ],
+      "query_phrases": [
+        "how should an MCP consumer integrate with Myelin"
+      ],
+      "section_hash": "sha256:ee1de8142dc858ba77329425b25e1c927f10a039a939f87ba84a9a943add1701",
+      "section_id": "query-status-and-agent-interfaces/agent-and-mcp-boundary",
+      "topics": [
+        "architecture boundaries",
+        "compatibility"
+      ],
+      "wiki_path": "wiki/query-status-and-agent-interfaces.md"
+    },
+    {
+      "aliases": [
+        "query limitations",
+        "known query gaps"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "auto layer",
+        "how facade",
+        "schema check gap"
+      ],
+      "query_phrases": [
+        "what query and MCP features are not implemented yet"
+      ],
+      "section_hash": "sha256:218b864673fff37de8653196e3b4f58d63b72d9d3d795ceb68388e672373258e",
+      "section_id": "query-status-and-agent-interfaces/known-gaps-and-cautions",
+      "topics": [
+        "query roadmap",
+        "implementation cautions"
+      ],
+      "wiki_path": "wiki/query-status-and-agent-interfaces.md"
+    },
+    {
+      "aliases": [
+        "documentation reading path",
+        "authoritative docs"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "docs README",
+        "MYELIN.md",
+        "ROADMAP.md",
+        "reading order"
+      ],
+      "query_phrases": [
+        "what order should I read Myelin documentation"
+      ],
+      "section_hash": "sha256:166b2e393a39158544e9d9c81be8de8c3b703afec2169bb17db0abe7ad19452e",
+      "section_id": "roadmap-adrs-and-design-history/canonical-reading-path",
+      "topics": [
+        "repository orientation",
+        "documentation authority"
+      ],
+      "wiki_path": "wiki/roadmap-adrs-and-design-history.md"
+    },
+    {
+      "aliases": [
+        "roadmap workflow",
+        "implementation tracker"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "ROADMAP.md",
+        "done next open retired",
+        "active task"
+      ],
+      "query_phrases": [
+        "how should I determine the next Myelin task"
+      ],
+      "section_hash": "sha256:382b035492bfaebd4bb14d1c155465a051bc5f4d3dfd901afd0ae6008644e6d2",
+      "section_id": "roadmap-adrs-and-design-history/roadmap-status-model",
+      "topics": [
+        "project planning",
+        "roadmap states"
+      ],
+      "wiki_path": "wiki/roadmap-adrs-and-design-history.md"
+    },
+    {
+      "aliases": [
+        "architecture decisions",
+        "decision records"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "ADRs",
+        "append-only decisions",
+        "ADR 0067"
+      ],
+      "query_phrases": [
+        "which ADRs govern current Project Memory design"
+      ],
+      "section_hash": "sha256:8001ab6a9e48cfdcb51fbafd004daf79aaded2a16e4a47a988c9180b1d92cf05",
+      "section_id": "roadmap-adrs-and-design-history/adr-decision-boundaries",
+      "topics": [
+        "design governance",
+        "superseding decisions"
+      ],
+      "wiki_path": "wiki/roadmap-adrs-and-design-history.md"
+    },
+    {
+      "aliases": [
+        "current design thread",
+        "Project Memory spec"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "active design docs",
+        "agent-authored documentation",
+        "subject manifest"
+      ],
+      "query_phrases": [
+        "which design documents describe current Project Memory creation"
+      ],
+      "section_hash": "sha256:349d68cdbab7ccb8f171fa8df84237808033b2f9e44ec766c8d7ad6087209461",
+      "section_id": "roadmap-adrs-and-design-history/active-design-docs",
+      "topics": [
+        "design history",
+        "creation architecture"
+      ],
+      "wiki_path": "wiki/roadmap-adrs-and-design-history.md"
+    },
+    {
+      "aliases": [
+        "archive policy",
+        "superseded designs"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "docs archive",
+        "historical docs",
+        "V1"
+      ],
+      "query_phrases": [
+        "can I rely on docs archive for current Myelin behavior"
+      ],
+      "section_hash": "sha256:b5ad7eda04ad7f16b67cac24d032dd47d4ca1158331e9699dc888655a9b3b005",
+      "section_id": "roadmap-adrs-and-design-history/archive-boundaries",
+      "topics": [
+        "documentation authority",
+        "historical context"
+      ],
+      "wiki_path": "wiki/roadmap-adrs-and-design-history.md"
+    },
+    {
+      "aliases": [
+        "conflict resolution",
+        "source precedence"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "documentation conflicts",
+        "authority order",
+        "current evidence"
+      ],
+      "query_phrases": [
+        "how should conflicting Myelin documents be resolved"
+      ],
+      "section_hash": "sha256:5d2a6d057363e24781e50508d8035b33537b67a56551fd3495c7c286f8b4a20d",
+      "section_id": "roadmap-adrs-and-design-history/conflict-resolution-rules",
+      "topics": [
+        "documentation governance",
+        "decision making"
+      ],
+      "wiki_path": "wiki/roadmap-adrs-and-design-history.md"
+    },
+    {
+      "aliases": [
+        "orientation guide",
+        "implementation guidance"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "future agent guidance",
+        "ADR 0067",
+        "derived retrieval"
+      ],
+      "query_phrases": [
+        "what should a future agent remember before changing Myelin"
+      ],
+      "section_hash": "sha256:1cfde2d57e8ed892bd229f24dd90eb7191a1d735f51efc5d8b5cefb8fe03b5a1",
+      "section_id": "roadmap-adrs-and-design-history/practical-orientation-for-future-agents",
+      "topics": [
+        "Project Memory workflow",
+        "retrieval boundary"
+      ],
+      "wiki_path": "wiki/roadmap-adrs-and-design-history.md"
+    },
+    {
+      "aliases": [
+        "runtime utilities",
+        "filesystem boundary"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "runtime helpers",
+        "resolveInside",
+        "runProcess",
+        "SQLite runtime"
+      ],
+      "query_phrases": [
+        "what runtime helpers enforce Myelin path and process safety"
+      ],
+      "section_hash": "sha256:c9281777c4edac27374fcd2ca8bae4484488ab93060c9428cd6f1bcc6b06b7db",
+      "section_id": "runtime-providers-and-project-layout/runtime-helpers",
+      "topics": [
+        "runtime safety",
+        "subprocess execution"
+      ],
+      "wiki_path": "wiki/runtime-providers-and-project-layout.md"
+    },
+    {
+      "aliases": [
+        "configuration order",
+        "runtime config"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "myelin.config",
+        ".env",
+        "environment variables",
+        "providers"
+      ],
+      "query_phrases": [
+        "which Myelin configuration source takes precedence"
+      ],
+      "section_hash": "sha256:8d2442e7af3afddb641c45bb627b4cca3b94c880c0f11e1cbc851c504dc99999",
+      "section_id": "runtime-providers-and-project-layout/config-precedence",
+      "topics": [
+        "configuration",
+        "model profiles"
+      ],
+      "wiki_path": "wiki/runtime-providers-and-project-layout.md"
+    },
+    {
+      "aliases": [
+        "LLM runner",
+        "provider client"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "invokeLlm",
+        "Codex",
+        "Claude",
+        "read-only sandbox"
+      ],
+      "query_phrases": [
+        "how does Myelin invoke Codex and Claude"
+      ],
+      "section_hash": "sha256:3ff9b156bfbfb53aaf50e2239d7d905139b89e2a526195b44bae2d05ba609a3c",
+      "section_id": "runtime-providers-and-project-layout/provider-abstraction",
+      "topics": [
+        "provider execution",
+        "JSON prompting"
+      ],
+      "wiki_path": "wiki/runtime-providers-and-project-layout.md"
+    },
+    {
+      "aliases": [
+        "project layout",
+        "shell repair"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "project shell",
+        "bootstrap",
+        "project discovery"
+      ],
+      "query_phrases": [
+        "what files does Myelin bootstrap create for a project"
+      ],
+      "section_hash": "sha256:87528dbe2adc484132a9e4ffa8e4bc75a02f91daa9d3edabac426dffe9383047",
+      "section_id": "runtime-providers-and-project-layout/project-discovery-and-shell-layout",
+      "topics": [
+        "project registration",
+        "filesystem layout"
+      ],
+      "wiki_path": "wiki/runtime-providers-and-project-layout.md"
+    },
+    {
+      "aliases": [
+        "hook installation",
+        "provider capture"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "Codex hooks",
+        "myelin install",
+        "capture",
+        "fail open"
+      ],
+      "query_phrases": [
+        "how does Myelin install and manage Codex hooks"
+      ],
+      "section_hash": "sha256:e7ee7cf3b7ced39743ef472b51ede04fe76f4cee2295cc8fdc457689f955821d",
+      "section_id": "runtime-providers-and-project-layout/install-and-capture-boundaries",
+      "topics": [
+        "integration safety",
+        "event capture"
+      ],
+      "wiki_path": "wiki/runtime-providers-and-project-layout.md"
+    },
+    {
+      "aliases": [
+        "run directory",
+        "artifact safety"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "run artifacts",
+        "project-learn",
+        "writeRunArtifact"
+      ],
+      "query_phrases": [
+        "where are project learn artifacts written"
+      ],
+      "section_hash": "sha256:817424581f5b5b3171d38fd87c5ed735a5284b4bbd2e6de8ad552dd2ee8f7883",
+      "section_id": "runtime-providers-and-project-layout/run-artifacts",
+      "topics": [
+        "audit logs",
+        "project learn runtime"
+      ],
+      "wiki_path": "wiki/runtime-providers-and-project-layout.md"
+    },
+    {
+      "aliases": [
+        "runtime limitations",
+        "known runtime gaps"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "fresh bootstrap",
+        "embedding providers",
+        "Codex-only install"
+      ],
+      "query_phrases": [
+        "what runtime and install limitations does Myelin have"
+      ],
+      "section_hash": "sha256:e91bb63a704d216940dfaba8d9b602e6d141fb9f40fa257d057ef10c3c87d508",
+      "section_id": "runtime-providers-and-project-layout/known-gaps",
+      "topics": [
+        "implementation gaps",
+        "runtime constraints"
+      ],
+      "wiki_path": "wiki/runtime-providers-and-project-layout.md"
+    },
+    {
+      "aliases": [
+        "schema layer",
+        "schema compiler"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "Phase 0 schema",
+        "schema context",
+        "global rules"
+      ],
+      "query_phrases": [
+        "what is the current Myelin schema model"
+      ],
+      "section_hash": "sha256:bcb1aab8dbc2b1fcfb1d79b78f7ff82436ae582f5674341a0b84b23bdaafe246",
+      "section_id": "schema-and-documentation-contracts/schema-layer",
+      "topics": [
+        "schema architecture",
+        "generated context"
+      ],
+      "wiki_path": "wiki/schema-and-documentation-contracts.md"
+    },
+    {
+      "aliases": [
+        "schema commands",
+        "schema freshness"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "schema check",
+        "schema build",
+        "schema-context.json"
+      ],
+      "query_phrases": [
+        "what is the difference between schema check and schema build"
+      ],
+      "section_hash": "sha256:ec7ecfb40fed6a1295333270589e1ce1fe0d772c29684dadcbdaee70b4559075",
+      "section_id": "schema-and-documentation-contracts/schema-check-and-build",
+      "topics": [
+        "schema operations",
+        "read-write boundaries"
+      ],
+      "wiki_path": "wiki/schema-and-documentation-contracts.md"
+    },
+    {
+      "aliases": [
+        "schema rules",
+        "global vocabulary"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "source classification",
+        "memory scopes",
+        "page taxonomy"
+      ],
+      "query_phrases": [
+        "what typed rules define Myelin source and page classification"
+      ],
+      "section_hash": "sha256:23e4781bc7e4000b6186253d5f8e1621ad2429cd44b819c8ccdf5d385b862833",
+      "section_id": "schema-and-documentation-contracts/typed-global-rules",
+      "topics": [
+        "source processing",
+        "documentation taxonomy"
+      ],
+      "wiki_path": "wiki/schema-and-documentation-contracts.md"
+    },
+    {
+      "aliases": [
+        "agent authoring contract",
+        "subject report"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "subject writer",
+        "draft wiki",
+        "documentation contract"
+      ],
+      "query_phrases": [
+        "what must a Project Memory subject writer produce"
+      ],
+      "section_hash": "sha256:86d6108c686048ebbd6bda3e832b913d8ea62515b61ad572e310bc7cba75ab55",
+      "section_id": "schema-and-documentation-contracts/documentation-contract",
+      "topics": [
+        "Project Memory creation",
+        "authoring boundaries"
+      ],
+      "wiki_path": "wiki/schema-and-documentation-contracts.md"
+    },
+    {
+      "aliases": [
+        "documentation writing rules",
+        "evidence expectations"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "provenance",
+        "wiki quality",
+        "inference labels"
+      ],
+      "query_phrases": [
+        "what provenance is required for Project Memory wiki content"
+      ],
+      "section_hash": "sha256:3a2b46ae6cfa24d183ae04a12c720450805d4c7d473c84cfdb592aa197001167",
+      "section_id": "schema-and-documentation-contracts/quality-and-provenance-expectations",
+      "topics": [
+        "canonical writing",
+        "source grounding"
+      ],
+      "wiki_path": "wiki/schema-and-documentation-contracts.md"
+    },
+    {
+      "aliases": [
+        "schema cautions",
+        "stale schema docs"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "schema conflicts",
+        "project ingest",
+        "quality diagnostics"
+      ],
+      "query_phrases": [
+        "what schema documentation conflicts should I know about"
+      ],
+      "section_hash": "sha256:cc43834cdd8f7caf0f4c537628bf75918aa6230a61b4d628eb8878306e116597",
+      "section_id": "schema-and-documentation-contracts/known-gaps-and-conflicts",
+      "topics": [
+        "documentation drift",
+        "schema limitations"
+      ],
+      "wiki_path": "wiki/schema-and-documentation-contracts.md"
+    },
+    {
+      "aliases": [
+        "ingest pipeline",
+        "experience processing"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "ingest",
+        "Experience Log",
+        "Session Memory",
+        "handoffs"
+      ],
+      "query_phrases": [
+        "what does myelin ingest do and not do"
+      ],
+      "section_hash": "sha256:c524d888311211716abd857ec210ec95e11048232bd8a74876b934ef8c849963",
+      "section_id": "session-memory-and-experience-ingest/boundary",
+      "topics": [
+        "ingest boundary",
+        "memory promotion"
+      ],
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "aliases": [
+        "hook capture",
+        "Experience Log capture"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "Codex hooks",
+        "capture events",
+        "fail open",
+        "git context"
+      ],
+      "query_phrases": [
+        "how does Myelin capture Codex hook activity"
+      ],
+      "section_hash": "sha256:575091bbe96aa3d1efd4b694d136347d3fcb8bdd650d6d1295b0695086027970",
+      "section_id": "session-memory-and-experience-ingest/capture-flow",
+      "topics": [
+        "event recording",
+        "capture safety"
+      ],
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "aliases": [
+        "Experience Log tables",
+        "ingest audit records"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "experience_events",
+        "tombstones",
+        "leases"
+      ],
+      "query_phrases": [
+        "how do Experience Log tombstones and leases work"
+      ],
+      "section_hash": "sha256:dc2cc6cced2f1a9a7f862b41751599f99c6adbc350952154950353742693bb2b",
+      "section_id": "session-memory-and-experience-ingest/experience-log-tables",
+      "topics": [
+        "SQLite queue",
+        "recovery lifecycle"
+      ],
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "aliases": [
+        "background ingest",
+        "worker launch"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "ingest jobs",
+        "detached worker",
+        "batching"
+      ],
+      "query_phrases": [
+        "how are Myelin ingest workers launched"
+      ],
+      "section_hash": "sha256:b103d287b3070293a0878613ca51c1a58a4302fa9b8b3ecde62e703c07034357",
+      "section_id": "session-memory-and-experience-ingest/detached-ingest-jobs",
+      "topics": [
+        "ingest orchestration",
+        "job lifecycle"
+      ],
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "aliases": [
+        "worker contract",
+        "ingest output types"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "ingest worker",
+        "JSON output",
+        "tombstone refs"
+      ],
+      "query_phrases": [
+        "what output can an ingest worker produce"
+      ],
+      "section_hash": "sha256:47d80617123ca27def819f4555ec9694df57fa3e3f92045c312b451ab406673c",
+      "section_id": "session-memory-and-experience-ingest/worker-prompt-and-outputs",
+      "topics": [
+        "provider processing",
+        "transactional ingest"
+      ],
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "aliases": [
+        "Session Memory records",
+        "memory lifecycle"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "session_memories",
+        "supersession",
+        "retraction",
+        "embeddings"
+      ],
+      "query_phrases": [
+        "how are Session Memory records updated or retracted"
+      ],
+      "section_hash": "sha256:9090d1749a75cf2324a92ab5f540c82ed9b47a547f39514ddf1e88070ce0d836",
+      "section_id": "session-memory-and-experience-ingest/session-memory-records",
+      "topics": [
+        "trusted memory",
+        "reconciliation"
+      ],
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "aliases": [
+        "candidate records",
+        "downstream instructions"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "memory candidates",
+        "handoffs",
+        "reviewable leads"
+      ],
+      "query_phrases": [
+        "what is the difference between a candidate and a handoff"
+      ],
+      "section_hash": "sha256:5b9e3494caa3190b84d892083ffa3165dd0beac3df0191273897f209bc736eaf",
+      "section_id": "session-memory-and-experience-ingest/candidates-and-handoffs",
+      "topics": [
+        "trust boundaries",
+        "memory promotion"
+      ],
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "aliases": [
+        "drain status",
+        "job recovery"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "ingest status",
+        "recovery",
+        "claimed leases",
+        "pending embeddings"
+      ],
+      "query_phrases": [
+        "how does Myelin report ingest completion and recover jobs"
+      ],
+      "section_hash": "sha256:eedfe5ef69475c2cc782e036f4ff4845598e84146777e78276ad41aa4215dffe",
+      "section_id": "session-memory-and-experience-ingest/status-and-recovery",
+      "topics": [
+        "operational status",
+        "ingest resilience"
+      ],
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "aliases": [
+        "automatic ingest",
+        "capture scheduler"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "auto maintenance",
+        "cooldown",
+        "SessionStart",
+        "background worker"
+      ],
+      "query_phrases": [
+        "when does Myelin auto-maintenance run"
+      ],
+      "section_hash": "sha256:5539d05f38adc1067b6f92f130950e5ec4af4045b5d9306afafb93bf4bd08cfb",
+      "section_id": "session-memory-and-experience-ingest/auto-maintenance",
+      "topics": [
+        "background maintenance",
+        "hook behavior"
+      ],
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "aliases": [
+        "ingest verification",
+        "implementation evidence"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "capture tests",
+        "ingest tests",
+        "maintenance tests"
+      ],
+      "query_phrases": [
+        "which tests verify Session Memory ingest behavior"
+      ],
+      "section_hash": "sha256:0c94af2156a4afb8d0302b995ad83a88ff3f06cadcae34583ced5c86fdfb99f6",
+      "section_id": "session-memory-and-experience-ingest/verification-evidence",
+      "topics": [
+        "test coverage",
+        "ingest contracts"
+      ],
+      "wiki_path": "wiki/session-memory-and-experience-ingest.md"
+    },
+    {
+      "aliases": [
+        "inbox boundaries",
+        "source evidence model"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "sources inbox",
+        "gap inbox",
+        "canonical wiki"
+      ],
+      "query_phrases": [
+        "what is the difference between Myelin inbox surfaces"
+      ],
+      "section_hash": "sha256:82360937ee1a554a595b9bc20592845b737d2fef681096491025dafe2ee77069",
+      "section_id": "source-evidence-inbox-and-candidate-boundaries/boundary-model",
+      "topics": [
+        "source preservation",
+        "candidate intake"
+      ],
+      "wiki_path": "wiki/source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "aliases": [
+        "source triage",
+        "classification fields"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "source_kind",
+        "ownership",
+        "destination",
+        "action"
+      ],
+      "query_phrases": [
+        "how must preserved sources be classified"
+      ],
+      "section_hash": "sha256:5f32f4f2de6d1d028c888de67f5e43d6917b0e9640afb03f1ca0234e0174eb6e",
+      "section_id": "source-evidence-inbox-and-candidate-boundaries/source-classification",
+      "topics": [
+        "source processing",
+        "provenance"
+      ],
+      "wiki_path": "wiki/source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "aliases": [
+        "legacy inbox",
+        "answer gap tracking"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "gap inbox",
+        "low confidence",
+        "repair notes"
+      ],
+      "query_phrases": [
+        "how does the legacy gap and repair inbox work"
+      ],
+      "section_hash": "sha256:6da56e79bce4765c1842a3790f101e9bd52c6d34fcff070df9d6a3960cf17969",
+      "section_id": "source-evidence-inbox-and-candidate-boundaries/gap-and-repair-inbox",
+      "topics": [
+        "quality repair",
+        "inbox schema"
+      ],
+      "wiki_path": "wiki/source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "aliases": [
+        "durable proposal inbox",
+        "runtime source proposals"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "runtime inbox",
+        "memory inbox create",
+        "immutable JSON"
+      ],
+      "query_phrases": [
+        "how do I create a runtime inbox proposal"
+      ],
+      "section_hash": "sha256:16ad65afc9352f8b2572dd03d1aa64329d416ca8b0ca5aaab1a6fc9d87108246",
+      "section_id": "source-evidence-inbox-and-candidate-boundaries/runtime-inbox-source-proposals",
+      "topics": [
+        "Project Memory leads",
+        "source preservation"
+      ],
+      "wiki_path": "wiki/source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "aliases": [
+        "candidate lifecycle",
+        "inbox candidates"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "candidate intake",
+        "needs_review",
+        "project.inbox"
+      ],
+      "query_phrases": [
+        "how does runtime inbox intake create Project Memory candidates"
+      ],
+      "section_hash": "sha256:cce4c058c7f80ca7676f52d3ef014614ad125a803764fbd675a518a78cf44af0",
+      "section_id": "source-evidence-inbox-and-candidate-boundaries/candidates-are-leads",
+      "topics": [
+        "Project Memory leads",
+        "deterministic intake"
+      ],
+      "wiki_path": "wiki/source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "aliases": [
+        "curation flow",
+        "command split"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "project learn",
+        "inbox intake",
+        "project ingest"
+      ],
+      "query_phrases": [
+        "when does project learn intake runtime inbox items"
+      ],
+      "section_hash": "sha256:d42e0d0594c216954699b28ac7b70e6e47e68ebdaecbb5c2452616c9cfef2bb1",
+      "section_id": "source-evidence-inbox-and-candidate-boundaries/project-learn-flow",
+      "topics": [
+        "runtime inbox",
+        "command vocabulary"
+      ],
+      "wiki_path": "wiki/source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "aliases": [
+        "lead reconciliation",
+        "terminal decisions"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "source consumption",
+        "candidate retirement",
+        "dispositions"
+      ],
+      "query_phrases": [
+        "which candidate dispositions retire Project Memory leads"
+      ],
+      "section_hash": "sha256:25529118999517de4ffdf11ff8fc9ff8be72b5e3cef641566b1e0e1bcf986cab",
+      "section_id": "source-evidence-inbox-and-candidate-boundaries/source-consumption-reconciliation",
+      "topics": [
+        "candidate lifecycle",
+        "maintenance reporting"
+      ],
+      "wiki_path": "wiki/source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "aliases": [
+        "stale memory repair",
+        "source-to-wiki workflow"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "provenance",
+        "repair workflow",
+        "preserve source"
+      ],
+      "query_phrases": [
+        "what is the safe workflow for repairing Project Memory"
+      ],
+      "section_hash": "sha256:0f05b1dfcce46425f044472dde3921fd10526da160f52055e632514f0cc3d311",
+      "section_id": "source-evidence-inbox-and-candidate-boundaries/provenance-and-repair-rules",
+      "topics": [
+        "canonical updates",
+        "evidence handling"
+      ],
+      "wiki_path": "wiki/source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "aliases": [
+        "inbox cautions",
+        "current inbox gaps"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "inbox ambiguity",
+        "Practice Memory",
+        "Personal Memory"
+      ],
+      "query_phrases": [
+        "what inbox and candidate limitations exist today"
+      ],
+      "section_hash": "sha256:abbc6d64e87bb3be62bfdf0cb63ee548f85792c3de4f9a3adb028f024940fead",
+      "section_id": "source-evidence-inbox-and-candidate-boundaries/current-gaps-and-cautions",
+      "topics": [
+        "scope limitations",
+        "terminology"
+      ],
+      "wiki_path": "wiki/source-evidence-inbox-and-candidate-boundaries.md"
+    },
+    {
+      "aliases": [
+        "memory database",
+        "SQLite state"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "state/memory.db",
+        "SQLite",
+        "WAL",
+        "root database"
+      ],
+      "query_phrases": [
+        "where is the Myelin SQLite database stored"
+      ],
+      "section_hash": "sha256:fd9c1195f2e7cc6bdcf9f18dadde9d7396db3bbd38f145baea602402e8f966c9",
+      "section_id": "storage-sqlite-and-retrieval-indexes/root-sqlite-state",
+      "topics": [
+        "storage architecture",
+        "database runtime"
+      ],
+      "wiki_path": "wiki/storage-sqlite-and-retrieval-indexes.md"
+    },
+    {
+      "aliases": [
+        "database schema",
+        "SQLite migrations"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "migrations",
+        "schema_migrations",
+        "retrieval tables"
+      ],
+      "query_phrases": [
+        "which tables exist in Myelin memory.db"
+      ],
+      "section_hash": "sha256:788624ea2cb4f09745c0d1bdce0a40874e10a03b8b153d47134ffa83ced55bb6",
+      "section_id": "storage-sqlite-and-retrieval-indexes/migrations-and-tables",
+      "topics": [
+        "storage evolution",
+        "memory tables"
+      ],
+      "wiki_path": "wiki/storage-sqlite-and-retrieval-indexes.md"
+    },
+    {
+      "aliases": [
+        "vector runtime",
+        "SQLite extension"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "sqlite-vec",
+        "SQLite dylib",
+        "vector tables"
+      ],
+      "query_phrases": [
+        "how does Myelin load sqlite-vec and SQLite"
+      ],
+      "section_hash": "sha256:3a26cc0f66257f3c84b40c0eed27531e30e03364aba0447579cc7c7c23fc03df",
+      "section_id": "storage-sqlite-and-retrieval-indexes/sqlite-runtime-and-sqlite-vec",
+      "topics": [
+        "vector search",
+        "runtime selection"
+      ],
+      "wiki_path": "wiki/storage-sqlite-and-retrieval-indexes.md"
+    },
+    {
+      "aliases": [
+        "session vector index",
+        "memory index session"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "Session Memory indexing",
+        "embeddings",
+        "session_memory_vec"
+      ],
+      "query_phrases": [
+        "how are Session Memory records embedded and queried"
+      ],
+      "section_hash": "sha256:145a72a7e124cec3f5ef0a21028666b84f06e011cca1c81ddd06109797965ee9",
+      "section_id": "storage-sqlite-and-retrieval-indexes/session-memory-indexing",
+      "topics": [
+        "embedding lifecycle",
+        "Session Memory retrieval"
+      ],
+      "wiki_path": "wiki/storage-sqlite-and-retrieval-indexes.md"
+    },
+    {
+      "aliases": [
+        "project vector index",
+        "memory index project"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "Project Memory indexing",
+        "markdown sections",
+        "semantic hints"
+      ],
+      "query_phrases": [
+        "how is canonical Project Memory indexed for retrieval"
+      ],
+      "section_hash": "sha256:25638dfed8a7606b26177a2a1f4a7c54b6e838a26397c348207c06a79cc0fbc4",
+      "section_id": "storage-sqlite-and-retrieval-indexes/project-memory-retrieval-indexing",
+      "topics": [
+        "derived retrieval",
+        "markdown indexing"
+      ],
+      "wiki_path": "wiki/storage-sqlite-and-retrieval-indexes.md"
+    },
+    {
+      "aliases": [
+        "retrieval freshness",
+        "rebuild rules"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "markdown wins",
+        "stale index",
+        "degraded retrieval"
+      ],
+      "query_phrases": [
+        "what happens when Myelin retrieval indexes are stale"
+      ],
+      "section_hash": "sha256:0547d91f665d46d3e9100d574e6a266a061bde3f438d1927bba596eff47e8cc0",
+      "section_id": "storage-sqlite-and-retrieval-indexes/freshness-rebuild-and-degradation-rules",
+      "topics": [
+        "canonical truth",
+        "serving degradation"
+      ],
+      "wiki_path": "wiki/storage-sqlite-and-retrieval-indexes.md"
+    },
+    {
+      "aliases": [
+        "database verification",
+        "retrieval coverage"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "storage tests",
+        "retrieval tests",
+        "indexer tests"
+      ],
+      "query_phrases": [
+        "which tests verify Myelin storage and retrieval"
+      ],
+      "section_hash": "sha256:0f71c791c21cde30c6e2a67c43cafcd1fa32f0c47745ddfe3301fe57b7474ffa",
+      "section_id": "storage-sqlite-and-retrieval-indexes/verification-coverage",
+      "topics": [
+        "test coverage",
+        "storage contracts"
+      ],
+      "wiki_path": "wiki/storage-sqlite-and-retrieval-indexes.md"
+    },
+    {
+      "aliases": [
+        "indexing operations",
+        "embedding setup"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "embedding config",
+        "Ollama",
+        "Gemini",
+        "batch size"
+      ],
+      "query_phrases": [
+        "how do I configure and run Myelin embedding indexes"
+      ],
+      "section_hash": "sha256:ca081b689c78a99b21f16d2237d8088e77d01cb5300a4bffe0c9150be11e1a74",
+      "section_id": "storage-sqlite-and-retrieval-indexes/operational-notes",
+      "topics": [
+        "local development",
+        "embedding providers"
+      ],
+      "wiki_path": "wiki/storage-sqlite-and-retrieval-indexes.md"
+    },
+    {
+      "aliases": [
+        "standard checks",
+        "test commands"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "bun test",
+        "typecheck",
+        "make test",
+        "verification"
+      ],
+      "query_phrases": [
+        "which commands verify Myelin changes"
+      ],
+      "section_hash": "sha256:4cafd82c826032f97a79e7da5aabb6692fca3e304a2e05f1dbac75cb289df476",
+      "section_id": "testing-and-verification/standard-verification-commands",
+      "topics": [
+        "development verification",
+        "test suite"
+      ],
+      "wiki_path": "wiki/testing-and-verification.md"
+    },
+    {
+      "aliases": [
+        "test layout",
+        "test organization"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "tests directory",
+        "fixtures",
+        "test boundaries"
+      ],
+      "query_phrases": [
+        "how is the Myelin test suite organized"
+      ],
+      "section_hash": "sha256:2c468f2b5e626e8fa60ce0255a612bb4870e69f07c2ce11ce7d01606ed1caa43",
+      "section_id": "testing-and-verification/test-suite-organization",
+      "topics": [
+        "test coverage",
+        "repository structure"
+      ],
+      "wiki_path": "wiki/testing-and-verification.md"
+    },
+    {
+      "aliases": [
+        "high-risk tests",
+        "durable write safety"
+      ],
+      "confidence": "medium",
+      "keywords": [
+        "pre-write validation",
+        "markdown applier",
+        "contract tests"
+      ],
+      "query_phrases": [
+        "which tests protect Myelin from unsafe durable memory writes"
+      ],
+      "section_hash": "sha256:242a3c4c96c8a2a428dae6eb7f0e2e38d6702d8a32eba481d336c9b8d7578938",
+      "section_id": "testing-and-verification/contract-tests-that-matter",
+      "topics": [
+        "quality gates",
+        "Project Memory safety"
+      ],
+      "wiki_path": "wiki/testing-and-verification.md"
+    },
+    {
+      "aliases": [
+        "TypeScript validation",
+        "compile check"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "typecheck",
+        "tsc --noEmit",
+        "typed contracts"
+      ],
+      "query_phrases": [
+        "why is typecheck required for Myelin changes"
+      ],
+      "section_hash": "sha256:5327ea9291b19b5a96957eecc1af772e8878a3299336959efb357cf11fedb682",
+      "section_id": "testing-and-verification/typecheck-expectations",
+      "topics": [
+        "static verification",
+        "contract drift"
+      ],
+      "wiki_path": "wiki/testing-and-verification.md"
+    },
+    {
+      "aliases": [
+        "verification limitations",
+        "evidence risks"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "live providers",
+        "retrieval quality",
+        "sqlite-vec",
+        "run artifacts"
+      ],
+      "query_phrases": [
+        "which Myelin claims require live evidence beyond tests"
+      ],
+      "section_hash": "sha256:1b131a12ff4aff843da5ee97866c9e01c47502f6971ed9bb61522f0b9b1531c5",
+      "section_id": "testing-and-verification/high-risk-areas-requiring-evidence",
+      "topics": [
+        "operational confidence",
+        "testing limits"
+      ],
+      "wiki_path": "wiki/testing-and-verification.md"
+    },
+    {
+      "aliases": [
+        "verification workflow",
+        "test strategy"
+      ],
+      "confidence": "high",
+      "keywords": [
+        "focused tests",
+        "full test suite",
+        "run artifacts"
+      ],
+      "query_phrases": [
+        "how should I verify a Myelin implementation change"
+      ],
+      "section_hash": "sha256:fca1272584be5e35ed5d5d900097907f108f12558e7a6f4263671e714ac82a93",
+      "section_id": "testing-and-verification/practical-verification-pattern",
+      "topics": [
+        "change validation",
+        "Project Memory QA"
+      ],
+      "wiki_path": "wiki/testing-and-verification.md"
+    }
+  ]
+}

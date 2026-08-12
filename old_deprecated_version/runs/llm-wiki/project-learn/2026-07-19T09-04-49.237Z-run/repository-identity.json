@@ -1,0 +1,18 @@
+{
+  "current_branch": "master",
+  "diagnostics": [],
+  "head_commit": "d12edfece6c7d60309c84878452292500f70abec",
+  "project_key": "llm-wiki",
+  "registered_repo_path": "/Users/liadgoren/Repositories/llm-wiki",
+  "remotes": [
+    {
+      "name": "origin",
+      "urls": [
+        "https://github.com/khgs2411/Myelin.git"
+      ]
+    }
+  ],
+  "repository_root": "/Users/liadgoren/Repositories/llm-wiki",
+  "schema_version": 1,
+  "status": "available"
+}

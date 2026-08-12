@@ -1,0 +1,24 @@
+{
+  "body": "Document the current post-create Project Memory workflow and Session Memory freshness boundary. The operator surface includes myelin memory maintain project and myelin memory review; Project auto-maintenance is thresholded and non-recursive. Session auto-maintenance drains Experience Log work, indexes active Session Memory, continues while active embeddings remain pending, and must await asynchronous indexing before closing SQLite. Changing embedding contracts must backfill every active Session Memory for the selected provider; Ollama qwen3-embedding:4b is now the local-first provider with Gemini fallback. Explicit recent-session queries use a deterministic semantic-plus-recency rerank, while ordinary queries remain semantic.",
+  "confidence": "high",
+  "created_at": "2026-07-10T07:28:53.574Z",
+  "creator": "operator",
+  "evidence_refs": [
+    "docs/ROADMAP.md",
+    "docs/CLI.md",
+    "src/maintenance/auto-memory-maintenance.ts",
+    "src/memory/session-memory-indexer.ts",
+    "src/memory/session-memory-query.ts",
+    "src/memory/embedding-provider-factory.ts"
+  ],
+  "id": "2026-07-10T07-28-53.574Z_628ecf",
+  "project_key": "llm-wiki",
+  "rationale": "The canonical wiki predates the completed maintenance commands and provider/freshness behavior, which caused dogfood queries to omit implemented capabilities and report stale continuity.",
+  "risk": "low",
+  "schema_version": 1,
+  "tags": [],
+  "target_hint": "wiki/command-surface-and-operator-workflows.md",
+  "target_layer": "project",
+  "target_scope": "llm-wiki",
+  "title": "Current memory maintenance and freshness workflow"
+}

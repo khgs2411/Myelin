@@ -1,0 +1,308 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "status": "completed",
+  "dispositions": [
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_project_memory_docs_semantics_20260718_0848",
+      "disposition": "applied_to_project_memory",
+      "reason": "Current code and tests verify the candidate evidence contract, SessionStart/raw-count semantics, degraded-baseline behavior, and reviewed promotion boundary; the draft now records those durable contracts without linking run-local identity evidence.",
+      "output_refs": ["draft-wiki/project-memory-creation-and-curation.md", "draft-wiki/source-evidence-inbox-and-candidate-boundaries.md", "draft-wiki/session-memory-and-experience-ingest.md", "draft-wiki/roadmap-adrs-and-design-history.md"]
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "project_inbox:llm-wiki:2026-07-18T08-47-39.250Z_17cd7d",
+      "disposition": "not_durable",
+      "reason": "The operator conclusion concerns a test-induced overlapping-ingest observation and explicitly says no active product gap or reporting fix is required; it does not add a standalone durable Project Memory fact.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "project_inbox:llm-wiki:2026-07-18T08-47-39.237Z_48417e",
+      "disposition": "deferred_unsafe_change",
+      "reason": "The source explicitly preserves the broader durable repository-identity prose policy as an open decision. This pass uses checkout identity only as report evidence and does not settle or expand that policy.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_maintenance_contract_update_20260718_0841",
+      "disposition": "applied_to_project_memory",
+      "reason": "The current ingest, maintenance-report, candidate-validation, status, and regression-test sources verify these maintained contracts; the draft documents their current behavior.",
+      "output_refs": ["draft-wiki/project-memory-creation-and-curation.md", "draft-wiki/source-evidence-inbox-and-candidate-boundaries.md", "draft-wiki/session-memory-and-experience-ingest.md"]
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_documentation_contract_update_20260718_0836",
+      "disposition": "already_covered",
+      "reason": "Its verified documentation-contract claims are covered by the current-pass updates attributed to the more specific maintenance-contract sources; the stale claimable-count gap is not promoted.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_sessionstart_raw_count_contract_20260718",
+      "disposition": "applied_to_project_memory",
+      "reason": "Current capture, ingest, worker, and regression-test sources verify forced SessionStart scheduling and the distinction between a raw queued snapshot and worker-claimable tombstones.",
+      "output_refs": ["draft-wiki/session-memory-and-experience-ingest.md"]
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_workflow_routing_20260718",
+      "disposition": "applied_to_project_memory",
+      "reason": "Current worker code verifies that applied project-scoped ingest candidates schedule optional Project Memory maintenance while preserving the curator verification boundary.",
+      "output_refs": ["draft-wiki/source-evidence-inbox-and-candidate-boundaries.md"]
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_operator_workflow_contract_20260718",
+      "disposition": "already_covered",
+      "reason": "The final draft already documents SessionStart, auto-maintenance overlap guards, and raw queued versus claimable accounting through the applied SessionStart source.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_review_routing_contract_20260718",
+      "disposition": "already_covered",
+      "reason": "The verified durable-routing behavior is covered by the current source-boundary update; its remaining wording is a duplicate leased summary.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_ingest_contract_20260718",
+      "disposition": "already_covered",
+      "reason": "The final draft covers the verified SessionStart and raw-count behavior; the source's request to decide whether reporting needs a change is an open policy question rather than a current documentation gap.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_project_routing_fix_20260717",
+      "disposition": "already_covered",
+      "reason": "Current worker code independently verifies project-candidate routing, and the draft records it; the historical installed-version and test-count snapshot is not durable project prose.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_preserve_curated_baseline_when_maintenance_degrades_20260717",
+      "disposition": "applied_to_project_memory",
+      "reason": "Current status-inspector code and regression coverage verify that degraded maintenance preserves an eligible curated baseline, so the draft now names the lifecycle and its precedence over recreate.",
+      "output_refs": ["draft-wiki/project-memory-creation-and-curation.md"]
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_candidate_lead_contract_20260717",
+      "disposition": "applied_to_project_memory",
+      "reason": "Current worker validation verifies evidence-bearing candidate cardinality while the maintenance flow retains canonical page selection and verification responsibility; the draft now distinguishes that from legacy stored leads.",
+      "output_refs": ["draft-wiki/source-evidence-inbox-and-candidate-boundaries.md"]
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_legacy_path_consumer_risk_20260716",
+      "disposition": "already_covered",
+      "reason": "Current layout migration code and tests consistently establish flattened projects, sources, runs, and state/memory paths with collision failure; the existing layout subject already documents the remaining legacy-path boundary.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_repo_identity_prose_policy_20260716",
+      "disposition": "deferred_unsafe_change",
+      "reason": "This is explicitly an unresolved product-policy choice about durable identity prose, and current implementation alone does not authorize settling it.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_resources_root_naming_20260716",
+      "disposition": "already_covered",
+      "reason": "Current layout helpers, migration code, tests, README, and draft documentation consistently use sources/<key>/ for preserved source evidence; this stale naming lead is resolved by the implemented public/storage contract.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_verify_finalized_index_20260715",
+      "disposition": "already_covered",
+      "reason": "The current draft index is published canonical navigation and links every existing subject page; the prompt-only finalizer lead is stale.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_planner_contract_followup_20260715",
+      "disposition": "belongs_to_other_layer",
+      "reason": "This is a proposed Class Kit planner/implementation follow-up, not verified durable behavior of the llm-wiki Project Memory documentation surface.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_product_resolution_invite_only_conflict_20260715",
+      "disposition": "belongs_to_other_layer",
+      "reason": "The claimed invite-only conflict concerns Class Kit product documentation, not this repository's Project Memory contract.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_classes_members_only_privacy_review_20260715",
+      "disposition": "belongs_to_other_layer",
+      "reason": "The privacy boundary concerns Class Kit caller visibility and belongs to that repository's product/security review.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_review_gate_gap_20260719",
+      "disposition": "applied_to_project_memory",
+      "reason": "Current review-checkpoint and curator-service code verify exact reviewed-run promotion, so the reported gap is stale and the draft now documents the implemented contract.",
+      "output_refs": ["draft-wiki/project-memory-creation-and-curation.md", "draft-wiki/command-surface-and-operator-workflows.md"]
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_next_slice_review_20260718_0852",
+      "disposition": "already_covered",
+      "reason": "The exact reviewed-artifact promotion part of this proposal is implemented and documented by this pass; the remaining typed-source-resolution suggestion is proposed engineering work, not a new Project Memory fact.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_claimable_rows_labeling_20260718_0848",
+      "disposition": "deferred_unsafe_change",
+      "reason": "Whether to add a distinct claimable-row label is an explicitly open reporting-policy choice; current raw-count behavior is documented without treating the decision as a known gap.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_claimable_count_contract_20260718_0836",
+      "disposition": "deferred_unsafe_change",
+      "reason": "The handoff asks for a product decision about claimable-count reporting. No current explicit policy resolves it, and the operator source says no day-to-day fix is required.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_promote_sessionstart_contract_20260718",
+      "disposition": "already_covered",
+      "reason": "The final draft documents the verified bounded SessionStart drain and raw-versus-claimable distinction through the applied candidate source.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_verify_raw_row_count_20260718",
+      "disposition": "already_covered",
+      "reason": "Current code confirms raw queued-count behavior and the final draft records it. The request to change or decide intent remains a separate policy/engineering action.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_review_rerun_20260718",
+      "disposition": "applied_to_project_memory",
+      "reason": "Current command and maintenance sources verify foreground progress, heartbeats, schema-validated reports, and retry feedback; the command documentation now captures the repaired operator behavior.",
+      "output_refs": ["draft-wiki/command-surface-and-operator-workflows.md"]
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_project_review_20260718",
+      "disposition": "already_covered",
+      "reason": "The leased operator-workflow facts are verified and covered by the final Session Memory draft; no additional canonical write is needed.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_review_semantic_race_20260718",
+      "disposition": "belongs_to_other_layer",
+      "reason": "This is an unimplemented ingest-convergence engineering investigation, not verified current Project Memory behavior to publish as documentation.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_verify_droplet_bootstrap_20260717",
+      "disposition": "belongs_to_other_layer",
+      "reason": "The proposed Droplet Bot bootstrap concerns another repository and cannot become llm-wiki Project Memory documentation.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_implement_approved_fixes_20260717",
+      "disposition": "already_covered",
+      "reason": "The concrete approved maintenance fixes are independently verified in current status, candidate, and review-promotion code and are documented by this pass.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_repair_project_memory_contracts_20260717",
+      "disposition": "applied_to_project_memory",
+      "reason": "Current status and worker-validation contracts verify the two named repairs, which are now recorded in the Project Memory creation and source-boundary subjects.",
+      "output_refs": ["draft-wiki/project-memory-creation-and-curation.md", "draft-wiki/source-evidence-inbox-and-candidate-boundaries.md"]
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_project_maintenance_dogfood_20260716_0844",
+      "disposition": "not_durable",
+      "reason": "This is a completed dogfood-run follow-up request rather than a durable current repository behavior or documentation contract.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_legacy_path_audit_20260716",
+      "disposition": "already_covered",
+      "reason": "Current layout migration code and tests establish the new paths and collision behavior; existing layout documentation already covers the stale-consumer risk.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_strip_identity_links_20260716",
+      "disposition": "already_covered",
+      "reason": "The draft does not add or refresh a run-local repository-identity link, and checkout identity is recorded only as report evidence in this pass.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_resources_root_naming_20260716",
+      "disposition": "already_covered",
+      "reason": "The implemented and tested layout consistently uses sources/<key>/; no unresolved naming choice remains.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_query_ranking_20260716",
+      "disposition": "belongs_to_other_layer",
+      "reason": "This is a Class Kit retrieval-ranking engineering follow-up, not a durable llm-wiki documentation update.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_close_documentation_gaps_20260715",
+      "disposition": "belongs_to_other_layer",
+      "reason": "The requested regression gaps concern Class Kit destructive and workflow boundaries, not this repository's Project Memory documentation.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_planner_contract_followup_20260715",
+      "disposition": "belongs_to_other_layer",
+      "reason": "The planner/recreate decision is a Class Kit implementation follow-up and not a verified Myelin documentation contract.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_resume_incomplete_subject_runs_20260715",
+      "disposition": "belongs_to_other_layer",
+      "reason": "This asks about incomplete Class Kit subject runs and does not establish a durable llm-wiki Project Memory fact.",
+      "output_refs": []
+    }
+  ],
+  "touched_paths": [
+    "draft-wiki/project-memory-creation-and-curation.md",
+    "draft-wiki/source-evidence-inbox-and-candidate-boundaries.md",
+    "draft-wiki/session-memory-and-experience-ingest.md",
+    "draft-wiki/command-surface-and-operator-workflows.md",
+    "draft-wiki/roadmap-adrs-and-design-history.md"
+  ],
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/src/project/project-memory-review-checkpoint.ts",
+    "target-repo/src/project/project-memory-curator-service.ts",
+    "target-repo/src/project/project-memory-agent-maintenance-service.ts",
+    "target-repo/src/ingest/ingest-service.ts",
+    "target-repo/src/ingest/worker.ts",
+    "target-repo/src/status/project-memory-inspector.ts",
+    "target-repo/tests/project/project-memory-curator-service.test.ts",
+    "target-repo/tests/commands/memory.test.ts",
+    "target-repo/tests/capture/facade.test.ts",
+    "target-repo/tests/status/status-service.test.ts"
+  ],
+  "known_gaps": []
+}

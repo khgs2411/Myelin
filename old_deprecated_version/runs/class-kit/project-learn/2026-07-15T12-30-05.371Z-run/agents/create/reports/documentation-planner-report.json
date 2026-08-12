@@ -1,0 +1,43 @@
+{
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/README.md",
+    "target-repo/docs/product-shape.md",
+    "target-repo/docs/api/class-api-map.md",
+    "target-repo/class-kit-sdk/src/types.ts",
+    "target-repo/class-kit-sdk/src/client/class-kit-client.ts",
+    "target-repo/class-kit-api/supabase/functions/_shared/context.ts",
+    "target-repo/class-kit-api/supabase/functions/_shared/permissions.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-product-context/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-classes/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-register-class/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-manage-registrations/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-memberships/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-schedules/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-attendance/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-product-documents/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-product-change-requests/index.ts",
+    "target-repo/class-kit-api/supabase/functions/_shared/pm/types.ts",
+    "target-repo/class-kit-api/supabase/migrations/20260607132920_membership_ledger.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260607143000_schedule_rule_model.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260607160000_registration_engine.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260612073150_product_auth_policy.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260612120000_permission_layer_foundation.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260629133541_product_access_entries.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260705060042_product_documents.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260707144646_product_change_requests.sql",
+    "target-repo/class-kit-api/supabase/tests/member_auto_approve_registration.sql",
+    "target-repo/class-kit-api/supabase/tests/pending_registration_cancellation.sql",
+    "target-repo/class-kit-api/supabase/tests/schedule_generation_backfill.sql"
+  ],
+  "known_gaps": [
+    "No inspected automated regression covers origin resolution or the full open versus invite_only product-access state machine, including platform-admin exclusion and pending/rejected/inactive outcomes.",
+    "No inspected automated regression covers permission-level fallback to platform roles, permission-key non-inheritance, custom-role capability derivation, or last-manager protection.",
+    "No inspected automated regression covers class visibility/read shaping, lifecycle transitions, public field policy, or manager class mutations.",
+    "Registration tests cover member_auto_approve and a pending cancellation case, but not the full capacity, hidden/members_only, approval/recovery, cancellation-cutoff, and stock-restoration matrix.",
+    "No inspected automated regression covers membership upgrade/replacement/revocation, all mode and grant-state combinations, or ledger completeness.",
+    "Schedule backfill is covered, but no inspected regression covers all recurrence/status/skip/protected-generated-class transitions.",
+    "No inspected automated regression covers attendance transitions, document version/publication/locale/acceptance behavior, change-request revisions/attachments, or Trello synchronization and unknown-status handling.",
+    "The subject pages created in this planning pass are canonical placeholders; detailed subject-level curation must retain the stated gaps until implementation and regression evidence are added."
+  ]
+}

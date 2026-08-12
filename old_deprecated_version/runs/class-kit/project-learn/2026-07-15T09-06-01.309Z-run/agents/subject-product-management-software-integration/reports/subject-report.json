@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "product-management-software-integration",
+  "wiki_path": "product-management-software-integration.md",
+  "status": "partial",
+  "evidence_paths": [
+    "repository-identity.json",
+    "docs/api/backend-api.md",
+    "docs/sdk/client-sdk.md",
+    "docs/api/class-api-map.md",
+    "docs/changelog.md"
+  ],
+  "touched_paths": [
+    "draft-wiki/product-management-software-integration.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "The assigned Supabase shared PM provider code, admin PM Edge Function, and migrations are absent from target-repo, so documented behavior cannot be implementation-verified.",
+    "No PM integration regression tests are present in the supplied snapshot.",
+    "Authorization and state-gate precedence across platform-admin access, configuration existence/enabled state, request eligibility, existing links, and sync mutations is not executably verified.",
+    "Attachment retry/failure semantics, force-new concurrency, transaction boundaries, and disabled-configuration action behavior are not established by available evidence."
+  ]
+}

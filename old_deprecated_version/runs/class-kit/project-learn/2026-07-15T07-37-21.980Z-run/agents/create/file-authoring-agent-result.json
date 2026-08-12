@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "stage_id": "create-planner",
+  "status": "completed",
+  "provider_mode": "live",
+  "provider": "codex",
+  "model": "gpt-5.6-terra",
+  "sandbox": "workspace-write",
+  "cwd": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T07-37-21.980Z-run/agents/create",
+  "target_repo_snapshot": "target-repo (removed after invocation)",
+  "allowed_output_roots": [
+    {
+      "name": "draft_wiki",
+      "relativePath": "draft-wiki"
+    },
+    {
+      "name": "planner_reports",
+      "relativePath": "reports"
+    }
+  ],
+  "discovered_outputs": [
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/authorization-and-role-grants.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T07-37-21.980Z-run/agents/create/draft-wiki/authorization-and-role-grants.md",
+      "size_bytes": 1296
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/class-lifecycle-and-registrations.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T07-37-21.980Z-run/agents/create/draft-wiki/class-lifecycle-and-registrations.md",
+      "size_bytes": 1531
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/index.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T07-37-21.980Z-run/agents/create/draft-wiki/index.md",
+      "size_bytes": 3395
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/memberships-and-entitlements.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T07-37-21.980Z-run/agents/create/draft-wiki/memberships-and-entitlements.md",
+      "size_bytes": 1404
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/product-access-policy.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T07-37-21.980Z-run/agents/create/draft-wiki/product-access-policy.md",
+      "size_bytes": 1917
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/product-content-and-pm-workflows.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T07-37-21.980Z-run/agents/create/draft-wiki/product-content-and-pm-workflows.md",
+      "size_bytes": 1409
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/repository-identity-and-boundaries.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T07-37-21.980Z-run/agents/create/draft-wiki/repository-identity-and-boundaries.md",
+      "size_bytes": 836
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/sdk-and-control-plane-surfaces.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T07-37-21.980Z-run/agents/create/draft-wiki/sdk-and-control-plane-surfaces.md",
+      "size_bytes": 880
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/templates-schedules-and-generation.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T07-37-21.980Z-run/agents/create/draft-wiki/templates-schedules-and-generation.md",
+      "size_bytes": 1371
+    },
+    {
+      "root_name": "planner_reports",
+      "relative_path": "reports/documentation-planner-report.json",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T07-37-21.980Z-run/agents/create/reports/documentation-planner-report.json",
+      "size_bytes": 1857
+    },
+    {
+      "root_name": "planner_reports",
+      "relative_path": "reports/documentation-subject-manifest.json",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T07-37-21.980Z-run/agents/create/reports/documentation-subject-manifest.json",
+      "size_bytes": 3703
+    }
+  ],
+  "result_ref": "file-authoring-agent-result.json"
+}

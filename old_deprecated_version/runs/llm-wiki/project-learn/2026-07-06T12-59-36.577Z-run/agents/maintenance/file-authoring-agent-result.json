@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "stage_id": "maintenance",
+  "status": "completed",
+  "provider_mode": "live",
+  "provider": "codex",
+  "model": "gpt-5.5",
+  "sandbox": "workspace-write",
+  "cwd": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run/agents/maintenance",
+  "target_repo_snapshot": "target-repo (removed after invocation)",
+  "allowed_output_roots": [
+    {
+      "name": "draft_wiki",
+      "relativePath": "draft-wiki"
+    },
+    {
+      "name": "maintenance_reports",
+      "relativePath": "reports"
+    }
+  ],
+  "discovered_outputs": [
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/command-workflows.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run/agents/maintenance/draft-wiki/command-workflows.md",
+      "size_bytes": 11895
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/external-boundaries-and-integrations.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run/agents/maintenance/draft-wiki/external-boundaries-and-integrations.md",
+      "size_bytes": 10551
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/index.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run/agents/maintenance/draft-wiki/index.md",
+      "size_bytes": 2053
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/product-and-memory-model.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run/agents/maintenance/draft-wiki/product-and-memory-model.md",
+      "size_bytes": 7167
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/project-memory-lifecycle.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run/agents/maintenance/draft-wiki/project-memory-lifecycle.md",
+      "size_bytes": 10500
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/roadmap-decisions-and-docs.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run/agents/maintenance/draft-wiki/roadmap-decisions-and-docs.md",
+      "size_bytes": 7871
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/schema-config-and-runtime.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run/agents/maintenance/draft-wiki/schema-config-and-runtime.md",
+      "size_bytes": 10281
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/session-memory-and-experience-ingest.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run/agents/maintenance/draft-wiki/session-memory-and-experience-ingest.md",
+      "size_bytes": 9825
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/storage-retrieval-and-query.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run/agents/maintenance/draft-wiki/storage-retrieval-and-query.md",
+      "size_bytes": 12639
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/verification-and-quality-gates.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run/agents/maintenance/draft-wiki/verification-and-quality-gates.md",
+      "size_bytes": 10671
+    },
+    {
+      "root_name": "maintenance_reports",
+      "relative_path": "reports/documentation-maintenance-report.json",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run/agents/maintenance/reports/documentation-maintenance-report.json",
+      "size_bytes": 2269
+    }
+  ],
+  "result_ref": "file-authoring-agent-result.json"
+}

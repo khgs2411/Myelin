@@ -1,0 +1,28 @@
+{
+  "artifacts": {
+    "curator_output": "documentation-maintenance-result.json",
+    "curator_run_result": "curator-run-result.json",
+    "curator_validation": "curator-validation.json",
+    "file_authoring_runs": [
+      "agents/maintenance/file-authoring-agent-result.json"
+    ],
+    "input_packet": "input-packet.json",
+    "maintenance_report": "reports/documentation-maintenance-report.json",
+    "repository_identity": "repository-identity.json",
+    "runtime_inbox_intake": "runtime-inbox-intake.json",
+    "summary": "summary.md"
+  },
+  "content_quality_status": "trusted",
+  "curation_kind": "agent_authored",
+  "dry_run": false,
+  "mode": "maintain",
+  "project_key": "class-kit",
+  "review": false,
+  "run_dir": "projects/class-kit/runs/project-learn/2026-07-15T08-14-06.079Z-run",
+  "run_id": "2026-07-15T08-14-06.079Z-run",
+  "run_kind": "maintenance",
+  "status": "failed",
+  "stopped_before_writes": true,
+  "stopped_reason": "file-authoring agent failed: WARNING: proceeding, even though we could not create PATH aliases: Operation not permitted (os error 1)\n2026-07-15T08:14:06.459069Z  WARN codex_state::runtime: failed to open state db at /Users/liadgoren/.codex/state_5.sqlite: failed to open state DB at /Users/liadgoren/.codex/state_5.sqlite: error returned from database: (code: 8) attempt to write a readonly database\n2026-07-15T08:14:06.459097Z  WARN codex_rollout::state_db: failed to initialize state runtime: failed to initialize state runtime at /Users/liadgoren/.codex: failed to open state DB at /Users/liadgoren/.codex/state_5.sqlite: error returned from database: (code: 8) attempt to write a readonly database: error returned from database: (code: 8) attempt to write a readonly database: (code: 8) attempt to write a readonly database\nError: failed to initialize in-process app-server client: Operation not permitted (os error 1)\n",
+  "validation_ok": false
+}

@@ -1,0 +1,2096 @@
+{
+  "degraded": false,
+  "degraded_reasons": [],
+  "lookup": {
+    "quality_summary": {
+      "advisory_reasons": [
+        "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected."
+      ],
+      "blocking": false,
+      "blocking_reasons": [],
+      "proposal_scoped_result_ids": []
+    },
+    "queries": [
+      {
+        "query": "Verify whether the SDK card is self-contained or requires the API repo to be present locally. The user explicitly asked whether the SDK card depends on the API project existing on the same machine, which is a boundary worth verifying before implementation.",
+        "source_id": "handoff_classkit_verify_sdk_independence_20260715",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Implement the document-lifecycle refactor implied by the resolved product decisions. This is the concrete next step after product decisions were confirmed as settled.",
+        "source_id": "handoff_classkit_document_lifecycle_refactor_20260715",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Confirm the repository's docs and API contracts align with the draft plus immutable-history versioning model. The response changes the canonical lifecycle shape, and the draft-clearing choice needs a durable downstream confirmation.",
+        "source_id": "handoff_classkit_versioning_contract_sync_20260715",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Align ClassKit docs and contracts with the new version lifecycle primitives. The current docs likely still reflect the older lifecycle and retention model.",
+        "source_id": "handoff_classkit_docs_version_api_alignment_20260715",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Update the ClassKit SDK contract to expose version tools while keeping behavior in integrating products. This is the immediate downstream work implied by the new boundary decision and terminology ambiguity.",
+        "source_id": "handoff_classkit_sdk_contract_followup_20260715",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Verify the July 8 class-kit-admin Pages failures and produce the exact workflow/config fix. The evidence is indirect and the fix belongs in the downstream repo.",
+        "source_id": "handoff_classkit_admin_pages_build_20260715",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Verify and, if needed, add ClassKit manager version history support for Noya restore flows. User identified a likely missing SDK/API capability that affects version restore in Noya.",
+        "source_id": "handoff_classkit_manager_history_20260715",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Split `apps/demo` into a public repo and deploy it independently on GitHub Pages. The user explicitly requested a public repo and GitHub Pages deployment for `apps/demo` only.",
+        "source_id": "handoff_classkit_demo_public_pages_20260715",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Unblock the demo2 GitHub Pages deployment path The deployment path is currently blocked by repository Pages settings rather than by the build itself.",
+        "source_id": "handoff_classkit_unblock_github_pages_20260629",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Update demo2 design guidance and add a separate admin control panel guide The user explicitly asked for the guide update and the follow-on admin guide, and codifying them now reduces drift in later UI work.",
+        "source_id": "handoff_classkit_demo_guides_20260629",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Write the reusable Supabase auth guide for ClassKit-owned projects The repo is actively converging on a reusable auth/deployment doc set, and this is the next concrete artifact.",
+        "source_id": "handoff_classkit_auth_md_20260629",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Publish and verify the GitHub Pages split build for demo2 and demo The implementation was verified locally, but the assistant explicitly noted that Pages still needed a commit/push or workflow dispatch to go live.",
+        "source_id": "handoff_classkit_publish_pages_20260629",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Preserve the local-vs-remote deployment split as more products are added This is a durable repo-level boundary that future work is likely to touch.",
+        "source_id": "handoff_classkit_shared_remote_split_20260629",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Evaluate whether ClassKit should store product origin and redirect URL configuration in the database and surface it in the admin panel. The user explicitly raised database-managed redirect URLs as the next possible control point for multi-product auth, but the design is still undecided.",
+        "source_id": "handoff_classkit_db_redirect_registry_20260628",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Bootstrap the remote ClassKit product records and verify demo/demo2 against the shared Supabase project. The deployment is done; the next durable step is product bootstrap and verification.",
+        "source_id": "handoff_classkit_remote_bootstrap_and_smoke_20260628",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Resolve the generated-class action contract in the schedule lifecycle spec The latest discussion is still ambiguous and affects implementation boundaries.",
+        "source_id": "handoff_classkit_generated_class_actions_20260628",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Verify the new auth implementation against local Supabase and smoke the demo flows Build and lint passed, but the local Supabase boot/reset path was explicitly not verified.",
+        "source_id": "handoff_verify_local_supabase_auth",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Carry the Class Kit packaging and deployment split through to a verified build and deploy path. The recent project prompts established the target packaging and deployment shape but left implementation and verification for follow-up.",
+        "source_id": "handoff_classkit_deploy_split_next",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Unblock the first remote smoke test for ClassKit Deployment is complete, but the remote product is not yet configured enough to validate the main SDK function end to end.",
+        "source_id": "handoff_classkit_remote_seed_20260628",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Draft the first implementation plan for the shared Supabase namespace and SDK boundary. The user has already agreed on the backend-first shape and needs a concrete implementation entry point.",
+        "source_id": "handoff_classkit_namespace_implementation_plan_20260628",
+        "source_kind": "project_handoff"
+      },
+      {
+        "query": "Chunk 08 auth-mode guard Retained evidence claims chunk 08 uses `Boolean(productKey) && !savingAuthMode` to guard auth-mode saving. Specific code-level claim is actionable, but it still needs a direct source check before promotion.",
+        "source_id": "cand_classkit_chunk08_guard_20260614_01",
+        "source_kind": "project_candidate"
+      },
+      {
+        "query": "Project-level readiness for admin-and-manager-surfaces may be durable, but should be confirmed against current branch/state before promoting. Readiness can drift as implementation advances.",
+        "source_id": "ingest_2026-06-14T10-12-52.575Z_368d77_cand_project_admin_manager_plan_readiness",
+        "source_kind": "project_candidate"
+      },
+      {
+        "query": "Chunk-08 auth-mode saving is documented as guarded by productKey and saving flag to prevent invalid saves. Specific guarded expression is stable-seeming but still should be re-verified against current source.",
+        "source_id": "cand_project_chunk08_authmode_guard_01",
+        "source_kind": "project_candidate"
+      },
+      {
+        "query": "Card 266 appears blocked by missing environment/tooling constraints rather than confirmed product-regression logic. Useful operational signal, but should be validated against current board or test environment state.",
+        "source_id": "cand_project_card266_blocker_classification_01",
+        "source_kind": "project_candidate"
+      },
+      {
+        "query": "Review handoff was queued for Card 264 (`Admin UI Improve typography scale, labels, and alignment across admin workflows`) on branch `class-kit/admin-ui-improve-typography-scale-labels-and-alignment-across-admin-workflows-ZMkO`. This is an active workflow state, not an outcome yet.",
+        "source_id": "cand_722bc10a_card264_ready_for_review",
+        "source_kind": "project_candidate"
+      }
+    ],
+    "results": [
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [
+              "project"
+            ],
+            "score": 6.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_verify_sdk_independence_20260715:api-asked-be-before-boundary-card-depends-existing-explicitly-implementation-locally-machine-present-project-repo-requires-same-sdk-self-contained-user-verify-verifying-whether-which-worth",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Verify whether the SDK card is self-contained or requires the API repo to be present locally. The user explicitly asked whether the SDK card depends on the API project existing on the same machine, which is a boundary worth verifying before implementation.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_verify_sdk_independence_20260715",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_document_lifecycle_refactor_20260715:after-as-by-concrete-confirmed-decisions-document-lifecycle-implement-implied-next-product-refactor-resolved-settled-step-this-were",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Implement the document-lifecycle refactor implied by the resolved product decisions. This is the concrete next step after product decisions were confirmed as settled.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_document_lifecycle_refactor_20260715",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_versioning_contract_sync_20260715:align-api-canonical-changes-choice-confirm-confirmation-contracts-docs-downstream-draft-draft-clearing-durable-immutable-history-lifecycle-model-needs-plus-repository-response-s-shape-versioning",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Confirm the repository's docs and API contracts align with the draft plus immutable-history versioning model. The response changes the canonical lifecycle shape, and the draft-clearing choice needs a durable downstream confirmation.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_versioning_contract_sync_20260715",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_docs_version_api_alignment_20260715:align-classkit-contracts-current-docs-lifecycle-likely-model-new-older-primitives-reflect-retention-still-version",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Align ClassKit docs and contracts with the new version lifecycle primitives. The current docs likely still reflect the older lifecycle and retention model.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_docs_version_api_alignment_20260715",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_sdk_contract_followup_20260715:ambiguity-behavior-boundary-by-classkit-contract-decision-downstream-expose-immediate-implied-in-integrating-keeping-new-products-sdk-terminology-this-tools-update-version-while-work",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Update the ClassKit SDK contract to expose version tools while keeping behavior in integrating products. This is the immediate downstream work implied by the new boundary decision and terminology ambiguity.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_sdk_contract_followup_20260715",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_admin_pages_build_20260715:8-belongs-class-kit-admin-config-downstream-evidence-exact-failures-fix-in-indirect-july-pages-produce-repo-verify-workflow",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Verify the July 8 class-kit-admin Pages failures and produce the exact workflow/config fix. The evidence is indirect and the fix belongs in the downstream repo.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_admin_pages_build_20260715",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_manager_history_20260715:add-affects-api-capability-classkit-flows-history-identified-if-in-likely-manager-missing-needed-noya-restore-sdk-support-that-user-verify-version",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Verify and, if needed, add ClassKit manager version history support for Noya restore flows. User identified a likely missing SDK/API capability that affects version restore in Noya.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_manager_history_20260715",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_demo_public_pages_20260715:apps-demo-deploy-deployment-explicitly-github-independently-only-pages-public-repo-requested-split-user",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Split `apps/demo` into a public repo and deploy it independently on GitHub Pages. The user explicitly requested a public repo and GitHub Pages deployment for `apps/demo` only.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_demo_public_pages_20260715",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_unblock_github_pages_20260629:blocked-build-by-currently-demo2-deployment-github-itself-pages-path-rather-repository-settings-than-unblock",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Unblock the demo2 GitHub Pages deployment path The deployment path is currently blocked by repository Pages settings rather than by the build itself.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_unblock_github_pages_20260629",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_demo_guides_20260629:add-admin-asked-codifying-control-demo2-design-drift-explicitly-follow-on-guidance-guide-in-later-now-panel-reduces-separate-them-ui-update-user-work",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Update demo2 design guidance and add a separate admin control panel guide The user explicitly asked for the guide update and the follow-on admin guide, and codifying them now reduces drift in later UI work.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_demo_guides_20260629",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_auth_md_20260629:actively-artifact-auth-classkit-owned-concrete-converging-deployment-doc-guide-next-projects-repo-reusable-set-supabase-this-write",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Write the reusable Supabase auth guide for ClassKit-owned projects The repo is actively converging on a reusable auth/deployment doc set, and this is the next concrete artifact.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_auth_md_20260629",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_publish_pages_20260629:assistant-build-but-commit-demo-demo2-dispatch-explicitly-github-go-implementation-live-locally-needed-noted-pages-publish-push-split-still-that-verified-verify-was-workflow",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Publish and verify the GitHub Pages split build for demo2 and demo The implementation was verified locally, but the assistant explicitly noted that Pages still needed a commit/push or workflow dispatch to go live.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_publish_pages_20260629",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_shared_remote_split_20260629:added-as-boundary-deployment-durable-future-likely-local-vs-remote-more-preserve-products-repo-level-split-that-this-touch-work",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Preserve the local-vs-remote deployment split as more products are added This is a durable repo-level boundary that future work is likely to touch.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_shared_remote_split_20260629",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_db_redirect_registry_20260628:admin-as-auth-but-classkit-configuration-control-database-database-managed-design-evaluate-explicitly-in-multi-product-next-origin-panel-point-possible-product-raised-redirect-should-still-store-surface-undecided-url-urls-user-whether",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Evaluate whether ClassKit should store product origin and redirect URL configuration in the database and surface it in the admin panel. The user explicitly raised database-managed redirect URLs as the next possible control point for multi-product auth, but the design is still undecided.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_db_redirect_registry_20260628",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [
+              "project"
+            ],
+            "score": 6.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_remote_bootstrap_and_smoke_20260628:against-bootstrap-classkit-demo-demo2-deployment-done-durable-next-product-project-records-remote-shared-step-supabase-verification-verify",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Bootstrap the remote ClassKit product records and verify demo/demo2 against the shared Supabase project. The deployment is done; the next durable step is product bootstrap and verification.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_remote_bootstrap_and_smoke_20260628",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_generated_class_actions_20260628:action-affects-ambiguous-boundaries-contract-discussion-generated-class-implementation-in-latest-lifecycle-resolve-schedule-spec-still",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Resolve the generated-class action contract in the schedule lifecycle spec The latest discussion is still ambiguous and affects implementation boundaries.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_generated_class_actions_20260628",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [
+              "not"
+            ],
+            "score": 1.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_verify_local_supabase_auth:against-auth-boot-build-but-demo-explicitly-flows-implementation-lint-local-new-not-passed-path-reset-smoke-supabase-verified-verify-was",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Verify the new auth implementation against local Supabase and smoke the demo flows Build and lint passed, but the local Supabase boot/reset path was explicitly not verified.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_verify_local_supabase_auth",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [
+              "project"
+            ],
+            "score": 6.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_deploy_split_next:build-but-carry-class-deploy-deployment-established-follow-up-implementation-kit-left-packaging-path-project-prompts-recent-shape-split-target-through-verification-verified",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Carry the Class Kit packaging and deployment split through to a verified build and deploy path. The recent project prompts established the target packaging and deployment shape but left implementation and verification for follow-up.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_deploy_split_next",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [
+              "not",
+              "yet"
+            ],
+            "score": 2.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_remote_seed_20260628:but-classkit-complete-configured-deployment-end-enough-first-function-main-not-product-remote-sdk-smoke-test-unblock-validate-yet",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Unblock the first remote smoke test for ClassKit Deployment is complete, but the remote product is not yet configured enough to validate the main SDK function end to end.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_remote_seed_20260628",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_handoff:handoff_classkit_namespace_implementation_plan_20260628:agreed-already-backend-first-boundary-concrete-draft-entry-first-implementation-namespace-needs-plan-point-sdk-shape-shared-supabase-user",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Draft the first implementation plan for the shared Supabase namespace and SDK boundary. The user has already agreed on the backend-first shape and needs a concrete implementation entry point.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "handoff_classkit_namespace_implementation_plan_20260628",
+        "source_kind": "project_handoff",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_candidate:cand_classkit_chunk08_guard_20260614_01:08-actionable-auth-mode-before-boolean-but-check-chunk-claim-claims-code-level-direct-evidence-guard-needs-productkey-promotion-retained-saving-savingauthmode-source-specific-still-uses",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Chunk 08 auth-mode guard Retained evidence claims chunk 08 uses `Boolean(productKey) && !savingAuthMode` to guard auth-mode saving. Specific code-level claim is actionable, but it still needs a direct source check before promotion.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "cand_classkit_chunk08_guard_20260614_01",
+        "source_kind": "project_candidate",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_candidate:ingest_2026-06-14T10-12-52.575Z_368d77_cand_project_admin_manager_plan_readiness:admin-and-manager-surfaces-advances-against-as-be-before-branch-but-can-confirmed-current-drift-durable-implementation-may-project-level-promoting-readiness-should-state",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Project-level readiness for admin-and-manager-surfaces may be durable, but should be confirmed against current branch/state before promoting. Readiness can drift as implementation advances.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "ingest_2026-06-14T10-12-52.575Z_368d77_cand_project_admin_manager_plan_readiness",
+        "source_kind": "project_candidate",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_candidate:cand_project_chunk08_authmode_guard_01:against-as-auth-mode-be-but-by-chunk-08-current-documented-expression-flag-guarded-invalid-prevent-productkey-re-verified-saves-saving-should-source-specific-stable-seeming-still",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Chunk-08 auth-mode saving is documented as guarded by productKey and saving flag to prevent invalid saves. Specific guarded expression is stable-seeming but still should be re-verified against current source.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "cand_project_chunk08_authmode_guard_01",
+        "source_kind": "project_candidate",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [],
+            "score": 0.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_candidate:cand_project_card266_blocker_classification_01:266-against-appears-be-blocked-board-but-by-card-confirmed-constraints-current-environment-logic-missing-operational-product-regression-rather-should-signal-state-test-than-tooling-useful-validated",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Card 266 appears blocked by missing environment/tooling constraints rather than confirmed product-regression logic. Useful operational signal, but should be validated against current board or test environment state.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "cand_project_card266_blocker_classification_01",
+        "source_kind": "project_candidate",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      },
+      {
+        "apply_severity": "advisory",
+        "degraded_reason": "Project Memory lookup used fallback markdown search; derived metadata/vector indexes were unavailable or not selected.",
+        "hits": [
+          {
+            "canonical_ref": {
+              "category": null,
+              "heading_path": [
+                "Project Memory"
+              ],
+              "page_title": "Project Memory",
+              "project_key": "class-kit",
+              "section_hash": "sha256:unknown-fallback",
+              "section_id": "project-memory",
+              "wiki_path": "wiki/index.md"
+            },
+            "freshness": "not_applicable",
+            "id": "hit:0",
+            "matched_terms": [
+              "not",
+              "yet"
+            ],
+            "score": 2.25,
+            "snippet": "Project Memory has not been curated yet.",
+            "source_components": {
+              "fallback_text": true,
+              "retrieval_hints": false,
+              "structural_text": false
+            }
+          }
+        ],
+        "id": "lookup:project_candidate:cand_722bc10a_card264_ready_for_review:264-across-active-admin-admin-ui-improve-typography-scale-labels-and-alignment-across-admin-workflows-zmko-alignment-branch-card-class-kit-handoff-improve-labels-not-outcome-queued-review-scale-state-this-typography-ui-was-workflow-workflows-yet",
+        "lookup_freshness": "not_applicable",
+        "lookup_quality": "fallback",
+        "query": "Review handoff was queued for Card 264 (`Admin UI Improve typography scale, labels, and alignment across admin workflows`) on branch `class-kit/admin-ui-improve-typography-scale-labels-and-alignment-across-admin-workflows-ZMkO`. This is an active workflow state, not an outcome yet.",
+        "retrieval_method": "fallback_markdown_search",
+        "source_id": "cand_722bc10a_card264_ready_for_review",
+        "source_kind": "project_candidate",
+        "source_tools": [
+          "project-memory-markdown-scan"
+        ]
+      }
+    ]
+  },
+  "mode": "create",
+  "pending": {
+    "project_candidates": [
+      {
+        "candidate_type": "project.verification",
+        "confidence": "high",
+        "id": "cand_classkit_chunk08_guard_20260614_01",
+        "priority": "high",
+        "producer_kind": "normalized",
+        "reason": "Specific code-level claim is actionable, but it still needs a direct source check before promotion.",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-14T11-44-05.099Z_94f0b9_retry_medium_8c68ab62-42b6-4c28-b1e7-2d19ca5ceba8"
+        ],
+        "status": "pending",
+        "summary": "Retained evidence claims chunk 08 uses `Boolean(productKey) && !savingAuthMode` to guard auth-mode saving.",
+        "title": "Chunk 08 auth-mode guard"
+      },
+      {
+        "candidate_type": "project.decision",
+        "confidence": "medium",
+        "id": "ingest_2026-06-14T10-12-52.575Z_368d77_cand_project_admin_manager_plan_readiness",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "reason": "Readiness can drift as implementation advances.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-14T10-12-52.575Z_368d77_c65cd09e-5f3f-4189-b2e5-c7943d308de9"
+        ],
+        "status": "pending",
+        "summary": "Project-level readiness for admin-and-manager-surfaces may be durable, but should be confirmed against current branch/state before promoting.",
+        "title": null
+      },
+      {
+        "candidate_type": "project.verification",
+        "confidence": "high",
+        "id": "cand_project_chunk08_authmode_guard_01",
+        "priority": "high",
+        "producer_kind": "normalized",
+        "reason": "Specific guarded expression is stable-seeming but still should be re-verified against current source.",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-14T10-12-52.575Z_368d77_ea9bdfe2-5093-4246-b294-10e567e84830"
+        ],
+        "status": "pending",
+        "summary": "Chunk-08 auth-mode saving is documented as guarded by productKey and saving flag to prevent invalid saves.",
+        "title": null
+      },
+      {
+        "candidate_type": "project.workflow",
+        "confidence": "high",
+        "id": "cand_project_card266_blocker_classification_01",
+        "priority": "high",
+        "producer_kind": "normalized",
+        "reason": "Useful operational signal, but should be validated against current board or test environment state.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-14T10-12-52.575Z_368d77_ea9bdfe2-5093-4246-b294-10e567e84830"
+        ],
+        "status": "pending",
+        "summary": "Card 266 appears blocked by missing environment/tooling constraints rather than confirmed product-regression logic.",
+        "title": null
+      },
+      {
+        "candidate_type": "project.workflow",
+        "confidence": "high",
+        "id": "cand_722bc10a_card264_ready_for_review",
+        "priority": "high",
+        "producer_kind": "normalized",
+        "reason": "This is an active workflow state, not an outcome yet.",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-14T10-12-52.575Z_368d77_b8060a7e-2264-40fb-9118-a058637d2552"
+        ],
+        "status": "pending",
+        "summary": "Review handoff was queued for Card 264 (`Admin UI Improve typography scale, labels, and alignment across admin workflows`) on branch `class-kit/admin-ui-improve-typography-scale-labels-and-alignment-across-admin-workflows-ZMkO`.",
+        "title": null
+      },
+      {
+        "candidate_type": "project.workflow",
+        "confidence": "high",
+        "id": "ingest_2026-06-14T10-04-28.710Z_e38db1_cand_project_card266_blocker_category",
+        "priority": "high",
+        "producer_kind": "normalized",
+        "reason": "Prevents false-positive product regressions, but requires current-harness confirmation.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-14T10-04-28.710Z_e38db1_445b8229-8211-44ee-b95b-137c8a37567c"
+        ],
+        "status": "pending",
+        "summary": "Card 266 is likely an environment/infrastructure blocker rather than a product defect; confirm on current environment before any code-level rejection/fixes.",
+        "title": null
+      },
+      {
+        "candidate_type": "project.decision",
+        "confidence": "medium",
+        "id": "cand_project_admin_manager_plan_readiness",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "reason": "Implementation is ongoing and plan status may drift.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-14T10-04-28.710Z_e38db1_445b8229-8211-44ee-b95b-137c8a37567c"
+        ],
+        "status": "pending",
+        "summary": "Project-level readiness for admin-and-manager-surfaces may be durable, but should be confirmed against current branch/state before promoting.",
+        "title": null
+      },
+      {
+        "candidate_type": "project.workflow",
+        "confidence": "high",
+        "id": "cand_project_card266_blocker_category",
+        "priority": "high",
+        "producer_kind": "normalized",
+        "reason": "High-value operational memory, but should be confirmed on current review board state before long-term adoption.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-14T09-59-30.902Z_b7a47a_757d1885-8ea4-40e8-b3b1-a4a5827e281a",
+          "tomb_ingest_2026-06-14T09-59-30.902Z_b7a47a_02f4b01f-5a6b-4c18-a625-ea8d3158e392"
+        ],
+        "status": "pending",
+        "summary": "Card 266 may represent environment/harness limitation (not product regression), given explicit missing supabase_cli/demo_env_local/browser automation evidence.",
+        "title": null
+      },
+      {
+        "candidate_type": "project.workflow",
+        "confidence": "medium",
+        "id": "cand_classkit_sdk_isolated_boundary_20260715",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "reason": "The prompt raises a repo-boundary assumption that is useful but not yet confirmed enough for trusted session memory.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T07-50-54.366Z_23ad5c_333c21e6-8174-45c2-816e-dee490fbae9b"
+        ],
+        "status": "needs_review",
+        "summary": "The current class-kit implementation workflow appears to assume isolated worktrees and may need the SDK card to remain independently actionable without the API repo present on the same machine, but this boundary is unverified.",
+        "title": "SDK card may need no sibling-repo access"
+      },
+      {
+        "candidate_type": "project.decision",
+        "confidence": "medium",
+        "id": "cand_classkit_publish_clears_draft_20260715",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "reason": "The leased evidence states this as a recommendation, not a finalized decision, so it should be reviewed before becoming trusted project memory.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T07-28-41.236Z_ced15d_44932fc7-e0bf-48b2-b78e-c7a8ccb570e3"
+        ],
+        "status": "needs_review",
+        "summary": "Publishing should clear the working draft after snapshotting it, rather than keep the draft synchronized with the newly published content.",
+        "title": "Publish should clear the working draft"
+      },
+      {
+        "candidate_type": "project.decision",
+        "confidence": "medium",
+        "id": "cand_classkit_draft_save_policy_20260715",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "reason": "The source explicitly leaves this as an unresolved design choice, so it should not be trusted as settled memory yet.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T07-09-42.066Z_cdd4de_ea864303-06ff-4c67-a28f-fbba8acf58f5"
+        ],
+        "status": "needs_review",
+        "summary": "The remaining open question is whether saved drafts should be immutable, creating a new draft on each explicit save, or editable in place until publication.",
+        "title": "Draft save policy still open"
+      },
+      {
+        "candidate_type": "project.decision",
+        "confidence": "medium",
+        "id": "cand_classkit_version_activation_semantics_20260715",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "reason": "The leased prompt expresses a preference but ends as a question, so the exact product contract should be reviewed before treating it as a durable decision.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T07-07-15.434Z_60a15f_a574ead8-805b-41e3-98be-b0abd1b20462"
+        ],
+        "status": "needs_review",
+        "summary": "Potential project decision: version activation should materialize a new version from the selected source version instead of mutating the source version directly.",
+        "title": "Version activation should be immutable publication"
+      },
+      {
+        "candidate_type": "project.decision",
+        "confidence": "medium",
+        "id": "cand_classkit_reactivation_semantics_20260715",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "reason": "This affects the public SDK contract and version identity semantics, so it should be confirmed before treating it as settled.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T07-03-51.851Z_0cf6ef_3851f1b6-f9f1-48fc-8827-7d1faefe5f4d"
+        ],
+        "status": "needs_review",
+        "summary": "The remaining open question is whether an archived version may be reactivated in place or whether reactivation must always copy into a new version.",
+        "title": "Decide archived-version reactivation semantics"
+      },
+      {
+        "candidate_type": "project.decision",
+        "confidence": "medium",
+        "id": "cand_classkit_nonactive_state_term_20260715",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "reason": "The naming is ambiguous and could affect public SDK wording, so it should be reviewed before being trusted as a settled project memory.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T07-02-10.595Z_6dfdc6_62674ca7-d414-4c0e-9a55-283c772bc0ff"
+        ],
+        "status": "needs_review",
+        "summary": "The product still needs a final term for the non-active document state, since the prompt treats draft as archived or otherwise not active but does not lock the label.",
+        "title": "Resolve non-active version terminology"
+      },
+      {
+        "candidate_type": "project.decision",
+        "confidence": "medium",
+        "id": "cand_classkit_manager_history_restore_semantics_20260715",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "reason": "The transcript contains a strong recommendation, but the restore contract is still a product decision rather than a confirmed implementation fact.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T06-59-54.258Z_a36e97_0bbe54d6-ab20-44a4-a7af-da7ad95179c8"
+        ],
+        "status": "needs_review",
+        "summary": "Restore semantics likely should remain append-only and exact-locale: `listVersions`/`getVersion` should be product-scoped, and restoring a prior version should create a new draft or version rather than overwrite archived history.",
+        "title": "Restore semantics need product decision"
+      },
+      {
+        "candidate_type": "project.blocker",
+        "confidence": "low",
+        "id": "cand_classkit_admin_pages_build_20260715",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "reason": "The event is a generated suggestion, not a confirmed failing run or inspected workflow log.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T06-59-54.258Z_a36e97_9f58ca16-685b-49b4-b589-fd8b3aab5894"
+        ],
+        "status": "needs_review",
+        "summary": "There may be a class-kit-admin GitHub Pages failure related to the v0.1.18 private SDK switch and deploy-key flow, but the evidence is indirect and needs repo verification before treating it as confirmed.",
+        "title": "Possible class-kit-admin Pages build failure"
+      },
+      {
+        "candidate_type": "project.feature-gap",
+        "confidence": "medium",
+        "id": "cand_classkit_manager_history_api_gap_20260715",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "reason": "The absence of the API is plausible but should be verified before treating it as a confirmed product constraint.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T06-57-17.884Z_6995c0_c6b59840-9114-47df-86cd-203cfb80c5f6"
+        ],
+        "status": "needs_review",
+        "summary": "Possible ClassKit SDK/backend gap: manager version history retrieval may need to be added so Noya can restore archived versions through supported APIs.",
+        "title": "Possible missing manager history API"
+      },
+      {
+        "candidate_type": "project.workflow",
+        "confidence": "medium",
+        "id": "cand_classkit_design_guides_20260629",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "reason": "The guidance is clearly requested, but the exact doc split and ownership boundaries should be confirmed before storing it as trusted memory.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-28T12-55-19.459Z_f82904_416d5e7e-4ec5-4e5b-8c5d-8d893292394f",
+          "tomb_ingest_2026-06-28T12-55-19.459Z_f82904_4eba9757-f8e4-44d5-9f02-cae7ef2d2e99"
+        ],
+        "status": "needs_review",
+        "summary": "Codify the surface-specific demo2 rule in repository docs and add a separate design guide for the demo/admin control panel application.",
+        "title": "Split demo2 and admin control panel design guidance"
+      },
+      {
+        "candidate_type": "project.workflow",
+        "confidence": "medium",
+        "id": "cand_classkit_auth_md_20260629",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "reason": "Requested in current work, but the durable doc shape should be reviewed before becoming trusted project memory.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-28T14-35-11.459Z_9d5eb7_9eba122a-7a8f-42c7-9696-7cafa9270c3b",
+          "tomb_ingest_2026-06-28T14-35-11.459Z_9d5eb7_188c3625-bffc-4f11-b930-003bf56de956"
+        ],
+        "status": "needs_review",
+        "summary": "Add a copy-pastable `authentication.md` that explains Supabase auth for ClassKit-owned projects, with Google now, Apple later, and the shared remote Supabase project as the example backend.",
+        "title": "Create a reusable authentication.md for ClassKit-owned projects"
+      },
+      {
+        "candidate_type": "project.decision",
+        "confidence": "medium",
+        "id": "cand_classkit_demo_app_docs_env_scope_20260629",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "reason": "Direct user instruction, but the repo state was not independently verified in this ingest.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-28T14-35-11.459Z_9d5eb7_70dd6a7f-8566-4ecb-847b-71bb04493196",
+          "tomb_ingest_2026-06-28T14-35-11.459Z_9d5eb7_72f9d698-6d52-4334-a340-825c365bd6f4"
+        ],
+        "status": "needs_review",
+        "summary": "The demo admin panel should keep its own frontend-only docs and `.env`/`.env.example` under `app/demo`, with local development able to target local or remote Supabase and the deployed Pages build using remote Supabase only.",
+        "title": "Demo app docs and env should live under app/demo"
+      }
+    ],
+    "project_handoffs": [
+      {
+        "confidence": "medium",
+        "id": "handoff_classkit_verify_sdk_independence_20260715",
+        "objective": "Verify whether the SDK card is self-contained or requires the API repo to be present locally.",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "prompt_text": "Review the SDK card and related repo context to confirm whether implementation can proceed in an isolated worktree without access to the sibling API project. If the boundary is self-contained, record that as durable project context; if not, document the dependency and any required coordination point.",
+        "reason": "The user explicitly asked whether the SDK card depends on the API project existing on the same machine, which is a boundary worth verifying before implementation.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T07-50-54.366Z_23ad5c_333c21e6-8174-45c2-816e-dee490fbae9b"
+        ],
+        "source_session_memory_ids": [],
+        "status": "pending",
+        "suggested_actions": [
+          "Inspect the SDK card scope and acceptance criteria",
+          "Check for explicit API-repo dependencies",
+          "Record the confirmed boundary as project memory if valid"
+        ]
+      },
+      {
+        "confidence": "high",
+        "id": "handoff_classkit_document_lifecycle_refactor_20260715",
+        "objective": "Implement the document-lifecycle refactor implied by the resolved product decisions.",
+        "priority": "high",
+        "producer_kind": "normalized",
+        "prompt_text": "Use the resolved scope memory as the contract: add or adjust the revision-guarded draft flow, immutable publish history, explicit active-version handling, archive semantics, and contract tests. Keep Noya behind the SDK boundary and preserve published content during migration.",
+        "reason": "This is the concrete next step after product decisions were confirmed as settled.",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T07-31-55.607Z_a8dbb8_9021617d-d856-441d-a67e-4912b172e5a4"
+        ],
+        "source_session_memory_ids": [
+          "mem_classkit_document_lifecycle_refactor_scope_20260715"
+        ],
+        "status": "pending",
+        "suggested_actions": [
+          "review current draft/publish implementation",
+          "update backend contract tests",
+          "verify migration preserves published content"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "id": "handoff_classkit_versioning_contract_sync_20260715",
+        "objective": "Confirm the repository's docs and API contracts align with the draft plus immutable-history versioning model.",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "prompt_text": "Review the version lifecycle wording in docs/api/backend-api.md, docs/sdk/client-sdk.md, and the related lifecycle specs against the new draft/publish/archive model. Update any status-based language that no longer matches the contract, and resolve the open question about whether publishing should clear the draft.",
+        "reason": "The response changes the canonical lifecycle shape, and the draft-clearing choice needs a durable downstream confirmation.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T07-28-41.236Z_ced15d_44932fc7-e0bf-48b2-b78e-c7a8ccb570e3"
+        ],
+        "source_session_memory_ids": [
+          "mem_classkit_draft_history_model_20260715"
+        ],
+        "status": "pending",
+        "suggested_actions": [
+          "inspect docs/api/backend-api.md",
+          "inspect docs/sdk/client-sdk.md",
+          "reconcile lifecycle terms",
+          "decide whether publish clears draft"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "id": "handoff_classkit_docs_version_api_alignment_20260715",
+        "objective": "Align ClassKit docs and contracts with the new version lifecycle primitives.",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "prompt_text": "Review the versioning contract in the cited evidence and update any docs or API maps that still describe `upsert`/`activateVersion` or the old pruning rule. Confirm the draft-save policy separately before finalizing any user-facing wording.",
+        "reason": "The current docs likely still reflect the older lifecycle and retention model.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T07-09-42.066Z_cdd4de_ea864303-06ff-4c67-a28f-fbba8acf58f5"
+        ],
+        "source_session_memory_ids": [
+          "mem_classkit_version_lifecycle_monotonic_20260715",
+          "mem_classkit_publication_history_permanent_20260715"
+        ],
+        "status": "pending",
+        "suggested_actions": [
+          "audit docs for `upsert` references",
+          "replace lifecycle docs with `createVersion`/`publishVersion` terminology",
+          "separate draft-retention wording from publication-history wording"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "id": "handoff_classkit_sdk_contract_followup_20260715",
+        "objective": "Update the ClassKit SDK contract to expose version tools while keeping behavior in integrating products.",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "prompt_text": "Review the current ClassKit version-management boundary and update the documented SDK contract so it exposes version retrieval, status changes, and active/draft replacement tools without embedding product-specific behavior. Also resolve the final label for the non-active version state in the same contract pass.",
+        "reason": "This is the immediate downstream work implied by the new boundary decision and terminology ambiguity.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T07-02-10.595Z_6dfdc6_62674ca7-d414-4c0e-9a55-283c772bc0ff"
+        ],
+        "source_session_memory_ids": [
+          "mem_classkit_sdk_tools_behavior_boundary_20260715"
+        ],
+        "status": "pending",
+        "suggested_actions": [
+          "review the current SDK/API surface",
+          "align method names with the tool-only boundary",
+          "decide the final non-active state term",
+          "update examples and docs to match the contract"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "id": "handoff_classkit_admin_pages_build_20260715",
+        "objective": "Verify the July 8 class-kit-admin Pages failures and produce the exact workflow/config fix.",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "prompt_text": "Inspect the July 8 unread GitHub notifications against the v0.1.18 private SDK rollout and deployment guidance, confirm the actual failure mode in class-kit-admin, then patch the missing workflow/config or docs and return the exact change needed there.",
+        "reason": "The evidence is indirect and the fix belongs in the downstream repo.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T06-59-54.258Z_a36e97_9f58ca16-685b-49b4-b589-fd8b3aab5894"
+        ],
+        "source_session_memory_ids": [],
+        "status": "pending",
+        "suggested_actions": [
+          "check class-kit-admin Pages workflow",
+          "compare private SDK install and deploy-key steps",
+          "identify the failing config line or documentation gap",
+          "apply the minimal fix in class-kit-admin"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "id": "handoff_classkit_manager_history_20260715",
+        "objective": "Verify and, if needed, add ClassKit manager version history support for Noya restore flows.",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "prompt_text": "Check the ClassKit SDK/backend for manager history support. If `listVersions()` and `getVersion(id)` are missing, design a permission-gated history API that returns prior versions and full Markdown so Noya can restore archived content without raw DB or Edge Function calls.",
+        "reason": "User identified a likely missing SDK/API capability that affects version restore in Noya.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T06-57-17.884Z_6995c0_c6b59840-9114-47df-86cd-203cfb80c5f6"
+        ],
+        "source_session_memory_ids": [
+          "mem_classkit_manager_history_investigation_20260715"
+        ],
+        "status": "pending",
+        "suggested_actions": [
+          "inspect the SDK surface",
+          "confirm backend retention behavior",
+          "design a permission-gated history endpoint if absent"
+        ]
+      },
+      {
+        "confidence": "high",
+        "id": "handoff_classkit_demo_public_pages_20260715",
+        "objective": "Split `apps/demo` into a public repo and deploy it independently on GitHub Pages.",
+        "priority": "high",
+        "producer_kind": "normalized",
+        "prompt_text": "Implement the requested `apps/demo` isolation so it becomes the only public Pages-published surface, and update any repo/docs/configuration boundaries needed to keep the other ClassKit apps out of that deployment path.",
+        "reason": "The user explicitly requested a public repo and GitHub Pages deployment for `apps/demo` only.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T06-57-17.884Z_6995c0_5c1c50a4-c1d0-446e-ae33-5f57d4b01113"
+        ],
+        "source_session_memory_ids": [
+          "mem_classkit_demo_public_pages_request_20260715"
+        ],
+        "status": "pending",
+        "suggested_actions": [
+          "review the current `apps/demo` deployment boundary",
+          "identify the repo split or visibility change required",
+          "update GitHub Pages config so only `apps/demo` deploys"
+        ]
+      },
+      {
+        "confidence": "high",
+        "id": "handoff_classkit_unblock_github_pages_20260629",
+        "objective": "Unblock the demo2 GitHub Pages deployment path",
+        "priority": "high",
+        "producer_kind": "normalized",
+        "prompt_text": "Review the latest Pages failure state, confirm whether GitHub Pages is enabled for this private repo, and either push the workflow fix and rerun deployment or switch the static deploy to an alternate host if Pages remains unavailable. Update the deployment docs or project memory if the contract changes.",
+        "reason": "The deployment path is currently blocked by repository Pages settings rather than by the build itself.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-29T05-36-58.012Z_8df44e_75328adc-7822-48e9-b6d0-f2d207612595",
+          "tomb_ingest_2026-06-29T05-36-58.012Z_8df44e_a2174b0c-d2ea-4618-9cc5-3032f803a306",
+          "tomb_ingest_2026-06-29T05-36-58.012Z_8df44e_8d102b66-3e6f-49b6-a44c-922e93aff34a"
+        ],
+        "source_session_memory_ids": [
+          "mem_classkit_github_pages_blocked_private_repo_20260629"
+        ],
+        "status": "pending",
+        "suggested_actions": [
+          "confirm repo Pages settings",
+          "push or keep the npm pin workflow fix",
+          "rerun the Pages deployment",
+          "choose an alternate static host if private Pages stays unavailable"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "id": "handoff_classkit_demo_guides_20260629",
+        "objective": "Update demo2 design guidance and add a separate admin control panel guide",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "prompt_text": "Update the demo2 design guide so it explicitly states the drill-down pattern: choose page, then role, then permission category, and edit only that slice. Then create a separate design guide for the demo/admin control panel application so future work knows which surface-specific shape to follow.",
+        "reason": "The user explicitly asked for the guide update and the follow-on admin guide, and codifying them now reduces drift in later UI work.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-28T12-55-19.459Z_f82904_416d5e7e-4ec5-4e5b-8c5d-8d893292394f",
+          "tomb_ingest_2026-06-28T12-55-19.459Z_f82904_4eba9757-f8e4-44d5-9f02-cae7ef2d2e99"
+        ],
+        "source_session_memory_ids": [
+          "mem_classkit_demo2_drilldown_pattern_20260629"
+        ],
+        "status": "pending",
+        "suggested_actions": [
+          "update demo2 design guide",
+          "write a new admin control panel design guide",
+          "keep the guide language tied to the existing drill-down workflow"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "id": "handoff_classkit_auth_md_20260629",
+        "objective": "Write the reusable Supabase auth guide for ClassKit-owned projects",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "prompt_text": "Create `authentication.md` in the same style as `deployment.md`. It should explain how Supabase auth works for ClassKit-owned projects, cover Google sign-in now and Apple sign-in later, show how the flows connect to the shared remote Supabase project, and keep the wording copy-pasteable for reuse in other ClassKit repos.",
+        "reason": "The repo is actively converging on a reusable auth/deployment doc set, and this is the next concrete artifact.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-28T14-35-11.459Z_9d5eb7_9eba122a-7a8f-42c7-9696-7cafa9270c3b",
+          "tomb_ingest_2026-06-28T14-35-11.459Z_9d5eb7_188c3625-bffc-4f11-b930-003bf56de956"
+        ],
+        "source_session_memory_ids": [
+          "mem_classkit_deployable_boundary_20260629"
+        ],
+        "status": "pending",
+        "suggested_actions": [
+          "draft authentication.md",
+          "reuse the existing deployment.md tone and structure",
+          "include provider setup and example env variables"
+        ]
+      },
+      {
+        "confidence": "high",
+        "id": "handoff_classkit_publish_pages_20260629",
+        "objective": "Publish and verify the GitHub Pages split build for demo2 and demo",
+        "priority": "high",
+        "producer_kind": "normalized",
+        "prompt_text": "Review the GitHub Pages split-layout changes, commit/push the workflow and base-path updates if they are still unpushed, then verify the live `demo2` root and `demo` `/admin/` routes plus the matching Supabase auth redirects.",
+        "reason": "The implementation was verified locally, but the assistant explicitly noted that Pages still needed a commit/push or workflow dispatch to go live.",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-29T05-17-23.445Z_66d603_1cf3785e-ee61-4b85-9260-be0ec42a54b3"
+        ],
+        "source_session_memory_ids": [
+          "mem_classkit_pages_layout_20260629"
+        ],
+        "status": "pending",
+        "suggested_actions": [
+          "confirm the Pages artifact layout",
+          "push the branch or dispatch the Pages workflow",
+          "check both deployed URLs and redirect behavior"
+        ]
+      },
+      {
+        "confidence": "high",
+        "id": "handoff_classkit_shared_remote_split_20260629",
+        "objective": "Preserve the local-vs-remote deployment split as more products are added",
+        "priority": "high",
+        "producer_kind": "normalized",
+        "prompt_text": "Review the deployment docs and related Supabase config to keep local development single-tenant for ClassKit while allowing the remote shared Supabase project to host additional product schemas and functions owned by other repos.",
+        "reason": "This is a durable repo-level boundary that future work is likely to touch.",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-28T14-35-11.459Z_9d5eb7_8d00e0ff-4c2e-465b-b6df-c771b436f8b3"
+        ],
+        "source_session_memory_ids": [
+          "mem_classkit_local_remote_tenancy_20260629"
+        ],
+        "status": "pending",
+        "suggested_actions": [
+          "check the local/remote split in deployment docs",
+          "avoid mirroring future remote products into local dev",
+          "keep product-specific schemas and function names isolated"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "id": "handoff_classkit_db_redirect_registry_20260628",
+        "objective": "Evaluate whether ClassKit should store product origin and redirect URL configuration in the database and surface it in the admin panel.",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "prompt_text": "Review the current auth boundary and decide whether redirect URLs and product origins should be admin-managed database state for each product. If yes, define the schema, authority boundary, and SDK lookup flow; if no, document the simpler static/env-based alternative.",
+        "reason": "The user explicitly raised database-managed redirect URLs as the next possible control point for multi-product auth, but the design is still undecided.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-28T14-56-19.426Z_c7d3e9_78dc8980-27e3-405a-9cd2-a841f938e580"
+        ],
+        "source_session_memory_ids": [
+          "mem_classkit_shared_google_oauth_app_20260628",
+          "mem_classkit_localhost_redirect_requires_5173_20260628"
+        ],
+        "status": "pending",
+        "suggested_actions": [
+          "Review whether origin and redirect URLs belong in `class_kit.products` or in app-local env",
+          "Check how the SDK resolves product context today",
+          "Draft the smallest safe schema or config change if database-managed redirects are approved"
+        ]
+      },
+      {
+        "confidence": "high",
+        "id": "handoff_classkit_remote_bootstrap_and_smoke_20260628",
+        "objective": "Bootstrap the remote ClassKit product records and verify demo/demo2 against the shared Supabase project.",
+        "priority": "high",
+        "producer_kind": "normalized",
+        "prompt_text": "Use the deployed remote schema/functions to create the ClassKit product rows, allowed origins, auth policy, and default auth redirects, then verify that the demo app and demo2 resolve the correct product locally and on GitHub Pages without poisoning auth sessions.",
+        "reason": "The deployment is done; the next durable step is product bootstrap and verification.",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-28T15-02-28.578Z_f3d598_08c883ea-ce18-48a5-bf2d-8a08d5d38ee1",
+          "tomb_ingest_2026-06-28T15-02-28.578Z_f3d598_5b0be3a5-7979-4488-a4d9-47b0899824f1"
+        ],
+        "source_session_memory_ids": [
+          "mem_classkit_auth_multitenancy_verified_20260628",
+          "mem_classkit_remote_product_bootstrap_next_20260628"
+        ],
+        "status": "pending",
+        "suggested_actions": [
+          "create or update remote product rows",
+          "set default auth redirects and allowed origins",
+          "run local and Pages auth smoke checks"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "id": "handoff_classkit_generated_class_actions_20260628",
+        "objective": "Resolve the generated-class action contract in the schedule lifecycle spec",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "prompt_text": "Review the current schedule lifecycle spec and the Wodnix reference, then confirm whether Class Kit should expose skip + cancel only or also a separate remove action for generated classes. Update the spec and agenda with a single concrete contract and note any backend or SDK shape changes it implies.",
+        "reason": "The latest discussion is still ambiguous and affects implementation boundaries.",
+        "risk": "medium",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-28T12-55-19.459Z_f82904_77b2e847-0a59-4045-bb75-ac04a498ffdb",
+          "tomb_ingest_2026-06-28T12-55-19.459Z_f82904_a92b086e-14f4-4cef-a412-cc5663dc06e1"
+        ],
+        "source_session_memory_ids": [],
+        "status": "pending",
+        "suggested_actions": [
+          "read docs/design/2026-06-25-schedule-lifecycle-management/spec.md",
+          "compare against the Wodnix scheduling behavior",
+          "update the agenda and spec with one chosen contract"
+        ]
+      },
+      {
+        "confidence": "high",
+        "id": "handoff_verify_local_supabase_auth",
+        "objective": "Verify the new auth implementation against local Supabase and smoke the demo flows",
+        "priority": "high",
+        "producer_kind": "normalized",
+        "prompt_text": "Use the implemented Google/auth multi-tenancy changes as the baseline, then bring up local Supabase, run the reset path, and smoke the demo and demo2 auth flows end to end. Confirm the local stack starts cleanly, `demo` remains Google-sign-in only, `demo2` respects product-backed email/password and Google policy, and the new product redirect records are usable after reset.",
+        "reason": "Build and lint passed, but the local Supabase boot/reset path was explicitly not verified.",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-28T14-56-19.426Z_c7d3e9_926f7137-0b24-4990-836e-beb26497d7aa"
+        ],
+        "source_session_memory_ids": [
+          "mem_classkit_auth_multitenancy_impl_20260628"
+        ],
+        "status": "pending",
+        "suggested_actions": [
+          "start local Supabase",
+          "run the reset path",
+          "smoke demo Google sign-in",
+          "smoke demo2 email/password and Google auth",
+          "confirm redirect records load after reset"
+        ]
+      },
+      {
+        "confidence": "medium",
+        "id": "handoff_classkit_deploy_split_next",
+        "objective": "Carry the Class Kit packaging and deployment split through to a verified build and deploy path.",
+        "priority": "normal",
+        "producer_kind": "normalized",
+        "prompt_text": "Continue from the current Class Kit deployment shape: verify the Supabase backend, make `packages/react` the built private SDK package, switch `app/demo` to consume that package, and confirm the GitHub Pages/admin deployment path. If a real `SUPABASE_ACCESS_TOKEN` is still missing, stop at the smallest safe verification step and report exactly what is blocked.",
+        "reason": "The recent project prompts established the target packaging and deployment shape but left implementation and verification for follow-up.",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-28T12-55-19.459Z_f82904_538531da-9926-4a94-a948-8cc3c7d2345d"
+        ],
+        "source_session_memory_ids": [
+          "mem_classkit_product_users_table_20260628",
+          "mem_classkit_three_deployables_20260628"
+        ],
+        "status": "pending",
+        "suggested_actions": [
+          "verify local package build",
+          "wire demo to built package",
+          "confirm Pages base path",
+          "validate Supabase deploy auth"
+        ]
+      },
+      {
+        "confidence": "high",
+        "id": "handoff_classkit_remote_seed_20260628",
+        "objective": "Unblock the first remote smoke test for ClassKit",
+        "priority": "high",
+        "producer_kind": "normalized",
+        "prompt_text": "Seed the remote ClassKit product/origin records in Supabase, then re-run `class-kit-product-context` and confirm the remote deployment returns a non-forbidden response.",
+        "reason": "Deployment is complete, but the remote product is not yet configured enough to validate the main SDK function end to end.",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-28T14-35-11.459Z_9d5eb7_314c411c-61f5-4387-927e-ea643889f0ed"
+        ],
+        "source_session_memory_ids": [
+          "mem_classkit_remote_deploy_blocker_20260628"
+        ],
+        "status": "pending",
+        "suggested_actions": [
+          "add the missing remote ClassKit seed data",
+          "re-run the smoke test against the remote Supabase project",
+          "verify the response is no longer `forbidden`"
+        ]
+      },
+      {
+        "confidence": "high",
+        "id": "handoff_classkit_namespace_implementation_plan_20260628",
+        "objective": "Draft the first implementation plan for the shared Supabase namespace and SDK boundary.",
+        "priority": "high",
+        "producer_kind": "normalized",
+        "prompt_text": "Inspect the current Class Kit migrations, Edge Functions, and demo app wiring, then produce a surgical implementation plan to move Class Kit into a private `class_kit` schema, keep `auth.users` shared, prefix Edge Functions, and make `app/demo` consume the built SDK package.",
+        "reason": "The user has already agreed on the backend-first shape and needs a concrete implementation entry point.",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-28T12-55-19.459Z_f82904_839e5e96-6a78-4246-8f7f-5d48f4f9e0ff",
+          "tomb_ingest_2026-06-28T12-55-19.459Z_f82904_e460edc6-bc49-4c3c-8a35-9084e6adf1c9",
+          "tomb_ingest_2026-06-28T12-55-19.459Z_f82904_157013f1-4b10-4246-8549-8171da943f95"
+        ],
+        "source_session_memory_ids": [
+          "mem_classkit_shared_supabase_namespace_20260628",
+          "mem_classkit_demo_consumes_built_sdk_20260628",
+          "mem_classkit_backend_boundary_first_step_20260628"
+        ],
+        "status": "pending",
+        "suggested_actions": [
+          "inventory current public tables and functions",
+          "rewrite migrations into the class_kit schema",
+          "prefix Edge Functions and hide names behind the SDK",
+          "remove demo source aliases and test against the built package",
+          "verify the remote Supabase connection path"
+        ]
+      }
+    ]
+  },
+  "project": {
+    "key": "class-kit",
+    "lifecycle": "active",
+    "name": "class-kit",
+    "repo_paths": [
+      "/Users/liadgoren/Repositories/class-kit"
+    ]
+  },
+  "project_key": "class-kit",
+  "schema_version": 1,
+  "session_memory": {
+    "selected": [
+      {
+        "confidence": "high",
+        "created_at": "2026-07-15T07:49:28.744Z",
+        "id": "mem_classkit_symfony_cards_created_20260715",
+        "memory_kind": "continuity",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T07-48-56.686Z_088269_8ab15098-d0f8-4082-b710-1094bc4a53d3"
+        ],
+        "summary": "Created two Symphony cards in the Planning list: the API card for mutable drafts and immutable publication history, and the SDK card for product-document draft and history manager APIs.",
+        "title": "Two Symphony cards created in Planning",
+        "updated_at": "2026-07-15T07:49:28.744Z"
+      },
+      {
+        "confidence": "high",
+        "created_at": "2026-07-15T07:33:00.306Z",
+        "id": "mem_classkit_document_lifecycle_refactor_scope_20260715",
+        "memory_kind": "decision",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T07-31-55.607Z_a8dbb8_9021617d-d856-441d-a67e-4912b172e5a4"
+        ],
+        "summary": "ClassKit work should be treated as a structural document-lifecycle refactor: one mutable revision-guarded draft per document type/locale, atomic publish into immutable consecutively numbered versions, explicit active version and history, retained published content, SDK draft/history/publish/archive primitives, Noya behind the SDK boundary, and backend contract tests for permissions, conflicts, atomic replacement, and retention.",
+        "title": "Document lifecycle refactor is the real scope",
+        "updated_at": "2026-07-15T07:33:00.306Z"
+      },
+      {
+        "confidence": "high",
+        "created_at": "2026-07-15T07:31:53.856Z",
+        "id": "mem_classkit_implement_now_20260715",
+        "memory_kind": "continuity",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T07-31-04.747Z_ecd3a1_af282f68-3eac-4180-b9ac-003ba0009316"
+        ],
+        "summary": "User indicated the current ClassKit work is ready to move from planning into implementation.",
+        "title": "User approved implementation phase",
+        "updated_at": "2026-07-15T07:31:53.856Z"
+      },
+      {
+        "confidence": "high",
+        "created_at": "2026-07-15T06:57:14.119Z",
+        "id": "mem_classkit_branch_docs_root_20260629",
+        "memory_kind": "decision",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-07-15T06-54-56.481Z_02df81_7bd8025d-3904-4341-9651-69b42494c6f1",
+          "tomb_ingest_2026-07-15T06-54-56.481Z_02df81_0e818596-ea84-4d8d-a4b1-fe047789a660",
+          "tomb_ingest_2026-07-15T06-54-56.481Z_02df81_6fbb2bad-e0b3-4385-8bc0-a027fe059445",
+          "tomb_ingest_2026-07-15T06-54-56.481Z_02df81_748962f0-4049-46c4-b765-ab39ef9250fd"
+        ],
+        "summary": "ClassKit now uses `master` for newly initialized repositories unless a project explicitly says otherwise. The root `class-kit` repo is a local-only documentation repo with no remote origin, `apps/` stays local-only, `class-kit-api` and `class-kit-sdk` track `origin/master`, and duplicate child documentation was removed in favor of the canonical root `docs/` tree.",
+        "title": "ClassKit defaults new repos to master and keeps root docs canonical",
+        "updated_at": "2026-07-15T06:57:14.119Z"
+      },
+      {
+        "confidence": "high",
+        "created_at": "2026-06-29T05:41:43.435Z",
+        "id": "mem_classkit_demo2_remote_auth_ready_20260629",
+        "memory_kind": "verification",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-29T05-17-23.445Z_66d603_2f90b5a8-6917-4563-bc95-e8fa87927565",
+          "tomb_ingest_2026-06-29T05-17-23.445Z_66d603_79ad06af-293c-4e05-ab09-f80945705b3c"
+        ],
+        "summary": "`demo2` is wired to the shared remote Supabase project for local development at `http://localhost:5174`, with `auth_mode=open`, email/password and Google enabled, and the product auth redirect set to `http://localhost:5174`.",
+        "title": "demo2 remote auth is wired locally",
+        "updated_at": "2026-06-29T05:41:43.435Z"
+      },
+      {
+        "confidence": "high",
+        "created_at": "2026-06-29T05:41:43.435Z",
+        "id": "mem_classkit_demo2_admin_register_hidden_20260629",
+        "memory_kind": "decision",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-29T05-17-23.445Z_66d603_36cb7f83-bbf8-49f6-9146-d85d312a76fa",
+          "tomb_ingest_2026-06-29T05-17-23.445Z_66d603_79ad06af-293c-4e05-ab09-f80945705b3c"
+        ],
+        "summary": "`demo2` should hide the Register CTA for signed-in admin users instead of showing a non-actionable action.",
+        "title": "Hide demo2 register for admins",
+        "updated_at": "2026-06-29T05:41:43.435Z"
+      },
+      {
+        "confidence": "high",
+        "created_at": "2026-06-29T05:39:28.847Z",
+        "id": "mem_classkit_env_placeholder_20260629",
+        "memory_kind": "verification",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-28T14-35-11.459Z_9d5eb7_977a5c77-da43-47cf-80e6-73ac44de0152"
+        ],
+        "summary": "`SUPABASE_ACCESS_TOKEN` should remain present as an empty placeholder in `.env.example`, `supabase/.env.example`, and `supabase/.env`; the real token belongs only in local env or CI secrets.",
+        "title": "Supabase access token stays as a blank placeholder in env templates",
+        "updated_at": "2026-06-29T05:39:28.847Z"
+      },
+      {
+        "confidence": "high",
+        "created_at": "2026-06-29T05:39:28.847Z",
+        "id": "mem_classkit_demo2_drilldown_pattern_20260629",
+        "memory_kind": "decision",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-28T12-55-19.459Z_f82904_416d5e7e-4ec5-4e5b-8c5d-8d893292394f",
+          "tomb_ingest_2026-06-28T12-55-19.459Z_f82904_4eba9757-f8e4-44d5-9f02-cae7ef2d2e99"
+        ],
+        "summary": "Demo2 dashboard surfaces should follow a drill-down pattern: choose page, then role, then permission category, and edit only the active slice. Future demo2 features should keep that surface-specific shape.",
+        "title": "Demo2 surfaces should use drill-down editing",
+        "updated_at": "2026-06-29T05:39:28.847Z"
+      },
+      {
+        "confidence": "high",
+        "created_at": "2026-06-29T05:20:36.293Z",
+        "id": "mem_classkit_platform_admin_not_product_member_20260629",
+        "memory_kind": "decision",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-29T05-17-23.445Z_66d603_3dfeb595-da8c-48bc-a424-1c88d9ba98fc",
+          "tomb_ingest_2026-06-29T05-17-23.445Z_66d603_3f029fbc-e0ea-4ca3-86ed-9cfb80ce9100"
+        ],
+        "summary": "`khgs2411@gmail.com` remained a ClassKit platform admin but was removed from `demo2` product membership; platform admins should not be auto-enrolled into a product-local `class_kit.users` row unless explicitly assigned.",
+        "title": "Platform admins stay outside product-local membership unless assigned",
+        "updated_at": "2026-06-29T05:20:36.293Z"
+      },
+      {
+        "confidence": "high",
+        "created_at": "2026-06-29T05:18:22.198Z",
+        "id": "mem_classkit_local_remote_tenancy_20260629",
+        "memory_kind": "decision",
+        "risk": "low",
+        "source_event_refs": [
+          "tomb_ingest_2026-06-28T14-35-11.459Z_9d5eb7_8d00e0ff-4c2e-465b-b6df-c771b436f8b3"
+        ],
+        "summary": "ClassKit should keep the local Supabase stack single-tenant for ClassKit only, while the remote Supabase project is the shared production platform that can host multiple product sub-projects owned by different repos.",
+        "title": "Local dev stays ClassKit-only; production is shared",
+        "updated_at": "2026-06-29T05:18:22.198Z"
+      }
+    ]
+  },
+  "state": {
+    "bootstrap_state": {
+      "missing": [
+        "curated_project_memory",
+        "experience_log_capture_verification"
+      ],
+      "status": "uncurated"
+    },
+    "freshness": null,
+    "pages_manifest": null,
+    "project_memory": null
+  },
+  "wiki": {
+    "page_count": 1,
+    "pages": [
+      {
+        "headings": [
+          "Project Memory"
+        ],
+        "path": "wiki/index.md",
+        "size_bytes": 59,
+        "snippet": "Project Memory has not been curated yet.",
+        "title": "Project Memory"
+      }
+    ],
+    "sections": [
+      {
+        "body_text": "Project Memory has not been curated yet.",
+        "category": null,
+        "end_line": 4,
+        "heading_level": 1,
+        "heading_path": [
+          "Project Memory"
+        ],
+        "heading_text": "Project Memory",
+        "page_title": "Project Memory",
+        "project_key": "class-kit",
+        "section_hash": "sha256:0c9e47f876a12289796d234a262efbc2ca5df70417d052dd76c86f845d4159a9",
+        "section_id": "project-memory",
+        "snippet": "Project Memory has not been curated yet.",
+        "start_line": 1,
+        "wiki_path": "wiki/index.md"
+      }
+    ]
+  }
+}

@@ -1,0 +1,457 @@
+{
+  "degraded_reasons": [],
+  "draft_wiki_dir": "/Users/liadgoren/Repositories/llm-wiki/runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run/agents/maintenance/draft-wiki",
+  "file_authoring_run_ref": "agents/maintenance/file-authoring-agent-result.json",
+  "project_key": "class-kit",
+  "report": {
+    "dispositions": [
+      {
+        "disposition": "insufficient_evidence",
+        "output_refs": [],
+        "reason": "No Geoapify integration, autocomplete API, per-product provider-key configuration, or selected-location persistence contract exists in the checked implementation. Current classes expose only a raw nullable location text field.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260717_geolocation_autocomplete_project_contract"
+      },
+      {
+        "disposition": "insufficient_evidence",
+        "output_refs": [],
+        "reason": "The provider-neutral boundary and normalized-snapshot persistence are proposed directions only; neither is verified by current repository code or regression tests.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260717_geolocation_autocomplete_boundary"
+      },
+      {
+        "disposition": "insufficient_evidence",
+        "output_refs": [],
+        "reason": "The current product-user/admin APIs operate on auth users and access entries. They do not define ghost customers or separate Noya-facing add-customer and invite-customer actions.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260717_manager_customer_actions_split"
+      },
+      {
+        "disposition": "insufficient_evidence",
+        "output_refs": [
+          "draft-wiki/classes-and-registrations.md",
+          "draft-wiki/memberships-and-entitlements.md"
+        ],
+        "reason": "The shared product-level cutoff and pending-registration exception are implemented and documented, but this snapshot exposes no authorized-manager mutation surface for the cutoff. The proposed editable-manager rule cannot be promoted as a complete contract.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260717_cancellation_window_project"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "The claimed Symphony card and label state is external planning-board workflow state, not implementation-backed ClassKit Project Memory in this checkout.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260717_planning_split_board_state"
+      },
+      {
+        "disposition": "insufficient_evidence",
+        "output_refs": [],
+        "reason": "No ghost-customer identity model, merge operation, or regression coverage for profile-only conflict handling is present in the current API, SDK, or tests.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260717_ghost_merge_policy"
+      },
+      {
+        "disposition": "insufficient_evidence",
+        "output_refs": [],
+        "reason": "Current registration requires an active product user and has no manager-created ghost-user, manual-registration, or ghost-to-real merge contract.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260717_ghost_user_feature_split"
+      },
+      {
+        "disposition": "insufficient_evidence",
+        "output_refs": [
+          "draft-wiki/templates-schedules-and-attendance.md",
+          "draft-wiki/classes-and-registrations.md"
+        ],
+        "reason": "The current implementation retains template field metadata but does not consume visible or searchable flags for customer exposure or filtering. The proposed live-policy behavior conflicts with current verified behavior.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260717_template_field_policy"
+      },
+      {
+        "disposition": "not_durable",
+        "output_refs": [],
+        "reason": "This is an unresolved future product-design decision, not verified current repository behavior.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260717_geolocation_sdk_boundary"
+      },
+      {
+        "disposition": "not_durable",
+        "output_refs": [],
+        "reason": "This is a confirmation task for an unimplemented proposal rather than durable current project knowledge.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260717_geolocation_confirm_boundary"
+      },
+      {
+        "disposition": "not_durable",
+        "output_refs": [],
+        "reason": "This is an open design question. The current implementation has raw location text, not reusable product-owned location records.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260717_structured_locations_review"
+      },
+      {
+        "disposition": "already_covered",
+        "output_refs": [
+          "draft-wiki/classes-and-registrations.md",
+          "draft-wiki/templates-schedules-and-attendance.md"
+        ],
+        "reason": "The wiki records that classes store object-valued custom_data, template validation applies when a template is used, and current list APIs do not support custom-data filtering or customer customData projection.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260717_lesson_metadata_filter_verify"
+      },
+      {
+        "disposition": "insufficient_evidence",
+        "output_refs": [],
+        "reason": "No checked ClassKit contract implements the stated ghost-customer/add-customer/invite-customer split, and Noya planning-card mutation is outside this documentation maintenance scope.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260717_noya_customer_actions_split"
+      },
+      {
+        "disposition": "already_covered",
+        "output_refs": [
+          "draft-wiki/classes-and-registrations.md"
+        ],
+        "reason": "The current repository and wiki establish one product-level registration_cancellation_cutoff_hours value, inherited by all classes; no class-scoped cutoff exists.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260717_cancellation_scope_decision"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "Cross-project Noya ticket review is planning/dependency work, not a change to verified ClassKit Project Memory in this checkout.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260717_noya_prereq_scan"
+      },
+      {
+        "disposition": "insufficient_evidence",
+        "output_refs": [],
+        "reason": "No current manual manager-registration endpoint or explicit manager override policy is verified in the API, SDK, or regression tests.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260717_manager_override_policy"
+      },
+      {
+        "disposition": "insufficient_evidence",
+        "output_refs": [
+          "draft-wiki/classes-and-registrations.md"
+        ],
+        "reason": "The current class visibility values are public, hidden, and members_only; no private-lesson invitation workflow or entitlement-refund contract is verified.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_private_lesson_workflow_review"
+      },
+      {
+        "disposition": "insufficient_evidence",
+        "output_refs": [],
+        "reason": "No ghost-user merge implementation or test evidence exists in this snapshot.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260717_ghost_merge_verify"
+      },
+      {
+        "disposition": "insufficient_evidence",
+        "output_refs": [],
+        "reason": "Ghost-customer ownership is not represented by the current user, access-entry, or membership models.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260717_ghost_customer_ownership"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "Splitting future work into API and SDK cards is external planning work; the underlying ghost-user contract is not current verified repository behavior.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260717_ghost_user_cards"
+      },
+      {
+        "disposition": "insufficient_evidence",
+        "output_refs": [],
+        "reason": "The checkout has auth-backed product users and access entries, but no documented or implemented pending-customer or internal-person identity variant.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260717_manager_created_user_model"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [
+          "draft-wiki/memberships-and-entitlements.md"
+        ],
+        "reason": "Updating a feature card is planning-board work. Current verified self-registration stock accounting is already documented, but the requested manager-created-user behavior is not implemented.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260717_card_update_registration_stock"
+      },
+      {
+        "disposition": "insufficient_evidence",
+        "output_refs": [],
+        "reason": "This is an unresolved product decision, and no private lesson or private-link access implementation is present.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_private_lesson_access_clarify"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [
+          "draft-wiki/classes-and-registrations.md",
+          "draft-wiki/templates-schedules-and-attendance.md"
+        ],
+        "reason": "This is an implementation handoff. The requested live-policy/filter/projection contract is not current behavior and should not be documented as such before implementation and verification.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260717_custom_data_implement"
+      }
+    ],
+    "evidence_paths": [
+      "repository-identity.json",
+      "target-repo/class-kit-api/supabase/functions/class-kit-classes/index.ts",
+      "target-repo/class-kit-api/supabase/functions/class-kit-templates/index.ts",
+      "target-repo/class-kit-api/supabase/migrations/20260607134535_template_class_core.sql",
+      "target-repo/class-kit-api/supabase/migrations/20260609110000_registration_cancellation_cutoff.sql",
+      "target-repo/class-kit-api/supabase/migrations/20260702055851_allow_pending_registration_cancellation_after_cutoff.sql",
+      "target-repo/class-kit-api/supabase/tests/member_auto_approve_registration.sql",
+      "target-repo/class-kit-api/supabase/tests/pending_registration_cancellation.sql"
+    ],
+    "known_gaps": [
+      "No implementation or regression evidence was found for geolocation autocomplete, provider configuration, reusable locations, or a location SDK surface beyond raw class/template text fields.",
+      "No implementation or regression evidence was found for ghost customers/users, manual manager registration, entitlement overrides, or ghost-to-real merges.",
+      "No current implementation or regression evidence supports live template visible/searchable policy, custom-data list filters, or customer customData projections; current docs record the opposite boundary.",
+      "The repository verifies the product-wide cancellation cutoff and pending-after-cutoff exception, but no manager-facing cutoff mutation contract is present.",
+      "External Symphony/Noya card state and unresolved future product decisions were not treated as current ClassKit implementation facts."
+    ],
+    "project_key": "class-kit",
+    "schema_version": 1,
+    "status": "completed",
+    "touched_paths": [
+      "reports/documentation-maintenance-report.json"
+    ]
+  },
+  "report_ref": "reports/documentation-maintenance-report.json",
+  "source_consumptions": [
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260717_geolocation_autocomplete_project_contract",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260717_geolocation_autocomplete_boundary",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260717_manager_customer_actions_split",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md",
+        "draft-wiki/memberships-and-entitlements.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260717_cancellation_window_project",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260717_planning_split_board_state",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260717_ghost_merge_policy",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260717_ghost_user_feature_split",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [
+        "draft-wiki/templates-schedules-and-attendance.md",
+        "draft-wiki/classes-and-registrations.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260717_template_field_policy",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_geolocation_sdk_boundary",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_geolocation_confirm_boundary",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_structured_locations_review",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md",
+        "draft-wiki/templates-schedules-and-attendance.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_lesson_metadata_filter_verify",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_noya_customer_actions_split",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_cancellation_scope_decision",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_noya_prereq_scan",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_manager_override_policy",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_private_lesson_workflow_review",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_ghost_merge_verify",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_ghost_customer_ownership",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_ghost_user_cards",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_manager_created_user_model",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [
+        "draft-wiki/memberships-and-entitlements.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_card_update_registration_stock",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_private_lesson_access_clarify",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-17T13:48:07.861Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-17T13-48-07.861Z-run",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md",
+        "draft-wiki/templates-schedules-and-attendance.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_custom_data_implement",
+      "terminal_decision": "belongs_to_other_layer"
+    }
+  ],
+  "status": "completed"
+}

@@ -1,0 +1,128 @@
+{
+  "degraded_reasons": [
+    "The supplied root snapshot excludes class-kit-api implementation, migration, and regression-test sources. The structured-location behavior is consistently documented in current canonical sources but was not independently checked against code or focused regression tests in this pass.",
+    "The claimed custom-data discovery change could not be verified against current class-kit-api code or regression tests; current canonical documentation still states that class-list custom-data filtering and projection are unsupported."
+  ],
+  "draft_wiki_dir": "/Users/liadgoren/Repositories/llm-wiki/runs/class-kit/project-learn/2026-07-18T09-48-14.555Z-run/agents/maintenance/draft-wiki",
+  "file_authoring_run_ref": "agents/maintenance/file-authoring-agent-result.json",
+  "project_key": "class-kit",
+  "report": {
+    "dispositions": [
+      {
+        "disposition": "applied_to_project_memory",
+        "output_refs": [
+          "draft-wiki/architecture-and-boundaries.md"
+        ],
+        "reason": "Verified root AGENTS.md establishes durable documentation-repository boundaries, validation guidance, and commit conventions; the canonical boundary page now records that guidance.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260718_root_agents_workflow"
+      },
+      {
+        "disposition": "applied_to_project_memory",
+        "output_refs": [
+          "draft-wiki/classes-and-registrations.md",
+          "draft-wiki/templates-schedules-and-attendance.md"
+        ],
+        "reason": "Current canonical backend API, capability-map, changelog, deployment, and context documentation consistently describe the shipped backend location snapshot and autocomplete contract; the class and template pages now cover its durable behavior.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260718_lesson_location_autocomplete_project"
+      },
+      {
+        "disposition": "insufficient_evidence",
+        "output_refs": [],
+        "reason": "The supplied source checkout excludes class-kit-api implementation and regression tests. Current canonical documentation instead explicitly says customer/manager class lists have no custom-data filter or projection contract, so the candidate's claimed changed behavior cannot be verified and would conflict with the current documented contract.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_custom_data_discovery_api_contract"
+      },
+      {
+        "disposition": "already_covered",
+        "output_refs": [],
+        "reason": "The verified root AGENTS.md guidance is covered by the root-guidance update attributed to the overlapping root contributor-guidance candidate in this pass.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_root_agents_workflow"
+      },
+      {
+        "disposition": "already_covered",
+        "output_refs": [],
+        "reason": "The verified root AGENTS.md guidance is covered by the root-guidance update attributed to the overlapping root contributor-guidance candidate in this pass.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_root_agents_guidance"
+      }
+    ],
+    "evidence_paths": [
+      "repository-identity.json",
+      "target-repo/AGENTS.md",
+      "target-repo/docs/api/backend-api.md",
+      "target-repo/docs/api/class-api-map.md",
+      "target-repo/docs/changelog.md",
+      "target-repo/docs/shared/context.md",
+      "target-repo/docs/shared/deployment.md"
+    ],
+    "known_gaps": [
+      "The supplied root snapshot excludes class-kit-api implementation, migration, and regression-test sources. The structured-location behavior is consistently documented in current canonical sources but was not independently checked against code or focused regression tests in this pass.",
+      "The claimed custom-data discovery change could not be verified against current class-kit-api code or regression tests; current canonical documentation still states that class-list custom-data filtering and projection are unsupported."
+    ],
+    "project_key": "class-kit",
+    "schema_version": 1,
+    "status": "degraded",
+    "touched_paths": [
+      "draft-wiki/architecture-and-boundaries.md",
+      "draft-wiki/classes-and-registrations.md",
+      "draft-wiki/templates-schedules-and-attendance.md"
+    ]
+  },
+  "report_ref": "reports/documentation-maintenance-report.json",
+  "source_consumptions": [
+    {
+      "consumed_at": "2026-07-18T09:48:14.555Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-18T09-48-14.555Z-run",
+      "output_refs": [
+        "draft-wiki/architecture-and-boundaries.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260718_root_agents_workflow",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-18T09:48:14.555Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-18T09-48-14.555Z-run",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md",
+        "draft-wiki/templates-schedules-and-attendance.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260718_lesson_location_autocomplete_project",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-18T09:48:14.555Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-18T09-48-14.555Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_custom_data_discovery_api_contract",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-18T09:48:14.555Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-18T09-48-14.555Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_root_agents_workflow",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-18T09:48:14.555Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-18T09-48-14.555Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_root_agents_guidance",
+      "terminal_decision": "already_covered"
+    }
+  ],
+  "status": "degraded"
+}

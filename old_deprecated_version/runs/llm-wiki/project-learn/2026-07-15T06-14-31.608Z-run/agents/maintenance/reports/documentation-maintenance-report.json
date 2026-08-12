@@ -1,0 +1,131 @@
+{
+  "project_key": "llm-wiki",
+  "sources": [
+    {
+      "source_ref": "cand_llmwiki_step12_doc_contract_conflict_20260715",
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/command-surface-and-operator-workflows.md"
+      ],
+      "reason": "The Step 12 roadmap requires Droplet Bot to use a distinct project identity, while docs/CLI.md still uses wizepal in its example."
+    },
+    {
+      "source_ref": "cand_embedding_contract_lifecycle_20260713",
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/storage-sqlite-and-retrieval-indexes.md",
+        "draft-wiki/runtime-providers-and-project-layout.md"
+      ],
+      "reason": "Current resolver, lifecycle, and status code verifies the persisted active/desired contract lifecycle and safe historical cleanup boundary."
+    },
+    {
+      "source_ref": "cand_llmwiki_embedding_contract_lifecycle_20260712",
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/storage-sqlite-and-retrieval-indexes.md"
+      ],
+      "reason": "The verified lifecycle is covered by the embedding-contract update applied from the duplicate proposal."
+    },
+    {
+      "source_ref": "cand_llmwiki_legacy_test_coverage_gap_20260712",
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The snapshot shows extensive current boundary coverage, but does not establish the claimed deleted-test set or a remaining coverage gap."
+    },
+    {
+      "source_ref": "cand_llmwiki_dropletbot_clean_start_identity_20260710",
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/command-surface-and-operator-workflows.md"
+      ],
+      "reason": "docs/ROADMAP.md now explicitly confirms the distinct clean identity rather than leaving it as an assumption."
+    },
+    {
+      "source_ref": "handoff_llmwiki_step12_contract_review_20260715",
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/command-surface-and-operator-workflows.md"
+      ],
+      "reason": "Direct comparison of docs/ROADMAP.md and docs/CLI.md verified the naming conflict and its clean-cohort boundary."
+    },
+    {
+      "source_ref": "handoff_llmwiki_dropletbot_bootstrap_20260714",
+      "disposition": "already_covered",
+      "output_refs": [
+        "target-repo/docs/ROADMAP.md"
+      ],
+      "reason": "The active roadmap already defines the clean Droplet Bot dogfood path; its identity constraint is also reflected in the draft wiki."
+    },
+    {
+      "source_ref": "handoff_llmwiki_classkit_rebootstrap_20260714",
+      "disposition": "already_covered",
+      "output_refs": [
+        "target-repo/docs/ROADMAP.md"
+      ],
+      "reason": "The active roadmap already specifies Class Kit rebootstrap from preserved continuity; this is execution work, not new durable understanding."
+    },
+    {
+      "source_ref": "handoff_embedding_contract_review_20260713",
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/storage-sqlite-and-retrieval-indexes.md"
+      ],
+      "reason": "The repository confirms the proposal has become implemented lifecycle behavior and the durable documentation was updated."
+    },
+    {
+      "source_ref": "handoff_llmwiki_step12_external_dogfood_20260713",
+      "disposition": "already_covered",
+      "output_refs": [
+        "target-repo/docs/ROADMAP.md"
+      ],
+      "reason": "The active roadmap already owns the external dogfood sequence; Project Memory should not duplicate volatile active work."
+    },
+    {
+      "source_ref": "handoff_llmwiki_embedding_contract_fix_20260712",
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/storage-sqlite-and-retrieval-indexes.md"
+      ],
+      "reason": "The proposed implementation is now verified repository behavior and documented as such."
+    },
+    {
+      "source_ref": "handoff_llmwiki_verify_refactor_coverage_20260712",
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is a future verification request, not a verified reusable fact about the project."
+    },
+    {
+      "source_ref": "handoff_llmwiki_review_cleanup_20260712",
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/command-surface-and-operator-workflows.md",
+        "draft-wiki/query-status-and-agent-interfaces.md"
+      ],
+      "reason": "src/commands/memory.ts and its command test verify that the incomplete auto layer was removed; stale draft guidance was corrected."
+    },
+    {
+      "source_ref": "handoff_llmwiki_step10_review_for_execution_20260710",
+      "disposition": "already_covered",
+      "output_refs": [
+        "target-repo/docs/ROADMAP.md"
+      ],
+      "reason": "Roadmap Step 10 is recorded as completed, so this historical approval handoff adds no current durable documentation."
+    },
+    {
+      "source_ref": "handoff_llmwiki_step10_write_plans_20260710",
+      "disposition": "already_covered",
+      "output_refs": [
+        "target-repo/docs/ROADMAP.md"
+      ],
+      "reason": "Roadmap Step 10 is recorded as completed, so this historical plan-writing handoff adds no current durable documentation."
+    },
+    {
+      "source_ref": "handoff_llmwiki_verify_dropletbot_identity_20260710",
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/command-surface-and-operator-workflows.md"
+      ],
+      "reason": "The roadmap directly confirms the distinct identity and the draft now captures the resulting operator boundary."
+    }
+  ]
+}

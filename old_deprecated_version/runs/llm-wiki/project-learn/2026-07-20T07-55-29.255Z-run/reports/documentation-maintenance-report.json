@@ -1,0 +1,131 @@
+{
+  "dispositions": [
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/session-memory-and-experience-ingest.md"
+      ],
+      "reason": "Current ingest code reconciles terminal replay rows before queue counting and job creation, exposes reconciled_count, and the auto-maintenance worker records a failed, non-rescheduled outcome when a started ingest makes no queue progress; focused regression tests cover both behaviors.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_auto_maintenance_workflow_20260720"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/project-memory-creation-and-curation.md"
+      ],
+      "reason": "The reviewed promotion contract was already documented, and current code/tests additionally verify that explicit concurrent Project Memory mutation contention is recorded and reported as skipped rather than failed; the durable operator outcome is now documented.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_reviewed_project_memory_promotion_20260720"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "reason": "Current docs retain the wizepal bootstrap example while the current roadmap requires a distinct clean Droplet Bot identity. The draft now marks the CLI example stale and preserves the roadmap's boundary without inventing an unspecified project key.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_cli_dropletbot_example_stale"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "reason": "The explicit operator decision defers repository-identity prose changes. The draft's checkout-specific identity paragraph was removed; repository-identity.json remains run evidence only and is not promoted into canonical prose.",
+      "source_kind": "project_candidate",
+      "source_ref": "project_inbox:llm-wiki:2026-07-18T08-47-39.237Z_48417e"
+    },
+    {
+      "disposition": "deferred_unsafe_change",
+      "output_refs": [],
+      "reason": "This is an explicitly unresolved product-policy question. Current implementation and checkout evidence do not constitute an approved durable policy for what repository identity facts may appear in Project Memory.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_repo_identity_prose_policy_20260716"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [],
+      "reason": "Repository code and regression tests verified the handoff's replay-reconciliation, count-reporting, and no-progress claims; the final draft documents them through the overlapping candidate disposition.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_verify_auto_maintenance_20260720"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [],
+      "reason": "The durable documentation mismatch in this handoff is covered by the Droplet Bot candidate disposition. Its requested installed-product dogfood execution is follow-up work, not additional Project Memory documentation evidence in this authoring pass.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_step12_dogfood_gate"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "Current code still deliberately defaults EMBEDDING_OLLAMA_URL to localhost and its regression tests assert that endpoint. The handoff proposes an implementation decision; no verified changed operator contract exists to promote into Project Memory.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_fix_ollama_default_endpoint_20260720"
+    },
+    {
+      "disposition": "deferred_unsafe_change",
+      "output_refs": [],
+      "reason": "The explicit current operator source keeps identity-prose policy deferred. Checkout snapshots are run evidence and cannot settle this durable-policy question.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_identity_prose_policy_20260719_0932"
+    },
+    {
+      "disposition": "deferred_unsafe_change",
+      "output_refs": [],
+      "reason": "This handoff expressly asks for an unresolved product reporting decision. Existing raw queue behavior does not establish whether a separate claimable-row contract is intended.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_claimable_rows_labeling_20260718_0848"
+    },
+    {
+      "disposition": "deferred_unsafe_change",
+      "output_refs": [],
+      "reason": "The source asks whether to canonize or refine an open claimable-count reporting contract. No current explicit decision source resolves it.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_claimable_count_contract_20260718_0836"
+    },
+    {
+      "disposition": "deferred_unsafe_change",
+      "output_refs": [],
+      "reason": "Current code shows queued_count is a raw active-row count, but the handoff asks whether that user-visible choice is intentional. Incidental implementation does not settle the open policy question.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_verify_raw_row_count_20260718"
+    },
+    {
+      "disposition": "deferred_unsafe_change",
+      "output_refs": [],
+      "reason": "The requested broad identity-link publication policy conflicts with the explicit current decision to defer identity-prose work. Current publication code also supports managed identity-state handling, so this handoff is not verified as an approved durable-policy change.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_strip_identity_links_20260716"
+    }
+  ],
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/src/ingest/ingest-service.ts",
+    "target-repo/src/commands/ingest.ts",
+    "target-repo/src/maintenance/auto-memory-maintenance.ts",
+    "target-repo/tests/ingest/ingest-service.test.ts",
+    "target-repo/tests/maintenance/auto-memory-maintenance.test.ts",
+    "target-repo/src/project/project-memory-review-checkpoint.ts",
+    "target-repo/src/maintenance/auto-project-memory-maintenance.ts",
+    "target-repo/tests/project/project-memory-curator-service.test.ts",
+    "target-repo/tests/maintenance/auto-project-memory-maintenance.test.ts",
+    "target-repo/tests/commands/maintenance.test.ts",
+    "target-repo/tests/status/status-service.test.ts",
+    "target-repo/docs/CLI.md",
+    "target-repo/docs/ROADMAP.md",
+    "target-repo/src/runtime/config.ts",
+    "target-repo/tests/runtime/runtime.test.ts",
+    "target-repo/tests/memory/embedding-provider-factory.test.ts"
+  ],
+  "known_gaps": [],
+  "project_key": "llm-wiki",
+  "schema_version": 1,
+  "status": "completed",
+  "touched_paths": [
+    "draft-wiki/session-memory-and-experience-ingest.md",
+    "draft-wiki/project-memory-creation-and-curation.md",
+    "draft-wiki/roadmap-adrs-and-design-history.md"
+  ]
+}

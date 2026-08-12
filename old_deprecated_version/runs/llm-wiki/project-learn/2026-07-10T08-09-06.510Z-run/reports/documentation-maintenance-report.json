@@ -1,0 +1,67 @@
+{
+  "dispositions": [
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/runtime-providers-and-project-layout.md",
+        "draft-wiki/query-status-and-agent-interfaces.md"
+      ],
+      "reason": "Added the missing derived-vector dimension-mismatch behavior and explicit-recency rerank contract; the existing SessionStart and deterministic confidence documentation was already accurate.",
+      "source_kind": "project_candidate",
+      "source_ref": "project_inbox:llm-wiki:2026-07-10T08-07-27.992Z_a64a3b"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/command-surface-and-operator-workflows.md"
+      ],
+      "reason": "Documented the implemented post-bootstrap maintenance and review commands plus the non-recursive thresholded Project Memory auto-maintenance boundary.",
+      "source_kind": "project_candidate",
+      "source_ref": "project_inbox:llm-wiki:2026-07-10T07-28-53.574Z_628ecf"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/command-surface-and-operator-workflows.md",
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "reason": "Current documentation already records `memory review` as the operator surface for terminal outcomes and explicitly preserves the no-separate-research-queue boundary; the proposed queue remains deferred.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_research_queue_open_question"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is a continuation instruction and approval reminder, not reusable project knowledge. It does not establish a new verified product or repository contract.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_resume_main_mission_project_memory"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "reason": "This is an audit task rather than source evidence. The audit found the draft wiki already delegates fast-moving roadmap status to `docs/ROADMAP.md` and contains no specific stale roadmap claim to correct.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_audit_current_status_pages_20260710"
+    }
+  ],
+  "evidence_paths": [
+    "target-repo/README.md",
+    "target-repo/docs/CLI.md",
+    "target-repo/docs/ROADMAP.md",
+    "target-repo/src/capture/facade.ts",
+    "target-repo/src/memory/session-memory-query.ts",
+    "target-repo/tests/capture/facade.test.ts",
+    "target-repo/tests/maintenance/auto-memory-maintenance.test.ts"
+  ],
+  "known_gaps": [],
+  "project_key": "llm-wiki",
+  "schema_version": 1,
+  "status": "completed",
+  "touched_paths": [
+    "draft-wiki/command-surface-and-operator-workflows.md",
+    "draft-wiki/query-status-and-agent-interfaces.md",
+    "draft-wiki/runtime-providers-and-project-layout.md"
+  ]
+}

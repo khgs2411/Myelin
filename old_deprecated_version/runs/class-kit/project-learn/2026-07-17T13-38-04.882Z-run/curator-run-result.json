@@ -1,0 +1,28 @@
+{
+  "artifacts": {
+    "curator_output": "documentation-maintenance-result.json",
+    "curator_run_result": "curator-run-result.json",
+    "curator_validation": "curator-validation.json",
+    "file_authoring_runs": [
+      "agents/maintenance/file-authoring-agent-result.json"
+    ],
+    "input_packet": "input-packet.json",
+    "maintenance_report": "reports/documentation-maintenance-report.json",
+    "repository_identity": "repository-identity.json",
+    "runtime_inbox_intake": "runtime-inbox-intake.json",
+    "summary": "summary.md"
+  },
+  "content_quality_status": "trusted",
+  "curation_kind": "agent_authored",
+  "dry_run": false,
+  "mode": "maintain",
+  "project_key": "class-kit",
+  "review": false,
+  "run_dir": "runs/class-kit/project-learn/2026-07-17T13-38-04.882Z-run",
+  "run_id": "2026-07-17T13-38-04.882Z-run",
+  "run_kind": "maintenance",
+  "status": "failed",
+  "stopped_before_writes": true,
+  "stopped_reason": "agent wrote outside allowed output roots: documentation-maintenance-report.json",
+  "validation_ok": false
+}

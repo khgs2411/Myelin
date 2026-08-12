@@ -1,0 +1,39 @@
+{
+  "schema_version": 2,
+  "project_key": "class-kit",
+  "status": "curated",
+  "source_run_dir": "runs/class-kit/project-learn/2026-07-19T08-22-44.921Z-run",
+  "updated_at": "2026-07-19T08:22:44.921Z",
+  "provider_mode": "live",
+  "curation_kind": "agent_authored",
+  "run_kind": "maintenance",
+  "create": {
+    "status": "skipped",
+    "planner_status": "completed",
+    "subject_writer_status": "completed",
+    "subject_count": 0,
+    "subject_writer_concurrency_limit": 0,
+    "subject_writer_retry_limit": 0,
+    "subject_report_refs": []
+  },
+  "maintenance": {
+    "status": "degraded",
+    "report_ref": "reports/documentation-maintenance-report.json",
+    "dispositions_count": 8,
+    "applied_count": 2,
+    "already_covered_count": 5,
+    "degraded_reason": "The snapshot has focused handler and helper regression source for location validation, pair transitions, autocomplete authorization, and provider degradation, but no focused integration regression source was found that exercises the location-snapshot migration constraints together with Edge Function writes.",
+    "degraded_reasons": [
+      "The snapshot has focused handler and helper regression source for location validation, pair transitions, autocomplete authorization, and provider degradation, but no focused integration regression source was found that exercises the location-snapshot migration constraints together with Edge Function writes."
+    ]
+  },
+  "retrieval_readiness": {
+    "status": "pending",
+    "checked_at": "2026-07-19T08:22:44.921Z",
+    "reason": "retrieval lifecycle has not completed yet"
+  },
+  "content_quality": {
+    "status": "not_evaluated",
+    "reason": "agent_authored_documentation_has_no_schema_quality_gate"
+  }
+}

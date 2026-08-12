@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "repository-identity-and-boundaries",
+  "wiki_path": "repository-identity-and-boundaries.md",
+  "status": "complete_with_known_gaps",
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/README.md",
+    "target-repo/docs/getting-started.md",
+    "target-repo/docs/product-shape.md",
+    "target-repo/docs/repositories/structure.md",
+    "target-repo/class-kit-sdk/package.json",
+    "target-repo/class-kit-api/package.json",
+    "target-repo/apps/class-kit-admin/package.json",
+    "target-repo/apps/demo2/package.json"
+  ],
+  "touched_paths": [
+    "draft-wiki/repository-identity-and-boundaries.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "Mounted target-repo Git metadata and the deterministic ClassKit identity record conflict; the cause and current canonical remote state are not verifiable from this snapshot.",
+    "The parent-documentation-repository remote policy conflicts between repository-identity.json and docs/repositories/structure.md.",
+    "Feature-level Edge Function, RLS, and SDK behavior is outside this boundary subject and not exhaustively verified here."
+  ]
+}

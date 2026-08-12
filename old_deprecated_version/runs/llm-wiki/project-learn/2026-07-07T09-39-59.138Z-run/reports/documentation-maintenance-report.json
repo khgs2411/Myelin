@@ -1,0 +1,127 @@
+{
+  "dispositions": [
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/project-memory-creation-and-curation.md"
+      ],
+      "reason": "Repo verification found an agent-authored run-result compatibility summary that still reports content_quality_status trusted, while the v2 canonical Project Memory state records content_quality.status as not_evaluated. The Project Memory creation documentation now states that project-memory.json is authoritative for agent-authored quality status.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_quality_status_reconciliation"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The source requests investigation of additional ranking algorithms and explicitly needs external verification. The repository snapshot documents the current derived retrieval index, hint files, lookup quality, and retrieval-maintenance queue, but does not provide verified evidence for a new ranking strategy to promote into Project Memory.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_project_retrieval_algorithms_review"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is an operational next-action to run maintenance and compare query logs against a benchmark baseline. It does not change durable project understanding without fresh run artifacts or benchmark results.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_project_maintenance_benchmark"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/session-memory-and-experience-ingest.md",
+        "draft-wiki/storage-sqlite-and-retrieval-indexes.md"
+      ],
+      "reason": "The draft Session Memory documentation already covers Experience Log drain status, retry/pending labels, tombstone recovery, and explicit Session Memory indexing after ingest. The source adds a run-specific backlog action, not a new durable contract.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_continue_drain_and_retest"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The source requests comparison of additional ranking strategies against logged benchmark data. The snapshot supports the existing Project Memory retrieval boundary and repair queue, but no verified tuning result or selected algorithm is available to document durably.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_project_memory_retrieval_tuning"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is a planning handoff for an earlier implementation-planning step. The current repo already contains the later ADR 0067 agent-authored documentation design and plan set, so the handoff itself is not durable Project Memory content.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_step56_implementation_planning"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "reason": "This is a concrete operator action to archive a baseline before provider-backed dogfood. It needs execution evidence before any durable documentation change; the current draft already records the relevant dogfood and archive-boundary history at a higher level.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_step4_dogfood_archive"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/storage-sqlite-and-retrieval-indexes.md",
+        "draft-wiki/session-memory-and-experience-ingest.md"
+      ],
+      "reason": "The draft storage and Session Memory pages already document Session Memory embedding indexing, pending retrieval states, and the myelin memory index session command. The handoff's count of three pending embeddings is ephemeral runtime status, not a durable project contract.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_index_pending_session_embeddings"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/project-memory-creation-and-curation.md",
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "reason": "The draft Project Memory creation and design-history pages already document the durable redesign outcome: Project Memory create mode is agent-authored repo documentation under ADR 0067, after earlier shallow structured output proved insufficient.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_redesign_project_memory_shape"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/project-memory-creation-and-curation.md"
+      ],
+      "reason": "The draft Project Memory creation page already documents the current file-authoring boundary, bounded run-local output roots, packet inputs, and no direct canonical writes by agents. No additional verified boundary fix from this source is available in the snapshot.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_project_learn_boundary_fix_20260707"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/source-evidence-inbox-and-candidate-boundaries.md"
+      ],
+      "reason": "Repo and draft verification show runtime inbox candidate intake is already documented: project learn runs source-consumption reconciliation, then runtime inbox intake, then packet construction; valid project runtime inbox items become needs-review project.inbox candidates.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_route_gaps_to_candidate_intake"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/project-memory-creation-and-curation.md",
+        "draft-wiki/roadmap-adrs-and-design-history.md"
+      ],
+      "reason": "The draft pages already document the staged curator rewrite's durable outcome: ADR 0067 agent-authored documentation, file-authoring runner boundaries, maintenance report dispositions, and legacy structured curator contracts as compatibility or historical surfaces.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_validate_curator_rewrite"
+    }
+  ],
+  "evidence_paths": [
+    "target-repo/src/project/project-memory-curator-service.ts",
+    "target-repo/src/project/project-memory-agent-contracts.ts",
+    "target-repo/tests/project/project-memory-draft-promotion.test.ts",
+    "target-repo/src/project/project-memory-agent-maintenance-service.ts",
+    "target-repo/docs/adr/0067-use-agent-authored-project-memory-documentation.md",
+    "target-repo/docs/ROADMAP.md"
+  ],
+  "known_gaps": [
+    "No external algorithm research was performed for Project Memory retrieval ranking sources.",
+    "No live maintenance, ingest drain, embedding indexing, or benchmark rerun was executed during this documentation-maintenance pass."
+  ],
+  "project_key": "llm-wiki",
+  "schema_version": 1,
+  "status": "completed",
+  "touched_paths": [
+    "draft-wiki/project-memory-creation-and-curation.md",
+    "reports/documentation-maintenance-report.json"
+  ]
+}

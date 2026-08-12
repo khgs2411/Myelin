@@ -1,0 +1,20 @@
+{
+  "concurrency_limit": 4,
+  "draft_wiki_dir": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T07-37-21.980Z-run/agents/create/draft-wiki",
+  "error": "repository identity contradiction must be labeled in /Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T07-37-21.980Z-run/agents/create/draft-wiki/sdk-and-control-plane-surfaces.md: live metadata includes origin remote",
+  "file_authoring_run_refs": [],
+  "manifest": {
+    "project_key": "class-kit",
+    "schema_version": 1,
+    "subjects": []
+  },
+  "planner_report_ref": "reports/documentation-planner-report.json",
+  "pre_maintenance_wiki_ref": "pre-maintenance-wiki",
+  "project_key": "class-kit",
+  "repository_identity_ref": "repository-identity.json",
+  "retry_limit": 1,
+  "status": "failed",
+  "subject_manifest_ref": "reports/documentation-subject-manifest.json",
+  "subject_report_refs": [],
+  "subject_reports": []
+}

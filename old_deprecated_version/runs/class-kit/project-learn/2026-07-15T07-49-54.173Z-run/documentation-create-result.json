@@ -1,0 +1,418 @@
+{
+  "concurrency_limit": 4,
+  "draft_wiki_dir": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run/agents/create/draft-wiki",
+  "file_authoring_run_refs": [
+    "agents/create/file-authoring-agent-result.json",
+    "agents/subject-admin-pm-integration/file-authoring-agent-result.json",
+    "agents/subject-attendance-lifecycle/file-authoring-agent-result.json",
+    "agents/subject-class-discovery-registration-and-lifecycle/file-authoring-agent-result.json",
+    "agents/subject-memberships-and-stock/file-authoring-agent-result.json",
+    "agents/subject-product-access-and-authorization/file-authoring-agent-result.json",
+    "agents/subject-product-documents-and-change-requests/file-authoring-agent-result.json",
+    "agents/subject-repository-identity-and-boundaries/file-authoring-agent-result.json",
+    "agents/subject-sdk-and-api-facade/file-authoring-agent-result.json",
+    "agents/subject-templates-and-schedules/file-authoring-agent-result.json"
+  ],
+  "manifest": {
+    "project_key": "class-kit",
+    "schema_version": 1,
+    "subjects": [
+      {
+        "purpose": "Record sanitized checkout identity, source layout, and the remote-origin contradiction.",
+        "subject_id": "repository-identity-and-boundaries",
+        "suggested_repo_paths": [
+          "repository-identity.json",
+          "target-repo/README.md",
+          "target-repo/docs/repositories/structure.md",
+          "target-repo/docs/product-shape.md"
+        ],
+        "title": "Repository identity and boundaries",
+        "wiki_path": "repository-identity-and-boundaries.md"
+      },
+      {
+        "purpose": "Explain origin resolution, authentication, access states, role/permission semantics, and gate precedence.",
+        "subject_id": "product-access-and-authorization",
+        "suggested_repo_paths": [
+          "target-repo/class-kit-api/supabase/functions/_shared/context.ts",
+          "target-repo/class-kit-api/supabase/functions/_shared/permissions.ts",
+          "target-repo/class-kit-api/supabase/migrations/20260612073150_product_auth_policy.sql",
+          "target-repo/class-kit-api/supabase/migrations/20260612122000_permission_requirement_catalog.sql"
+        ],
+        "title": "Product access and authorization",
+        "wiki_path": "product-access-and-authorization.md"
+      },
+      {
+        "purpose": "Document visibility, eligibility, approval policy, capacity, cancellation, and state transitions.",
+        "subject_id": "class-discovery-registration-and-lifecycle",
+        "suggested_repo_paths": [
+          "target-repo/class-kit-api/supabase/migrations/20260607134535_template_class_core.sql",
+          "target-repo/class-kit-api/supabase/migrations/20260607160000_registration_engine.sql",
+          "target-repo/class-kit-api/supabase/tests/member_auto_approve_registration.sql",
+          "target-repo/class-kit-api/supabase/tests/pending_registration_cancellation.sql"
+        ],
+        "title": "Class discovery, registration, and lifecycle",
+        "wiki_path": "class-discovery-registration-and-lifecycle.md"
+      },
+      {
+        "purpose": "Document membership modes, active-grant eligibility, transitions, and stock ledger behavior.",
+        "subject_id": "memberships-and-stock",
+        "suggested_repo_paths": [
+          "target-repo/class-kit-api/supabase/migrations/20260607132920_membership_ledger.sql",
+          "target-repo/class-kit-api/supabase/functions/class-kit-memberships/index.ts",
+          "target-repo/class-kit-sdk/src/manager/manager-api.ts"
+        ],
+        "title": "Memberships and stock",
+        "wiki_path": "memberships-and-stock.md"
+      },
+      {
+        "purpose": "Document recurring schedule policy, generated-class provenance, and lifecycle controls.",
+        "subject_id": "templates-and-schedules",
+        "suggested_repo_paths": [
+          "target-repo/class-kit-api/supabase/migrations/20260607143000_schedule_rule_model.sql",
+          "target-repo/class-kit-api/supabase/functions/class-kit-schedules/index.ts",
+          "target-repo/class-kit-api/supabase/tests/schedule_generation_backfill.sql"
+        ],
+        "title": "Templates and schedules",
+        "wiki_path": "templates-and-schedules.md"
+      },
+      {
+        "purpose": "Document attendance participant categories and class attendance transitions.",
+        "subject_id": "attendance-lifecycle",
+        "suggested_repo_paths": [
+          "target-repo/class-kit-api/supabase/migrations/20260607170000_attendance_engine.sql",
+          "target-repo/class-kit-api/supabase/functions/class-kit-attendance/index.ts"
+        ],
+        "title": "Attendance lifecycle",
+        "wiki_path": "attendance-lifecycle.md"
+      },
+      {
+        "purpose": "Document document versioning and product feedback/request state contracts.",
+        "subject_id": "product-documents-and-change-requests",
+        "suggested_repo_paths": [
+          "target-repo/class-kit-api/supabase/migrations/20260705060042_product_documents.sql",
+          "target-repo/class-kit-api/supabase/migrations/20260707144646_product_change_requests.sql"
+        ],
+        "title": "Product documents and change requests",
+        "wiki_path": "product-documents-and-change-requests.md"
+      },
+      {
+        "purpose": "Document Trello configuration, PM link states, and attachment synchronization.",
+        "subject_id": "admin-pm-integration",
+        "suggested_repo_paths": [
+          "target-repo/class-kit-api/supabase/migrations/20260708110703_pm_software_integrations.sql",
+          "target-repo/class-kit-api/supabase/functions/class-kit-admin-pm-integrations/index.ts"
+        ],
+        "title": "Admin PM integration",
+        "wiki_path": "admin-pm-integration.md"
+      },
+      {
+        "purpose": "Document the supported frontend boundary and public namespaces.",
+        "subject_id": "sdk-and-api-facade",
+        "suggested_repo_paths": [
+          "target-repo/class-kit-sdk/src/client/class-kit-client.ts",
+          "target-repo/class-kit-sdk/src/types.ts",
+          "target-repo/docs/api/class-api-map.md"
+        ],
+        "title": "SDK and API facade",
+        "wiki_path": "sdk-and-api-facade.md"
+      }
+    ]
+  },
+  "planner_report_ref": "reports/documentation-planner-report.json",
+  "pre_maintenance_wiki_ref": "pre-maintenance-wiki",
+  "project_key": "class-kit",
+  "repository_identity_ref": "repository-identity.json",
+  "retry_limit": 1,
+  "status": "completed",
+  "subject_manifest_ref": "reports/documentation-subject-manifest.json",
+  "subject_report_refs": [
+    "agents/subject-admin-pm-integration/reports/subject-report.json",
+    "agents/subject-attendance-lifecycle/reports/subject-report.json",
+    "agents/subject-class-discovery-registration-and-lifecycle/reports/subject-report.json",
+    "agents/subject-memberships-and-stock/reports/subject-report.json",
+    "agents/subject-product-access-and-authorization/reports/subject-report.json",
+    "agents/subject-product-documents-and-change-requests/reports/subject-report.json",
+    "agents/subject-repository-identity-and-boundaries/reports/subject-report.json",
+    "agents/subject-sdk-and-api-facade/reports/subject-report.json",
+    "agents/subject-templates-and-schedules/reports/subject-report.json"
+  ],
+  "subject_reports": [
+    {
+      "evidence_paths": [
+        "repository-identity.json",
+        "target-repo/class-kit-api/supabase/migrations/20260708110703_pm_software_integrations.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260708131835_pm_trello_labels.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260709072033_pm_board_snapshots.sql",
+        "target-repo/class-kit-api/supabase/functions/class-kit-admin-pm-integrations/index.ts",
+        "target-repo/class-kit-api/supabase/functions/_shared/admin_api.ts",
+        "target-repo/class-kit-api/supabase/functions/_shared/pm/factory.ts",
+        "target-repo/class-kit-api/supabase/functions/_shared/pm/types.ts",
+        "target-repo/class-kit-api/supabase/functions/_shared/pm/facade/product_management_software.ts",
+        "target-repo/class-kit-api/supabase/functions/_shared/pm/providers/trello_provider.ts",
+        "target-repo/docs/api/backend-api.md"
+      ],
+      "known_gaps": [
+        "No PM-integration-focused automated tests were found in the available test directories; behavior is documented from current implementation, schema, and backend API documentation.",
+        "The attachment-link schema permits pending and the shared type permits skipped, but the current Trello creation path only emits uploaded or failed; no verified transition coverage exists for pending or skipped.",
+        "No current PM action retries or reconciles failed attachment mirroring after initial card creation.",
+        "subject report status was complete_with_known_gaps"
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "admin-pm-integration",
+      "touched_paths": [
+        "draft-wiki/admin-pm-integration.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "admin-pm-integration.md"
+    },
+    {
+      "evidence_paths": [
+        "repository-identity.json",
+        "target-repo/class-kit-api/supabase/migrations/20260607134535_template_class_core.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260607160000_registration_engine.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260607170000_attendance_engine.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260612121000_permission_helper_functions.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260612122000_permission_requirement_catalog.sql",
+        "target-repo/class-kit-api/supabase/functions/_shared/context.ts",
+        "target-repo/class-kit-api/supabase/functions/_shared/permissions.ts",
+        "target-repo/class-kit-api/supabase/functions/class-kit-attendance/index.ts",
+        "target-repo/class-kit-api/supabase/tests/truncate_product_admin_action.sql"
+      ],
+      "known_gaps": [
+        "No dedicated attendance lifecycle SQL or Edge Function regression tests are present in the snapshot.",
+        "Concurrent attendance-start and walk-in behavior is not covered by focused regression evidence.",
+        "The missing-class behavior of list_class is inferred from the current query implementation and lacks focused test coverage.",
+        "subject report status was complete_with_known_gaps"
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "attendance-lifecycle",
+      "touched_paths": [
+        "draft-wiki/attendance-lifecycle.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "attendance-lifecycle.md"
+    },
+    {
+      "evidence_paths": [
+        "repository-identity.json",
+        "target-repo/class-kit-api/supabase/migrations/20260607134535_template_class_core.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260607160000_registration_engine.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260607170000_attendance_engine.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260622150445_class_api_pattern_foundation.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260623163000_member_auto_approve_product_users.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260701084833_fix_member_auto_approve_registration.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260702055851_allow_pending_registration_cancellation_after_cutoff.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260702121000_public_class_discovery_non_cancelled.sql",
+        "target-repo/class-kit-api/supabase/functions/class-kit-classes/index.ts",
+        "target-repo/class-kit-api/supabase/functions/class-kit-register-class/index.ts",
+        "target-repo/class-kit-api/supabase/functions/class-kit-manage-registrations/index.ts",
+        "target-repo/class-kit-api/supabase/tests/member_auto_approve_registration.sql",
+        "target-repo/class-kit-api/supabase/tests/pending_registration_cancellation.sql"
+      ],
+      "known_gaps": [
+        "No broad SQL regression coverage in this snapshot for every discovery visibility combination, hidden-class direct registration, concurrent capacity contention, manager recovery actions, or the full attendance lifecycle.",
+        "The caller-aware list/get surface returns members_only rows before registration enforces membership, unlike list_user; the distinction lacks targeted regression coverage.",
+        "Documentation is based on static current-snapshot evidence; no live Supabase database or full migration/test run was available.",
+        "subject report status was complete"
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "class-discovery-registration-and-lifecycle",
+      "touched_paths": [
+        "draft-wiki/class-discovery-registration-and-lifecycle.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "class-discovery-registration-and-lifecycle.md"
+    },
+    {
+      "evidence_paths": [
+        "repository-identity.json",
+        "target-repo/class-kit-api/supabase/migrations/20260607132920_membership_ledger.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260607160000_registration_engine.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260608020000_membership_cancellation_audit.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260701084833_fix_member_auto_approve_registration.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260705110018_adjust_membership_remaining_stock_only.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260705111440_set_membership_manager_entrypoint.sql",
+        "target-repo/class-kit-api/supabase/functions/class-kit-memberships/index.ts",
+        "target-repo/class-kit-api/supabase/functions/class-kit-classes/index.ts",
+        "target-repo/class-kit-api/supabase/tests/member_auto_approve_registration.sql",
+        "target-repo/class-kit-sdk/src/manager/manager-api.ts",
+        "target-repo/class-kit-sdk/src/client/class-kit-client.ts"
+      ],
+      "known_gaps": [
+        "No dedicated regression coverage for complete mode resolution, grant transitions, stock adjustment, expiry, or restoration behavior.",
+        "The effective-grant predicate ignores valid_from, while inactive eligibility states do not automatically change the grant status and can still block a new grant.",
+        "The SDK MembershipEventType omits backend event membership_set.",
+        "subject report status was complete_with_known_gaps"
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "memberships-and-stock",
+      "touched_paths": [
+        "draft-wiki/memberships-and-stock.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "memberships-and-stock.md"
+    },
+    {
+      "evidence_paths": [
+        "repository-identity.json",
+        "target-repo/class-kit-api/supabase/functions/_shared/cors.ts",
+        "target-repo/class-kit-api/supabase/functions/_shared/context.ts",
+        "target-repo/class-kit-api/supabase/functions/_shared/permissions.ts",
+        "target-repo/class-kit-api/supabase/functions/class-kit-product-context/index.ts",
+        "target-repo/class-kit-api/supabase/functions/class-kit-profile/index.ts",
+        "target-repo/class-kit-api/supabase/functions/class-kit-register-class/index.ts",
+        "target-repo/class-kit-api/supabase/functions/class-kit-admin-products/index.ts",
+        "target-repo/class-kit-api/supabase/migrations/20260612073150_product_auth_policy.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260612120000_permission_layer_foundation.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260612121000_permission_helper_functions.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260612122000_permission_requirement_catalog.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260629133541_product_access_entries.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260629121334_root_origin_matches_paths.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260707144646_product_change_requests.sql",
+        "target-repo/class-kit-api/supabase/tests/truncate_product_admin_action.sql"
+      ],
+      "known_gaps": [
+        "The snapshot has no direct executable regression coverage for origin matching, local product-key ambiguity, or auth-provider policy denial.",
+        "The product access-entry branches for invited, pending, active, rejected, inactive, and open-mode reactivation are implemented but not directly covered by the available SQL regressions.",
+        "Product versus platform permission-key and permission-level fallback behavior, including last role-management actor protection, lacks current executable regression coverage in this snapshot.",
+        "The requirements catalog says auth-mode updates need product.auth_mode.update, but the current class-kit-admin-products implementation checks product level 75 with platform-level fallback; the wiki marks this catalog/runtime contradiction rather than treating the catalog as current behavior.",
+        "The permission-layer smoke checklist is historical design guidance and was not treated as proof of the current implementation."
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "product-access-and-authorization",
+      "touched_paths": [
+        "draft-wiki/product-access-and-authorization.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "product-access-and-authorization.md"
+    },
+    {
+      "evidence_paths": [
+        "repository-identity.json",
+        "target-repo/class-kit-api/supabase/migrations/20260705060042_product_documents.sql",
+        "target-repo/class-kit-api/supabase/functions/class-kit-product-documents/index.ts",
+        "target-repo/class-kit-api/supabase/migrations/20260707144646_product_change_requests.sql",
+        "target-repo/class-kit-api/supabase/functions/class-kit-product-change-requests/index.ts",
+        "target-repo/class-kit-api/supabase/functions/class-kit-admin-product-change-requests/index.ts",
+        "target-repo/class-kit-api/supabase/functions/class-kit-admin-pm-integrations/index.ts",
+        "target-repo/class-kit-api/supabase/functions/_shared/pm/types.ts",
+        "target-repo/class-kit-sdk/src/client/class-kit-client.ts",
+        "target-repo/class-kit-sdk/src/manager/manager-api.ts",
+        "target-repo/docs/api/backend-api.md",
+        "target-repo/docs/sdk/client-sdk.md"
+      ],
+      "known_gaps": [
+        "The snapshot has no focused automated regression tests for product-document publication, archival, locale fallback, pruning, acceptance idempotency, or cache invalidation.",
+        "The snapshot has no focused automated regression tests for change-request revision/deletion semantics, attachment upload completion, platform status updates, or Trello status mapping.",
+        "Attachment completion marks metadata uploaded without verifying the Storage object exists; the documented lifecycle reflects implementation rather than a verified object-presence invariant.",
+        "subject report status was completed_with_known_gaps"
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "product-documents-and-change-requests",
+      "touched_paths": [
+        "draft-wiki/product-documents-and-change-requests.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "product-documents-and-change-requests.md"
+    },
+    {
+      "evidence_paths": [
+        "repository-identity.json",
+        "target-repo/README.md",
+        "target-repo/docs/getting-started.md",
+        "target-repo/docs/repositories/structure.md",
+        "target-repo/docs/product-shape.md"
+      ],
+      "known_gaps": [
+        "The checkout manifest does not establish nested API, SDK, or app repository commits, remotes, or working-tree state.",
+        "The deterministic parent origin conflicts with authored claims that the parent documentation repository is local-only and has no remote; intent cannot be resolved from the snapshot.",
+        "Access, eligibility, membership, approval, and lifecycle behavior are outside this repository-identity subject and were not independently verified here.",
+        "subject report status was completed_with_known_gaps"
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "repository-identity-and-boundaries",
+      "touched_paths": [
+        "draft-wiki/repository-identity-and-boundaries.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "repository-identity-and-boundaries.md"
+    },
+    {
+      "evidence_paths": [
+        "repository-identity.json",
+        "target-repo/class-kit-sdk/package.json",
+        "target-repo/class-kit-sdk/src/index.ts",
+        "target-repo/class-kit-sdk/src/client/class-kit-client.ts",
+        "target-repo/class-kit-sdk/src/client/product-api.ts",
+        "target-repo/class-kit-sdk/src/types.ts",
+        "target-repo/class-kit-sdk/src/manager/manager-api.ts",
+        "target-repo/class-kit-sdk/src/context/product-context-state.ts",
+        "target-repo/class-kit-sdk/src/context/product-provider.tsx",
+        "target-repo/class-kit-api/supabase/functions/_shared/context.ts",
+        "target-repo/class-kit-api/supabase/functions/_shared/permissions.ts",
+        "target-repo/class-kit-api/supabase/functions/class-kit-product-context/index.ts",
+        "target-repo/class-kit-api/supabase/functions/class-kit-register-class/index.ts",
+        "target-repo/docs/api/class-api-map.md"
+      ],
+      "known_gaps": [
+        "No SDK unit or integration tests were found for namespace-to-Edge-Function mapping, Vite configuration branches, browser site-header construction, or facade error normalization.",
+        "The snapshot's SQL regressions cover selected registration, schedule, and product-reset behavior, not every SDK-exposed management or admin operation.",
+        "The broad endpoint capability inventory is corroborated by the authored API map; complete endpoint-by-endpoint authorization and state-transition verification belongs to the owning lifecycle subjects.",
+        "subject report status was complete"
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "sdk-and-api-facade",
+      "touched_paths": [
+        "draft-wiki/sdk-and-api-facade.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "sdk-and-api-facade.md"
+    },
+    {
+      "evidence_paths": [
+        "repository-identity.json",
+        "target-repo/class-kit-api/supabase/migrations/20260607112136_product_role_foundation.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260607134535_template_class_core.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260607143000_schedule_rule_model.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260607153000_schedule_generation_engine.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260608030000_generated_class_source_integrity.sql",
+        "target-repo/class-kit-api/supabase/migrations/20260623080614_backfill_schedule_generation_from_start.sql",
+        "target-repo/class-kit-api/supabase/functions/class-kit-templates/index.ts",
+        "target-repo/class-kit-api/supabase/functions/class-kit-schedules/index.ts",
+        "target-repo/class-kit-api/supabase/functions/class-kit-schedule-generate/index.ts",
+        "target-repo/class-kit-api/supabase/tests/schedule_generation_backfill.sql",
+        "target-repo/class-kit-sdk/src/client/class-kit-client.ts"
+      ],
+      "known_gaps": [
+        "No dedicated regression coverage for schedule lifecycle transitions, inactive-template blocking, skip/unskip regeneration, invalid schedule input, generation-count bounds, or idempotency counts.",
+        "No test establishes reconciliation behavior when an edited schedule changes the start time of an already generated occurrence.",
+        "subject report status was complete_with_known_gaps"
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "templates-and-schedules",
+      "touched_paths": [
+        "draft-wiki/templates-and-schedules.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "templates-and-schedules.md"
+    }
+  ]
+}

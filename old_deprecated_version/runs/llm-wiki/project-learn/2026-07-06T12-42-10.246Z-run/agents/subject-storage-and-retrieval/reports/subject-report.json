@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "subject_id": "storage-and-retrieval",
+  "wiki_path": "storage-and-retrieval.md",
+  "status": "completed",
+  "evidence_paths": [
+    "MYELIN.md",
+    "docs/IMPLEMENTATION_ALIGNMENT.md",
+    "src/runtime/layout.ts",
+    "src/runtime/project-shell.ts",
+    "src/runtime/projects.ts",
+    "src/runtime/state.ts",
+    "src/runtime/config.ts",
+    "src/memory/db.ts",
+    "src/memory/migrations.ts",
+    "src/memory/sqlite-runtime.ts",
+    "src/memory/sqlite-vec.ts",
+    "src/memory/embedding-provider.ts",
+    "src/memory/embedding-provider-factory.ts",
+    "src/memory/query-embedding-cache.ts",
+    "src/memory/session-memory-indexer.ts",
+    "src/memory/session-memory-query.ts",
+    "src/memory/project-memory-retrieval-storage.ts",
+    "src/memory/project-memory-retrieval-indexer.ts",
+    "src/memory/project-memory-retrieval-index-service.ts",
+    "src/memory/project-memory-retrieval-text.ts",
+    "src/memory/project-memory-hint-jobs.ts",
+    "src/project/project-memory-markdown-sections.ts",
+    "src/project/project-memory-hints.ts",
+    "src/query/engine.ts",
+    "src/query/memory-query-service.ts",
+    "src/query/project-memory-query-service.ts",
+    "src/commands/memory.ts",
+    "tests/memory/project-memory-retrieval-indexer.test.ts",
+    "tests/query/project-memory-query-service.test.ts",
+    "tests/memory/retrieval-maintenance-queue.test.ts"
+  ],
+  "touched_paths": [
+    "draft-wiki/storage-and-retrieval.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "`myelin memory query --layer auto` is parsed but currently follows the Session Memory path unless `--layer project` is explicitly used.",
+    "Project Memory query fails closed until `myelin memory index project <key>` has indexed Project Memory rows.",
+    "Hint files and hint job state exist, but a complete agentic hint-generation or query-time repair flow was not verified in this subject pass.",
+    "`docs/IMPLEMENTATION_ALIGNMENT.md` still describes an older page-metadata query seed; current `src/query/` and `src/memory/` code is more authoritative for retrieval behavior."
+  ]
+}

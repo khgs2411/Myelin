@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "administrative-control-plane",
+  "wiki_path": "administrative-control-plane.md",
+  "status": "completed_with_gaps",
+  "evidence_paths": [
+    "repository-identity.json",
+    "class-kit-api/supabase/functions/_shared/admin_api.ts",
+    "class-kit-api/supabase/functions/_shared/permissions.ts",
+    "class-kit-api/supabase/functions/_shared/context.ts",
+    "class-kit-api/supabase/functions/class-kit-admin-products/index.ts",
+    "class-kit-api/supabase/functions/class-kit-admin-product-users/index.ts",
+    "class-kit-api/supabase/migrations/20260607112136_product_role_foundation.sql",
+    "class-kit-api/supabase/migrations/20260612122000_permission_requirement_catalog.sql",
+    "class-kit-api/supabase/migrations/20260628130854_product_auth_redirects.sql",
+    "class-kit-api/supabase/migrations/20260629103250_bind_auth_redirects_to_origins.sql",
+    "class-kit-api/supabase/migrations/20260629133541_product_access_entries.sql",
+    "class-kit-api/supabase/migrations/20260702093741_platform_app_auth_redirects.sql",
+    "class-kit-api/supabase/migrations/20260702120000_truncate_product_admin_action.sql",
+    "class-kit-api/supabase/tests/truncate_product_admin_action.sql"
+  ],
+  "touched_paths": [
+    "draft-wiki/administrative-control-plane.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "The reset regression test exercises the SQL function directly, not the Edge Function authorization or RPC error mapping.",
+    "No focused automated tests were found for product creation, origin/redirect mutation, redirect default fallback, or product-access transitions.",
+    "Apple is accepted for redirect configuration but the current product-context eligibility code accepts only email and Google; intended Apple support needs review.",
+    "The function-permission catalog conflicts with the handlers' current platform-level-100 gate for several actions and needs reconciliation."
+  ]
+}

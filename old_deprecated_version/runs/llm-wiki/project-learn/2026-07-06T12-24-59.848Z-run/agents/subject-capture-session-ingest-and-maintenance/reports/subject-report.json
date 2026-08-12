@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "subject_id": "capture-session-ingest-and-maintenance",
+  "wiki_path": "capture-session-ingest-and-maintenance.md",
+  "status": "completed",
+  "evidence_paths": [
+    "target-repo/src/commands/capture.ts",
+    "target-repo/src/commands/ingest.ts",
+    "target-repo/src/capture/capture-service.ts",
+    "target-repo/src/capture/facade.ts",
+    "target-repo/src/capture/providers/codex.ts",
+    "target-repo/src/ingest/ingest-service.ts",
+    "target-repo/src/ingest/runtime.ts",
+    "target-repo/src/ingest/worker.ts",
+    "target-repo/src/ingest/status.ts",
+    "target-repo/src/ingest/reconciliation-context.ts",
+    "target-repo/src/maintenance/auto-memory-maintenance.ts",
+    "target-repo/src/maintenance/worker.ts",
+    "target-repo/src/memory/experience.ts",
+    "target-repo/src/memory/session-memories.ts",
+    "target-repo/src/memory/session-memory-contexts.ts",
+    "target-repo/src/memory/session-memory-links.ts",
+    "target-repo/src/memory/candidates.ts",
+    "target-repo/src/memory/handoffs.ts",
+    "target-repo/src/memory/ingest-types.ts",
+    "target-repo/src/memory/migrations.ts",
+    "target-repo/docs/CLI.md",
+    "target-repo/tests/capture/capture-service.test.ts",
+    "target-repo/tests/ingest/runtime.test.ts",
+    "target-repo/tests/ingest/worker.test.ts",
+    "target-repo/tests/maintenance/auto-memory-maintenance.test.ts"
+  ],
+  "touched_paths": [
+    "draft-wiki/capture-session-ingest-and-maintenance.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "Auto-maintenance is opt-in; capture alone does not guarantee Session Memory creation unless manual ingest or auto-maintenance runs.",
+    "Session Memory retrieval depends on embedding indexing, so written Session Memory can remain retrieval-pending.",
+    "The inspected capture provider normalization is Codex-specific, while ingest supports both codex and claude providers.",
+    "Ingest prompt budgeting can trim reconciliation context, although source evidence remains preserved in rows and tombstones.",
+    "Ingest workers can create Project Memory candidates and handoff instructions but do not edit curated wiki pages directly."
+  ]
+}

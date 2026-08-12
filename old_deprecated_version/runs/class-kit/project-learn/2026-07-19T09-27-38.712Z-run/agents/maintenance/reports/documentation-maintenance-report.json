@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "status": "degraded",
+  "dispositions": [
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260719_customer_identity_boundary",
+      "disposition": "deferred_unsafe_change",
+      "reason": "The candidate proposes an explicitly unsettled identity-policy change. Current canonical documentation consistently names auth.users as the shared identity and class_kit.users as the product membership/profile/role boundary; the frozen checkout contains no product_customers schema or implementation evidence that authorizes replacing that boundary.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260719_customer_identity_split_review_2d9f7a",
+      "disposition": "deferred_unsafe_change",
+      "reason": "This is a conversation-level proposal with unresolved profile ownership. Target documentation describes the existing class_kit.users product-user boundary, but no explicit accepted decision or current implementation for product_customers is present in the sanitized checkout.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260719_membership_template_contract_01",
+      "disposition": "insufficient_evidence",
+      "reason": "The claimed migration, handlers, and SQL tests are absent from this frozen documentation-repository checkout. Current draft documentation instead records that grants have no template/class restriction and no membership_not_eligible outcome; without current API code or regression-test source, the claimed replacement contract cannot be established.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_ingest_20260719_membership_template_binding",
+      "disposition": "insufficient_evidence",
+      "reason": "The candidate's absolute class-kit-api migration and test paths are not included in target-repo. The available canonical class and membership documentation describes the pre-template eligibility contract, so the asserted schema, generic 403, and passed-test facts cannot be independently verified here.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_visibility_semantics_contract",
+      "disposition": "insufficient_evidence",
+      "reason": "The source is a leased-session assertion and the target checkout has neither the referenced class handlers nor regression tests. Existing draft prose documents the prior active-grant behavior but does not establish the proposed omit-from-list, direct-GET 403, and registration-400 split.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260719_customer_identity_split_review_5a31e0",
+      "disposition": "deferred_unsafe_change",
+      "reason": "The handoff asks for acceptance of a durable architecture decision. Current canonical sources support the existing auth.users/class_kit.users split, while the requested product_customers alternative has no explicit accepted decision or implementation evidence in this checkout.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_ghost_customers_35b935",
+      "disposition": "deferred_unsafe_change",
+      "reason": "This handoff explicitly asks to decide the product-user boundary before implementation. It cannot be settled from incidental existing documentation, which describes the current class_kit.users boundary rather than an approved ghost-customer policy.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260719_template_membership_review_01",
+      "disposition": "insufficient_evidence",
+      "reason": "The staged API diff, migration, handlers, and tests named by the handoff are unavailable in target-repo. The available durable docs retain the no-template-restriction contract, so no Project Memory update is justified.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_ingest_20260719_membership_template_review",
+      "disposition": "insufficient_evidence",
+      "reason": "Current repository evidence available to this pass does not include the claimed membership-template migration, handlers, or tests. The handoff alone cannot supersede the existing documented contract.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_ingest_20260719_optional_membership_template_api",
+      "disposition": "belongs_to_other_layer",
+      "reason": "This is an implementation and verification request for the separate class-kit-api repository, not a verified Project Memory fact. The sanitized checkout also does not include that repository's source.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_visibility_contract_review",
+      "disposition": "insufficient_evidence",
+      "reason": "The requested verification depends on class-kit-api handlers, error helpers, and tests that are absent from target-repo. No current source establishes the proposed 403/omission/400 public-contract split.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260719_verify_status_code_contract",
+      "disposition": "deferred_unsafe_change",
+      "reason": "The handoff frames 403 versus 404 as a possible public-contract decision. No current explicit decision source or implementation/test evidence in this checkout resolves that policy question.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_membership_visibility_decision",
+      "disposition": "deferred_unsafe_change",
+      "reason": "The handoff expressly identifies the direct-GET status as unresolved. The frozen checkout lacks the relevant current handler and contract tests, so documenting either status as final would be an unsafe policy change.",
+      "output_refs": []
+    },
+    {
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_ingest_20260719_card349",
+      "disposition": "belongs_to_other_layer",
+      "reason": "This is a downstream Trello implementation request for the separate class-kit-api repository, rather than a verified durable documentation fact.",
+      "output_refs": []
+    }
+  ],
+  "touched_paths": [],
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/docs/repositories/structure.md",
+    "target-repo/docs/shared/authentication.md",
+    "target-repo/docs/product-shape.md",
+    "target-repo/docs/api/backend-api.md",
+    "target-repo/docs/api/class-api-map.md",
+    "draft-wiki/classes-and-registrations.md",
+    "draft-wiki/memberships-and-entitlements.md"
+  ],
+  "known_gaps": [
+    "The frozen target-repo checkout contains only the ClassKit documentation repository, not the class-kit-api migration, Edge Function, or regression-test sources required to verify the claimed membership-template eligibility and visibility-status contracts.",
+    "No explicit accepted product policy or current implementation source resolves the proposed product_customers/nullable auth_user_id identity boundary against the currently documented class_kit.users model."
+  ]
+}

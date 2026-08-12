@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "stage_id": "create-planner",
+  "status": "failed",
+  "provider_mode": "live",
+  "provider": "codex",
+  "model": "gpt-5.6-terra",
+  "sandbox": "workspace-write",
+  "cwd": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T12-24-29.146Z-run/agents/create",
+  "target_repo_snapshot": "target-repo (removed after invocation)",
+  "allowed_output_roots": [
+    {
+      "name": "draft_wiki",
+      "relativePath": "draft-wiki"
+    },
+    {
+      "name": "planner_reports",
+      "relativePath": "reports"
+    }
+  ],
+  "discovered_outputs": [],
+  "result_ref": "file-authoring-agent-result.json",
+  "error": "agent wrote outside allowed output roots: docs/draft-wiki/product-change-requests-and-trello.md"
+}

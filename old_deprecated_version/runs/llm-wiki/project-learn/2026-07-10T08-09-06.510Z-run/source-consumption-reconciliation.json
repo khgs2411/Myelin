@@ -1,0 +1,28 @@
+{
+  "already_terminal_refs": [
+    "project_handoff:handoff_llmwiki_oo_mcp_project_followup",
+    "project_handoff:handoff_llmwiki_retry_failed_auto_ingest",
+    "project_handoff:handoff_llmwiki_ingest_status_audit",
+    "project_candidate:cand_llmwiki_quality_status_reconciliation",
+    "project_candidate:cand_llmwiki_project_retrieval_algorithms_review",
+    "project_handoff:handoff_llmwiki_project_maintenance_benchmark",
+    "project_handoff:handoff_llmwiki_continue_drain_and_retest",
+    "project_handoff:handoff_llmwiki_project_memory_retrieval_tuning",
+    "project_handoff:handoff_llmwiki_step56_implementation_planning",
+    "project_handoff:handoff_llmwiki_step4_dogfood_archive",
+    "project_handoff:handoff_llmwiki_index_pending_session_embeddings",
+    "project_handoff:handoff_llmwiki_redesign_project_memory_shape",
+    "project_handoff:handoff_llmwiki_project_learn_boundary_fix_20260707",
+    "project_handoff:handoff_llmwiki_route_gaps_to_candidate_intake",
+    "project_handoff:handoff_llmwiki_validate_curator_rewrite"
+  ],
+  "blocking": false,
+  "degraded": false,
+  "degraded_reasons": [],
+  "missing_refs": [],
+  "processed_candidates": [],
+  "processed_project_handoffs": [],
+  "project_key": "llm-wiki",
+  "skipped_refs": [],
+  "source_consumption_state_path": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/state/project-memory-source-consumptions.json"
+}

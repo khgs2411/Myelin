@@ -1,0 +1,10 @@
+{
+  "accepted_entries": 88,
+  "category": null,
+  "degraded": false,
+  "project_key": "llm-wiki",
+  "rejected_entries": 0,
+  "required": false,
+  "run_ref": "runs/llm-wiki/project-memory-hints/2026-07-20T07-55-29.255Z-run",
+  "status": "completed"
+}

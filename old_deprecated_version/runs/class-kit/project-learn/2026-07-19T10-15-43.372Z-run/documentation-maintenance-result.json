@@ -1,0 +1,213 @@
+{
+  "degraded_reasons": [
+    "The target snapshot excludes the ignored class-kit-api and class-kit-sdk repositories, including migrations, Edge Function source, and regression tests. It therefore cannot verify a customer-record lifecycle, product_customers/auth_user_id model, ghost-to-auth merge audit, customer_id foreign-key migration, automatic customer backfill, or cross-product identity-discovery policy.",
+    "repository-identity.json reports branch version/1.2.0 with an origin remote, while target-repo/docs/repositories/structure.md says the parent repository is local-only and should not have a remote. This checkout contradiction is run evidence only and did not justify a canonical wiki edit in this pass."
+  ],
+  "draft_wiki_dir": "/Users/liadgoren/Repositories/llm-wiki/runs/class-kit/project-learn/2026-07-19T10-15-43.372Z-run/agents/maintenance/draft-wiki",
+  "file_authoring_run_ref": "agents/maintenance/file-authoring-agent-result.json",
+  "project_key": "class-kit",
+  "report": {
+    "dispositions": [
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "The proposed no-hard-delete, deactivate/reactivate, and audited-merge policy is explicitly awaiting product-owner confirmation. Current canonical material documents destructive product, membership, registration, and change-request operations, but establishes no customer-record lifecycle contract; the source snapshot contains no owning API/schema implementation or regression test for this proposed policy.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_customer_lifecycle_no_hard_delete"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "Exactly-one product_customer creation, relationship backfill, and access-revocation retention are proposed product-policy changes, not verified current behavior. The current access contract instead names active class_kit.users product membership activation for open/invite-only products; it does not establish a product_customers record or the requested backfill semantics.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260719_product_customer_auto_creation"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "The source explicitly frames separate customer and application-access resources, plus explicit audited ghost linking, as an in-flight design proposal. Current API maps document management.users and access-user administration, but do not define a separate customer resource or merge/link protocol; the proposal cannot be promoted from incidental naming alone.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_customer_access_boundary_01"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "Current authentication and authorization documentation establishes global auth.users with product-scoped membership and origin isolation, but it does not establish the proposed manager-discovery, disclosure, or cross-product linking rule. This privacy-sensitive policy needs an explicit accepted contract or implementation and regression evidence before canonical documentation can state it.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260719_cross_product_privacy_rule"
+      },
+      {
+        "disposition": "already_covered",
+        "output_refs": [],
+        "reason": "The current accepted ADR and active backend/auth documentation consistently resolve the present boundary as auth.users for global identity and class_kit.users for product membership/profile/role state. They contain no product_customers table, nullable auth_user_id contract, or customer_id-backed resource migration. The candidate's contrary session proposal is not current durable behavior in this checkout.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260719_customer_identity_boundary"
+      },
+      {
+        "disposition": "already_covered",
+        "output_refs": [],
+        "reason": "The same current accepted contract already documents the active product-user boundary: class_kit.users is the product membership table, product role assignments are scoped to product_id/user_id, and customer-facing access activates product membership only through the documented gates. No checked-in current source establishes the proposed nullable-auth customer model or customer_id foreign-key migration.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260719_customer_identity_split_review_2d9f7a"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This is a requested product-policy decision and downstream implementation handoff, not evidence of an implemented Project Memory fact. It requires product-owner decision work before a future maintenance pass can document an accepted customer lifecycle contract.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_confirm_customer_lifecycle_policy"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This requests architecture/API verification and possible contract implementation. The current documentation exposes product-user management and access administration but no implemented customer-management resource, so the handoff belongs to product and engineering decision work rather than this documentation update.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_verify_customer_access_split_01"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This is a verification and potential implementation handoff for a privacy-sensitive identity boundary. Current canonical docs support product-scoped membership and origin isolation, but do not prove the requested cross-product discovery/linking behavior; no durable documentation change is warranted from the handoff alone.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_identity_boundary_review"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "The handoff asks to decide and implement a different customer/access identity model. The active accepted documentation instead names class_kit.users as the product membership boundary; no checked-in implementation confirms product_customers, nullable auth_user_id, or customer_id-backed registrations for promotion to Project Memory.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260719_customer_identity_split_review_5a31e0"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This is explicitly a card-driven decision and implementation sequence for ghost customers and later merge work. It is not current durable repository behavior, and the referenced card work is outside the documentation snapshot's verified contract.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_ghost_customers_35b935"
+      }
+    ],
+    "evidence_paths": [
+      "repository-identity.json",
+      "target-repo/docs/repositories/structure.md",
+      "target-repo/docs/adr/0001-scoped-product-permission-layer.md",
+      "target-repo/docs/shared/authentication.md",
+      "target-repo/docs/api/backend-api.md",
+      "target-repo/docs/api/class-api-map.md",
+      "draft-wiki/index.md",
+      "draft-wiki/architecture-and-boundaries.md",
+      "draft-wiki/product-access-and-authentication.md",
+      "draft-wiki/authorization-and-roles.md"
+    ],
+    "known_gaps": [
+      "The target snapshot excludes the ignored class-kit-api and class-kit-sdk repositories, including migrations, Edge Function source, and regression tests. It therefore cannot verify a customer-record lifecycle, product_customers/auth_user_id model, ghost-to-auth merge audit, customer_id foreign-key migration, automatic customer backfill, or cross-product identity-discovery policy.",
+      "repository-identity.json reports branch version/1.2.0 with an origin remote, while target-repo/docs/repositories/structure.md says the parent repository is local-only and should not have a remote. This checkout contradiction is run evidence only and did not justify a canonical wiki edit in this pass."
+    ],
+    "project_key": "class-kit",
+    "schema_version": 1,
+    "status": "degraded",
+    "touched_paths": []
+  },
+  "report_ref": "reports/documentation-maintenance-report.json",
+  "source_consumptions": [
+    {
+      "consumed_at": "2026-07-19T10:15:43.372Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-15-43.372Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_customer_lifecycle_no_hard_delete",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T10:15:43.372Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-15-43.372Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260719_product_customer_auto_creation",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T10:15:43.372Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-15-43.372Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_customer_access_boundary_01",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T10:15:43.372Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-15-43.372Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260719_cross_product_privacy_rule",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T10:15:43.372Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-15-43.372Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260719_customer_identity_boundary",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-19T10:15:43.372Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-15-43.372Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260719_customer_identity_split_review_2d9f7a",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-19T10:15:43.372Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-15-43.372Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_confirm_customer_lifecycle_policy",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-19T10:15:43.372Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-15-43.372Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_verify_customer_access_split_01",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-19T10:15:43.372Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-15-43.372Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_identity_boundary_review",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-19T10:15:43.372Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-15-43.372Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260719_customer_identity_split_review_5a31e0",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-19T10:15:43.372Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-15-43.372Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_ghost_customers_35b935",
+      "terminal_decision": "belongs_to_other_layer"
+    }
+  ],
+  "status": "degraded"
+}

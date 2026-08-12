@@ -1,0 +1,18 @@
+{
+  "eligible_item_ids": [],
+  "global_findings": [
+    {
+      "category": "provider",
+      "code": "project_memory_create_failed",
+      "message": "subject report schema_version must be 1",
+      "severity": "blocker"
+    }
+  ],
+  "item_results": [],
+  "mode": "create",
+  "noop_refs": [],
+  "ok": false,
+  "project_key": "llm-wiki",
+  "quarantined_item_ids": [],
+  "rejected_item_ids": []
+}

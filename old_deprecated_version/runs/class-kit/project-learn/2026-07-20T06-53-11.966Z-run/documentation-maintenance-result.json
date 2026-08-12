@@ -1,0 +1,226 @@
+{
+  "degraded_reasons": [],
+  "draft_wiki_dir": "/Users/liadgoren/Repositories/llm-wiki/runs/class-kit/project-learn/2026-07-20T06-53-11.966Z-run/agents/maintenance/draft-wiki",
+  "file_authoring_run_ref": "agents/maintenance/file-authoring-agent-result.json",
+  "project_key": "class-kit",
+  "report": {
+    "dispositions": [
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "The source explicitly leaves the ghost-user role/access exception unresolved. Current role storage requires a non-null authenticated user_id and supports only manager/user roles; no implemented ghost flow or approved durable policy was found.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260720_ghost_user_role_contract"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "Current migration evidence establishes class_kit.users as an authenticated product-membership table keyed by (product_id, user_id), not a customer record. The proposed customer-ID evolution and migration scope remain an explicitly open product decision.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260720_customer_model_evolution"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "Copy-once profile synchronization is presented as a recommendation awaiting approval. No implemented linked-customer model or explicit current policy resolving that choice was found.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260719_linked_customer_sync_policy"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "The proposed customer_id canonicalization and user_id compatibility translation are not present in current migrations, API source, SDK source, or canonical documentation; the source itself says approval is pending.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260719_customer_id_transition_review"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "Deactivate/reactivate and audited merge are unapproved customer-lifecycle proposals. Current product-user storage includes active/inactive status, but that does not settle the proposed customer-history and duplicate-merge policy.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_customer_lifecycle_no_hard_delete"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "The exactly-one product-customer/backfill workflow is an unaccepted proposal. Current code documents product-user access activation, but no product_customer table or transactional customer-creation implementation was found.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260719_product_customer_auto_creation"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "The proposed separation of customer management from application-access management, including explicit audited ghost linking, remains in-flight design work. Existing product access and role contracts do not establish the proposed customer resource boundary.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_customer_access_boundary_01"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "Product membership is currently scoped by (product_id, user_id), but the privacy-sensitive rule forbidding cross-product match revelation or linking is posed as an open policy and has no explicit implemented customer-linking contract to promote.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260719_cross_product_privacy_rule"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This is an engineering/product-decision handoff, not evidence of an adopted Project Memory contract. It requires explicit policy selection before implementation or documentation changes.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260720_ghost_user_contract_review"
+      },
+      {
+        "disposition": "already_covered",
+        "output_refs": [],
+        "reason": "Current API implementation and regression-test source verify structured snapshots and permission-gated autocomplete, while current SDK source contains no locations facade. The final wiki already documents the backend contract, free-text fallback, attribution rule, and that applications must wait for a released facade. No release evidence supports a change. The inspected repository identity conflicts with target-repo/docs/repositories/structure.md's local-only/no-origin claim; identity remains run evidence and was not used to alter canonical prose.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_sdk_structured_locations_01"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This asks for an explicit product-owner decision and possible migration work. Current evidence shows the physical class_kit.users membership table; it does not authorize documenting a rename as durable fact.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260720_confirm_customer_table_rename"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This is a request to settle an unapproved synchronization policy before implementation, rather than durable evidence for Project Memory maintenance.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260719_confirm_linked_customer_sync_policy"
+      }
+    ],
+    "evidence_paths": [
+      "repository-identity.json",
+      "target-repo/docs/repositories/structure.md",
+      "target-repo/class-kit-api/supabase/migrations/20260607112136_product_role_foundation.sql",
+      "target-repo/class-kit-api/supabase/functions/class-kit-locations/index.ts",
+      "target-repo/class-kit-api/supabase/functions/class-kit-locations/index.test.ts",
+      "target-repo/class-kit-api/supabase/functions/_shared/geoapify.test.ts",
+      "target-repo/class-kit-api/supabase/functions/_shared/location.test.ts",
+      "target-repo/class-kit-api/supabase/functions/class-kit-classes/index.test.ts",
+      "target-repo/class-kit-api/supabase/tests/lesson_location_snapshots.sql",
+      "target-repo/class-kit-sdk/src/client/class-kit-client.ts",
+      "target-repo/class-kit-sdk/src/manager/manager-api.ts",
+      "draft-wiki/classes-and-registrations.md",
+      "draft-wiki/sdk-and-product-api.md"
+    ],
+    "known_gaps": [],
+    "project_key": "class-kit",
+    "schema_version": 1,
+    "status": "completed",
+    "touched_paths": []
+  },
+  "report_ref": "reports/documentation-maintenance-report.json",
+  "source_consumptions": [
+    {
+      "consumed_at": "2026-07-20T06:53:11.966Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-20T06-53-11.966Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260720_ghost_user_role_contract",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-20T06:53:11.966Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-20T06-53-11.966Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260720_customer_model_evolution",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-20T06:53:11.966Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-20T06-53-11.966Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260719_linked_customer_sync_policy",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-20T06:53:11.966Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-20T06-53-11.966Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260719_customer_id_transition_review",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-20T06:53:11.966Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-20T06-53-11.966Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_customer_lifecycle_no_hard_delete",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-20T06:53:11.966Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-20T06-53-11.966Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260719_product_customer_auto_creation",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-20T06:53:11.966Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-20T06-53-11.966Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_customer_access_boundary_01",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-20T06:53:11.966Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-20T06-53-11.966Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260719_cross_product_privacy_rule",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-20T06:53:11.966Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-20T06-53-11.966Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260720_ghost_user_contract_review",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-20T06:53:11.966Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-20T06-53-11.966Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_sdk_structured_locations_01",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-20T06:53:11.966Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-20T06-53-11.966Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260720_confirm_customer_table_rename",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-20T06:53:11.966Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-20T06-53-11.966Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260719_confirm_linked_customer_sync_policy",
+      "terminal_decision": "belongs_to_other_layer"
+    }
+  ],
+  "status": "completed"
+}

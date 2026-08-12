@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "project_key": "llm-wiki",
+  "status": "curated",
+  "source_run_dir": "projects/llm-wiki/runs/project-learn/2026-07-06T13-20-19.956Z-run",
+  "updated_at": "2026-07-06T13:20:19.956Z",
+  "provider_mode": "live",
+  "curation_kind": "agent_authored",
+  "run_kind": "recreate",
+  "create": {
+    "status": "completed",
+    "planner_status": "completed",
+    "subject_writer_status": "completed",
+    "subject_count": 11,
+    "subject_writer_concurrency_limit": 4,
+    "subject_writer_retry_limit": 1,
+    "manifest_ref": "reports/documentation-subject-manifest.json",
+    "planner_report_ref": "reports/documentation-planner-report.json",
+    "subject_report_refs": [
+      "agents/subject-command-surface-and-operator-workflows/reports/subject-report.json",
+      "agents/subject-product-and-memory-model/reports/subject-report.json",
+      "agents/subject-project-memory-creation-and-curation/reports/subject-report.json",
+      "agents/subject-query-status-and-agent-interfaces/reports/subject-report.json",
+      "agents/subject-roadmap-adrs-and-design-history/reports/subject-report.json",
+      "agents/subject-runtime-providers-and-project-layout/reports/subject-report.json",
+      "agents/subject-schema-and-documentation-contracts/reports/subject-report.json",
+      "agents/subject-session-memory-and-experience-ingest/reports/subject-report.json",
+      "agents/subject-source-evidence-inbox-and-candidate-boundaries/reports/subject-report.json",
+      "agents/subject-storage-sqlite-and-retrieval-indexes/reports/subject-report.json",
+      "agents/subject-testing-and-verification/reports/subject-report.json"
+    ],
+    "pre_maintenance_wiki_ref": "pre-maintenance-wiki"
+  },
+  "maintenance": {
+    "status": "noop",
+    "report_ref": "reports/documentation-maintenance-report.json",
+    "dispositions_count": 0,
+    "applied_count": 0,
+    "already_covered_count": 0,
+    "degraded_reasons": []
+  },
+  "retrieval_readiness": {
+    "status": "pending",
+    "checked_at": "2026-07-06T13:20:19.956Z",
+    "reason": "retrieval lifecycle has not completed yet"
+  },
+  "content_quality": {
+    "status": "not_evaluated",
+    "reason": "agent_authored_documentation_has_no_schema_quality_gate"
+  }
+}

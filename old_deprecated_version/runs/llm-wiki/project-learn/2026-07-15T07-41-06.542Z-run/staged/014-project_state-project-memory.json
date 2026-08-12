@@ -1,0 +1,41 @@
+{
+  "schema_version": 2,
+  "project_key": "llm-wiki",
+  "status": "degraded",
+  "source_run_dir": "projects/llm-wiki/runs/project-learn/2026-07-15T07-41-06.542Z-run",
+  "updated_at": "2026-07-15T07:41:06.542Z",
+  "provider_mode": "live",
+  "curation_kind": "agent_authored",
+  "run_kind": "maintenance",
+  "create": {
+    "status": "skipped",
+    "planner_status": "completed",
+    "subject_writer_status": "completed",
+    "subject_count": 0,
+    "subject_writer_concurrency_limit": 0,
+    "subject_writer_retry_limit": 0,
+    "subject_report_refs": []
+  },
+  "maintenance": {
+    "status": "degraded",
+    "report_ref": "reports/documentation-maintenance-report.json",
+    "dispositions_count": 22,
+    "applied_count": 12,
+    "already_covered_count": 1,
+    "degraded_reason": "Historical removal of legacy project-memory tests and equivalence of replacement coverage could not be verified from the current checkout alone.",
+    "degraded_reasons": [
+      "Historical removal of legacy project-memory tests and equivalence of replacement coverage could not be verified from the current checkout alone.",
+      "The Step 12 clean Droplet Bot project key is unresolved: docs/ROADMAP.md requires a distinct identity, while docs/CLI.md still uses wizepal.",
+      "Current behavior coverage was read from targeted regression tests; this maintenance pass did not execute the full Bun test suite or a live provider-backed dogfood run."
+    ]
+  },
+  "retrieval_readiness": {
+    "status": "pending",
+    "checked_at": "2026-07-15T07:41:06.542Z",
+    "reason": "retrieval lifecycle has not completed yet"
+  },
+  "content_quality": {
+    "status": "not_evaluated",
+    "reason": "agent_authored_documentation_has_no_schema_quality_gate"
+  }
+}

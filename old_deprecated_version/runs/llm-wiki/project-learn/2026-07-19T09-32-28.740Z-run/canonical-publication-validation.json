@@ -1,0 +1,22 @@
+{
+  "checked_internal_links": 12,
+  "checked_pages": [
+    "command-surface-and-operator-workflows.md",
+    "index.md",
+    "product-and-memory-model.md",
+    "project-memory-creation-and-curation.md",
+    "query-status-and-agent-interfaces.md",
+    "roadmap-adrs-and-design-history.md",
+    "runtime-providers-and-project-layout.md",
+    "schema-and-documentation-contracts.md",
+    "session-memory-and-experience-ingest.md",
+    "source-evidence-inbox-and-candidate-boundaries.md",
+    "storage-sqlite-and-retrieval-indexes.md",
+    "testing-and-verification.md"
+  ],
+  "project_key": "llm-wiki",
+  "rewritten_repo_citations": [],
+  "rewritten_repository_identity_links": [],
+  "schema_version": 1,
+  "status": "passed"
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "subject_id": "verification-and-quality-gates",
+  "wiki_path": "verification-and-quality-gates.md",
+  "status": "completed",
+  "evidence_paths": [
+    "package.json",
+    "src/schema/validators.ts",
+    "src/schema/compiler.ts",
+    "src/query/engine.ts",
+    "src/query/project-memory-query-service.ts",
+    "src/project/project-memory-quality-contract.ts",
+    "src/project/project-memory-rendered-quality.ts",
+    "src/project/project-memory-curator-validator.ts",
+    "src/project/project-memory-agent-create-service.ts",
+    "src/project/project-memory-agent-maintenance-service.ts",
+    "src/project/project-memory-draft-promotion.ts",
+    "src/project/project-memory-markdown-applier.ts",
+    "src/project/project-memory-curator-service.ts",
+    "tests/commands/schema.test.ts",
+    "tests/query/project-memory-query-service.test.ts",
+    "tests/project/project-memory-create-contract-regression.test.ts",
+    "tests/project/project-memory-rendered-quality.test.ts",
+    "tests/project/project-memory-curator-service.test.ts",
+    "docs/ROADMAP.md"
+  ],
+  "touched_paths": [
+    "verification-and-quality-gates.md"
+  ],
+  "known_gaps": [
+    "The active agent-authored Project Memory path shape-validates manifests, reports, draft files, promotion, and retrieval readiness, but persisted state currently records content_quality as not_evaluated even though run results report content_quality_status trusted."
+  ]
+}

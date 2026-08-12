@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "documents-signup-links-and-change-requests",
+  "wiki_path": "documents-signup-links-and-change-requests.md",
+  "status": "partial",
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/docs/api/backend-api.md",
+    "target-repo/docs/api/class-api-map.md",
+    "target-repo/docs/sdk/client-sdk.md",
+    "target-repo/docs/product-shape.md",
+    "target-repo/docs/changelog.md"
+  ],
+  "touched_paths": [
+    "draft-wiki/documents-signup-links-and-change-requests.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "The assigned Edge Functions and migrations are absent from target-repo, so implementation-level behavior and schemas could not be verified.",
+    "No regression tests are mounted for this subject.",
+    "Exact product-document status values, change-request transition validation, error precedence, attachment validation, and acceptance idempotency require source verification."
+  ]
+}

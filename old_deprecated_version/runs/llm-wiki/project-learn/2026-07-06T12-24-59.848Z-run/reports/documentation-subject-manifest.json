@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "subjects": [
+    {
+      "subject_id": "product-memory-model",
+      "wiki_path": "product-memory-model.md",
+      "title": "Product Memory Model",
+      "purpose": "Explain the Myelin product shape, memory layers, canonical terminology, current boundaries, and non-goals.",
+      "suggested_repo_paths": [
+        "README.md",
+        "MYELIN.md",
+        "CONTEXT.md",
+        "MY_VISION.md",
+        "docs/IMPLEMENTATION_ALIGNMENT.md",
+        "docs/adr/0050-adopt-myelin-product-name.md",
+        "docs/adr/0021-keep-curated-project-memory-in-markdown.md",
+        "docs/adr/0022-use-karpathy-llm-wiki-pattern-as-taxonomy-origin.md"
+      ]
+    },
+    {
+      "subject_id": "operator-cli-workflows",
+      "wiki_path": "operator-cli-workflows.md",
+      "title": "Operator CLI Workflows",
+      "purpose": "Document the supported command vocabulary, Makefile aliases, command side effects, JSON output modes, and normal operator workflows.",
+      "suggested_repo_paths": [
+        "docs/CLI.md",
+        "README.md",
+        "Makefile",
+        "src/cli.ts",
+        "src/commands/",
+        "tests/commands/"
+      ]
+    },
+    {
+      "subject_id": "runtime-and-project-layout",
+      "wiki_path": "runtime-and-project-layout.md",
+      "title": "Runtime And Project Layout",
+      "purpose": "Document the Bun/TypeScript runtime foundation, repository layout, project shell, generated state, run artifacts, and write boundaries.",
+      "suggested_repo_paths": [
+        "README.md",
+        "MYELIN.md",
+        "AGENTS.md",
+        "src/runtime/",
+        "src/project/project-reset-service.ts",
+        "tests/runtime/",
+        "docs/adr/0011-keep-mcp-detached-as-agent-interface.md",
+        "docs/adr/0048-core-owns-query-mcp-consumes-via-contract.md"
+      ]
+    },
+    {
+      "subject_id": "capture-session-ingest-and-maintenance",
+      "wiki_path": "capture-session-ingest-and-maintenance.md",
+      "title": "Capture Session Ingest And Maintenance",
+      "purpose": "Document capture hooks, Experience Log persistence, detached ingest jobs, Session Memory, candidates, handoffs, lifecycle links, and auto-maintenance.",
+      "suggested_repo_paths": [
+        "src/capture/",
+        "src/memory/experience.ts",
+        "src/memory/session-memories.ts",
+        "src/memory/session-memory-contexts.ts",
+        "src/memory/candidates.ts",
+        "src/memory/handoffs.ts",
+        "src/memory/session-memory-links.ts",
+        "src/ingest/",
+        "src/maintenance/",
+        "tests/capture/",
+        "tests/ingest/",
+        "tests/maintenance/"
+      ]
+    },
+    {
+      "subject_id": "project-memory-authoring-lifecycle",
+      "wiki_path": "project-memory-authoring-lifecycle.md",
+      "title": "Project Memory Authoring Lifecycle",
+      "purpose": "Document project learn create and maintenance modes, planner and subject writer agents, draft wiki promotion, candidate dispositions, and source consumption.",
+      "suggested_repo_paths": [
+        "src/project/project-memory-agent-create-service.ts",
+        "src/project/project-memory-agent-maintenance-service.ts",
+        "src/project/project-memory-agent-contracts.ts",
+        "src/project/project-memory-packet.ts",
+        "src/project/project-memory-draft-promotion.ts",
+        "src/project/project-memory-markdown-applier.ts",
+        "src/project/project-memory-source-consumption-reconciler.ts",
+        "src/project/project-memory-candidate-intake-service.ts",
+        "src/runtime/file-authoring-agent.ts",
+        "docs/design/2026-07-06-project-memory-agent-authored-documentation/spec.md",
+        "docs/adr/0067-use-agent-authored-project-memory-documentation.md",
+        "tests/project/"
+      ]
+    },
+    {
+      "subject_id": "storage-retrieval-and-query",
+      "wiki_path": "storage-retrieval-and-query.md",
+      "title": "Storage Retrieval And Query",
+      "purpose": "Document root SQLite state, Session Memory and Project Memory retrieval storage, embeddings, query behavior, markdown resolution, and degraded states.",
+      "suggested_repo_paths": [
+        "src/memory/db.ts",
+        "src/memory/migrations.ts",
+        "src/memory/sqlite-runtime.ts",
+        "src/memory/sqlite-vec.ts",
+        "src/memory/session-memory-indexer.ts",
+        "src/memory/session-memory-query.ts",
+        "src/memory/project-memory-retrieval-storage.ts",
+        "src/memory/project-memory-retrieval-indexer.ts",
+        "src/memory/project-memory-retrieval-index-service.ts",
+        "src/memory/retrieval-maintenance-queue.ts",
+        "src/project/project-memory-markdown-sections.ts",
+        "src/query/memory-query-service.ts",
+        "src/query/project-memory-query-service.ts",
+        "vendor/sqlite/README.md",
+        "tests/memory/",
+        "tests/query/"
+      ]
+    },
+    {
+      "subject_id": "schema-config-and-provider-boundary",
+      "wiki_path": "schema-config-and-provider-boundary.md",
+      "title": "Schema Config And Provider Boundary",
+      "purpose": "Document schema context, typed rules, config precedence, provider/model selection, embeddings, LLM invocation, and compatibility contracts.",
+      "suggested_repo_paths": [
+        "schema/global.md",
+        "schema/rules/",
+        "src/schema/",
+        "src/commands/schema.ts",
+        "src/runtime/config.ts",
+        "src/runtime/llm-client.ts",
+        "src/runtime/file-authoring-agent.ts",
+        "myelin.config",
+        "docs/adr/0049-phase-0-ships-thin-global-only-schema.md",
+        "docs/adr/0051-preserve-multi-provider-byo-runner-abstraction.md",
+        "tests/schema/",
+        "tests/runtime/llm-client.test.ts"
+      ]
+    },
+    {
+      "subject_id": "decisions-roadmap-and-verification",
+      "wiki_path": "decisions-roadmap-and-verification.md",
+      "title": "Decisions Roadmap And Verification",
+      "purpose": "Document canonical docs, ADR authority, roadmap state, design history, archive status, verification commands, test coverage, and known gaps.",
+      "suggested_repo_paths": [
+        "docs/README.md",
+        "docs/ROADMAP.md",
+        "docs/IMPLEMENTATION_ALIGNMENT.md",
+        "docs/adr/",
+        "docs/design/",
+        "docs/archive/README.md",
+        "tests/",
+        "package.json",
+        "CONTRIBUTING.md"
+      ]
+    }
+  ]
+}

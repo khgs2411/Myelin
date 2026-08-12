@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "product-access-authentication",
+  "wiki_path": "product-access-and-authentication.md",
+  "status": "completed_with_known_gaps",
+  "evidence_paths": [
+    "repository-identity.json",
+    "class-kit-api/supabase/functions/_shared/cors.ts",
+    "class-kit-api/supabase/functions/_shared/context.ts",
+    "class-kit-api/supabase/functions/class-kit-product-context/index.ts",
+    "class-kit-api/supabase/functions/class-kit-product-signup/index.ts",
+    "class-kit-api/supabase/functions/class-kit-admin-product-users/index.ts",
+    "class-kit-api/supabase/functions/class-kit-admin-products/index.ts",
+    "class-kit-api/supabase/migrations/20260607112136_product_role_foundation.sql",
+    "class-kit-api/supabase/migrations/20260612061409_allow_shared_origin_product_hints.sql",
+    "class-kit-api/supabase/migrations/20260612120000_permission_layer_foundation.sql",
+    "class-kit-api/supabase/migrations/20260612124000_product_role_management_rpc.sql",
+    "class-kit-api/supabase/migrations/20260612073150_product_auth_policy.sql",
+    "class-kit-api/supabase/migrations/20260628130854_product_auth_redirects.sql",
+    "class-kit-api/supabase/migrations/20260629065604_preserve_pathful_product_origins.sql",
+    "class-kit-api/supabase/migrations/20260629103250_bind_auth_redirects_to_origins.sql",
+    "class-kit-api/supabase/migrations/20260629133541_product_access_entries.sql"
+  ],
+  "touched_paths": [
+    "draft-wiki/product-access-and-authentication.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "No regression test covers origin matching, local product hints, provider gates, redirect scoping, or access-entry state precedence.",
+    "The access-entry inactive state is schema-supported but no dedicated current administrator transition into it was found.",
+    "Apple redirect configuration exists while the runtime provider gate rejects Apple-authenticated users.",
+    "The inspected product-user deactivation path updates legacy users.status while membership lookup uses product_user_roles; no synchronization or regression coverage was found."
+  ]
+}

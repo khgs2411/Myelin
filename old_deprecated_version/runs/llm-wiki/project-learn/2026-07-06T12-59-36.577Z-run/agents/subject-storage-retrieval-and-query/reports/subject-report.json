@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "subject_id": "storage-retrieval-and-query",
+  "wiki_path": "storage-retrieval-and-query.md",
+  "status": "completed",
+  "evidence_paths": [
+    "target-repo/MYELIN.md",
+    "target-repo/src/memory/db.ts",
+    "target-repo/src/memory/migrations.ts",
+    "target-repo/src/memory/sqlite-runtime.ts",
+    "target-repo/src/memory/sqlite-vec.ts",
+    "target-repo/src/memory/session-memories.ts",
+    "target-repo/src/memory/session-memory-embeddings.ts",
+    "target-repo/src/memory/session-memory-indexer.ts",
+    "target-repo/src/memory/session-memory-query.ts",
+    "target-repo/src/memory/project-memory-retrieval-indexer.ts",
+    "target-repo/src/memory/project-memory-retrieval-storage.ts",
+    "target-repo/src/memory/query-embedding-cache.ts",
+    "target-repo/src/memory/retrieval-maintenance-queue.ts",
+    "target-repo/src/query/engine.ts",
+    "target-repo/src/query/memory-query-service.ts",
+    "target-repo/src/query/project-memory-query-service.ts",
+    "target-repo/src/commands/memory.ts",
+    "target-repo/src/project/project-memory-lookup.ts",
+    "target-repo/src/project/project-memory-markdown-sections.ts",
+    "target-repo/src/project/project-memory-retrieval-contracts.ts",
+    "target-repo/src/runtime/config.ts",
+    "target-repo/src/memory/embedding-provider-factory.ts",
+    "target-repo/vendor/sqlite/README.md",
+    "target-repo/docs/adr/0002-session-memory-starts-in-sqlite.md",
+    "target-repo/docs/adr/0021-keep-curated-project-memory-in-markdown.md",
+    "target-repo/docs/adr/0037-memory-query-fails-closed-without-schema.md",
+    "target-repo/docs/adr/0038-memory-query-does-not-build-schema-context.md",
+    "target-repo/docs/adr/0048-core-owns-query-mcp-consumes-via-contract.md",
+    "target-repo/docs/adr/0057-vendor-sqlite-runtime-for-vector-extensions.md"
+  ],
+  "touched_paths": [
+    "draft-wiki/storage-retrieval-and-query.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "The page notes the ADR-defined schema fail-closed query posture, but the inspected retrieval/query code does not itself show schema-context validation.",
+    "The current query service parses --layer auto, but inspected routing treats auto like the Session Memory default unless layer is exactly project."
+  ]
+}

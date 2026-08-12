@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "stage_id": "maintenance",
+  "status": "failed",
+  "provider_mode": "live",
+  "provider": "codex",
+  "model": "gpt-5.6-terra",
+  "sandbox": "workspace-write",
+  "cwd": "/Users/liadgoren/Repositories/llm-wiki/runs/class-kit/project-learn/2026-07-17T13-38-04.882Z-run/agents/maintenance",
+  "target_repo_snapshot": "target-repo (removed after invocation)",
+  "allowed_output_roots": [
+    {
+      "name": "draft_wiki",
+      "relativePath": "draft-wiki"
+    },
+    {
+      "name": "maintenance_reports",
+      "relativePath": "reports"
+    }
+  ],
+  "discovered_outputs": [],
+  "result_ref": "file-authoring-agent-result.json",
+  "error": "agent wrote outside allowed output roots: documentation-maintenance-report.json"
+}

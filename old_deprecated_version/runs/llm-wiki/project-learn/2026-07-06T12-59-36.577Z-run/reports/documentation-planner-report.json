@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "evidence_paths": [
+    "AGENTS.md",
+    "README.md",
+    "MYELIN.md",
+    "CONTEXT.md",
+    "docs/README.md",
+    "docs/CLI.md",
+    "docs/IMPLEMENTATION_ALIGNMENT.md",
+    "docs/ROADMAP.md",
+    "docs/adr/",
+    "myelin.config",
+    "package.json",
+    "src/cli.ts",
+    "src/commands/",
+    "src/project/",
+    "src/ingest/",
+    "src/capture/",
+    "src/maintenance/",
+    "src/memory/",
+    "src/query/",
+    "src/schema/",
+    "src/runtime/",
+    "schema/",
+    "tests/"
+  ],
+  "known_gaps": [
+    "Planner produced placeholders only; subject writers still need to author full pages from the suggested evidence paths.",
+    "The file map was sampled through top-level docs and representative implementation files, not every individual TypeScript source file.",
+    "Archived design material under docs/archive/ was not inspected in detail because active docs mark it as historical unless cited by canonical docs.",
+    "Existing generated project outputs under projects/ and state/ were not deeply inspected; they should be used cautiously as run evidence or serving state, not as canonical product design.",
+    "The manifest intentionally separates Session Memory, Project Memory, and retrieval/storage subjects because the repo treats those as distinct product boundaries."
+  ]
+}

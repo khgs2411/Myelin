@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "stage_id": "create-planner",
+  "status": "failed",
+  "provider_mode": "live",
+  "provider": "codex",
+  "model": "gpt-5.6-terra",
+  "sandbox": "workspace-write",
+  "cwd": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T07-37-01.957Z-run/agents/create",
+  "target_repo_snapshot": "target-repo (removed after invocation)",
+  "allowed_output_roots": [
+    {
+      "name": "draft_wiki",
+      "relativePath": "draft-wiki"
+    },
+    {
+      "name": "planner_reports",
+      "relativePath": "reports"
+    }
+  ],
+  "discovered_outputs": [],
+  "result_ref": "file-authoring-agent-result.json",
+  "error": "file-authoring agent failed: WARNING: proceeding, even though we could not create PATH aliases: Operation not permitted (os error 1)\n2026-07-15T07:37:02.582945Z  WARN codex_state::runtime: failed to open state db at /Users/liadgoren/.codex/state_5.sqlite: failed to open state DB at /Users/liadgoren/.codex/state_5.sqlite: error returned from database: (code: 8) attempt to write a readonly database\n2026-07-15T07:37:02.583647Z  WARN codex_rollout::state_db: failed to initialize state runtime: failed to initialize state runtime at /Users/liadgoren/.codex: failed to open state DB at /Users/liadgoren/.codex/state_5.sqlite: error returned from database: (code: 8) attempt to write a readonly database: error returned from database: (code: 8) attempt to write a readonly database: (code: 8) attempt to write a readonly database\nError: failed to initialize in-process app-server client: Operation not permitted (os error 1)\n"
+}

@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "stage_id": "maintenance",
+  "status": "completed",
+  "provider_mode": "live",
+  "provider": "codex",
+  "model": "gpt-5.6-terra",
+  "sandbox": "workspace-write",
+  "cwd": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T11-02-08.762Z-run/agents/maintenance",
+  "target_repo_snapshot": "target-repo (removed after invocation)",
+  "allowed_output_roots": [
+    {
+      "name": "draft_wiki",
+      "relativePath": "draft-wiki"
+    },
+    {
+      "name": "maintenance_reports",
+      "relativePath": "reports"
+    }
+  ],
+  "discovered_outputs": [
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/authorization-roles-and-permissions.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T11-02-08.762Z-run/agents/maintenance/draft-wiki/authorization-roles-and-permissions.md",
+      "size_bytes": 8146
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/class-discovery-visibility-and-lifecycle.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T11-02-08.762Z-run/agents/maintenance/draft-wiki/class-discovery-visibility-and-lifecycle.md",
+      "size_bytes": 10439
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/documents-signup-links-and-change-requests.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T11-02-08.762Z-run/agents/maintenance/draft-wiki/documents-signup-links-and-change-requests.md",
+      "size_bytes": 9997
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/index.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T11-02-08.762Z-run/agents/maintenance/draft-wiki/index.md",
+      "size_bytes": 2130
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/membership-entitlements-and-stock.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T11-02-08.762Z-run/agents/maintenance/draft-wiki/membership-entitlements-and-stock.md",
+      "size_bytes": 8987
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/platform-administration-and-product-configuration.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T11-02-08.762Z-run/agents/maintenance/draft-wiki/platform-administration-and-product-configuration.md",
+      "size_bytes": 10513
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/product-management-software-integration.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T11-02-08.762Z-run/agents/maintenance/draft-wiki/product-management-software-integration.md",
+      "size_bytes": 9694
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/product-resolution-auth-and-access.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T11-02-08.762Z-run/agents/maintenance/draft-wiki/product-resolution-auth-and-access.md",
+      "size_bytes": 10641
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/registration-and-attendance-lifecycle.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T11-02-08.762Z-run/agents/maintenance/draft-wiki/registration-and-attendance-lifecycle.md",
+      "size_bytes": 7710
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/repository-identity-and-boundaries.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T11-02-08.762Z-run/agents/maintenance/draft-wiki/repository-identity-and-boundaries.md",
+      "size_bytes": 6176
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/sdk-facade-and-application-integration.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T11-02-08.762Z-run/agents/maintenance/draft-wiki/sdk-facade-and-application-integration.md",
+      "size_bytes": 11793
+    },
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/templates-schedules-and-generated-classes.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T11-02-08.762Z-run/agents/maintenance/draft-wiki/templates-schedules-and-generated-classes.md",
+      "size_bytes": 9594
+    },
+    {
+      "root_name": "maintenance_reports",
+      "relative_path": "reports/documentation-maintenance-report.json",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T11-02-08.762Z-run/agents/maintenance/reports/documentation-maintenance-report.json",
+      "size_bytes": 12166
+    }
+  ],
+  "result_ref": "file-authoring-agent-result.json"
+}

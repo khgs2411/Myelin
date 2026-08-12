@@ -1,0 +1,17 @@
+{
+  "body": "For the current directory-layout and Project Memory maintenance slice, do not add, refresh, or rewrite repository identity prose or repository-identity links in canonical Project Memory. The broader identity-prose policy remains intentionally deferred; existing implementation details do not settle it.",
+  "confidence": "high",
+  "created_at": "2026-07-18T08:47:39.237Z",
+  "creator": "operator",
+  "evidence_refs": [],
+  "id": "2026-07-18T08-47-39.237Z_48417e",
+  "project_key": "llm-wiki",
+  "rationale": "The user explicitly chose to avoid repository-identity Obsidian polish and its extra complexity in this slice. This decision supersedes stale handoffs that asked to strip or reconcile identity links.",
+  "risk": "low",
+  "schema_version": 1,
+  "tags": [],
+  "target_hint": "roadmap-adrs-and-design-history.md",
+  "target_layer": "project",
+  "target_scope": "llm-wiki",
+  "title": "Defer repository identity prose changes"
+}

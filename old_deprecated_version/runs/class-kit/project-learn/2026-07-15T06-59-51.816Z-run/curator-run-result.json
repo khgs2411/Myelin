@@ -1,0 +1,23 @@
+{
+  "artifacts": {
+    "curator_output": "input-packet.json",
+    "curator_run_result": "curator-run-result.json",
+    "curator_validation": "curator-validation.json",
+    "input_packet": "input-packet.json",
+    "runtime_inbox_intake": "runtime-inbox-intake.json",
+    "summary": "summary.md"
+  },
+  "content_quality_status": "trusted",
+  "curation_kind": "agent_authored",
+  "dry_run": false,
+  "mode": "maintain",
+  "project_key": "class-kit",
+  "review": false,
+  "run_dir": "projects/class-kit/runs/project-learn/2026-07-15T06-59-51.816Z-run",
+  "run_id": "2026-07-15T06-59-51.816Z-run",
+  "run_kind": "maintenance",
+  "status": "failed",
+  "stopped_before_writes": true,
+  "stopped_reason": "Project Memory is not curated; run myelin project learn class-kit first.",
+  "validation_ok": false
+}

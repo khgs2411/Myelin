@@ -1,0 +1,228 @@
+{
+  "project": "class-kit",
+  "maintenance_result": "no_markdown_changes_required",
+  "sources": [
+    {
+      "source_ref": "cand_classkit_chunk08_guard_20260614_01",
+      "disposition": "insufficient_evidence",
+      "reason": "The exact expression exists only in an unchecked historical chunk plan, not verified current implementation.",
+      "output_refs": ["target-repo/docs/design/2026-06-12-admin-and-manager-surfaces/plans/08-demo2-role-and-auth-workflows.md:113"]
+    },
+    {
+      "source_ref": "ingest_2026-06-14T10-12-52.575Z_368d77_cand_project_admin_manager_plan_readiness",
+      "disposition": "not_durable",
+      "reason": "Implementation-plan readiness is volatile workflow state, not durable project understanding."
+    },
+    {
+      "source_ref": "cand_project_chunk08_authmode_guard_01",
+      "disposition": "insufficient_evidence",
+      "reason": "The cited guard is documented in a historical plan only; the snapshot does not verify it as current code.",
+      "output_refs": ["target-repo/docs/design/2026-06-12-admin-and-manager-surfaces/plans/08-demo2-role-and-auth-workflows.md:116"]
+    },
+    {
+      "source_ref": "cand_project_card266_blocker_classification_01",
+      "disposition": "belongs_to_other_layer",
+      "reason": "Card classification is external workflow/runner state and cannot be established from the repository snapshot."
+    },
+    {
+      "source_ref": "cand_722bc10a_card264_ready_for_review",
+      "disposition": "belongs_to_other_layer",
+      "reason": "A review handoff and branch name are external workflow state, not Project Memory."
+    },
+    {
+      "source_ref": "ingest_2026-06-14T10-04-28.710Z_e38db1_cand_project_card266_blocker_category",
+      "disposition": "belongs_to_other_layer",
+      "reason": "Environment/blocker classification belongs to runner or board operations and lacks current repository evidence."
+    },
+    {
+      "source_ref": "cand_project_admin_manager_plan_readiness",
+      "disposition": "not_durable",
+      "reason": "Plan readiness changes as implementation advances and should remain in the active planning workflow."
+    },
+    {
+      "source_ref": "cand_project_card266_blocker_category",
+      "disposition": "belongs_to_other_layer",
+      "reason": "Missing tooling and board status are environment operations, not durable product documentation."
+    },
+    {
+      "source_ref": "cand_classkit_design_guides_20260629",
+      "disposition": "deferred_unsafe_change",
+      "reason": "The requested surface-specific guide split conflicts with the current canonical-doc ownership rule and needs an explicit documentation-boundary decision.",
+      "output_refs": ["target-repo/docs/repositories/structure.md:16"]
+    },
+    {
+      "source_ref": "cand_classkit_auth_md_20260629",
+      "disposition": "already_covered",
+      "reason": "The reusable shared-Supabase authentication guide exists and already covers Google now, Apple later, shared-project identity, and redirects.",
+      "output_refs": ["target-repo/docs/shared/authentication.md:1"]
+    },
+    {
+      "source_ref": "cand_classkit_demo_app_docs_env_scope_20260629",
+      "disposition": "deferred_unsafe_change",
+      "reason": "Placing durable documentation under an app conflicts with the current parent-docs-only ownership rule; the environment model itself is already documented centrally.",
+      "output_refs": ["target-repo/docs/repositories/structure.md:16", "target-repo/docs/shared/deployment.md:24"]
+    },
+    {
+      "source_ref": "cand_classkit_platform_admin_role_20260628",
+      "disposition": "belongs_to_other_layer",
+      "reason": "A named account's remote role assignment is sensitive operational state, not reusable Project Memory."
+    },
+    {
+      "source_ref": "cand_classkit_db_redirect_registry_20260628",
+      "disposition": "already_covered",
+      "reason": "The current contract already makes product redirects database-managed records, administered separately from Supabase's global allow list.",
+      "output_refs": ["draft-wiki/identity-product-access-and-authorization.md:29", "target-repo/docs/shared/authentication.md:70"]
+    },
+    {
+      "source_ref": "cand_classkit_generated_class_actions_20260628",
+      "disposition": "already_covered",
+      "reason": "The wiki already preserves skip-versus-cancel as an unresolved lifecycle decision rather than promoting it as settled behavior.",
+      "output_refs": ["draft-wiki/design-history-and-unresolved-proposals.md:67"]
+    },
+    {
+      "source_ref": "cand_classkit_users_table_naming_20260628",
+      "disposition": "already_covered",
+      "reason": "The established durable schema name is class_kit.users; the candidate's alternative naming is tentative and adds no correction.",
+      "output_refs": ["draft-wiki/identity-product-access-and-authorization.md:19"]
+    },
+    {
+      "source_ref": "cand_b7a1e0",
+      "disposition": "already_covered",
+      "reason": "The documented future boundary keeps controlled-field classification backend-owned and out of UI code.",
+      "output_refs": ["target-repo/docs/design/2026-06-25-schedule-lifecycle-management/agenda.md:53", "draft-wiki/design-history-and-unresolved-proposals.md:54"]
+    },
+    {
+      "source_ref": "cand_4f9c2d",
+      "disposition": "already_covered",
+      "reason": "The wiki records durable exclusions as a future proposal and explicitly keeps deletion/skip behavior unresolved.",
+      "output_refs": ["draft-wiki/class-operations-and-lifecycle.md:60", "draft-wiki/design-history-and-unresolved-proposals.md:49"]
+    },
+    {
+      "source_ref": "cand_classkit_schedule_backfill_bug_20260623",
+      "disposition": "insufficient_evidence",
+      "reason": "The snapshot contains no reproduction, test result, or current implementation evidence for the reported backfill behavior."
+    },
+    {
+      "source_ref": "cand_classkit_manager_class_lifecycle_followup_20260622",
+      "disposition": "already_covered",
+      "reason": "Current living documentation explicitly supports publish, draft, and cancel; the candidate's open question does not improve that verified contract.",
+      "output_refs": ["draft-wiki/class-operations-and-lifecycle.md:31"]
+    },
+    {
+      "source_ref": "cand_classkit_class_api_slice_20260622",
+      "disposition": "already_covered",
+      "reason": "Caller-safe backend-resolved classes.list is already the documented customer discovery contract.",
+      "output_refs": ["draft-wiki/class-operations-and-lifecycle.md:19"]
+    },
+    {
+      "source_ref": "handoff_classkit_unblock_github_pages_20260629",
+      "disposition": "belongs_to_other_layer",
+      "reason": "GitHub Pages enablement and the latest deployment failure are external repository settings and workflow state."
+    },
+    {
+      "source_ref": "handoff_classkit_demo_guides_20260629",
+      "disposition": "deferred_unsafe_change",
+      "reason": "A new app-local guide hierarchy needs an explicit ownership decision because canonical durable docs currently live only in the parent docs tree.",
+      "output_refs": ["target-repo/docs/repositories/structure.md:16"]
+    },
+    {
+      "source_ref": "handoff_classkit_auth_md_20260629",
+      "disposition": "already_covered",
+      "reason": "The requested reusable authentication artifact is present in the canonical docs.",
+      "output_refs": ["target-repo/docs/shared/authentication.md:1"]
+    },
+    {
+      "source_ref": "handoff_classkit_publish_pages_20260629",
+      "disposition": "belongs_to_other_layer",
+      "reason": "Commit/push, workflow dispatch, live routes, and configured redirects are deployment operations outside this snapshot."
+    },
+    {
+      "source_ref": "handoff_classkit_shared_remote_split_20260629",
+      "disposition": "already_covered",
+      "reason": "The local product-scoped versus remote shared-platform split is a documented durable deployment boundary.",
+      "output_refs": ["draft-wiki/deployment-and-releases.md:38", "target-repo/docs/shared/deployment.md:47"]
+    },
+    {
+      "source_ref": "handoff_classkit_db_redirect_registry_20260628",
+      "disposition": "already_covered",
+      "reason": "Product-origin and redirect configuration are already documented as database-managed backend policy.",
+      "output_refs": ["draft-wiki/identity-product-access-and-authorization.md:29"]
+    },
+    {
+      "source_ref": "handoff_classkit_remote_bootstrap_and_smoke_20260628",
+      "disposition": "belongs_to_other_layer",
+      "reason": "Remote record bootstrap and live smoke outcomes are operational state, not durable documentation."
+    },
+    {
+      "source_ref": "handoff_classkit_generated_class_actions_20260628",
+      "disposition": "already_covered",
+      "reason": "The existing wiki deliberately preserves this as an unresolved design decision pending a single accepted contract.",
+      "output_refs": ["draft-wiki/design-history-and-unresolved-proposals.md:49"]
+    },
+    {
+      "source_ref": "handoff_verify_local_supabase_auth",
+      "disposition": "belongs_to_other_layer",
+      "reason": "A local-stack smoke request and its outcomes belong to verification operations, not Project Memory."
+    },
+    {
+      "source_ref": "handoff_classkit_deploy_split_next",
+      "disposition": "already_covered",
+      "reason": "The package/deployment split and its credential boundary are already documented; the remaining work is implementation verification.",
+      "output_refs": ["draft-wiki/deployment-and-releases.md:64", "draft-wiki/deployment-and-releases.md:81"]
+    },
+    {
+      "source_ref": "handoff_classkit_remote_seed_20260628",
+      "disposition": "belongs_to_other_layer",
+      "reason": "Remote seeding and a live function smoke test are operational environment work."
+    },
+    {
+      "source_ref": "handoff_classkit_namespace_implementation_plan_20260628",
+      "disposition": "already_covered",
+      "reason": "The current documentation already defines the private class_kit schema, private helper schema, Edge Function prefix, and SDK boundary.",
+      "output_refs": ["draft-wiki/deployment-and-releases.md:22"]
+    },
+    {
+      "source_ref": "handoff_classkit_schedule_lifecycle_spec_20260625",
+      "disposition": "already_covered",
+      "reason": "The archive page records the accepted terminology and carefully marks the remaining lifecycle contract as unresolved.",
+      "output_refs": ["draft-wiki/design-history-and-unresolved-proposals.md:43"]
+    },
+    {
+      "source_ref": "handoff_9f2b1a",
+      "disposition": "already_covered",
+      "reason": "Controlled-field protection and deletion/exclusion remain documented as a proposal awaiting an accepted lifecycle contract.",
+      "output_refs": ["draft-wiki/design-history-and-unresolved-proposals.md:49"]
+    },
+    {
+      "source_ref": "handoff_classkit_admin_demo_nested_rework_20260625",
+      "disposition": "not_durable",
+      "reason": "This is an unverified UI implementation handoff, not a stable cross-layer contract."
+    },
+    {
+      "source_ref": "handoff_classkit_programs_dashboard_ui_followup_20260625",
+      "disposition": "not_durable",
+      "reason": "A visual polish follow-up is session/workflow work rather than reusable project knowledge."
+    },
+    {
+      "source_ref": "handoff_permissions_view_bundle_20260625",
+      "disposition": "already_covered",
+      "reason": "The wiki preserves the permission-bundle boundary while marking the design artifact as draft rather than current implementation.",
+      "output_refs": ["draft-wiki/design-history-and-unresolved-proposals.md:27"]
+    },
+    {
+      "source_ref": "handoff_classkit_schedule_backfill_investigation_20260623",
+      "disposition": "insufficient_evidence",
+      "reason": "No reproduced failure or verified root cause is present in the snapshot."
+    },
+    {
+      "source_ref": "handoff_classkit_demo2_seed_slice_20260623",
+      "disposition": "not_durable",
+      "reason": "A seed-data implementation task is active work, not durable documentation until implemented and verified."
+    },
+    {
+      "source_ref": "handoff_classkit_review_branch_diff_20260623",
+      "disposition": "belongs_to_other_layer",
+      "reason": "A requested branch review belongs to code-review workflow, not Project Memory."
+    }
+  ]
+}

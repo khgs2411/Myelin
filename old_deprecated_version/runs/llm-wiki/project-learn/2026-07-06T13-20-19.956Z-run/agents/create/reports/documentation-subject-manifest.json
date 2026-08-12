@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "subjects": [
+    {
+      "subject_id": "product-and-memory-model",
+      "wiki_path": "product-and-memory-model.md",
+      "title": "Product and Memory Model",
+      "purpose": "Explain Myelin's product purpose, memory layer hierarchy, source-of-truth model, and promotion flow.",
+      "suggested_repo_paths": [
+        "MYELIN.md",
+        "CONTEXT.md",
+        "README.md",
+        "docs/IMPLEMENTATION_ALIGNMENT.md",
+        "docs/ROADMAP.md",
+        "schema/global.md"
+      ]
+    },
+    {
+      "subject_id": "command-surface-and-operator-workflows",
+      "wiki_path": "command-surface-and-operator-workflows.md",
+      "title": "Command Surface and Operator Workflows",
+      "purpose": "Document the CLI and Makefile workflows, command side effects, operator examples, and JSON-facing contracts.",
+      "suggested_repo_paths": [
+        "docs/CLI.md",
+        "README.md",
+        "Makefile",
+        "src/cli.ts",
+        "src/commands/",
+        "tests/commands/"
+      ]
+    },
+    {
+      "subject_id": "project-memory-creation-and-curation",
+      "wiki_path": "project-memory-creation-and-curation.md",
+      "title": "Project Memory Creation and Curation",
+      "purpose": "Describe how Project Memory is created and maintained through evidence maps, curator contracts, validation, apply, quality gates, and run artifacts.",
+      "suggested_repo_paths": [
+        "docs/ROADMAP.md",
+        "src/project/",
+        "src/commands/project.ts",
+        "src/runtime/project-run-infrastructure.ts",
+        "tests/project/",
+        "docs/design/"
+      ]
+    },
+    {
+      "subject_id": "session-memory-and-experience-ingest",
+      "wiki_path": "session-memory-and-experience-ingest.md",
+      "title": "Session Memory and Experience Ingest",
+      "purpose": "Explain capture, detached ingest jobs, Experience Log leasing, Session Memory outputs, candidates, handoffs, branch context, and auto-maintenance.",
+      "suggested_repo_paths": [
+        "src/capture/",
+        "src/ingest/",
+        "src/maintenance/",
+        "src/memory/experience.ts",
+        "src/memory/session-memories.ts",
+        "src/memory/candidates.ts",
+        "src/memory/handoffs.ts",
+        "tests/capture/",
+        "tests/ingest/",
+        "tests/maintenance/"
+      ]
+    },
+    {
+      "subject_id": "storage-sqlite-and-retrieval-indexes",
+      "wiki_path": "storage-sqlite-and-retrieval-indexes.md",
+      "title": "Storage, SQLite, and Retrieval Indexes",
+      "purpose": "Document root SQLite state, migrations, sqlite-vec runtime loading, Session Memory indexing, Project Memory retrieval indexes, freshness, and rebuild rules.",
+      "suggested_repo_paths": [
+        "src/memory/db.ts",
+        "src/memory/migrations.ts",
+        "src/memory/sqlite-runtime.ts",
+        "src/memory/sqlite-vec.ts",
+        "src/memory/session-memory-indexer.ts",
+        "src/memory/project-memory-retrieval-indexer.ts",
+        "src/memory/project-memory-retrieval-storage.ts",
+        "vendor/sqlite/",
+        "tests/memory/"
+      ]
+    },
+    {
+      "subject_id": "schema-and-documentation-contracts",
+      "wiki_path": "schema-and-documentation-contracts.md",
+      "title": "Schema and Documentation Contracts",
+      "purpose": "Capture schema build/check behavior, global rules, generated schema context, source classification, page taxonomy, and documentation quality contracts.",
+      "suggested_repo_paths": [
+        "schema/global.md",
+        "schema/rules/",
+        "schema/schema-context.md",
+        "src/schema/",
+        "src/commands/schema.ts",
+        "src/project/project-memory-curator-output-schema.ts",
+        "src/project/project-memory-quality-contract.ts",
+        "tests/schema/"
+      ]
+    },
+    {
+      "subject_id": "runtime-providers-and-project-layout",
+      "wiki_path": "runtime-providers-and-project-layout.md",
+      "title": "Runtime, Providers, and Project Layout",
+      "purpose": "Describe runtime helpers, config precedence, project discovery and shell layout, provider abstraction, subprocess execution, and run artifact boundaries.",
+      "suggested_repo_paths": [
+        "myelin.config",
+        "src/runtime/",
+        "src/bootstrap/",
+        "src/install/",
+        "src/commands/bootstrap.ts",
+        "src/commands/install.ts",
+        "src/memory/sqlite-runtime.ts",
+        "tests/runtime/",
+        "tests/bootstrap/",
+        "tests/install/"
+      ]
+    },
+    {
+      "subject_id": "query-status-and-agent-interfaces",
+      "wiki_path": "query-status-and-agent-interfaces.md",
+      "title": "Query, Status, and Agent Interfaces",
+      "purpose": "Explain query/status facades, citation and degradation envelopes, Project and Session Memory query services, and detached MCP compatibility contracts.",
+      "suggested_repo_paths": [
+        "README.md",
+        "MYELIN.md",
+        "docs/CLI.md",
+        "src/query/",
+        "src/status/",
+        "src/commands/memory.ts",
+        "src/commands/status.ts",
+        "src/memory/session-memory-query.ts",
+        "tests/query/",
+        "tests/status/"
+      ]
+    },
+    {
+      "subject_id": "source-evidence-inbox-and-candidate-boundaries",
+      "wiki_path": "source-evidence-inbox-and-candidate-boundaries.md",
+      "title": "Source Evidence, Inbox, and Candidate Boundaries",
+      "purpose": "Document runtime inbox items, source classification, candidates as leads, provenance requirements, stale/gap repair flow, and source-consumption reconciliation.",
+      "suggested_repo_paths": [
+        "docs/inbox-item-schema.md",
+        "src/inbox/",
+        "src/project/project-memory-candidate-intake-service.ts",
+        "src/project/project-memory-source-consumption-reconciler.ts",
+        "src/memory/memory-candidate-service.ts",
+        "src/memory/candidates.ts",
+        "schema/rules/source-classification.json",
+        "tests/inbox/",
+        "tests/project/"
+      ]
+    },
+    {
+      "subject_id": "testing-and-verification",
+      "wiki_path": "testing-and-verification.md",
+      "title": "Testing and Verification",
+      "purpose": "Map the verification strategy, test suite organization, contract tests, typecheck expectations, and high-risk areas that need evidence before trust claims.",
+      "suggested_repo_paths": [
+        "package.json",
+        "Makefile",
+        "tests/",
+        "src/project/project-memory-curator-validator.ts",
+        "src/project/project-memory-rendered-quality.ts",
+        "src/project/project-memory-usefulness-critique.ts",
+        "docs/ROADMAP.md"
+      ]
+    },
+    {
+      "subject_id": "roadmap-adrs-and-design-history",
+      "wiki_path": "roadmap-adrs-and-design-history.md",
+      "title": "Roadmap, ADRs, and Design History",
+      "purpose": "Orient future agents to the canonical reading path, roadmap status model, append-only ADRs, active design docs, archive boundaries, and conflict resolution.",
+      "suggested_repo_paths": [
+        "docs/README.md",
+        "docs/ROADMAP.md",
+        "docs/adr/",
+        "docs/design/",
+        "docs/archive/",
+        "MYELIN.md",
+        "docs/IMPLEMENTATION_ALIGNMENT.md"
+      ]
+    }
+  ]
+}

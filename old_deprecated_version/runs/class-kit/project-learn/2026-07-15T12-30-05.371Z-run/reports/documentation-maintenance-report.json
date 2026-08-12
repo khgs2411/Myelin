@@ -1,0 +1,223 @@
+{
+  "dispositions": [
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The supplied evidence states that the terminal outcome is absent; the target snapshot does not establish it.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_wavec_review_outcome_unknown"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "Unaccepted next-slice prompts do not establish current roadmap fact.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_wave_d_slice_ambiguity"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "A session-specific browser-click hang is not verified as a repository behavior or stable project policy.",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T10-12-52.575Z_368d77_cand_e38db1_02"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The proposed follow-up tracks have no completion or approval evidence in the current repository.",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T10-12-52.575Z_368d77_cand_e38db1_01"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "An in-session click-automation failure is environment-specific and not a durable product contract.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_bf2c1d_02"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The proposal bundle does not prove an accepted or completed project slice.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_bf2c1d_01"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "A stale-label warning and truncated Trello mutation output are external operational observations, not a repository contract.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_7b9d2a"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "Worktree removal and Symphony orchestration are run-specific operational actions, not ClassKit product memory.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_368d77_worktree_orchestration"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "Conflicting live-board cache observations are mutable external-state evidence.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_ck_trello_cache_warning_001"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/authorization-and-capabilities.md#platform-user-provisioning"
+      ],
+      "reason": "Current implementation disproves the claimed listUsers preflight and documents the actual duplicate-error mapping and partial-provisioning boundary.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_ck_auth_duplicate_email_001"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "The Symphony/Trello conversion playbook is board procedure rather than a durable ClassKit product contract.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_9c31"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "A truncated payload cannot establish any omitted reviewer outcome.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_reviewer_tombstone_payload_recovery"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The proposed review gate is handoff-derived and no current repository policy establishes it as mandatory.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_review_gate_workflow"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/authorization-and-capabilities.md#operational-endpoint-patterns"
+      ],
+      "reason": "Current documentation records the implemented auth-mode/product-key boundary rather than elevating historical plan approval to current fact.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit-docstatus-20260614-01"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The cleanup decision is explicitly open and has no confirmed repository outcome.",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T10-12-52.575Z_368d77_cand_local_cleanup_intent"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "No single durable card queue or acceptance checkpoint is present in the supplied checkout evidence.",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T10-12-52.575Z_368d77_cand_admin_card_queue_clarity"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "No current dependency-safe parallelism map is verified in the target repository.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_parallelism_planning_for_admin_cards"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The reported Card 266 timeline is contradictory and requires current Trello/branch evidence outside this snapshot.",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T10-04-28.710Z_e38db1_cand_5eb2c1"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "Handoff guardrails do not establish an active repository workflow contract.",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T10-04-28.710Z_e38db1_cand_project_symphony_review_gate_2"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "Symphony routing defaults are mutable external board state and were not live-verified.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_project_symphony_routing_observation"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "This is reviewer-session continuity and mutable Trello state, not durable product documentation.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_project_next_reviewer"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "Resolving Card 266 requires the cited external branch and Trello state, neither established by this target snapshot.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_2f8a91"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The ten-card status and Wave E smoke result are mutable review evidence not verified here.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_admin_review_pack"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The referenced reviewer handoff is not sufficient current evidence for a mandatory project policy.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_review_project_workflow"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "Current external routing defaults were not live-verified and may drift.",
+      "source_kind": "project_handoff",
+      "source_ref": "ingest_2026-06-14T10-12-52.575Z_368d77_handoff_review_symphony_routing_policy"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The requested validation concerns mutable external board configuration absent from this snapshot.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_project_validate_symphony_routing_defaults"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "Current external routing behavior was not verified and should not become stable project policy.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_review_symphony_routing_policy"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The suggested environment-only classification needs current environment and card evidence not available in the snapshot.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classify_card266_blocker"
+    }
+  ],
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/class-kit-api/supabase/functions/_shared/admin_api.ts",
+    "target-repo/class-kit-api/supabase/functions/_shared/auth_users.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-admin-product-users/index.ts",
+    "target-repo/class-kit-sdk/src/client/class-kit-client.ts",
+    "target-repo/class-kit-api/supabase/tests"
+  ],
+  "known_gaps": [
+    "No focused regression test was found for platform create_user, duplicate-email mapping, or partial provisioning recovery.",
+    "Reviewer outcomes, Card 266 status, and Symphony/Trello routing defaults require live external evidence and remain undocumented."
+  ],
+  "project_key": "class-kit",
+  "schema_version": 1,
+  "status": "completed",
+  "touched_paths": [
+    "draft-wiki/authorization-and-capabilities.md",
+    "reports/documentation-maintenance-report.json"
+  ]
+}

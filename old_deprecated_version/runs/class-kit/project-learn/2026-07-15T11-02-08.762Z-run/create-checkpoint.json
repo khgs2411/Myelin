@@ -1,0 +1,184 @@
+{
+  "create_artifacts": [
+    {
+      "path": "agents/create/file-authoring-agent-result.json",
+      "sha256": "sha256:e970675ff5375da05daababf432cb20bd05e13eda3b6d9e562a8c6dcf5aa7425"
+    },
+    {
+      "path": "agents/subject-authorization-roles-and-permissions/file-authoring-agent-result.json",
+      "sha256": "sha256:7e2723a188292d2903534f91c49790e3e1e0e6b1bd81aef44e068050d9ef0189"
+    },
+    {
+      "path": "agents/subject-authorization-roles-and-permissions/reports/subject-report.json",
+      "sha256": "sha256:b6f2015ca6ff7b1c369f290d42e5784b1080b355fe2fa8dae79734a03dfe8f72"
+    },
+    {
+      "path": "agents/subject-class-discovery-visibility-and-lifecycle/file-authoring-agent-result.json",
+      "sha256": "sha256:01b9533540cc72ab5745fed6fcfd58ba54ddfc0ce3234e389ffc7eb83860c19b"
+    },
+    {
+      "path": "agents/subject-class-discovery-visibility-and-lifecycle/reports/subject-report.json",
+      "sha256": "sha256:264cb677a3217d9026fee191158ecc2c2e71dec595590ee1a02e960e86d33594"
+    },
+    {
+      "path": "agents/subject-documents-signup-links-and-change-requests/file-authoring-agent-result.json",
+      "sha256": "sha256:fdb6164d30c7d3cfe24208633c2cc61fec193536c2666b2ef01dbb278fa1f72a"
+    },
+    {
+      "path": "agents/subject-documents-signup-links-and-change-requests/reports/subject-report.json",
+      "sha256": "sha256:a9303d770bde9b60145aeaf7b9e99ae0dc4e4ea5a7b4d112748c27382629c37a"
+    },
+    {
+      "path": "agents/subject-membership-entitlements-and-stock/file-authoring-agent-result.json",
+      "sha256": "sha256:27f29215647ec4e182f7ef543ee6b5e61efb9ac5150372320f943fe7c967417b"
+    },
+    {
+      "path": "agents/subject-membership-entitlements-and-stock/reports/subject-report.json",
+      "sha256": "sha256:ca60d00db50db909886331a23141cfe7b1cc6e27739741631aebd5bb08cb0410"
+    },
+    {
+      "path": "agents/subject-platform-administration-and-product-configuration/file-authoring-agent-result.json",
+      "sha256": "sha256:c2add4e07fdbc3f31321cf0ce2705c9b5e9a7bb1a146cf51bc7a8aff86a305ce"
+    },
+    {
+      "path": "agents/subject-platform-administration-and-product-configuration/reports/subject-report.json",
+      "sha256": "sha256:c205e85b5abe50f5684eeb60a149fb7ea1f1954f9815b4da8d84d32f26d527c1"
+    },
+    {
+      "path": "agents/subject-product-management-software-integration/file-authoring-agent-result.json",
+      "sha256": "sha256:87cbe473c4964cb7e66076f8aae0e76f1e0b8faf8d155b83c118e2be8796e931"
+    },
+    {
+      "path": "agents/subject-product-management-software-integration/reports/subject-report.json",
+      "sha256": "sha256:e51707bc2b33297c9d9660da2b0cd62641e42ff7eb9f38a82ccbf8f84a4101b1"
+    },
+    {
+      "path": "agents/subject-product-resolution-auth-and-access/file-authoring-agent-result.json",
+      "sha256": "sha256:b523271ac576ed2b1e828d2bdcbf44257c52143801ba40f4b7020dc032b80f55"
+    },
+    {
+      "path": "agents/subject-product-resolution-auth-and-access/reports/subject-report.json",
+      "sha256": "sha256:84a53be3fc2b1a485ea10725e3dfbabc05c0c7a419f2e3d908fb369ddb60ffc8"
+    },
+    {
+      "path": "agents/subject-registration-and-attendance-lifecycle/file-authoring-agent-result.json",
+      "sha256": "sha256:0383693b10df76c5619da11df5dd754c2e6f581b8f2403ab2479c978f795cf83"
+    },
+    {
+      "path": "agents/subject-registration-and-attendance-lifecycle/reports/subject-report.json",
+      "sha256": "sha256:8e334ce257685aa2166abd14207e6d2bb79c61f034f0d0924cf3171091ba4d15"
+    },
+    {
+      "path": "agents/subject-repository-identity-and-boundaries/file-authoring-agent-result.json",
+      "sha256": "sha256:9ea9c967094c1e409c60cffe1f6caef51867b59261ada6b18697792b8db3da60"
+    },
+    {
+      "path": "agents/subject-repository-identity-and-boundaries/reports/subject-report.json",
+      "sha256": "sha256:2b02c0320b6809fad5f51600745e0ee629aa6aa3c325e598236a882fb513ef20"
+    },
+    {
+      "path": "agents/subject-sdk-facade-and-application-integration/file-authoring-agent-result.json",
+      "sha256": "sha256:ba36d6ea026db9b5d5a38049fc1e23cc61d0564e9d052ac9239c75db6762b21c"
+    },
+    {
+      "path": "agents/subject-sdk-facade-and-application-integration/reports/subject-report.json",
+      "sha256": "sha256:18c1eb9ffe570fec236c31a8b33123bcc1509214bf50e206879b793f5eea682b"
+    },
+    {
+      "path": "agents/subject-templates-schedules-and-generated-classes/file-authoring-agent-result.json",
+      "sha256": "sha256:486c658a5498d1265dd976c87086e856e9863aaa914a49d84d80a7ff1cd27679"
+    },
+    {
+      "path": "agents/subject-templates-schedules-and-generated-classes/reports/subject-report.json",
+      "sha256": "sha256:102f9cd3c2258783df237c02914924a456ed479d67192f0dbd3f151055873d80"
+    },
+    {
+      "path": "documentation-create-result.json",
+      "sha256": "sha256:934a651e96781cdeff96c893fc39a1e5e4a2a666a4755f64749faeddefec79ed"
+    },
+    {
+      "path": "pre-maintenance-wiki/authorization-roles-and-permissions.md",
+      "sha256": "sha256:a884a8b2b9631e864e6c4806687ee7d0ed37b8e3afe1836f69b3e9538935cebf"
+    },
+    {
+      "path": "pre-maintenance-wiki/class-discovery-visibility-and-lifecycle.md",
+      "sha256": "sha256:f0e901dc38a2244261bf144f7218213284e82ced713a0ae3cbe31b6b8dbd9102"
+    },
+    {
+      "path": "pre-maintenance-wiki/documents-signup-links-and-change-requests.md",
+      "sha256": "sha256:e6fa2885a3ed276918a004eb4cebfb236fb9580f8747da790416dc7c957eb169"
+    },
+    {
+      "path": "pre-maintenance-wiki/index.md",
+      "sha256": "sha256:f020e0c5dcabcd43e9a591c651a88b35dabc36b7e415f86331d40083f0a4260c"
+    },
+    {
+      "path": "pre-maintenance-wiki/membership-entitlements-and-stock.md",
+      "sha256": "sha256:5181635104aa284eccb23160304e87e8b073b93175826707794d5d484303c01a"
+    },
+    {
+      "path": "pre-maintenance-wiki/platform-administration-and-product-configuration.md",
+      "sha256": "sha256:e4798e1be08d9315339bd2da8e0c945371210e340de8042cb1e8599028763c6c"
+    },
+    {
+      "path": "pre-maintenance-wiki/product-management-software-integration.md",
+      "sha256": "sha256:1a6f2f81ef4a4df92870d0eeb4b7c846e93e0392dd4b9a945068bdda3efe01ba"
+    },
+    {
+      "path": "pre-maintenance-wiki/product-resolution-auth-and-access.md",
+      "sha256": "sha256:4fa7d5d44c710314220649da26f25b94671b1341bf2eb872f1cdadac10a822e0"
+    },
+    {
+      "path": "pre-maintenance-wiki/registration-and-attendance-lifecycle.md",
+      "sha256": "sha256:a542f000db2dd542b2c0b8e2678aa0e84adc0a9685b437b6fed8f393333f9e1e"
+    },
+    {
+      "path": "pre-maintenance-wiki/repository-identity-and-boundaries.md",
+      "sha256": "sha256:40e3899f894551e4b071bdba1a05e91954809daa6a9e38f9b15cce749bbd86bf"
+    },
+    {
+      "path": "pre-maintenance-wiki/sdk-facade-and-application-integration.md",
+      "sha256": "sha256:4ced7f58e2f0efb9ac0742af67e5dac9100e5b48bfb6d2155b2086d503f2e135"
+    },
+    {
+      "path": "pre-maintenance-wiki/templates-schedules-and-generated-classes.md",
+      "sha256": "sha256:cc3435b3c48a5c2c6c80a0b9c9d6a10c64701f37108d17bab74828651015e47c"
+    },
+    {
+      "path": "reports/documentation-planner-report.json",
+      "sha256": "sha256:584bc1266644ca7df22396054a4263ae09bd1f49c9993a9043aa16e7e9571016"
+    },
+    {
+      "path": "reports/documentation-subject-manifest.json",
+      "sha256": "sha256:259d65683883d499d0bfeb5bdcecf9253a3efbdd378e48ba2cbff8c5b790ae16"
+    },
+    {
+      "path": "repository-identity.json",
+      "sha256": "sha256:f1c41ecbd83b9821773751088bfbebdacc4c81fad31af43f3b6b9269787ca7ed"
+    }
+  ],
+  "created_at": "2026-07-15T11:02:08.762Z",
+  "draft_wiki_files": [
+    "pre-maintenance-wiki/authorization-roles-and-permissions.md",
+    "pre-maintenance-wiki/class-discovery-visibility-and-lifecycle.md",
+    "pre-maintenance-wiki/documents-signup-links-and-change-requests.md",
+    "pre-maintenance-wiki/index.md",
+    "pre-maintenance-wiki/membership-entitlements-and-stock.md",
+    "pre-maintenance-wiki/platform-administration-and-product-configuration.md",
+    "pre-maintenance-wiki/product-management-software-integration.md",
+    "pre-maintenance-wiki/product-resolution-auth-and-access.md",
+    "pre-maintenance-wiki/registration-and-attendance-lifecycle.md",
+    "pre-maintenance-wiki/repository-identity-and-boundaries.md",
+    "pre-maintenance-wiki/sdk-facade-and-application-integration.md",
+    "pre-maintenance-wiki/templates-schedules-and-generated-classes.md"
+  ],
+  "input_packet_sha256": "sha256:481e00633ae1158613b99da5b0a7e8b236a1f93023c7e9d7c2aaa9200b19d9ae",
+  "pending_sources_sha256": "sha256:876d3e3bb47550999de8d7295f62439dc03bab05eae9223968713da3509d7656",
+  "project_key": "class-kit",
+  "repo_path": "/Users/liadgoren/Repositories/class-kit",
+  "runtime_contract_version": 1,
+  "schema_context_hash": "1597328d89675d4b0e9b0bb390dba58672fa230411dbfca9279bc0aad6d88cfe",
+  "schema_version": 1,
+  "source_run_dir": "projects/class-kit/runs/project-learn/2026-07-15T11-02-08.762Z-run",
+  "target_repo_fingerprint": "sha256:509b1610d322d674f9a5e8ceea1063107289db3b983a19e6782f0a2ba055c7d2"
+}

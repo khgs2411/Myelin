@@ -1,0 +1,158 @@
+{
+  "create_artifacts": [
+    {
+      "path": "agents/create/file-authoring-agent-result.json",
+      "sha256": "sha256:d30e8d53d809b0303d03a0f639cf9212c2ac73136a71fbcdcbd5bc90b3dfed0b"
+    },
+    {
+      "path": "agents/subject-admin-pm-integration/file-authoring-agent-result.json",
+      "sha256": "sha256:7c24b736838b015993d19b0c63835d579b9ffc36c981d72a2f1a09259fcf7ff7"
+    },
+    {
+      "path": "agents/subject-admin-pm-integration/reports/subject-report.json",
+      "sha256": "sha256:3e104bebf28f7e6aec126e6bf612153a5326621dfed87a35520e6a5ff097eb5a"
+    },
+    {
+      "path": "agents/subject-attendance-lifecycle/file-authoring-agent-result.json",
+      "sha256": "sha256:2a89eec5f5728b18af8d7cfd355c4c7d3e86811b2cef914afc0c9d3d3e6140f8"
+    },
+    {
+      "path": "agents/subject-attendance-lifecycle/reports/subject-report.json",
+      "sha256": "sha256:52695b27def53946a95f562310eba5fef24c6d6597f93ce11de7890074dd73c8"
+    },
+    {
+      "path": "agents/subject-class-discovery-registration-and-lifecycle/file-authoring-agent-result.json",
+      "sha256": "sha256:f9cd9d3f8b08579bf808d12a5a9b650aff5f92fdde2f804de0feeca5478256ac"
+    },
+    {
+      "path": "agents/subject-class-discovery-registration-and-lifecycle/reports/subject-report.json",
+      "sha256": "sha256:0731b5180e4657acc19102568e07c3f8f9629b1b6beb5c2c4710a2f4a3a35bb4"
+    },
+    {
+      "path": "agents/subject-memberships-and-stock/file-authoring-agent-result.json",
+      "sha256": "sha256:a754dc178394315de62a6ca8714f4b312ecf293fe99bef9067c3fc4f920b36e0"
+    },
+    {
+      "path": "agents/subject-memberships-and-stock/reports/subject-report.json",
+      "sha256": "sha256:7b2c58dd42efbcacd154ed2b01717a9c1439e32a0b5307b36590447699a3b4ab"
+    },
+    {
+      "path": "agents/subject-product-access-and-authorization/file-authoring-agent-result.json",
+      "sha256": "sha256:21c911b9984e4771be41a01942055f60269a254aebda4c3e506452b93a9f7021"
+    },
+    {
+      "path": "agents/subject-product-access-and-authorization/reports/subject-report.json",
+      "sha256": "sha256:1191f4e093412133777d181cb2f2f10180ce78bc5a20778ddf89c0ae38e7a831"
+    },
+    {
+      "path": "agents/subject-product-documents-and-change-requests/file-authoring-agent-result.json",
+      "sha256": "sha256:d61b47363f648e1daa7a5ac51fd7be3d827c84f7e1515fa236d145001c6c76bd"
+    },
+    {
+      "path": "agents/subject-product-documents-and-change-requests/reports/subject-report.json",
+      "sha256": "sha256:ea52211b971901e6d7d8f86f39718d7811b987becba98936ece8c5bfcb274262"
+    },
+    {
+      "path": "agents/subject-repository-identity-and-boundaries/file-authoring-agent-result.json",
+      "sha256": "sha256:156142fce665eaf196670b28d48e593d4c6d47586720529bf42e391342db1d82"
+    },
+    {
+      "path": "agents/subject-repository-identity-and-boundaries/reports/subject-report.json",
+      "sha256": "sha256:061b24cd912ad300403c937736b59fe6a4d8e15bae9674175c280e870b9aec7a"
+    },
+    {
+      "path": "agents/subject-sdk-and-api-facade/file-authoring-agent-result.json",
+      "sha256": "sha256:318889ef6b56872ff38318155221ae64569e5b39dbba28a8c44c79376e266b24"
+    },
+    {
+      "path": "agents/subject-sdk-and-api-facade/reports/subject-report.json",
+      "sha256": "sha256:4f054d3bde358089781f851d6ec7eab335bd2962910a9a1e8d37a4bf5bd632fd"
+    },
+    {
+      "path": "agents/subject-templates-and-schedules/file-authoring-agent-result.json",
+      "sha256": "sha256:4998ea1fef25f73acc388707eb77c0b950831907169ec6476e3eea8f77fb1c76"
+    },
+    {
+      "path": "agents/subject-templates-and-schedules/reports/subject-report.json",
+      "sha256": "sha256:a23ec5ed1429e95c579c808ace12e7d4a123fd2f52fee39361af4f3098921d88"
+    },
+    {
+      "path": "documentation-create-result.json",
+      "sha256": "sha256:86e0c359392ebbef411690dc64f84aaa631626ee99ad3c30e1b0ef2cb9ce9bd8"
+    },
+    {
+      "path": "pre-maintenance-wiki/admin-pm-integration.md",
+      "sha256": "sha256:d7fa908346367b1e27ece1c45617ef689e68a1b3befc121122554911cb6d6945"
+    },
+    {
+      "path": "pre-maintenance-wiki/attendance-lifecycle.md",
+      "sha256": "sha256:18b113cf170a6873c4b87d3f64ad32674a3835c9f707dc47769acafd0f1cb063"
+    },
+    {
+      "path": "pre-maintenance-wiki/class-discovery-registration-and-lifecycle.md",
+      "sha256": "sha256:1fde29603337a7db69e625bd40bb9658f5caa3f47ffc0e99af544b8d28e9463c"
+    },
+    {
+      "path": "pre-maintenance-wiki/index.md",
+      "sha256": "sha256:cd3dd09d18be63472b7cf21e77c4d0e3d3e4e9d57bcd6390aa88ab83ca6e42cc"
+    },
+    {
+      "path": "pre-maintenance-wiki/memberships-and-stock.md",
+      "sha256": "sha256:ec5ca9c24c88ddae5813ad7da3a685a4af6f104f38624ac24fb219b5c73ccc71"
+    },
+    {
+      "path": "pre-maintenance-wiki/product-access-and-authorization.md",
+      "sha256": "sha256:20a629f44aac101a2627d5bd01b6b510babab53997555abd42608cf60591a5be"
+    },
+    {
+      "path": "pre-maintenance-wiki/product-documents-and-change-requests.md",
+      "sha256": "sha256:454ccd9779484230656672c630206d9fb436fa51aac87faf75fe75315897e444"
+    },
+    {
+      "path": "pre-maintenance-wiki/repository-identity-and-boundaries.md",
+      "sha256": "sha256:111055b24eebdfe73276d54af9446d4f0de87b319cbc83aca28ff26ced56f461"
+    },
+    {
+      "path": "pre-maintenance-wiki/sdk-and-api-facade.md",
+      "sha256": "sha256:6c1a2d3261caf4da9820a6538d90eed4e768cace714c709a5332613e3e5a057e"
+    },
+    {
+      "path": "pre-maintenance-wiki/templates-and-schedules.md",
+      "sha256": "sha256:e684840aef8c34ac0af3e51c13bf779d978c60def66067a62e8b9ded26d19708"
+    },
+    {
+      "path": "reports/documentation-planner-report.json",
+      "sha256": "sha256:1786bdf99263045a04df32adf9066510e6ce6ed5047fcd5c594cb5419195b571"
+    },
+    {
+      "path": "reports/documentation-subject-manifest.json",
+      "sha256": "sha256:a3aeb4fe1afc47f45d0e53ec00aff9b5982953949d2f0a9a322957e0f4d15cda"
+    },
+    {
+      "path": "repository-identity.json",
+      "sha256": "sha256:f1c41ecbd83b9821773751088bfbebdacc4c81fad31af43f3b6b9269787ca7ed"
+    }
+  ],
+  "created_at": "2026-07-15T07:49:54.173Z",
+  "draft_wiki_files": [
+    "pre-maintenance-wiki/admin-pm-integration.md",
+    "pre-maintenance-wiki/attendance-lifecycle.md",
+    "pre-maintenance-wiki/class-discovery-registration-and-lifecycle.md",
+    "pre-maintenance-wiki/index.md",
+    "pre-maintenance-wiki/memberships-and-stock.md",
+    "pre-maintenance-wiki/product-access-and-authorization.md",
+    "pre-maintenance-wiki/product-documents-and-change-requests.md",
+    "pre-maintenance-wiki/repository-identity-and-boundaries.md",
+    "pre-maintenance-wiki/sdk-and-api-facade.md",
+    "pre-maintenance-wiki/templates-and-schedules.md"
+  ],
+  "input_packet_sha256": "sha256:698161d71c6caaa898477ea9358775f96f1380c33aa16d1dd3a1b270e0a9f9ad",
+  "pending_sources_sha256": "sha256:2caf1a4c066ed8f304a7ee77d816d014ee356121442ec86f31ce66bddd453c9a",
+  "project_key": "class-kit",
+  "repo_path": "/Users/liadgoren/Repositories/class-kit",
+  "runtime_contract_version": 1,
+  "schema_context_hash": "1597328d89675d4b0e9b0bb390dba58672fa230411dbfca9279bc0aad6d88cfe",
+  "schema_version": 1,
+  "source_run_dir": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+  "target_repo_fingerprint": "sha256:509b1610d322d674f9a5e8ceea1063107289db3b983a19e6782f0a2ba055c7d2"
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "project_key": "llm-wiki",
+  "subject_id": "operator-cli-workflows",
+  "wiki_path": "operator-cli-workflows.md",
+  "status": "completed",
+  "evidence_paths": [
+    "docs/CLI.md",
+    "README.md",
+    "Makefile",
+    "src/cli.ts",
+    "src/commands/registry.ts",
+    "src/commands/status.ts",
+    "src/commands/bootstrap.ts",
+    "src/commands/schema.ts",
+    "src/commands/project.ts",
+    "src/commands/ingest.ts",
+    "src/commands/memory.ts",
+    "src/commands/session.ts",
+    "src/commands/install.ts",
+    "src/commands/capture.ts",
+    "tests/commands/project.test.ts",
+    "tests/commands/ingest.test.ts",
+    "tests/commands/memory.test.ts",
+    "tests/commands/schema.test.ts",
+    "tests/commands/session.test.ts",
+    "tests/commands/status.test.ts",
+    "tests/commands/bootstrap.test.ts",
+    "tests/commands/install.test.ts",
+    "tests/commands/capture.test.ts"
+  ],
+  "touched_paths": [
+    "draft-wiki/operator-cli-workflows.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "docs/CLI.md omits implemented command surfaces: project list, project packet, project reset, memory index project, project learn --recreate, and memory query --layer/--max-inline-chars.",
+    "README.md mentions project onboard and make onboard as V2 vocabulary, but the inspected CLI registry and Makefile do not expose those commands.",
+    "Makefile bootstrap usage allows ARGS='--json', but bootstrap.ts rejects unknown options and does not implement JSON output."
+  ]
+}

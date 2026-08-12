@@ -1,0 +1,17 @@
+{
+  "body": "The observed manual-ingest and auto-ingest overlap was a test-induced edge case. Raw queued-row count and immediately claimable rows may differ under that overlap, but no day-to-day concurrency or reporting fix is currently required. Do not promote this observation into a canonical Known Gap or degraded maintenance outcome.",
+  "confidence": "high",
+  "created_at": "2026-07-18T08:47:39.250Z",
+  "creator": "operator",
+  "evidence_refs": [],
+  "id": "2026-07-18T08-47-39.250Z_17cd7d",
+  "project_key": "llm-wiki",
+  "rationale": "The user explicitly concluded there was nothing to fix after identifying that a manual ingestion was started while automatic ingestion was already running.",
+  "risk": "low",
+  "schema_version": 1,
+  "tags": [],
+  "target_hint": "session-memory-and-experience-ingest.md",
+  "target_layer": "project",
+  "target_scope": "llm-wiki",
+  "title": "Raw ingest count is not an active product gap"
+}

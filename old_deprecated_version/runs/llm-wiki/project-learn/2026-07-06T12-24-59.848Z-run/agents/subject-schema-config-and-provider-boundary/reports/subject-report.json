@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "subject_id": "schema-config-and-provider-boundary",
+  "wiki_path": "schema-config-and-provider-boundary.md",
+  "status": "completed",
+  "evidence_paths": [
+    "target-repo/AGENTS.md",
+    "target-repo/schema/global.md",
+    "target-repo/schema/schema-context.md",
+    "target-repo/schema/rules/source-classification.json",
+    "target-repo/schema/rules/memory-scopes.json",
+    "target-repo/schema/rules/page-taxonomy.json",
+    "target-repo/src/schema/compiler.ts",
+    "target-repo/src/schema/types.ts",
+    "target-repo/src/schema/validators.ts",
+    "target-repo/src/commands/schema.ts",
+    "target-repo/src/runtime/config.ts",
+    "target-repo/src/runtime/llm-client.ts",
+    "target-repo/src/runtime/file-authoring-agent.ts",
+    "target-repo/src/memory/embedding-provider.ts",
+    "target-repo/src/memory/embedding-provider-factory.ts",
+    "target-repo/src/memory/sqlite-runtime.ts",
+    "target-repo/src/commands/memory.ts",
+    "target-repo/src/query/engine.ts",
+    "target-repo/myelin.config",
+    "target-repo/docs/adr/0049-phase-0-ships-thin-global-only-schema.md",
+    "target-repo/docs/adr/0051-preserve-multi-provider-byo-runner-abstraction.md",
+    "target-repo/docs/adr/0057-vendor-sqlite-runtime-for-vector-extensions.md",
+    "target-repo/tests/schema/schema-service.test.ts",
+    "target-repo/tests/runtime/llm-client.test.ts",
+    "target-repo/tests/runtime/file-authoring-agent.test.ts",
+    "target-repo/tests/memory/embedding-provider-factory.test.ts",
+    "target-repo/tests/memory/sqlite-runtime.test.ts"
+  ],
+  "touched_paths": [
+    "draft-wiki/schema-config-and-provider-boundary.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "schema/global.md still mentions project ingest, while AGENTS.md and the compiler command list describe top-level ingest plus project learn as the current contract.",
+    "Project-local schema, override records, schema candidates, include-global, and multi-project apply are deferred beyond Phase 0.",
+    "Gemini is implemented for embeddings only; live LLM invocation supports Codex and Claude, and unqualified unknown MODEL values resolve as Codex model ids.",
+    "Vendored SQLite runtime is currently platform-specific to darwin-arm64; other platforms fall back to host behavior unless a runtime is added."
+  ]
+}

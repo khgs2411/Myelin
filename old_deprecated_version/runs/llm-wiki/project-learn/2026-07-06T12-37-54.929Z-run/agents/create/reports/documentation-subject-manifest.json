@@ -1,0 +1,209 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "subjects": [
+    {
+      "subject_id": "product-model-and-memory-layers",
+      "wiki_path": "draft-wiki/product-model-and-memory-layers.md",
+      "title": "Product Model And Memory Layers",
+      "purpose": "Explain the Myelin product thesis, memory scopes, evidence flow, source-of-truth boundaries, and user vision for living repo documentation.",
+      "suggested_repo_paths": [
+        "MYELIN.md",
+        "MY_VISION.md",
+        "CONTEXT.md",
+        "README.md",
+        "AGENTS.md",
+        "docs/IMPLEMENTATION_ALIGNMENT.md",
+        "docs/ROADMAP.md",
+        "docs/adr/0050-adopt-myelin-product-name.md",
+        "docs/adr/0067-use-agent-authored-project-memory-documentation.md"
+      ]
+    },
+    {
+      "subject_id": "operator-cli-and-workflows",
+      "wiki_path": "draft-wiki/operator-cli-and-workflows.md",
+      "title": "Operator CLI And Workflows",
+      "purpose": "Document the active CLI vocabulary, command behavior, side effects, Makefile aliases, and normal operator workflows.",
+      "suggested_repo_paths": [
+        "docs/CLI.md",
+        "README.md",
+        "AGENTS.md",
+        "Makefile",
+        "src/cli.ts",
+        "src/commands/",
+        "tests/commands/"
+      ]
+    },
+    {
+      "subject_id": "runtime-foundation-and-providers",
+      "wiki_path": "draft-wiki/runtime-foundation-and-providers.md",
+      "title": "Runtime Foundation And Providers",
+      "purpose": "Document runtime helpers, config precedence, provider/model selection, JSON-only LLM invocation, artifacts, process execution, and file-authoring runner direction.",
+      "suggested_repo_paths": [
+        "src/runtime/",
+        "myelin.config",
+        "tests/runtime/",
+        "docs/design/2026-07-06-project-memory-agent-authored-documentation/spec.md",
+        "docs/adr/0051-preserve-multi-provider-byo-runner-abstraction.md"
+      ]
+    },
+    {
+      "subject_id": "project-shell-layout-and-capture",
+      "wiki_path": "draft-wiki/project-shell-layout-and-capture.md",
+      "title": "Project Shell, Layout, And Capture",
+      "purpose": "Document project bootstrap, layout, discovery, repair/migration, capture provider installation, hook normalization, git context, and auto-maintenance scheduling.",
+      "suggested_repo_paths": [
+        "src/bootstrap/",
+        "src/runtime/project-shell.ts",
+        "src/runtime/projects.ts",
+        "src/runtime/layout.ts",
+        "src/runtime/state.ts",
+        "src/capture/",
+        "src/install/",
+        "src/maintenance/",
+        "projects/llm-wiki/state/",
+        "tests/bootstrap/",
+        "tests/capture/",
+        "tests/install/",
+        "tests/maintenance/"
+      ]
+    },
+    {
+      "subject_id": "experience-log-ingest-session-memory",
+      "wiki_path": "draft-wiki/experience-log-ingest-session-memory.md",
+      "title": "Experience Log, Ingest, And Session Memory",
+      "purpose": "Document raw Experience Log storage, detached ingest jobs, tombstone leases, Session Memory outputs, candidates, handoffs, embeddings, and auto-maintenance drain behavior.",
+      "suggested_repo_paths": [
+        "src/memory/experience.ts",
+        "src/memory/session-memories.ts",
+        "src/memory/session-memory-contexts.ts",
+        "src/memory/session-memory-links.ts",
+        "src/memory/candidates.ts",
+        "src/memory/handoffs.ts",
+        "src/memory/ingest-types.ts",
+        "src/ingest/",
+        "src/maintenance/worker.ts",
+        "src/commands/ingest.ts",
+        "src/commands/session.ts",
+        "tests/ingest/",
+        "tests/memory/"
+      ]
+    },
+    {
+      "subject_id": "project-memory-create-maintenance",
+      "wiki_path": "draft-wiki/project-memory-create-maintenance.md",
+      "title": "Project Memory Create And Maintenance",
+      "purpose": "Document Project Memory creation and maintenance, `project learn`, agent-authored documentation workflow, candidate handling, apply/promotion, reset, and retrieval refresh.",
+      "suggested_repo_paths": [
+        "src/project/",
+        "src/commands/project.ts",
+        "src/inbox/runtime-inbox-items.ts",
+        "src/runtime/file-authoring-agent.ts",
+        "docs/design/2026-07-06-project-memory-agent-authored-documentation/",
+        "docs/design/2026-07-05-project-memory-rendered-create-contract/",
+        "docs/design/2026-06-30-project-memory-shape-creation-maintenance/",
+        "docs/adr/0058-use-mode-scoped-project-learn-curator-contracts.md",
+        "docs/adr/0060-use-apply-journal-for-project-memory-writes.md",
+        "docs/adr/0066-allow-clean-project-shell-rebootstrap-reset.md",
+        "docs/adr/0067-use-agent-authored-project-memory-documentation.md",
+        "tests/project/"
+      ]
+    },
+    {
+      "subject_id": "storage-sqlite-retrieval-indexes",
+      "wiki_path": "draft-wiki/storage-sqlite-retrieval-indexes.md",
+      "title": "Storage, SQLite, And Retrieval Indexes",
+      "purpose": "Document root SQLite, migrations, sqlite-vec runtime selection, embeddings, Session Memory query/indexing, and derived Project Memory retrieval indexes.",
+      "suggested_repo_paths": [
+        "src/memory/db.ts",
+        "src/memory/migrations.ts",
+        "src/memory/sqlite-runtime.ts",
+        "src/memory/sqlite-vec.ts",
+        "src/memory/embedding-provider.ts",
+        "src/memory/embedding-provider-factory.ts",
+        "src/memory/session-memory-embeddings.ts",
+        "src/memory/session-memory-indexer.ts",
+        "src/memory/session-memory-query.ts",
+        "src/memory/project-memory-retrieval-storage.ts",
+        "src/memory/project-memory-retrieval-indexer.ts",
+        "src/memory/project-memory-retrieval-index-service.ts",
+        "src/memory/retrieval-maintenance-queue.ts",
+        "src/project/project-memory-markdown-sections.ts",
+        "src/project/project-memory-hints.ts",
+        "vendor/sqlite/README.md",
+        "tests/memory/"
+      ]
+    },
+    {
+      "subject_id": "schema-layer-documentation-rules",
+      "wiki_path": "draft-wiki/schema-layer-documentation-rules.md",
+      "title": "Schema Layer And Documentation Rules",
+      "purpose": "Document schema guidance, typed rules, generated schema context, validation commands, wiki writing rules, source classification, and deferred schema features.",
+      "suggested_repo_paths": [
+        "schema/global.md",
+        "schema/rules/",
+        "schema/schema-context.md",
+        "src/schema/",
+        "src/commands/schema.ts",
+        "docs/README.md",
+        "docs/inbox-item-schema.md",
+        "AGENTS.md",
+        "CONTEXT.md",
+        "docs/adr/0023-use-global-and-project-local-schema-layers.md",
+        "docs/adr/0026-use-markdown-and-typed-schema-rules.md",
+        "docs/adr/0029-validate-schema-rules-with-zod.md",
+        "docs/adr/0032-add-dedicated-schema-cli.md",
+        "docs/adr/0049-phase-0-ships-thin-global-only-schema.md",
+        "tests/schema/"
+      ]
+    },
+    {
+      "subject_id": "query-and-mcp-boundary",
+      "wiki_path": "draft-wiki/query-and-mcp-boundary.md",
+      "title": "Query And MCP Boundary",
+      "purpose": "Document current query services, response envelope, degradation behavior, schema gating, Project Memory markdown hydration, future MCP facades, and detached MCP/core boundary.",
+      "suggested_repo_paths": [
+        "src/query/",
+        "src/commands/memory.ts",
+        "src/status/status-service.ts",
+        "src/commands/status.ts",
+        "src/memory/session-memory-query.ts",
+        "src/memory/project-memory-retrieval-text.ts",
+        "src/memory/project-memory-retrieval-storage.ts",
+        "docs/CLI.md",
+        "MYELIN.md",
+        "CONTEXT.md",
+        "docs/adr/0005-use-query-how-status-mcp-facades.md",
+        "docs/adr/0007-mcp-project-selection-is-explicit.md",
+        "docs/adr/0011-keep-mcp-detached-as-agent-interface.md",
+        "docs/adr/0048-core-owns-query-mcp-consumes-via-contract.md",
+        "tests/query/",
+        "tests/status/"
+      ]
+    },
+    {
+      "subject_id": "roadmap-decisions-verification",
+      "wiki_path": "draft-wiki/roadmap-decisions-verification.md",
+      "title": "Roadmap, Decisions, And Verification",
+      "purpose": "Document canonical reading order, current roadmap status, ADR/design/archive usage, known gaps, test organization, and verification commands.",
+      "suggested_repo_paths": [
+        "docs/README.md",
+        "docs/ROADMAP.md",
+        "docs/IMPLEMENTATION_ALIGNMENT.md",
+        "docs/adr/",
+        "docs/design/",
+        "docs/archive/",
+        ".tasks/",
+        "tests/",
+        "bunfig.toml",
+        "tsconfig.json",
+        "CONTRIBUTING.md",
+        "SECURITY.md",
+        "SUPPORT.md",
+        "CODE_OF_CONDUCT.md",
+        "README.md",
+        "AGENTS.md"
+      ]
+    }
+  ]
+}

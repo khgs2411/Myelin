@@ -1,0 +1,328 @@
+{
+  "dispositions": [
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/platform-product-operations.md",
+        "draft-wiki/index.md"
+      ],
+      "reason": "Current Edge Function, migration, SDK, admin UI, and SQL regression establish the reset/truncation contract.",
+      "source_kind": "project_candidate",
+      "source_ref": "project_inbox:class-kit:2026-07-15T08-14-06.014Z_e5b6b2"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The deterministic identity file covers only the parent checkout and no source in this snapshot proves either child registration root.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_verify_child_repo_roots_20260715"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "This checkout documents sibling SDK/API ownership but does not establish whether the referenced work card can be implemented without the API checkout.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_sdk_isolated_boundary_20260715"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/product-access-and-authorization.md",
+        "draft-wiki/repository-identity-and-boundaries.md"
+      ],
+      "reason": "Current product context, migrations, and existing documentation already establish database-managed product redirect records and their allowed-origin relationship.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_db_redirect_registry_20260628"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The current implementation has schedule skip controls but no verified generated-class delete/cancel contract matching the proposed product decision.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_generated_class_actions_20260628"
+    },
+    {
+      "disposition": "deferred_unsafe_change",
+      "output_refs": [],
+      "reason": "The proposed schema naming change is unsettled and would alter a persisted/publicly consumed contract.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_users_table_naming_20260628"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The class handler protects generated source fields and template_id, but no complete centralized controlled-field set or regression proves the broader proposed rule.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_b7a1e0"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "No current generated-class deletion path was found that creates a durable schedule exclusion.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_4f9c2d"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/templates-and-schedules.md"
+      ],
+      "reason": "The schedule page records the current historical-backfill implementation and its targeted SQL regression while retaining coverage limitations.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_schedule_backfill_bug_20260623"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/sdk-and-api-facade.md"
+      ],
+      "reason": "Current facade documentation records the implemented explicit manager lifecycle verbs and does not present unimplemented restore/unpublish verbs as supported.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_manager_class_lifecycle_followup_20260622"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is a deferred API-shape proposal, not evidence of a current supported contract.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_class_api_slice_20260622"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The snapshot can establish internal consumers but cannot audit external package consumers or release commitments.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_public_api_break_20260622"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/product-access-and-authorization.md"
+      ],
+      "reason": "Current product-context, SDK, and Demo2 code establish the implemented dashboard projection and the absence of separate read flags.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_read_capability_contract"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "Spot inspection establishes the shared guard model but cannot prove every action path is guarded without a complete endpoint audit and regression evidence.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_permission_guard_scope"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is an unresolved rollout strategy rather than a current behavior contract.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_guard_migration_scope"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "The proposed implementation slice is planning context, not durable current product behavior.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_first_slice_proof"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "The source explicitly leaves the information architecture open.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_dashboard_ia"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "Symphony board routing is external workflow configuration, not ClassKit project-memory behavior; no live board evidence is present.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_symphony_routing_20260614_01"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "Historical readiness cannot be promoted without a current plan/source re-audit and execution status evidence.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_plan_ready_reverify_20260614_01"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "The described worker-environment limitation and workaround are session-specific operational context.",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T11-14-34.534Z_49b567_cand_wave_d_blocker_classification_003"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "No child registration receipt or root-binding evidence is available in this snapshot.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_verify_registration_roots_20260715"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "Reviewer registration repair is external Symphony configuration work.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_reviewer_repo_root_fix_20260715"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "Waiting for harness-delivered card updates is transient workflow state.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_harness_cards_20260715"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "Rewriting external Symphony cards belongs to the work-management layer, not durable ClassKit documentation.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_rewrite_symphony_cards_20260715"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "Current repository documentation does not prove the isolation requirements of the referenced SDK work card.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_verify_sdk_independence_20260715"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "Current code does not verify the proposed generated-class deletion/protection rules completely.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_9f2b1a"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is an outstanding implementation request, not a durable verified contract.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_admin_demo_nested_rework_20260625"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "UX polish follow-up is session/work-item context.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_programs_dashboard_ui_followup_20260625"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is a proposed cross-layer feature mapping, not current verified behavior.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_permissions_view_bundle_20260625"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/templates-and-schedules.md"
+      ],
+      "reason": "Existing durable documentation captures the implemented historical generation behavior, its targeted regression, and remaining gaps.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_schedule_backfill_investigation_20260623"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "A requested seed expansion is implementation work rather than durable current behavior.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_demo2_seed_slice_20260623"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "A branch-review request is transient workflow work and does not itself assert a verified project fact.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_review_branch_diff_20260623"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/sdk-and-api-facade.md"
+      ],
+      "reason": "The SDK facade page records the current explicit lifecycle verbs and does not claim the unimplemented alternatives.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_manager_class_ops_followup_20260622"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is a future design task; it is not current implementation evidence.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_class_api_slice_20260622"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "External consumers and release-policy decisions are not observable from this checkout.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_external_consumer_audit_20260622"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "The requested ownership exercise is planning work, not a verified durable contract.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_feature_matrix_split_20260621"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/product-access-and-authorization.md"
+      ],
+      "reason": "Current code resolves the implemented projection: five manage/entry booleans and no dedicated read flags.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_resolve_read_flags_then_plan"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is a pending review and UX decision, not a current verified fact.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_demo2_p09_review"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is a brainstorming-session starting brief, not durable project knowledge.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_manager_dashboard_bringup"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "Current implementation and plan readiness require a fresh explicit audit before promotion.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_verify_plan_ready_20260614_01"
+    }
+  ],
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/class-kit-api/supabase/functions/class-kit-admin-products/index.ts",
+    "target-repo/class-kit-api/supabase/functions/_shared/admin_api.ts",
+    "target-repo/class-kit-api/supabase/migrations/20260702120000_truncate_product_admin_action.sql",
+    "target-repo/class-kit-api/supabase/tests/truncate_product_admin_action.sql",
+    "target-repo/apps/class-kit-admin/src/components/product-reset-panel.tsx",
+    "target-repo/class-kit-api/supabase/functions/class-kit-product-context/index.ts",
+    "target-repo/class-kit-sdk/src/types.ts",
+    "target-repo/apps/demo2/src/control-dashboard.tsx"
+  ],
+  "known_gaps": [
+    "The truncation SQL regression does not exercise the Edge Function bearer-token, platform-level authorization, exact-key validation, or UI confirmation branches end-to-end.",
+    "The deterministic repository identity evidence covers only the parent checkout; child API/SDK reviewer registration roots and isolated-card assumptions remain unverified.",
+    "No complete regression-backed audit establishes every action path's guard coverage or a complete generated-class controlled-field/deletion contract.",
+    "External @class-kit/react consumers and current Symphony board/card state are outside this checkout evidence."
+  ],
+  "project_key": "class-kit",
+  "schema_version": 1,
+  "status": "completed",
+  "touched_paths": [
+    "draft-wiki/index.md",
+    "draft-wiki/platform-product-operations.md",
+    "draft-wiki/product-access-and-authorization.md",
+    "reports/documentation-maintenance-report.json"
+  ]
+}

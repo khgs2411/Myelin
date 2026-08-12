@@ -1,0 +1,162 @@
+{
+  "dispositions": [
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md#custom-data-query-and-response-boundary"
+      ],
+      "reason": "Verified current list inputs and implementation: neither customer nor management class lists accept filters.customData, and searchable flags are not consumed. The wiki now records that current boundary without promoting the unaccepted proposal.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260717_classlist_filter_grammar"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md#custom-data-query-and-response-boundary"
+      ],
+      "reason": "Verified the present response split: customer ClassSummary omits customData and management rows retain custom_data. The proposed future projection policy was not asserted as implemented.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_customdata_response_contract"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The claimed Todo-card split and dependency are external Trello state; the supplied target repository contains no authoritative card evidence.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260717_membership_card_split"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md#custom-data-query-and-response-boundary",
+        "draft-wiki/templates-schedules-and-attendance.md#custom-field-validation-is-not-discovery-policy"
+      ],
+      "reason": "Repository code verifies the existing custom_data primitive, template validation, and absence of a public filter/projection contract. The proposed key-presence/equality filter was not documented as supported.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260717_customdata_boundary"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md#registration-gate-order-and-outcomes"
+      ],
+      "reason": "Verified that registration uses membership_required for a missing active grant and has no template-bound eligibility or membership_not_eligible error. The wiki now distinguishes the current contract from the proposal.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260717_membership_not_eligible_error"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md#custom-data-query-and-response-boundary"
+      ],
+      "reason": "The requested verification established that the shared filters.customData contract is absent from current API/SDK code; the verified current boundary is documented.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_verify_classlist_filter_scope"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md#custom-data-query-and-response-boundary"
+      ],
+      "reason": "The requested verification established the current customer-versus-manager response boundary and that filtering/projection are not implemented list features.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_customdata_response_review"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/templates-schedules-and-attendance.md#custom-field-validation-is-not-discovery-policy"
+      ],
+      "reason": "Current code retains visible/searchable field attributes but does not consume them for public exposure or search. The documented boundary prevents treating the proposed rule as active behavior.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_metadata_boundary"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "Creating and linking Symphony/Trello issues is external work-tracking administration, not a target-repository Project Memory update.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_split_cards"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md#custom-data-query-and-response-boundary",
+        "draft-wiki/templates-schedules-and-attendance.md#custom-field-validation-is-not-discovery-policy"
+      ],
+      "reason": "The repository confirms existing custom_data storage and validation but not the recommended filter grammar or a metadata replacement decision; the documented current boundary captures that distinction.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_verify_customdata_boundary"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md#registration-gate-order-and-outcomes"
+      ],
+      "reason": "Current registration behavior is verified and documented: it has no template-mismatch gate or membership_not_eligible error, while missing active membership yields membership_required.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_membership_not_eligible_error"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md#registration-gate-order-and-outcomes"
+      ],
+      "reason": "Current code has no membership-template binding or alternate path affected by such a binding; this absence and the resulting current registration rule are documented.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_template_bound_membership_boundary"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "No membership-template relation or accepted cardinality decision exists in the target repository evidence, so zero-or-one versus many must not be presented as durable current behavior.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_membership_template_cardinality"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "Recording an accepted behavior on a Trello card is an external work-tracking action; the supplied repository does not verify an accepted fail-closed contract to add to Project Memory.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_trello_fail_closed_doc"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md#registration-gate-order-and-outcomes"
+      ],
+      "reason": "Repository verification found no membership-type template restriction or template-deactivation consequence for grants; the current registration contract documents that no mismatch gate exists.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_verify_membership_binding_boundary"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The target repository contains templates but no separate lesson-type model or accepted membership-eligibility binding decision; the requested product choice remains unresolved.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_card1_boundary"
+    }
+  ],
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/class-kit-api/supabase/functions/class-kit-classes/index.ts",
+    "target-repo/class-kit-api/supabase/functions/_shared/class_schema.ts",
+    "target-repo/class-kit-api/supabase/migrations/20260701084833_fix_member_auto_approve_registration.sql",
+    "target-repo/class-kit-api/supabase/tests/member_auto_approve_registration.sql",
+    "target-repo/class-kit-sdk/src/types.ts",
+    "target-repo/class-kit-sdk/src/manager/manager-api.ts"
+  ],
+  "known_gaps": [
+    "The snapshot has no focused regression coverage for template custom-field/default validation, visible/searchable flag handling, or customer/management custom-data list filtering and projection.",
+    "No repository evidence confirms any shared filters.customData grammar, searchable-only filter policy, customer customData projection rule, or membership-template binding/cardinality decision.",
+    "The reported Symphony/Trello card split, Todo state, cross-links, and fail-closed card documentation are external-state claims that were not verifiable from the target repository."
+  ],
+  "project_key": "class-kit",
+  "schema_version": 1,
+  "status": "completed",
+  "touched_paths": [
+    "draft-wiki/classes-and-registrations.md",
+    "draft-wiki/templates-schedules-and-attendance.md",
+    "reports/documentation-maintenance-report.json"
+  ]
+}

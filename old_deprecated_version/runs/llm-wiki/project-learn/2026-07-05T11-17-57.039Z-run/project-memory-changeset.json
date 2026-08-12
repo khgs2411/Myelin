@@ -1,0 +1,308 @@
+{
+  "applied_at": "2026-07-05T11:17:57.157Z",
+  "curator_output_ref": "curator-creation-draft.json",
+  "file_changes": [
+    {
+      "after_sha256": "be99309abadfe9f8e609b335073286251903da2efb7d6a5dab3f48389c9cfa38",
+      "before_sha256": null,
+      "item_ids": [],
+      "operation": "create",
+      "page_ids": [
+        "commands"
+      ],
+      "path": "projects/llm-wiki/wiki/command-workflows.md",
+      "staged_output_ref": "staged/001-wiki_page-command-workflows.md"
+    },
+    {
+      "after_sha256": "ae1281ae25f267cba6559fb8023312a422166e1ceb776e59c8bcbf7a0acc4631",
+      "before_sha256": null,
+      "item_ids": [],
+      "operation": "create",
+      "page_ids": [
+        "curation"
+      ],
+      "path": "projects/llm-wiki/wiki/curation-apply-lifecycle.md",
+      "staged_output_ref": "staged/002-wiki_page-curation-apply-lifecycle.md"
+    },
+    {
+      "after_sha256": "7d3cf4e0b67b510abae4d8bbca1a26942c2b63762b3f13d83c75183c8630f00f",
+      "before_sha256": null,
+      "item_ids": [],
+      "operation": "create",
+      "page_ids": [
+        "roadmap"
+      ],
+      "path": "projects/llm-wiki/wiki/current-work-roadmap-decisions.md",
+      "staged_output_ref": "staged/003-wiki_page-current-work-roadmap-decisions.md"
+    },
+    {
+      "after_sha256": "7bb35189dfa8f52ed438dad75ab92f25a668cc3b4f3a8d4f7e6418e7716fa9ce",
+      "before_sha256": null,
+      "item_ids": [],
+      "operation": "create",
+      "page_ids": [
+        "evidence"
+      ],
+      "path": "projects/llm-wiki/wiki/evidence-provenance-candidates.md",
+      "staged_output_ref": "staged/004-wiki_page-evidence-provenance-candidates.md"
+    },
+    {
+      "after_sha256": "47f215ad67be2277b269e847856e17da14cecf9556d6237b407152db84117c0e",
+      "before_sha256": "af716ebc6c7525092a8c9260116eae1173925704e6c1fb6d546e19c6f14b6de4",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "index"
+      ],
+      "path": "projects/llm-wiki/wiki/index.md",
+      "staged_output_ref": "staged/005-wiki_page-index.md"
+    },
+    {
+      "after_sha256": "b657db91b2637a725ebd812aacbcfaa9b4b4b4cb78ef382e43cb374354debd63",
+      "before_sha256": null,
+      "item_ids": [],
+      "operation": "create",
+      "page_ids": [
+        "storage"
+      ],
+      "path": "projects/llm-wiki/wiki/storage-retrieval.md",
+      "staged_output_ref": "staged/006-wiki_page-storage-retrieval.md"
+    },
+    {
+      "after_sha256": "181bbbfb84248f93180f2791f250eb00f6f2ebc277e0239ca906f52ee1cff8de",
+      "before_sha256": null,
+      "item_ids": [],
+      "operation": "create",
+      "page_ids": [],
+      "path": "projects/llm-wiki/state/project-memory.json",
+      "staged_output_ref": "staged/007-project_state-project-memory.json"
+    }
+  ],
+  "item_changes": [],
+  "packet_ref": {
+    "artifact": "input-packet.json",
+    "packet_schema_version": 1
+  },
+  "page_changes": [
+    {
+      "after_snippet": {
+        "anchor": "index",
+        "path": "wiki/index.md",
+        "sha256": "47f215ad67be2277b269e847856e17da14cecf9556d6237b407152db84117c0e",
+        "text": "# Project Memory Index\n\nProject Memory orientation and product model\n\n## Overview\n\nProject Memory in Myelin is the repository documentation layer: curated markdown under projects/<key>/wiki that future agents can read before rediscovering the codebase.\n\nSession Memory is separate continuity from captured conversations; it can produce candidates and handoffs, but those records are leads until project learn verifies repo evidence.\n\nCanonical Project Memory truth stays in markdown plus project state, while SQLite and vector rows are serving indexes that point back to current markdown sections.\n\nProvenance:\n\n- Evidence: repo_citation:MYELIN.md\n- Evidence: repo_citation:MY_VISION.md\n- Repo: MYELIN.md:1 - product model\n- Repo: MY_VISION.md:1 - user product vision\n\n## Operational Details\n\nThe cre",
+        "truncated": true
+      },
+      "evidence_refs": [
+        {
+          "kind": "repo_citation",
+          "ref": "MYELIN.md"
+        },
+        {
+          "kind": "repo_citation",
+          "ref": "MY_VISION.md"
+        }
+      ],
+      "inference": null,
+      "operation": "create",
+      "page_id": "index",
+      "repo_citations": [
+        {
+          "line_start": 1,
+          "path": "MYELIN.md",
+          "reason": "product model"
+        },
+        {
+          "line_start": 1,
+          "path": "MY_VISION.md",
+          "reason": "user product vision"
+        }
+      ],
+      "target_page": "index.md"
+    },
+    {
+      "after_snippet": {
+        "anchor": "storage",
+        "path": "wiki/storage-retrieval.md",
+        "sha256": "b657db91b2637a725ebd812aacbcfaa9b4b4b4cb78ef382e43cb374354debd63",
+        "text": "# Storage And Retrieval\n\nSQLite, embeddings, and markdown retrieval\n\n## Overview\n\nThe root SQLite database is state/memory.db, and it stores Session Memory records, memory candidates, handoffs, experience-log state, embeddings, and retrieval serving metadata keyed by project.\n\nSession Memory rows are durable conversation-derived memory items; Project Memory retrieval rows are derived pointers generated from canonical wiki markdown sections.\n\nThis distinction matters because memory query can return recent Session Memory directly, while Project Memory lookup should resolve index hits back to markdown content or a file reference.\n\nProvenance:\n\n- Evidence: repo_citation:src/memory/db.ts\n- Evidence: repo_citation:src/memory/project-memory-retrieval-indexer.ts\n- Repo: src/memory/db.ts:1 - root S",
+        "truncated": true
+      },
+      "evidence_refs": [
+        {
+          "kind": "repo_citation",
+          "ref": "src/memory/db.ts"
+        },
+        {
+          "kind": "repo_citation",
+          "ref": "src/memory/project-memory-retrieval-indexer.ts"
+        }
+      ],
+      "inference": null,
+      "operation": "create",
+      "page_id": "storage",
+      "repo_citations": [
+        {
+          "line_start": 1,
+          "path": "src/memory/db.ts",
+          "reason": "root SQLite database and memory tables"
+        },
+        {
+          "line_start": 1,
+          "path": "src/memory/project-memory-retrieval-indexer.ts",
+          "reason": "Project Memory retrieval rows"
+        }
+      ],
+      "target_page": "storage-retrieval.md"
+    },
+    {
+      "after_snippet": {
+        "anchor": "commands",
+        "path": "wiki/command-workflows.md",
+        "sha256": "be99309abadfe9f8e609b335073286251903da2efb7d6a5dab3f48389c9cfa38",
+        "text": "# Command Workflows\n\nCLI commands and operator workflows\n\n## Overview\n\nOperators create or refresh Project Memory with project learn <key>, query memory through memory query <key> <question>, and rebuild retrieval serving rows through memory index project <key>.\n\nThe Makefile wraps these V2 commands, but new automation should call bun src/cli.ts or the myelin binary with Myelin vocabulary rather than old compile/update terms.\n\nThe CLI layer is the dogfood interface inside this repository; MCP wrapping is intentionally later and should expose stable CLI behavior to agents in other projects.\n\nProvenance:\n\n- Evidence: repo_citation:src/commands/project.ts\n- Evidence: repo_citation:src/commands/memory.ts\n- Repo: src/commands/project.ts:1 - project learn and reset commands\n- Repo: src/commands/",
+        "truncated": true
+      },
+      "evidence_refs": [
+        {
+          "kind": "repo_citation",
+          "ref": "src/commands/project.ts"
+        },
+        {
+          "kind": "repo_citation",
+          "ref": "src/commands/memory.ts"
+        }
+      ],
+      "inference": null,
+      "operation": "create",
+      "page_id": "commands",
+      "repo_citations": [
+        {
+          "line_start": 1,
+          "path": "src/commands/project.ts",
+          "reason": "project learn and reset commands"
+        },
+        {
+          "line_start": 1,
+          "path": "src/commands/memory.ts",
+          "reason": "memory query and index commands"
+        }
+      ],
+      "target_page": "command-workflows.md"
+    },
+    {
+      "after_snippet": {
+        "anchor": "curation",
+        "path": "wiki/curation-apply-lifecycle.md",
+        "sha256": "ae1281ae25f267cba6559fb8023312a422166e1ceb776e59c8bcbf7a0acc4631",
+        "text": "# Curation And Apply Lifecycle\n\nProject learn curation, validation, apply, and retrieval lifecycle\n\n## Overview\n\nThe project learn create lifecycle builds an input packet, writes a deterministic evidence map, invokes the curator, validates the returned JSON, critiques usefulness, and only then applies markdown.\n\nDeterministic validation owns schema shape, sectioned rendered markdown, answer-domain coverage, orientation-surface inspection, evidence-map support, citations, answerability, and shallow-content detection.\n\nThe independent usefulness critique is a model-backed second gate that can return pass, review_only, or fail after reading rendered markdown and the evidence map.\n\nProvenance:\n\n- Evidence: repo_citation:src/project/project-memory-curator-service.ts\n- Evidence: repo_citation:sr",
+        "truncated": true
+      },
+      "evidence_refs": [
+        {
+          "kind": "repo_citation",
+          "ref": "src/project/project-memory-curator-service.ts"
+        },
+        {
+          "kind": "repo_citation",
+          "ref": "src/project/project-memory-markdown-applier.ts"
+        }
+      ],
+      "inference": null,
+      "operation": "create",
+      "page_id": "curation",
+      "repo_citations": [
+        {
+          "line_start": 1,
+          "path": "src/project/project-memory-curator-service.ts",
+          "reason": "curator orchestration"
+        },
+        {
+          "line_start": 1,
+          "path": "src/project/project-memory-markdown-applier.ts",
+          "reason": "canonical markdown apply"
+        }
+      ],
+      "target_page": "curation-apply-lifecycle.md"
+    },
+    {
+      "after_snippet": {
+        "anchor": "evidence",
+        "path": "wiki/evidence-provenance-candidates.md",
+        "sha256": "7bb35189dfa8f52ed438dad75ab92f25a668cc3b4f3a8d4f7e6418e7716fa9ce",
+        "text": "# Evidence Provenance And Candidates\n\nCandidate, handoff, session, and provenance boundaries\n\n## Overview\n\nProject Memory candidates and handoffs are leads created by producers such as Session Memory, runtime inbox intake, or future maintenance flows.\n\nA lead can explain why something is worth documenting, but project learn must inspect target-repo evidence before writing a durable Project Memory page.\n\nThe evidence map bridges the lead to repo truth by listing answer domains, representative questions, inspected paths, search terms, search results, and evidence refs.\n\nProvenance:\n\n- Evidence: repo_citation:src/project/project-memory-evidence-map.ts\n- Evidence: repo_citation:src/memory/candidates.ts\n- Repo: src/project/project-memory-evidence-map.ts:1 - evidence map\n- Repo: src/memory/candi",
+        "truncated": true
+      },
+      "evidence_refs": [
+        {
+          "kind": "repo_citation",
+          "ref": "src/project/project-memory-evidence-map.ts"
+        },
+        {
+          "kind": "repo_citation",
+          "ref": "src/memory/candidates.ts"
+        }
+      ],
+      "inference": null,
+      "operation": "create",
+      "page_id": "evidence",
+      "repo_citations": [
+        {
+          "line_start": 1,
+          "path": "src/project/project-memory-evidence-map.ts",
+          "reason": "evidence map"
+        },
+        {
+          "line_start": 1,
+          "path": "src/memory/candidates.ts",
+          "reason": "memory candidates"
+        }
+      ],
+      "target_page": "evidence-provenance-candidates.md"
+    },
+    {
+      "after_snippet": {
+        "anchor": "roadmap",
+        "path": "wiki/current-work-roadmap-decisions.md",
+        "sha256": "7d3cf4e0b67b510abae4d8bbca1a26942c2b63762b3f13d83c75183c8630f00f",
+        "text": "# Current Work Roadmap And Decisions\n\nCurrent roadmap, ADRs, and implementation decisions\n\n## Overview\n\ndocs/ROADMAP.md is the workload guide for Myelin, and the current Step 5/6 work focuses on making Project Memory first-create useful before Step 7 maintenance automation.\n\nThe July 5 design records the product correction: Project Memory must be living repo documentation organized by answer domains, not six shallow role pages.\n\nThe roadmap intentionally places MCP wrapping near the end because dogfood inside Myelin should use CLI commands until the behavior is stable.\n\nProvenance:\n\n- Evidence: repo_citation:docs/ROADMAP.md\n- Evidence: repo_citation:docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md\n- Repo: docs/ROADMAP.md:1 - current roadmap\n- Repo: docs/adr/0064-use-two-pass-",
+        "truncated": true
+      },
+      "evidence_refs": [
+        {
+          "kind": "repo_citation",
+          "ref": "docs/ROADMAP.md"
+        },
+        {
+          "kind": "repo_citation",
+          "ref": "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md"
+        }
+      ],
+      "inference": null,
+      "operation": "create",
+      "page_id": "roadmap",
+      "repo_citations": [
+        {
+          "line_start": 1,
+          "path": "docs/ROADMAP.md",
+          "reason": "current roadmap"
+        },
+        {
+          "line_start": 1,
+          "path": "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md",
+          "reason": "evidence workflow ADR"
+        }
+      ],
+      "target_page": "current-work-roadmap-decisions.md"
+    }
+  ],
+  "project_key": "llm-wiki",
+  "risk": {
+    "level": "low",
+    "reasons": [],
+    "requires_quarantine": false
+  },
+  "run_dir": "projects/llm-wiki/runs/project-learn/2026-07-05T11-17-57.039Z-run",
+  "schema_version": 1,
+  "source_consumptions": [],
+  "validation_ref": "curator-validation.json"
+}

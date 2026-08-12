@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "product-operations",
+  "wiki_path": "product-operations.md",
+  "status": "completed",
+  "evidence_paths": [
+    "docs/sdk/client-sdk.md",
+    "docs/api/backend-api.md",
+    "docs/api/class-api-map.md",
+    "docs/changelog.md"
+  ],
+  "touched_paths": [
+    "draft-wiki/product-operations.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "This subject is grounded in the snapshot's living API and SDK documentation; implementation-source behavior was not separately inspected.",
+    "Platform administration and the Trello PM integration are intentionally summarized only as boundaries because they belong to the separate platform-administration subject."
+  ]
+}

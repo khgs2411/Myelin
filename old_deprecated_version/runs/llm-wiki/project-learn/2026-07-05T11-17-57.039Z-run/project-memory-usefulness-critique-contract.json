@@ -1,0 +1,70 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "evidence_map_ref": {
+      "const": "project-memory-evidence-map.json",
+      "type": "string"
+    },
+    "project_key": {
+      "const": "llm-wiki",
+      "type": "string"
+    },
+    "reasons": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "rendered_markdown_refs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 1,
+      "type": "number"
+    },
+    "verdict": {
+      "enum": [
+        "pass",
+        "review_only",
+        "fail"
+      ],
+      "type": "string"
+    },
+    "weak_sections": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "heading": {
+            "type": "string"
+          },
+          "page_path": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "page_path",
+          "heading",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "project_key",
+    "verdict",
+    "reasons",
+    "weak_sections",
+    "evidence_map_ref",
+    "rendered_markdown_refs"
+  ],
+  "type": "object"
+}

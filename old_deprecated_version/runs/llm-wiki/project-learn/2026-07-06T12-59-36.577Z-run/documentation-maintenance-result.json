@@ -1,0 +1,96 @@
+{
+  "degraded_reasons": [],
+  "draft_wiki_dir": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run/agents/maintenance/draft-wiki",
+  "file_authoring_run_ref": "agents/maintenance/file-authoring-agent-result.json",
+  "project_key": "llm-wiki",
+  "report": {
+    "dispositions": [
+      {
+        "disposition": "applied_to_project_memory",
+        "output_refs": [
+          "draft-wiki/storage-retrieval-and-query.md",
+          "draft-wiki/external-boundaries-and-integrations.md"
+        ],
+        "reason": "Added the verified current query composition shape while preserving the existing deferred MCP boundary: core owns query, MemoryQueryService composes layer runners, and detached MCP consumes the CLI/JSON contract.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_oo_mcp_project_followup"
+      },
+      {
+        "disposition": "not_durable",
+        "output_refs": [
+          "draft-wiki/session-memory-and-experience-ingest.md"
+        ],
+        "reason": "The durable prompt-size packing behavior is already documented, while rerunning failed auto-maintenance jobs and clearing accumulated failed jobs is operational state rather than Project Memory documentation.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_retry_failed_auto_ingest"
+      },
+      {
+        "disposition": "applied_to_project_memory",
+        "output_refs": [
+          "draft-wiki/session-memory-and-experience-ingest.md"
+        ],
+        "reason": "Updated the ingest documentation with the current drain-pending label split for running work, retryable failed leases, and queued ingest work.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_ingest_status_audit"
+      }
+    ],
+    "evidence_paths": [
+      "target-repo/docs/adr/0048-core-owns-query-mcp-consumes-via-contract.md",
+      "target-repo/src/query/engine.ts",
+      "target-repo/src/query/memory-query-service.ts",
+      "target-repo/src/ingest/status.ts",
+      "target-repo/tests/ingest/status.test.ts",
+      "target-repo/docs/ROADMAP.md",
+      "target-repo/src/maintenance/auto-memory-maintenance.ts"
+    ],
+    "known_gaps": [
+      "Did not run live ingest or resolve failed jobs; that requested operation belongs to runtime maintenance, not Project Memory documentation."
+    ],
+    "project_key": "llm-wiki",
+    "schema_version": 1,
+    "status": "completed",
+    "touched_paths": [
+      "draft-wiki/storage-retrieval-and-query.md",
+      "draft-wiki/session-memory-and-experience-ingest.md",
+      "reports/documentation-maintenance-report.json"
+    ]
+  },
+  "report_ref": "reports/documentation-maintenance-report.json",
+  "source_consumptions": [
+    {
+      "consumed_at": "2026-07-06T12:59:36.577Z",
+      "consumed_by_run": "projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run",
+      "output_refs": [
+        "draft-wiki/storage-retrieval-and-query.md",
+        "draft-wiki/external-boundaries-and-integrations.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_oo_mcp_project_followup",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-06T12:59:36.577Z",
+      "consumed_by_run": "projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run",
+      "output_refs": [
+        "draft-wiki/session-memory-and-experience-ingest.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_retry_failed_auto_ingest",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-06T12:59:36.577Z",
+      "consumed_by_run": "projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run",
+      "output_refs": [
+        "draft-wiki/session-memory-and-experience-ingest.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_ingest_status_audit",
+      "terminal_decision": "applied_to_project_memory"
+    }
+  ],
+  "status": "completed"
+}

@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "project_key": "class-kit",
+  "subject_id": "platform-administration-and-pm-integration",
+  "wiki_path": "platform-administration-and-pm-integration.md",
+  "status": "completed",
+  "evidence_paths": [
+    "docs/sdk/client-sdk.md",
+    "docs/api/backend-api.md",
+    "docs/api/class-api-map.md",
+    "docs/product-shape.md",
+    "docs/changelog.md",
+    "docs/design/2026-07-08-pm-software-integration/pseudocode/README.md",
+    "docs/design/2026-07-08-pm-software-integration/pseudocode/AgreedImplementationShape.md"
+  ],
+  "touched_paths": [
+    "draft-wiki/platform-administration-and-pm-integration.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "The subject is grounded in the repository snapshot's living documentation rather than a live deployed Trello or Supabase environment.",
+    "The July 8 PM pseudocode is historical planning material and conflicts with the released label-mapping behavior; the wiki records the living v0.1.18 contract as authoritative."
+  ]
+}

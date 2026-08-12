@@ -1,0 +1,96 @@
+{
+  "dispositions": [
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [
+        "draft-wiki/change-requests-and-pm-integration.md",
+        "target-repo/docs/api/backend-api.md"
+      ],
+      "reason": "The notification has no card identity and describes a likely Symphony/harness credential problem. Current project docs establish only that TRELLO_API_KEY and TRELLO_TOKEN are server-side Edge Function secrets; they cannot establish the incident cause or recovery path.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_missing_trello_api_key_blocker_20260716"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/operator-workflows-and-local-apps.md",
+        "target-repo/docs/shared/deployment.md"
+      ],
+      "reason": "Canonical deployment documentation already requires a per-deployment read-only SDK deploy key, SSH setup before dependency installation, and a fail-fast secret check. The supplied snapshot contains no reusable preflight artifact or CI workflow from which to document a new implementation contract.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_static_host_sdk_preflight_20260716"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The candidate names broad urgent Admin UX work and P1/P2 findings but identifies neither the findings nor implementation or regression-test evidence. The available snapshot contains historic design plans, not a verified current prioritization contract.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_admin_ux_followup_scope"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [
+        "../state/repository-identity.json"
+      ],
+      "reason": "Repository identity confirms the current master checkout and commit, but the candidate gives no cleanup commit, branch, changed paths, or merge target to compare with that evidence. Delivery status cannot be promoted to durable project memory.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_admin_cleanup_merge_state"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [
+        "target-repo/Makefile",
+        "draft-wiki/operator-workflows-and-local-apps.md"
+      ],
+      "reason": "The Makefile confirms only that a Symphony reviewer makefile is included. This snapshot does not contain the claimed dependency-wave, Trello evidence, branch/diff acceptance policy, or its authoritative handoff source.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_project_symphony_review_gate"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "This is an operational one-hop triage request for an ambiguous external Symphony notification, not verified durable product behavior. It requires runner/harness or credential investigation before any project-memory update is justified.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_triage_missing_trello_api_key_20260716"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [
+        "draft-wiki/operator-workflows-and-local-apps.md",
+        "target-repo/docs/shared/deployment.md"
+      ],
+      "reason": "The handoff requests downstream implementation in a consumer deployment surface. Project Memory already documents the required deployment ordering and key boundary, while the target checkout does not provide a code or workflow location for the proposed preflight.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_static_host_sdk_preflight_20260716"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "Investigating and commenting on a named Trello card is external work-item administration. The card context and rejection rationale are absent from the repository snapshot, so no durable project-memory claim can be verified.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_trello_rejection_followup_20260716"
+    }
+  ],
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/Makefile",
+    "target-repo/docs/api/backend-api.md",
+    "target-repo/docs/changelog.md",
+    "target-repo/docs/repositories/structure.md",
+    "target-repo/docs/shared/deployment.md",
+    "draft-wiki/architecture-and-boundaries.md",
+    "draft-wiki/change-requests-and-pm-integration.md",
+    "draft-wiki/operator-workflows-and-local-apps.md"
+  ],
+  "known_gaps": [
+    "The assigned target-repo snapshot contains canonical documentation and design pseudocode but not the class-kit-api, class-kit-sdk, app source, CI workflows, or regression tests needed to verify incident causes, current Admin UX prioritization, cleanup delivery, or a reusable static-host preflight implementation.",
+    "No manager-attention notification, Symphony handoff artifact, Trello card content, or Trello API access was supplied, so the missing_trello_api_key event, review-gate policy, and requested rejection rationale remain unverified.",
+    "The static-host SDK deploy-key prerequisite is documented, including a GitHub Pages fail-fast secret check, but no current consumer workflow or observed deployment run is present to verify a reusable preflight beyond that documented example."
+  ],
+  "project_key": "class-kit",
+  "schema_version": 1,
+  "status": "degraded",
+  "touched_paths": [
+    "reports/documentation-maintenance-report.json"
+  ]
+}

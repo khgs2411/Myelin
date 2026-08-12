@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "repository-identity-and-boundaries",
+  "wiki_path": "repository-identity-and-boundaries.md",
+  "status": "complete_with_known_gaps",
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/README.md",
+    "target-repo/docs/getting-started.md",
+    "target-repo/docs/repositories/structure.md",
+    "target-repo/docs/product-shape.md",
+    "target-repo/docs/sdk/client-sdk.md",
+    "target-repo/docs/api/backend-api.md",
+    "target-repo/class-kit-sdk/src/client/product-api.ts",
+    "target-repo/class-kit-sdk/src/client/class-kit-client.ts",
+    "target-repo/apps/demo2/src/class-kit-client.ts",
+    "target-repo/apps/demo2/src/main.tsx",
+    "target-repo/apps/class-kit-admin/src/components/admin-auth-panel.tsx",
+    "target-repo/apps/class-kit-admin/src/components/product-reset-panel.tsx",
+    "target-repo/class-kit-api/supabase/functions/_shared/cors.ts",
+    "target-repo/class-kit-api/supabase/functions/_shared/context.ts"
+  ],
+  "touched_paths": [
+    "draft-wiki/repository-identity-and-boundaries.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "No regression test proves the browser boundary prevents direct ClassKit table, RPC, or Edge Function use by consuming apps.",
+    "No end-to-end test covers SDK site-url header handling and localhost-only product-key behavior through product resolution.",
+    "repository-identity.json records an origin remote for the documented local-only parent repository; intended remote ownership needs review.",
+    "No deterministic Git identity evidence was provided for class-kit-api or class-kit-sdk."
+  ]
+}

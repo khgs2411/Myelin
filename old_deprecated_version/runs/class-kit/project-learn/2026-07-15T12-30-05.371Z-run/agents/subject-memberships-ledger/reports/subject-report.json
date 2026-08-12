@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "memberships-ledger",
+  "wiki_path": "memberships-and-ledger.md",
+  "status": "complete_with_gaps",
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/class-kit-api/supabase/migrations/20260607132920_membership_ledger.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260607160000_registration_engine.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260608020000_membership_cancellation_audit.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260623163000_member_auto_approve_product_users.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260702055851_allow_pending_registration_cancellation_after_cutoff.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260705110018_adjust_membership_remaining_stock_only.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260705111440_set_membership_manager_entrypoint.sql",
+    "target-repo/class-kit-api/supabase/functions/class-kit-memberships/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-register-class/index.ts",
+    "target-repo/class-kit-api/supabase/tests/member_auto_approve_registration.sql",
+    "target-repo/class-kit-api/supabase/tests/pending_registration_cancellation.sql",
+    "target-repo/class-kit-sdk/src/client/class-kit-client.ts",
+    "target-repo/class-kit-sdk/src/manager/manager-api.ts"
+  ],
+  "touched_paths": [
+    "draft-wiki/memberships-and-ledger.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "No inspected regression test directly covers membership type validation, grant/upgrade/set/revoke transitions, mode-value resolution, stock adjustment, ledger event content, or the one-active-grant replacement invariant.",
+    "The SDK exported MembershipEventType omits membership_set even though the database constraint and set_membership RPC emit it.",
+    "valid_from is persisted but is not checked by the current effective-grant query; the intended behavior is not established by inspected coverage."
+  ]
+}

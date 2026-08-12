@@ -1,0 +1,214 @@
+{
+  "degraded_reasons": [],
+  "draft_wiki_dir": "/Users/liadgoren/Repositories/llm-wiki/runs/class-kit/project-learn/2026-07-19T10-03-02.780Z-run/agents/maintenance/draft-wiki",
+  "file_authoring_run_ref": "agents/maintenance/file-authoring-agent-result.json",
+  "project_key": "class-kit",
+  "report": {
+    "dispositions": [
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "Current migrations, functions, tests, and canonical docs retain product-user records keyed by auth user ID and contain no product_customers table, join-trigger creation, backfill, or access-revocation preservation contract. The candidate is an explicitly proposed product policy, so current absence cannot settle it.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260719_product_customer_auto_creation"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "The repository documents product-user access, roles, and profile management, but has no implemented customer-management resource or explicit ghost-to-identity merge contract. The requested resource split and audit rules remain an open architectural decision rather than a verified durable contract.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_customer_access_boundary_01"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "Product scoping is implemented for existing ClassKit resources, but no customer identity, contact-match, cross-product discovery, or merge flow exists in the checked repository to establish this proposed privacy policy. It must be explicitly decided before canonical documentation can state it.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260719_cross_product_privacy_rule"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "Current implementation uses class_kit.users and user_id-backed memberships, registrations, and attendance; no product_customers or nullable auth_user_id contract was found. The candidate requests a new durable identity model and retains an explicit profile-ownership uncertainty, so it is not promoted from proposal wording.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260719_customer_identity_boundary"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "Current code and regression tests support the existing product-user/auth boundary, not customer_id-backed memberships, registrations, attendance, or progress. This is a proposed replacement architecture and requires an explicit accepted decision before it can change Project Memory.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_classkit_20260719_customer_identity_split_review_2d9f7a"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "Verification found no customer API resource, ghost-link operation, or approved contract separating it from application-access management. The handoff asks for a policy decision, which current incidental product-user implementation cannot supply.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_verify_customer_access_split_01"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "The current repository enforces product scoping for its existing resources, but has no customer identity/linking flow to verify the proposed per-product customer uniqueness or cross-product match behavior. This remains downstream product and engineering work.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_identity_boundary_review"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "No implementation evidence establishes product_customers, nullable auth_user_id, or customer_id-backed operational records. The handoff describes a possible future boundary, not current durable behavior.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260719_customer_identity_split_review_5a31e0"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "The card-oriented ghost-customer and merge follow-up is an unimplemented product/engineering decision. It cannot be represented as current Project Memory without an approved design and repository evidence.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_ghost_customers_35b935"
+      },
+      {
+        "disposition": "applied_to_project_memory",
+        "output_refs": [
+          "draft-wiki/classes-and-registrations.md",
+          "draft-wiki/memberships-and-entitlements.md"
+        ],
+        "reason": "Current class handler code and its focused regression test establish the observable direct-get result: an ineligible members-only class returns generic 403 forbidden, while a missing otherwise-visible class returns 404. The corrected discovery and membership-eligibility prose records this contract. repository-identity.json was also inspected as run evidence and conflicts with the authored no-remote claim in target-repo/docs/repositories/structure.md; it did not drive canonical prose.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_20260719_verify_status_code_contract"
+      },
+      {
+        "disposition": "already_covered",
+        "output_refs": [],
+        "reason": "The final draft now documents the direct-get 403 result, list omission, template-bound eligibility, and registration precedence using current handler, migration, and regression-test evidence. This overlapping handoff therefore needs no separate documentation change.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_classkit_membership_visibility_decision"
+      }
+    ],
+    "evidence_paths": [
+      "repository-identity.json",
+      "target-repo/class-kit-api/supabase/functions/class-kit-classes/index.ts",
+      "target-repo/class-kit-api/supabase/functions/class-kit-classes/index.test.ts",
+      "target-repo/class-kit-api/supabase/migrations/20260719084853_membership_template_binding.sql",
+      "target-repo/class-kit-api/supabase/tests/membership_template_eligibility.sql",
+      "target-repo/class-kit-api/supabase/migrations/20260607160000_registration_engine.sql",
+      "target-repo/docs/shared/authentication.md",
+      "target-repo/docs/api/class-api-map.md"
+    ],
+    "known_gaps": [],
+    "project_key": "class-kit",
+    "schema_version": 1,
+    "status": "completed",
+    "touched_paths": [
+      "draft-wiki/classes-and-registrations.md",
+      "draft-wiki/memberships-and-entitlements.md"
+    ]
+  },
+  "report_ref": "reports/documentation-maintenance-report.json",
+  "source_consumptions": [
+    {
+      "consumed_at": "2026-07-19T10:03:02.780Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-03-02.780Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260719_product_customer_auto_creation",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T10:03:02.780Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-03-02.780Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_customer_access_boundary_01",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T10:03:02.780Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-03-02.780Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260719_cross_product_privacy_rule",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T10:03:02.780Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-03-02.780Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260719_customer_identity_boundary",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T10:03:02.780Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-03-02.780Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260719_customer_identity_split_review_2d9f7a",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T10:03:02.780Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-03-02.780Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_verify_customer_access_split_01",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T10:03:02.780Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-03-02.780Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_identity_boundary_review",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T10:03:02.780Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-03-02.780Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260719_customer_identity_split_review_5a31e0",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T10:03:02.780Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-03-02.780Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_ghost_customers_35b935",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-19T10:03:02.780Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-03-02.780Z-run",
+      "output_refs": [
+        "draft-wiki/classes-and-registrations.md",
+        "draft-wiki/memberships-and-entitlements.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260719_verify_status_code_contract",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-19T10:03:02.780Z",
+      "consumed_by_run": "runs/class-kit/project-learn/2026-07-19T10-03-02.780Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_membership_visibility_decision",
+      "terminal_decision": "already_covered"
+    }
+  ],
+  "status": "completed"
+}

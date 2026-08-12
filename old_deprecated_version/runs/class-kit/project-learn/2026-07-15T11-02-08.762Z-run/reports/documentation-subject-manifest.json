@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subjects": [
+    {
+      "subject_id": "repository-identity-and-boundaries",
+      "wiki_path": "repository-identity-and-boundaries.md",
+      "title": "Repository identity and product boundaries",
+      "purpose": "Record verified repository identity, the snapshot metadata contradiction, system layout, and layer ownership.",
+      "suggested_repo_paths": [
+        "README.md",
+        "docs/product-shape.md",
+        "docs/repositories/structure.md",
+        "repository-identity.json"
+      ]
+    },
+    {
+      "subject_id": "product-resolution-auth-and-access",
+      "wiki_path": "product-resolution-auth-and-access.md",
+      "title": "Product resolution, authentication, and access lifecycle",
+      "purpose": "Explain origin resolution and the complete access-policy and access-entry state machine.",
+      "suggested_repo_paths": [
+        "class-kit-api/supabase/functions/_shared/context.ts",
+        "class-kit-api/supabase/functions/class-kit-product-context/index.ts",
+        "class-kit-api/supabase/functions/class-kit-product-signup/index.ts",
+        "class-kit-api/supabase/migrations/20260629133541_product_access_entries.sql"
+      ]
+    },
+    {
+      "subject_id": "authorization-roles-and-permissions",
+      "wiki_path": "authorization-roles-and-permissions.md",
+      "title": "Authorization, roles, and permission evaluation",
+      "purpose": "Document role scopes, active assignments, permission grants, and level-versus-key evaluation semantics.",
+      "suggested_repo_paths": [
+        "class-kit-api/supabase/functions/_shared/permissions.ts",
+        "class-kit-api/supabase/migrations/20260612120000_permission_layer_foundation.sql",
+        "class-kit-api/supabase/migrations/20260612122000_permission_requirement_catalog.sql",
+        "docs/adr/0001-scoped-product-permission-layer.md"
+      ]
+    },
+    {
+      "subject_id": "class-discovery-visibility-and-lifecycle",
+      "wiki_path": "class-discovery-visibility-and-lifecycle.md",
+      "title": "Class discovery, visibility, and lifecycle",
+      "purpose": "Define class publication, temporal and lifecycle outcomes, visibility, and caller-safe field exposure.",
+      "suggested_repo_paths": [
+        "class-kit-api/supabase/functions/class-kit-classes/index.ts",
+        "class-kit-api/supabase/migrations/20260607134535_template_class_core.sql",
+        "class-kit-api/supabase/migrations/20260624090000_class_roster_public_field_policy.sql",
+        "class-kit-sdk/src/types.ts"
+      ]
+    },
+    {
+      "subject_id": "registration-and-attendance-lifecycle",
+      "wiki_path": "registration-and-attendance-lifecycle.md",
+      "title": "Registration and attendance lifecycle",
+      "purpose": "Describe eligibility and approval precedence, registration state transitions, cancellation cutoff behavior, and attendance workflows.",
+      "suggested_repo_paths": [
+        "class-kit-api/supabase/functions/class-kit-register-class/index.ts",
+        "class-kit-api/supabase/functions/class-kit-manage-registrations/index.ts",
+        "class-kit-api/supabase/functions/class-kit-attendance/index.ts",
+        "class-kit-api/supabase/migrations/20260607160000_registration_engine.sql",
+        "class-kit-api/supabase/tests/member_auto_approve_registration.sql",
+        "class-kit-api/supabase/tests/pending_registration_cancellation.sql"
+      ]
+    },
+    {
+      "subject_id": "membership-entitlements-and-stock",
+      "wiki_path": "membership-entitlements-and-stock.md",
+      "title": "Membership entitlements and stock",
+      "purpose": "Document membership modes, grant lifecycle, ranking, stock resolution, adjustments, and ledger evidence.",
+      "suggested_repo_paths": [
+        "class-kit-api/supabase/functions/class-kit-memberships/index.ts",
+        "class-kit-api/supabase/functions/class-kit-profile/index.ts",
+        "class-kit-api/supabase/migrations/20260607132920_membership_ledger.sql",
+        "class-kit-api/supabase/migrations/20260705111440_set_membership_manager_entrypoint.sql"
+      ]
+    },
+    {
+      "subject_id": "templates-schedules-and-generated-classes",
+      "wiki_path": "templates-schedules-and-generated-classes.md",
+      "title": "Templates, schedules, and generated classes",
+      "purpose": "Explain template defaults and custom data, schedule states/recurrence, skips, generation, and generated-class provenance.",
+      "suggested_repo_paths": [
+        "class-kit-api/supabase/functions/_shared/class_schema.ts",
+        "class-kit-api/supabase/functions/class-kit-templates/index.ts",
+        "class-kit-api/supabase/functions/class-kit-schedules/index.ts",
+        "class-kit-api/supabase/migrations/20260607143000_schedule_rule_model.sql",
+        "class-kit-api/supabase/migrations/20260607153000_schedule_generation_engine.sql"
+      ]
+    },
+    {
+      "subject_id": "sdk-facade-and-application-integration",
+      "wiki_path": "sdk-facade-and-application-integration.md",
+      "title": "SDK facade and application integration",
+      "purpose": "Map the public SDK contract, product context, React provider, and supported app-to-backend boundary.",
+      "suggested_repo_paths": [
+        "class-kit-sdk/src/index.ts",
+        "class-kit-sdk/src/client/class-kit-client.ts",
+        "class-kit-sdk/src/client/product-api.ts",
+        "class-kit-sdk/src/context/product-provider.tsx",
+        "docs/sdk/client-sdk.md"
+      ]
+    },
+    {
+      "subject_id": "platform-administration-and-product-configuration",
+      "wiki_path": "platform-administration-and-product-configuration.md",
+      "title": "Platform administration and product configuration",
+      "purpose": "Cover platform-admin operations, product provisioning, origin and redirect configuration, product-user decisions, and truncation.",
+      "suggested_repo_paths": [
+        "class-kit-api/supabase/functions/_shared/admin_api.ts",
+        "class-kit-api/supabase/functions/class-kit-admin-products/index.ts",
+        "class-kit-api/supabase/functions/class-kit-admin-product-users/index.ts",
+        "class-kit-api/supabase/tests/truncate_product_admin_action.sql"
+      ]
+    },
+    {
+      "subject_id": "documents-signup-links-and-change-requests",
+      "wiki_path": "documents-signup-links-and-change-requests.md",
+      "title": "Documents, signup links, and product change requests",
+      "purpose": "Describe content/version states, acceptance and public lookup behavior, feedback request states, and attachment workflows.",
+      "suggested_repo_paths": [
+        "class-kit-api/supabase/functions/class-kit-product-documents/index.ts",
+        "class-kit-api/supabase/functions/class-kit-signup-links/index.ts",
+        "class-kit-api/supabase/functions/class-kit-product-change-requests/index.ts",
+        "class-kit-api/supabase/migrations/20260705060042_product_documents.sql",
+        "class-kit-api/supabase/migrations/20260707144646_product_change_requests.sql"
+      ]
+    },
+    {
+      "subject_id": "product-management-software-integration",
+      "wiki_path": "product-management-software-integration.md",
+      "title": "Product-management software integration",
+      "purpose": "Document the Trello provider boundary, synchronization state, work-item links, snapshots, status mapping, and warnings.",
+      "suggested_repo_paths": [
+        "class-kit-api/supabase/functions/class-kit-admin-pm-integrations/index.ts",
+        "class-kit-api/supabase/functions/_shared/pm/types.ts",
+        "class-kit-api/supabase/functions/_shared/pm/providers/trello_provider.ts",
+        "class-kit-api/supabase/migrations/20260708110703_pm_software_integrations.sql",
+        "class-kit-api/supabase/migrations/20260709072033_pm_board_snapshots.sql"
+      ]
+    }
+  ]
+}

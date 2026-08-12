@@ -1,0 +1,223 @@
+{
+  "curator_output_ref": "documentation-maintenance-result.json",
+  "expected_writes": [
+    {
+      "before_sha256": "ab746bc719b8f3b1bc7326cad90807e515eafba37715a5d6cd462a483422ff54",
+      "canonical_path": "projects/llm-wiki/command-surface-and-operator-workflows.md",
+      "page_ids": [
+        "command-surface-and-operator-workflows.md"
+      ],
+      "staged_output_ref": "staged/001-wiki_page-command-surface-and-operator-workflows.md",
+      "write_kind": "wiki_page",
+      "write_order": 1
+    },
+    {
+      "before_sha256": "8cc696d03ab42d1fa4eef25b299adedc80d9049649d202fdfabcb07d67bfc4b8",
+      "canonical_path": "projects/llm-wiki/index.md",
+      "page_ids": [
+        "index.md"
+      ],
+      "staged_output_ref": "staged/002-wiki_page-index.md",
+      "write_kind": "wiki_page",
+      "write_order": 2
+    },
+    {
+      "before_sha256": "759e6d9d7c49a54c61e91a9d2d8b2268a842fbe4b4ef5556e82b183d53cc38b4",
+      "canonical_path": "projects/llm-wiki/product-and-memory-model.md",
+      "page_ids": [
+        "product-and-memory-model.md"
+      ],
+      "staged_output_ref": "staged/003-wiki_page-product-and-memory-model.md",
+      "write_kind": "wiki_page",
+      "write_order": 3
+    },
+    {
+      "before_sha256": "681a291fca04b94b1bc9e279f484e8f182de477c8d9a7ede4f58e5bc4d6fffbf",
+      "canonical_path": "projects/llm-wiki/project-memory-creation-and-curation.md",
+      "page_ids": [
+        "project-memory-creation-and-curation.md"
+      ],
+      "staged_output_ref": "staged/004-wiki_page-project-memory-creation-and-curation.md",
+      "write_kind": "wiki_page",
+      "write_order": 4
+    },
+    {
+      "before_sha256": "aefb0c4e70344fedfe62bc6aa835b3ef06e089f774bfa7391357efa306d0c396",
+      "canonical_path": "projects/llm-wiki/query-status-and-agent-interfaces.md",
+      "page_ids": [
+        "query-status-and-agent-interfaces.md"
+      ],
+      "staged_output_ref": "staged/005-wiki_page-query-status-and-agent-interfaces.md",
+      "write_kind": "wiki_page",
+      "write_order": 5
+    },
+    {
+      "before_sha256": "f1b7bf7223ad7419a14b853e3296dedd65fba039d98bdba75320b7e57b496db7",
+      "canonical_path": "projects/llm-wiki/roadmap-adrs-and-design-history.md",
+      "page_ids": [
+        "roadmap-adrs-and-design-history.md"
+      ],
+      "staged_output_ref": "staged/006-wiki_page-roadmap-adrs-and-design-history.md",
+      "write_kind": "wiki_page",
+      "write_order": 6
+    },
+    {
+      "before_sha256": "22bce277757354dcab788ba2ac2152f6e97fd1651356ca793870a42dadb3c8cf",
+      "canonical_path": "projects/llm-wiki/runtime-providers-and-project-layout.md",
+      "page_ids": [
+        "runtime-providers-and-project-layout.md"
+      ],
+      "staged_output_ref": "staged/007-wiki_page-runtime-providers-and-project-layout.md",
+      "write_kind": "wiki_page",
+      "write_order": 7
+    },
+    {
+      "before_sha256": "b365a68aaf5c62f9d4ccfdbde86c7983f356605f93cb695f7b9d4ec180ae218b",
+      "canonical_path": "projects/llm-wiki/schema-and-documentation-contracts.md",
+      "page_ids": [
+        "schema-and-documentation-contracts.md"
+      ],
+      "staged_output_ref": "staged/008-wiki_page-schema-and-documentation-contracts.md",
+      "write_kind": "wiki_page",
+      "write_order": 8
+    },
+    {
+      "before_sha256": "9b8758be6bb33800a72e9fd05fae255d4d659b3dea6fafe6589943ca90dd7ce3",
+      "canonical_path": "projects/llm-wiki/session-memory-and-experience-ingest.md",
+      "page_ids": [
+        "session-memory-and-experience-ingest.md"
+      ],
+      "staged_output_ref": "staged/009-wiki_page-session-memory-and-experience-ingest.md",
+      "write_kind": "wiki_page",
+      "write_order": 9
+    },
+    {
+      "before_sha256": "92d3868e43537dc48189c1736ba8b22da0aeafc66f841dfa8547a068613fec02",
+      "canonical_path": "projects/llm-wiki/source-evidence-inbox-and-candidate-boundaries.md",
+      "page_ids": [
+        "source-evidence-inbox-and-candidate-boundaries.md"
+      ],
+      "staged_output_ref": "staged/010-wiki_page-source-evidence-inbox-and-candidate-boundaries.md",
+      "write_kind": "wiki_page",
+      "write_order": 10
+    },
+    {
+      "before_sha256": "53627cdc4b0ff41d094bafb8b105fde443df8c61b1291c19f1c93d430ee2f25f",
+      "canonical_path": "projects/llm-wiki/storage-sqlite-and-retrieval-indexes.md",
+      "page_ids": [
+        "storage-sqlite-and-retrieval-indexes.md"
+      ],
+      "staged_output_ref": "staged/011-wiki_page-storage-sqlite-and-retrieval-indexes.md",
+      "write_kind": "wiki_page",
+      "write_order": 11
+    },
+    {
+      "before_sha256": "de4cb445a6a1b21dc57cacc99a7fdc79f36c14d28356e93bdc4b6727521d8b9c",
+      "canonical_path": "projects/llm-wiki/testing-and-verification.md",
+      "page_ids": [
+        "testing-and-verification.md"
+      ],
+      "staged_output_ref": "staged/012-wiki_page-testing-and-verification.md",
+      "write_kind": "wiki_page",
+      "write_order": 12
+    },
+    {
+      "before_sha256": "b351ea90052ca4155f562c2a44f793652de132ec8f0c3d70d383bff327c925c4",
+      "canonical_path": "state/llm-wiki/project-memory-source-consumptions.json",
+      "staged_output_ref": "staged/013-source_consumption_state-project-memory-source-consumptions.json",
+      "write_kind": "source_consumption_state",
+      "write_order": 13
+    },
+    {
+      "before_sha256": "e55f3f37e0db976a36eef67e3f81f62f5356de20d6a698b87eb3865825a41480",
+      "canonical_path": "state/llm-wiki/project-memory.json",
+      "staged_output_ref": "staged/014-project_state-project-memory.json",
+      "write_kind": "project_state",
+      "write_order": 14
+    }
+  ],
+  "mode": "maintain",
+  "observed_promotions": [
+    {
+      "after_sha256": "ab746bc719b8f3b1bc7326cad90807e515eafba37715a5d6cd462a483422ff54",
+      "canonical_path": "projects/llm-wiki/command-surface-and-operator-workflows.md",
+      "promoted_at": "2026-08-09T08:00:21.745Z"
+    },
+    {
+      "after_sha256": "8cc696d03ab42d1fa4eef25b299adedc80d9049649d202fdfabcb07d67bfc4b8",
+      "canonical_path": "projects/llm-wiki/index.md",
+      "promoted_at": "2026-08-09T08:00:21.745Z"
+    },
+    {
+      "after_sha256": "759e6d9d7c49a54c61e91a9d2d8b2268a842fbe4b4ef5556e82b183d53cc38b4",
+      "canonical_path": "projects/llm-wiki/product-and-memory-model.md",
+      "promoted_at": "2026-08-09T08:00:21.746Z"
+    },
+    {
+      "after_sha256": "681a291fca04b94b1bc9e279f484e8f182de477c8d9a7ede4f58e5bc4d6fffbf",
+      "canonical_path": "projects/llm-wiki/project-memory-creation-and-curation.md",
+      "promoted_at": "2026-08-09T08:00:21.747Z"
+    },
+    {
+      "after_sha256": "84294a3191a86deb023b6ddfeaf6a3584a99e8f7369bca59e6490b8e5ee37bf6",
+      "canonical_path": "projects/llm-wiki/query-status-and-agent-interfaces.md",
+      "promoted_at": "2026-08-09T08:00:21.747Z"
+    },
+    {
+      "after_sha256": "f1b7bf7223ad7419a14b853e3296dedd65fba039d98bdba75320b7e57b496db7",
+      "canonical_path": "projects/llm-wiki/roadmap-adrs-and-design-history.md",
+      "promoted_at": "2026-08-09T08:00:21.748Z"
+    },
+    {
+      "after_sha256": "22bce277757354dcab788ba2ac2152f6e97fd1651356ca793870a42dadb3c8cf",
+      "canonical_path": "projects/llm-wiki/runtime-providers-and-project-layout.md",
+      "promoted_at": "2026-08-09T08:00:21.748Z"
+    },
+    {
+      "after_sha256": "b365a68aaf5c62f9d4ccfdbde86c7983f356605f93cb695f7b9d4ec180ae218b",
+      "canonical_path": "projects/llm-wiki/schema-and-documentation-contracts.md",
+      "promoted_at": "2026-08-09T08:00:21.748Z"
+    },
+    {
+      "after_sha256": "24368bb9d1da210703ca5968d97f998c82855502204861fbeed4767079db7ebe",
+      "canonical_path": "projects/llm-wiki/session-memory-and-experience-ingest.md",
+      "promoted_at": "2026-08-09T08:00:21.749Z"
+    },
+    {
+      "after_sha256": "92d3868e43537dc48189c1736ba8b22da0aeafc66f841dfa8547a068613fec02",
+      "canonical_path": "projects/llm-wiki/source-evidence-inbox-and-candidate-boundaries.md",
+      "promoted_at": "2026-08-09T08:00:21.750Z"
+    },
+    {
+      "after_sha256": "53627cdc4b0ff41d094bafb8b105fde443df8c61b1291c19f1c93d430ee2f25f",
+      "canonical_path": "projects/llm-wiki/storage-sqlite-and-retrieval-indexes.md",
+      "promoted_at": "2026-08-09T08:00:21.751Z"
+    },
+    {
+      "after_sha256": "de4cb445a6a1b21dc57cacc99a7fdc79f36c14d28356e93bdc4b6727521d8b9c",
+      "canonical_path": "projects/llm-wiki/testing-and-verification.md",
+      "promoted_at": "2026-08-09T08:00:21.751Z"
+    },
+    {
+      "after_sha256": "58db993857773ad89d5c640ab7bfbac12d35315cd4d80a89e163d3c6f576db09",
+      "canonical_path": "state/llm-wiki/project-memory-source-consumptions.json",
+      "promoted_at": "2026-08-09T08:00:21.752Z"
+    },
+    {
+      "after_sha256": "15d20b4682626b3e6887e1198ff74a560368f603405801679249dce3d35532e4",
+      "canonical_path": "state/llm-wiki/project-memory.json",
+      "promoted_at": "2026-08-09T08:00:21.753Z"
+    }
+  ],
+  "packet_ref": "input-packet.json",
+  "project_key": "llm-wiki",
+  "recovery": {
+    "last_attempt_at": "2026-08-09T08:00:21.753Z",
+    "required_before_new_curator": false
+  },
+  "run_dir": "runs/llm-wiki/project-learn/2026-08-09T07-55-36.706Z-run",
+  "schema_version": 1,
+  "staged_outputs_dir": "staged",
+  "status": "applied",
+  "validation_ref": "curator-validation.json"
+}

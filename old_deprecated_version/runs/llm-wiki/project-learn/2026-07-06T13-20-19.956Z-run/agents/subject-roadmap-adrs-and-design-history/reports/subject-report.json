@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "subject_id": "roadmap-adrs-and-design-history",
+  "wiki_path": "roadmap-adrs-and-design-history.md",
+  "status": "completed",
+  "evidence_paths": [
+    "docs/README.md",
+    "docs/ROADMAP.md",
+    "MYELIN.md",
+    "CONTEXT.md",
+    "docs/IMPLEMENTATION_ALIGNMENT.md",
+    "docs/archive/README.md",
+    "docs/design/2026-06-23-project-memory-markdown-apply/spec.md",
+    "docs/design/2026-06-28-project-memory-retrieval-quality/spec.md",
+    "docs/design/2026-06-30-project-memory-shape-creation-maintenance/dogfood-validation.md",
+    "docs/design/2026-07-05-project-memory-rendered-create-contract/spec.md",
+    "docs/design/2026-07-06-project-memory-agent-authored-documentation/spec.md",
+    "docs/design/2026-07-06-project-memory-agent-authored-documentation/agenda.md",
+    "docs/design/2026-07-06-project-memory-agent-authored-documentation/plan.md",
+    "docs/adr/0021-keep-curated-project-memory-in-markdown.md",
+    "docs/adr/0047-quarantine-v1-and-rewrite-core-clean.md",
+    "docs/adr/0050-adopt-myelin-product-name.md",
+    "docs/adr/0058-use-mode-scoped-project-learn-curator-contracts.md",
+    "docs/adr/0059-use-structured-project-memory-apply-payloads.md",
+    "docs/adr/0060-use-apply-journal-for-project-memory-writes.md",
+    "docs/adr/0062-derive-project-memory-retrieval-from-markdown.md",
+    "docs/adr/0063-use-answer-domain-project-memory-documentation-map.md",
+    "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md",
+    "docs/adr/0065-require-independent-first-create-usefulness-critique.md",
+    "docs/adr/0066-allow-clean-project-shell-rebootstrap-reset.md",
+    "docs/adr/0067-use-agent-authored-project-memory-documentation.md"
+  ],
+  "touched_paths": [
+    "draft-wiki/roadmap-adrs-and-design-history.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "This subject page documents roadmap/design authority and decision history, not every individual ADR in detail.",
+    "The roadmap and latest ADRs show the active direction at this snapshot; future ADRs may supersede ADR 0067 or change the active roadmap item."
+  ]
+}

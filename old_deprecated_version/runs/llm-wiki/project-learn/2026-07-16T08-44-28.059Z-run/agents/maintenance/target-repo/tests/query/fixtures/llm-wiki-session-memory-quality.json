@@ -1,0 +1,243 @@
+{
+  "project_key": "llm-wiki",
+  "source": "Dogfood-derived snapshot from llm-wiki Session Memory on 2026-06-17.",
+  "memories": [
+    {
+      "id": "mem_llmwiki_worker_reconciliation_skip_stale_ops",
+      "kind": "verification",
+      "title": "Worker reconciliation skips stale ops from inactive context memories",
+      "summary": "Ingest worker reconciliation should still fail on references outside the supplied reconciliation context, but it now skips supersession/retraction operations when a memory was valid in context and became inactive before apply time. The fix was verified with `rtk bun test` and `rtk git diff --check`.",
+      "created_at": "2026-06-17T19:44:50.389Z",
+      "contexts": [{ "git_branch": "master", "repo_path": "/Users/liadgoren/Repositories/llm-wiki" }]
+    },
+    {
+      "id": "mem_llmwiki_dogfood_followup",
+      "kind": "next_action",
+      "title": "Finish llm-wiki dogfood ingest and inspect reconciliation",
+      "summary": "Continue the current `llm-wiki` ingest run to completion, then index session memories and inspect active/superseded memories plus links so the branch-aware reconciliation path can be verified end to end.",
+      "created_at": "2026-06-17T19:43:25.505Z",
+      "contexts": [{ "git_branch": "master", "repo_path": "/Users/liadgoren/Repositories/llm-wiki" }]
+    },
+    {
+      "id": "mem_llmwiki_git_context_branching",
+      "kind": "verification",
+      "title": "Git context is stored with session memories",
+      "summary": "Experience events now persist `repo_path`, `git_branch`, `git_commit`, and `git_worktree_id`, session memories get matching context rows, and session memory queries can filter by git branch while hydrating those contexts.",
+      "created_at": "2026-06-17T19:43:25.505Z",
+      "contexts": [{ "git_branch": "master", "repo_path": "/Users/liadgoren/Repositories/llm-wiki" }]
+    },
+    {
+      "id": "mem_llmwiki_ingest_runtime_lease_validation",
+      "kind": "verification",
+      "title": "Lease-backed ingest runtime is implemented and validated",
+      "summary": "The ingest-runtime stabilization work is now implemented on `master`: workers create tombstone-backed lease stubs, keep source rows until terminal commit, support stale lease recovery, expose configurable worker concurrency, delay, timeout, prompt budget, and ingest model settings, and add project-level status readback with completion-layer counts.",
+      "created_at": "2026-06-17T19:41:41.234Z",
+      "contexts": []
+    },
+    {
+      "id": "mem_llmwiki_ingest_design_finalized",
+      "kind": "decision",
+      "title": "Ingest-runtime stabilization design is finalized",
+      "summary": "The finalized design for ingest-runtime stabilization uses tombstone-backed lease stubs for traceability and duplicate prevention, reuses the same stub on retry, keeps status layered with a numeric enum, moves ingest runtime controls into a named `myelin.config` profile, stores failures as compact typed metadata plus log references, and prefers a small real retest plus a bounded replay fixture.",
+      "created_at": "2026-06-17T18:57:36.406Z",
+      "contexts": []
+    },
+    {
+      "id": "mem_ingest_pipeline",
+      "kind": "continuity",
+      "title": "Relational ingest works",
+      "summary": "Myelin now has a working relational ingest pipeline: it claims Experience Log rows, runs a detached Codex-backed worker, validates structured JSON output, writes session memories/candidates/handoffs, and finalizes tombstones.",
+      "created_at": "2026-06-17T18:57:00.347Z",
+      "contexts": []
+    },
+    {
+      "id": "mem_llmwiki_dogfood_project_key",
+      "kind": "continuity",
+      "title": "llm-wiki is the actual dogfood project key",
+      "summary": "This repo is already bootstrapped as `llm-wiki`; `bun src/cli.ts ingest status --project myelin` was misleading until the project-key validation fix, so `myelin` should be treated as unknown unless a deliberate rename migration is added.",
+      "created_at": "2026-06-17T19:43:25.505Z",
+      "contexts": [{ "git_branch": "master", "repo_path": "/Users/liadgoren/Repositories/llm-wiki" }]
+    },
+    {
+      "id": "mem_inline_small_fixes",
+      "kind": "decision",
+      "title": "Prefer inline for small fixes",
+      "summary": "For small, local, deterministic fixes, ask before creating Symphony tasks and prefer fixing inline in the same turn. Reserve Symphony for medium-sized, ambiguous, cross-cutting, or independently reviewable work.",
+      "created_at": "2026-06-17T18:57:00.347Z",
+      "contexts": []
+    },
+    {
+      "id": "mem_llmwiki_cli_docs_canonical",
+      "kind": "decision",
+      "title": "CLI docs are centralized in docs/CLI.md",
+      "summary": "`docs/CLI.md` is now the exhaustive command reference, linked from `README.md` and `docs/README.md`, so command usage, options, side effects, and examples live in one canonical place.",
+      "created_at": "2026-06-17T19:43:25.505Z",
+      "contexts": [{ "git_branch": "master", "repo_path": "/Users/liadgoren/Repositories/llm-wiki" }]
+    },
+    {
+      "id": "mem_llmwiki_ingest_jobs_admin",
+      "kind": "decision",
+      "title": "Ingest jobs now have list and resolve admin commands",
+      "summary": "The CLI now exposes `ingest jobs` for investigation and `ingest jobs resolve` for environment cleanup; resolving a failed job marks it completed, clears `error_json`, and preserves the prior error in `followup_state_json`, while `ingest status` now fails fast for unknown project keys.",
+      "created_at": "2026-06-17T19:43:25.505Z",
+      "contexts": [{ "git_branch": "master", "repo_path": "/Users/liadgoren/Repositories/llm-wiki" }]
+    },
+    {
+      "id": "mem_llmwiki_ingest_branch_flex",
+      "kind": "verification",
+      "title": "Ingest no longer hard-fails non-master branches",
+      "summary": "Ingest now records the target branch in job metadata and followup state instead of rejecting non-master branches, so branch context is preserved while detached workers still run.",
+      "created_at": "2026-06-17T19:43:25.505Z",
+      "contexts": [{ "git_branch": "master", "repo_path": "/Users/liadgoren/Repositories/llm-wiki" }]
+    },
+    {
+      "id": "mem_llmwiki_session_memory_active_only",
+      "kind": "verification",
+      "title": "Session Memory retrieval is live after indexing",
+      "summary": "After `memory index session wizepal`, query retrieval returns stored memories instead of an empty result, so the earlier retrieval pending blocker is obsolete.",
+      "created_at": "2026-06-17T18:59:27.359Z",
+      "contexts": [{ "git_branch": "master", "repo_path": "/Users/liadgoren/Repositories/llm-wiki" }]
+    }
+  ],
+  "candidates": [
+    {
+      "id": "cand_llmwiki_query_architecture_review",
+      "scope": "project",
+      "status": "needs_review",
+      "candidate_type": "project.decision",
+      "title": "Query architecture shape is still unsettled",
+      "summary": "The query subsystem has conflicting guidance: the current slice favors compositional services and plain data objects, but the longer-term shape may want explicit service/layer objects with injected dependencies for future polymorphic retrieval layers.",
+      "reason": "The source includes conflicting design advice, so this should be reviewed before hardening the query layer boundary."
+    }
+  ],
+  "cases": [
+    {
+      "id": "reconciliation-race-ranking",
+      "question": "What happened with the reconciliation race?",
+      "cached_vector_matches": [
+        { "memory_id": "mem_llmwiki_dogfood_followup", "distance": 0.8587751389 },
+        { "memory_id": "mem_llmwiki_worker_reconciliation_skip_stale_ops", "distance": 0.8598937392 },
+        { "memory_id": "mem_llmwiki_ingest_design_finalized", "distance": 0.8922232985 }
+      ],
+      "expected_active_any_ids": ["mem_llmwiki_worker_reconciliation_skip_stale_ops"],
+      "expected_max_rank": 1,
+      "expected_status": "warn",
+      "expected_diagnosis": "ranking"
+    },
+    {
+      "id": "branch-context-top-rank",
+      "question": "What branch-aware memory behavior exists?",
+      "git_branch": "master",
+      "cached_vector_matches": [
+        { "memory_id": "mem_llmwiki_git_context_branching", "distance": 0.72 },
+        { "memory_id": "mem_llmwiki_ingest_branch_flex", "distance": 0.74 },
+        { "memory_id": "mem_llmwiki_worker_reconciliation_skip_stale_ops", "distance": 0.79 }
+      ],
+      "expected_active_any_ids": ["mem_llmwiki_git_context_branching"],
+      "expected_max_rank": 1,
+      "expected_status": "pass",
+      "expected_diagnosis": "ok"
+    },
+    {
+      "id": "oo-composition-candidate",
+      "question": "What did we decide about OO rewrite versus composition?",
+      "cached_vector_matches": [
+        { "memory_id": "mem_inline_small_fixes", "distance": 0.9 },
+        { "memory_id": "mem_llmwiki_ingest_design_finalized", "distance": 0.92 },
+        { "memory_id": "mem_llmwiki_cli_docs_canonical", "distance": 0.93 }
+      ],
+      "expected_candidate_any_ids": ["cand_llmwiki_query_architecture_review"],
+      "expected_status": "warn",
+      "expected_diagnosis": "candidate-promotion"
+    },
+    {
+      "id": "stale-next-action",
+      "question": "What should I do next for Myelin?",
+      "cached_vector_matches": [
+        { "memory_id": "mem_llmwiki_dogfood_followup", "distance": 0.81 },
+        { "memory_id": "mem_ingest_pipeline", "distance": 0.84 },
+        { "memory_id": "mem_llmwiki_dogfood_project_key", "distance": 0.86 }
+      ],
+      "forbidden_active_ids": ["mem_llmwiki_dogfood_followup"],
+      "expected_status": "warn",
+      "expected_diagnosis": "stale-lifecycle"
+    },
+    {
+      "id": "failed-job-admin-ranking",
+      "question": "How do I inspect and clean failed ingest jobs?",
+      "cached_vector_matches": [
+        { "memory_id": "mem_ingest_pipeline", "distance": 0.82 },
+        { "memory_id": "mem_llmwiki_ingest_jobs_admin", "distance": 0.83 },
+        { "memory_id": "mem_llmwiki_ingest_runtime_lease_validation", "distance": 0.86 }
+      ],
+      "expected_active_any_ids": ["mem_llmwiki_ingest_jobs_admin"],
+      "expected_max_rank": 1,
+      "expected_status": "warn",
+      "expected_diagnosis": "ranking"
+    },
+    {
+      "id": "dogfood-project-key-top-rank",
+      "question": "What project key should I use for Myelin dogfooding?",
+      "cached_vector_matches": [
+        { "memory_id": "mem_llmwiki_dogfood_project_key", "distance": 0.61 },
+        { "memory_id": "mem_ingest_pipeline", "distance": 0.87 },
+        { "memory_id": "mem_llmwiki_cli_docs_canonical", "distance": 0.89 }
+      ],
+      "expected_active_any_ids": ["mem_llmwiki_dogfood_project_key"],
+      "expected_max_rank": 1,
+      "expected_status": "pass",
+      "expected_diagnosis": "ok"
+    },
+    {
+      "id": "session-memory-live-top-rank",
+      "question": "Is Session Memory retrieval live after indexing?",
+      "cached_vector_matches": [
+        { "memory_id": "mem_llmwiki_session_memory_active_only", "distance": 0.6 },
+        { "memory_id": "mem_ingest_pipeline", "distance": 0.83 },
+        { "memory_id": "mem_llmwiki_ingest_runtime_lease_validation", "distance": 0.88 }
+      ],
+      "expected_active_any_ids": ["mem_llmwiki_session_memory_active_only"],
+      "expected_max_rank": 1,
+      "expected_status": "pass",
+      "expected_diagnosis": "ok"
+    },
+    {
+      "id": "branch-filter-removes-other-branch",
+      "question": "What branch-aware memory behavior exists?",
+      "git_branch": "master",
+      "cached_vector_matches": [
+        { "memory_id": "mem_llmwiki_ingest_branch_flex", "distance": 0.7 },
+        { "memory_id": "mem_llmwiki_git_context_branching", "distance": 0.72 },
+        { "memory_id": "mem_ingest_pipeline", "distance": 0.8 }
+      ],
+      "expected_active_any_ids": ["mem_llmwiki_git_context_branching", "mem_llmwiki_ingest_branch_flex"],
+      "expected_max_rank": 1,
+      "expected_status": "pass",
+      "expected_diagnosis": "ok"
+    },
+    {
+      "id": "mcp-boundary-missing",
+      "question": "What did we decide about touching the MCP layer?",
+      "cached_vector_matches": [
+        { "memory_id": "mem_inline_small_fixes", "distance": 0.91 },
+        { "memory_id": "mem_llmwiki_ingest_design_finalized", "distance": 0.92 },
+        { "memory_id": "mem_llmwiki_dogfood_project_key", "distance": 0.93 }
+      ],
+      "expected_active_any_ids": ["mem_llmwiki_no_mcp_layer_yet"],
+      "expected_status": "fail",
+      "expected_diagnosis": "missing-ingest-output"
+    },
+    {
+      "id": "auto-maintenance-not-in-snapshot",
+      "question": "How does auto session memory maintenance work?",
+      "cached_vector_matches": [
+        { "memory_id": "mem_ingest_pipeline", "distance": 0.88 },
+        { "memory_id": "mem_llmwiki_ingest_runtime_lease_validation", "distance": 0.89 },
+        { "memory_id": "mem_llmwiki_cli_docs_canonical", "distance": 0.9 }
+      ],
+      "expected_active_any_ids": ["mem_llmwiki_auto_memory_maintenance_scheduler"],
+      "expected_status": "fail",
+      "expected_diagnosis": "missing-ingest-output"
+    }
+  ]
+}

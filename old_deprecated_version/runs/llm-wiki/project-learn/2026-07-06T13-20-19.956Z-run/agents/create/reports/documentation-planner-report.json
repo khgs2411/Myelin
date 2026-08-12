@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "evidence_paths": [
+    "README.md",
+    "MYELIN.md",
+    "CONTEXT.md",
+    "docs/README.md",
+    "docs/CLI.md",
+    "docs/IMPLEMENTATION_ALIGNMENT.md",
+    "docs/ROADMAP.md",
+    "docs/inbox-item-schema.md",
+    "docs/adr/",
+    "docs/design/",
+    "schema/global.md",
+    "schema/schema-context.md",
+    "schema/rules/",
+    "Makefile",
+    "package.json",
+    "myelin.config",
+    "src/cli.ts",
+    "src/commands/",
+    "src/project/",
+    "src/memory/",
+    "src/ingest/",
+    "src/capture/",
+    "src/maintenance/",
+    "src/query/",
+    "src/runtime/",
+    "src/schema/",
+    "src/inbox/",
+    "tests/"
+  ],
+  "known_gaps": [
+    "This run produced documentation shape and placeholders only; subject pages still need full synthesized content before they are useful Project Memory.",
+    "The repository has many historical docs under docs/archive and docs/design; final content must explicitly prefer MYELIN.md, docs/ROADMAP.md, current code, and append-only ADRs over superseded planning material.",
+    "docs/IMPLEMENTATION_ALIGNMENT.md contains useful implementation mapping but appears older than the latest roadmap steps around create-mode quality and Project Memory product reset; final docs should reconcile that drift.",
+    "The target snapshot includes a broad src/project surface for Project Memory creation and curation; deeper file-level reading is needed before documenting exact control flow or invariants.",
+    "The manifest's suggested paths include directories. A content-writing pass should resolve them to exact files and citations for each claim."
+  ]
+}

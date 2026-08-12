@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "templates-schedules-and-generated-classes",
+  "wiki_path": "templates-schedules-and-generated-classes.md",
+  "status": "complete_with_known_gaps",
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/class-kit-api/supabase/functions/_shared/class_schema.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-templates/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-schedules/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-schedule-generate/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-classes/index.ts",
+    "target-repo/class-kit-api/supabase/migrations/20260607134535_template_class_core.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260607143000_schedule_rule_model.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260607153000_schedule_generation_engine.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260608030000_generated_class_source_integrity.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260609120000_schedule_generation_count.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260623080614_backfill_schedule_generation_from_start.sql",
+    "target-repo/docs/api/backend-api.md",
+    "target-repo/docs/sdk/client-sdk.md"
+  ],
+  "touched_paths": [
+    "draft-wiki/templates-schedules-and-generated-classes.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "No focused template or schedule regression tests are present in the supplied snapshot to verify migrated database behavior, DST edge cases, state transitions, or generation counts.",
+    "The generator is insert-only and does not reconcile edits, later skips, or deactivation with existing generated classes.",
+    "Current generation limits the first N occurrences from starts_on, including past/existing occurrences; intended long-running scheduler semantics need product review."
+  ]
+}

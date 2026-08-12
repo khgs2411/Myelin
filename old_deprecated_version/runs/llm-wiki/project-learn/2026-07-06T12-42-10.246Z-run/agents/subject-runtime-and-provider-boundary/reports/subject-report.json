@@ -1,0 +1,41 @@
+{
+  "evidence_paths": [
+    "target-repo/src/runtime/fs.ts",
+    "target-repo/src/runtime/json.ts",
+    "target-repo/src/runtime/config.ts",
+    "target-repo/src/runtime/process.ts",
+    "target-repo/src/runtime/llm-client.ts",
+    "target-repo/src/runtime/project-run-infrastructure.ts",
+    "target-repo/src/runtime/file-authoring-agent.ts",
+    "target-repo/src/runtime/bootstrap.ts",
+    "target-repo/src/runtime/project-shell.ts",
+    "target-repo/src/install/codex.ts",
+    "target-repo/src/install/install-service.ts",
+    "target-repo/src/install/types.ts",
+    "target-repo/.mcp.json",
+    "target-repo/docs/adr/0011-keep-mcp-detached-as-agent-interface.md",
+    "target-repo/docs/adr/0048-core-owns-query-mcp-consumes-via-contract.md",
+    "target-repo/docs/adr/0051-preserve-multi-provider-byo-runner-abstraction.md",
+    "target-repo/tests/runtime/runtime.test.ts",
+    "target-repo/tests/runtime/llm-client.test.ts",
+    "target-repo/tests/runtime/project-run-infrastructure.test.ts",
+    "target-repo/tests/runtime/file-authoring-agent.test.ts",
+    "target-repo/tests/runtime/bootstrap.test.ts",
+    "target-repo/tests/install/codex.test.ts",
+    "target-repo/tests/install/install-service.test.ts"
+  ],
+  "known_gaps": [
+    "File-authoring agents are live Codex-only even though JSON LLM invocation supports Codex and Claude.",
+    "Gemini is documented and implemented as an embedding provider, not as a live LLM runner.",
+    "ADR 0048 defines the detached MCP query contract, but MCP-side implementation is outside this core repository snapshot."
+  ],
+  "project_key": "llm-wiki",
+  "schema_version": 1,
+  "status": "completed",
+  "subject_id": "runtime-and-provider-boundary",
+  "touched_paths": [
+    "draft-wiki/runtime-and-provider-boundary.md",
+    "reports/subject-report.json"
+  ],
+  "wiki_path": "runtime-and-provider-boundary.md"
+}

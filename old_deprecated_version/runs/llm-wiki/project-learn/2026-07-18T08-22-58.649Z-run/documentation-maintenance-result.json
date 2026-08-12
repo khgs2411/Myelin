@@ -1,0 +1,635 @@
+{
+  "degraded_reasons": [
+    "Manual ingest queued_count currently counts active raw experience rows while claimability excludes claimed rows; inspected tests do not establish the intended user-facing accounting policy.",
+    "Focused maintenance tests have two environment-dependent command-shape failures because the installed myelin launcher is resolved instead of the temporary checkout CLI path expected by those tests."
+  ],
+  "draft_wiki_dir": "/Users/liadgoren/Repositories/llm-wiki/runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run/agents/maintenance/draft-wiki",
+  "file_authoring_run_ref": "agents/maintenance/file-authoring-agent-result.json",
+  "project_key": "llm-wiki",
+  "report": {
+    "dispositions": [
+      {
+        "disposition": "applied_to_project_memory",
+        "output_refs": [
+          "draft-wiki/session-memory-and-experience-ingest.md"
+        ],
+        "reason": "Verified the SessionStart, lock, and raw-versus-claimable counting behavior; documented the operator-visible accounting distinction and its unverified policy intent.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_llmwiki_operator_workflow_contract_20260718"
+      },
+      {
+        "disposition": "applied_to_project_memory",
+        "output_refs": [
+          "draft-wiki/session-memory-and-experience-ingest.md"
+        ],
+        "reason": "Current worker prompt, candidate schema, and regression tests require evidence-bearing Project Memory leads for verified durable repository changes.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_llmwiki_review_routing_contract_20260718"
+      },
+      {
+        "disposition": "already_covered",
+        "output_refs": [],
+        "reason": "The identical ingest contract is covered by the update attributed to cand_llmwiki_operator_workflow_contract_20260718.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_llmwiki_ingest_contract_20260718"
+      },
+      {
+        "disposition": "already_covered",
+        "output_refs": [],
+        "reason": "The current evidence-bearing Project Memory candidate routing is covered by the update attributed to cand_llmwiki_review_routing_contract_20260718; the version snapshot is run evidence, not canonical prose.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_llmwiki_project_routing_fix_20260717"
+      },
+      {
+        "disposition": "applied_to_project_memory",
+        "output_refs": [
+          "draft-wiki/project-memory-creation-and-curation.md"
+        ],
+        "reason": "Current state helpers, packet mode, status behavior, and regression tests verify that a degraded maintenance result preserves a curated baseline.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_llmwiki_preserve_curated_baseline_when_maintenance_degrades_20260717"
+      },
+      {
+        "disposition": "already_covered",
+        "output_refs": [],
+        "reason": "The evidence-bearing candidate contract and maintenance page-selection boundary are covered by the routing update in this pass.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_llmwiki_candidate_lead_contract_20260717"
+      },
+      {
+        "disposition": "already_covered",
+        "output_refs": [],
+        "reason": "The runtime layout page already records migration, active-path normalization, and the remaining historical-path caveat; no concrete active stale consumer was established.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_llmwiki_legacy_path_consumer_risk_20260716"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "This unresolved publication-policy choice cannot be inferred from checkout evidence and does not establish a durable product fact.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_llmwiki_repo_identity_prose_policy_20260716"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "The requested root-name choice is an unresolved architectural decision, not verified current behavior.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_llmwiki_resources_root_naming_20260716"
+      },
+      {
+        "disposition": "applied_to_project_memory",
+        "output_refs": [
+          "draft-wiki/index.md"
+        ],
+        "reason": "The maintained index links every current subject page; removed stale wording that described the published documentation set as placeholders.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_llmwiki_verify_finalized_index_20260715"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This is a proposed Class Kit planning follow-up, not durable llm-wiki Project Memory evidence.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_llmwiki_planner_contract_followup_20260715"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "The alleged invite-only conflict concerns Class Kit documentation, not this repository.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_llmwiki_product_resolution_invite_only_conflict_20260715"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This privacy lead concerns Class Kit discovery behavior, not llm-wiki implementation.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_llmwiki_classes_members_only_privacy_review_20260715"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "These are unverified Class Kit maintenance gaps.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_llmwiki_classkit_unverified_gaps_20260715"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This is Class Kit PM regression follow-up, not project-memory documentation for llm-wiki.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_llmwiki_classkit_pm_regression_gap_review_20260715"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "The remote/ownership contradiction is explicitly about Class Kit.",
+        "source_kind": "project_candidate",
+        "source_ref": "cand_llmwiki_classkit_remote_contradiction_review_20260715"
+      },
+      {
+        "disposition": "already_covered",
+        "output_refs": [],
+        "reason": "Current raw-count and claimability behavior, plus the missing policy coverage, are documented by the applied operator-workflow disposition.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_verify_raw_row_count_20260718"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This requests implementation and rerun work rather than documenting a verified durable product change.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_review_rerun_20260718"
+      },
+      {
+        "disposition": "already_covered",
+        "output_refs": [],
+        "reason": "The verified ingest/reporting contract is documented by the applied operator-workflow disposition.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_project_review_20260718"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This is a proposed ingest-convergence implementation investigation, not a verified documentation change.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_review_semantic_race_20260718"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This is a roadmap/work-selection lead for another project.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_verify_droplet_bootstrap_20260717"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This is an implementation request with no specific verified durable fact to curate.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_implement_approved_fixes_20260717"
+      },
+      {
+        "disposition": "already_covered",
+        "output_refs": [],
+        "reason": "The verified baseline and evidence-bearing candidate contracts are covered by applied updates in this pass.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_repair_project_memory_contracts_20260717"
+      },
+      {
+        "disposition": "already_covered",
+        "output_refs": [],
+        "reason": "The current flattened layout and maintenance routing are already documented; the handoff contains no additional verified fact.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_project_maintenance_dogfood_20260716_0844"
+      },
+      {
+        "disposition": "already_covered",
+        "output_refs": [],
+        "reason": "Current layout migration and historical path normalization are already covered in runtime documentation.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_legacy_path_audit_20260716"
+      },
+      {
+        "disposition": "already_covered",
+        "output_refs": [],
+        "reason": "No draft page links repository-identity.json; no publication rewrite was needed.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_strip_identity_links_20260716"
+      },
+      {
+        "disposition": "deferred_unsafe_change",
+        "output_refs": [],
+        "reason": "The root naming decision remains unresolved and should not be invented in canonical documentation.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_resources_root_naming_20260716"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This is a Class Kit retrieval-ranking implementation follow-up.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_query_ranking_20260716"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This requests Class Kit regression-test implementation.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_close_documentation_gaps_20260715"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This is a proposed Class Kit planner/recreate decision.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_planner_contract_followup_20260715"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This concerns incomplete Class Kit subject-run processing.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_resume_incomplete_subject_runs_20260715"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This is maintenance of the Class Kit project readme.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_classkit_readme_refresh_20260715"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This asks for Class Kit candidate processing and warning resolution.",
+        "source_kind": "project_handoff",
+        "source_ref": "ingest_2026-07-15T09-06-06.928Z_8f6538_handoff_llmwiki_classkit_project_memory_review_20260715"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This is an operational retest request, not a verified durable documentation fact.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_retest_runtime_versioning_20260715"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This is a future Droplet Bot bootstrap task.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_bootstrap_droplet_bot_next_20260715"
+      },
+      {
+        "disposition": "belongs_to_other_layer",
+        "output_refs": [],
+        "reason": "This requests verification of Class Kit-specific gaps.",
+        "source_kind": "project_handoff",
+        "source_ref": "handoff_llmwiki_verify_classkit_gaps_20260715"
+      }
+    ],
+    "evidence_paths": [
+      "repository-identity.json",
+      "target-repo/src/capture/facade.ts",
+      "target-repo/src/maintenance/auto-memory-maintenance.ts",
+      "target-repo/src/ingest/ingest-service.ts",
+      "target-repo/src/ingest/worker.ts",
+      "target-repo/src/memory/experience.ts",
+      "target-repo/src/project/project-memory-state.ts",
+      "target-repo/src/project/project-memory-packet.ts",
+      "target-repo/tests/ingest/worker.test.ts",
+      "target-repo/tests/project/project-memory-curator-service.test.ts",
+      "target-repo/tests/project/project-memory-packet.test.ts",
+      "target-repo/tests/status/status-service.test.ts"
+    ],
+    "known_gaps": [
+      "Manual ingest queued_count currently counts active raw experience rows while claimability excludes claimed rows; inspected tests do not establish the intended user-facing accounting policy.",
+      "Focused maintenance tests have two environment-dependent command-shape failures because the installed myelin launcher is resolved instead of the temporary checkout CLI path expected by those tests."
+    ],
+    "project_key": "llm-wiki",
+    "schema_version": 1,
+    "status": "degraded",
+    "touched_paths": [
+      "draft-wiki/index.md",
+      "draft-wiki/project-memory-creation-and-curation.md",
+      "draft-wiki/session-memory-and-experience-ingest.md"
+    ]
+  },
+  "report_ref": "reports/documentation-maintenance-report.json",
+  "source_consumptions": [
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [
+        "draft-wiki/session-memory-and-experience-ingest.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_operator_workflow_contract_20260718",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [
+        "draft-wiki/session-memory-and-experience-ingest.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_review_routing_contract_20260718",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_ingest_contract_20260718",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_project_routing_fix_20260717",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [
+        "draft-wiki/project-memory-creation-and-curation.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_preserve_curated_baseline_when_maintenance_degrades_20260717",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_candidate_lead_contract_20260717",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_legacy_path_consumer_risk_20260716",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_repo_identity_prose_policy_20260716",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_resources_root_naming_20260716",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [
+        "draft-wiki/index.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_verify_finalized_index_20260715",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_planner_contract_followup_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_product_resolution_invite_only_conflict_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_classes_members_only_privacy_review_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_classkit_unverified_gaps_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_classkit_pm_regression_gap_review_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_llmwiki_classkit_remote_contradiction_review_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_verify_raw_row_count_20260718",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_review_rerun_20260718",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_project_review_20260718",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_review_semantic_race_20260718",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_verify_droplet_bootstrap_20260717",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_implement_approved_fixes_20260717",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_repair_project_memory_contracts_20260717",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_project_maintenance_dogfood_20260716_0844",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_legacy_path_audit_20260716",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_strip_identity_links_20260716",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_resources_root_naming_20260716",
+      "terminal_decision": "deferred_unsafe_change"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_query_ranking_20260716",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_close_documentation_gaps_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_planner_contract_followup_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_resume_incomplete_subject_runs_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_classkit_readme_refresh_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "ingest_2026-07-15T09-06-06.928Z_8f6538_handoff_llmwiki_classkit_project_memory_review_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_retest_runtime_versioning_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_bootstrap_droplet_bot_next_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-18T08:22:58.649Z",
+      "consumed_by_run": "runs/llm-wiki/project-learn/2026-07-18T08-22-58.649Z-run",
+      "output_refs": [],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_verify_classkit_gaps_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    }
+  ],
+  "status": "degraded"
+}

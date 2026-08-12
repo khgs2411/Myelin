@@ -1,0 +1,14 @@
+{
+  "batch_size": 50,
+  "degraded": false,
+  "failed": 0,
+  "failures": [],
+  "hints_orphaned": 0,
+  "hints_stale": 0,
+  "hints_valid": 76,
+  "indexed": 76,
+  "pending_remaining": 0,
+  "project_key": "class-kit",
+  "selected": 76,
+  "structural_sections_seen": 76
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "templates-schedules-attendance",
+  "wiki_path": "templates-schedules-and-attendance.md",
+  "status": "complete_with_known_gaps",
+  "evidence_paths": [
+    "target-repo/class-kit-api/supabase/functions/class-kit-templates/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-schedules/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-schedule-generate/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-attendance/index.ts",
+    "target-repo/class-kit-api/supabase/migrations/20260607134535_template_class_core.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260607143000_schedule_rule_model.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260609120000_schedule_generation_count.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260607170000_attendance_engine.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260702120000_truncate_product_admin_action.sql",
+    "target-repo/class-kit-api/supabase/tests/schedule_generation_backfill.sql",
+    "target-repo/class-kit-api/supabase/tests/truncate_product_admin_action.sql",
+    "target-repo/class-kit-sdk/src/manager/manager-api.ts"
+  ],
+  "touched_paths": [
+    "draft-wiki/templates-schedules-and-attendance.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "No focused regression test was found for template validation or default-copy behavior.",
+    "No focused regression test was found for schedule status transitions, skip API behavior, or active-template gating.",
+    "No focused regression test was found for attendance start, participant conflicts, updates after completion, or completion transitions."
+  ]
+}

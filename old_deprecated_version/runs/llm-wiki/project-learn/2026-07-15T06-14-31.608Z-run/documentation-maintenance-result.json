@@ -1,0 +1,23 @@
+{
+  "degraded_reasons": [
+    "maintenance report schema_version must be 1"
+  ],
+  "draft_wiki_dir": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/runs/project-learn/2026-07-15T06-14-31.608Z-run/agents/maintenance/draft-wiki",
+  "error": "maintenance report schema_version must be 1",
+  "file_authoring_run_ref": "agents/maintenance/file-authoring-agent-result.json",
+  "project_key": "llm-wiki",
+  "report": {
+    "dispositions": [],
+    "evidence_paths": [],
+    "known_gaps": [
+      "maintenance report schema_version must be 1"
+    ],
+    "project_key": "llm-wiki",
+    "schema_version": 1,
+    "status": "failed",
+    "touched_paths": []
+  },
+  "report_ref": "reports/documentation-maintenance-report.json",
+  "source_consumptions": [],
+  "status": "failed"
+}

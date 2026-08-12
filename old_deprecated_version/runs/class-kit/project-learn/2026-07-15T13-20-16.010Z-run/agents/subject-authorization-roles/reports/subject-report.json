@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "authorization-roles",
+  "wiki_path": "authorization-and-roles.md",
+  "status": "complete_with_known_gaps",
+  "evidence_paths": [
+    "target-repo/class-kit-api/supabase/functions/_shared/context.ts",
+    "target-repo/class-kit-api/supabase/functions/_shared/permissions.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-product-roles/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-product-user-roles/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-product-signup/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-templates/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-schedules/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-attendance/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-memberships/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-admin-products/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-admin-product-users/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-admin-product-change-requests/index.ts",
+    "target-repo/class-kit-api/supabase/migrations/20260612120000_permission_layer_foundation.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260612121000_permission_helper_functions.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260612073150_product_auth_policy.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260629133541_product_access_entries.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260702120000_truncate_product_admin_action.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260705060042_product_documents.sql",
+    "target-repo/class-kit-api/supabase/tests/truncate_product_admin_action.sql",
+    "target-repo/class-kit-sdk/src/manager/manager-api.ts",
+    "target-repo/class-kit-sdk/src/admin/admin-api.ts",
+    "target-repo/apps/class-kit-admin/src/App.tsx"
+  ],
+  "touched_paths": [
+    "draft-wiki/authorization-and-roles.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "No focused regression tests were found for role/permission derivation, product auth policy/access-entry activation, document-version pruning, schedule or attendance authorization, or change-request soft deletion.",
+    "The last-product-role-management-actor invariant is surfaced by the assignment helper, but its exact database and revoke-endpoint behavior lacks focused SQL/API regression coverage."
+  ]
+}

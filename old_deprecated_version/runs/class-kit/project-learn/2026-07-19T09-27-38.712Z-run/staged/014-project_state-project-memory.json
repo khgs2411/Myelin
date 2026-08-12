@@ -1,0 +1,40 @@
+{
+  "schema_version": 2,
+  "project_key": "class-kit",
+  "status": "curated",
+  "source_run_dir": "runs/class-kit/project-learn/2026-07-19T09-27-38.712Z-run",
+  "updated_at": "2026-07-19T09:27:38.712Z",
+  "provider_mode": "live",
+  "curation_kind": "agent_authored",
+  "run_kind": "maintenance",
+  "create": {
+    "status": "skipped",
+    "planner_status": "completed",
+    "subject_writer_status": "completed",
+    "subject_count": 0,
+    "subject_writer_concurrency_limit": 0,
+    "subject_writer_retry_limit": 0,
+    "subject_report_refs": []
+  },
+  "maintenance": {
+    "status": "degraded",
+    "report_ref": "reports/documentation-maintenance-report.json",
+    "dispositions_count": 14,
+    "applied_count": 0,
+    "already_covered_count": 0,
+    "degraded_reason": "The frozen target-repo checkout contains only the ClassKit documentation repository, not the class-kit-api migration, Edge Function, or regression-test sources required to verify the claimed membership-template eligibility and visibility-status contracts.",
+    "degraded_reasons": [
+      "The frozen target-repo checkout contains only the ClassKit documentation repository, not the class-kit-api migration, Edge Function, or regression-test sources required to verify the claimed membership-template eligibility and visibility-status contracts.",
+      "No explicit accepted product policy or current implementation source resolves the proposed product_customers/nullable auth_user_id identity boundary against the currently documented class_kit.users model."
+    ]
+  },
+  "retrieval_readiness": {
+    "status": "pending",
+    "checked_at": "2026-07-19T09:27:38.712Z",
+    "reason": "retrieval lifecycle has not completed yet"
+  },
+  "content_quality": {
+    "status": "not_evaluated",
+    "reason": "agent_authored_documentation_has_no_schema_quality_gate"
+  }
+}

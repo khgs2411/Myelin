@@ -1,0 +1,23 @@
+{
+  "degraded_reasons": [
+    "file-authoring agent failed: WARNING: proceeding, even though we could not create PATH aliases: Operation not permitted (os error 1)\n2026-07-15T08:14:06.459069Z  WARN codex_state::runtime: failed to open state db at /Users/liadgoren/.codex/state_5.sqlite: failed to open state DB at /Users/liadgoren/.codex/state_5.sqlite: error returned from database: (code: 8) attempt to write a readonly database\n2026-07-15T08:14:06.459097Z  WARN codex_rollout::state_db: failed to initialize state runtime: failed to initialize state runtime at /Users/liadgoren/.codex: failed to open state DB at /Users/liadgoren/.codex/state_5.sqlite: error returned from database: (code: 8) attempt to write a readonly database: error returned from database: (code: 8) attempt to write a readonly database: (code: 8) attempt to write a readonly database\nError: failed to initialize in-process app-server client: Operation not permitted (os error 1)\n"
+  ],
+  "draft_wiki_dir": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T08-14-06.079Z-run/agents/maintenance/draft-wiki",
+  "error": "file-authoring agent failed: WARNING: proceeding, even though we could not create PATH aliases: Operation not permitted (os error 1)\n2026-07-15T08:14:06.459069Z  WARN codex_state::runtime: failed to open state db at /Users/liadgoren/.codex/state_5.sqlite: failed to open state DB at /Users/liadgoren/.codex/state_5.sqlite: error returned from database: (code: 8) attempt to write a readonly database\n2026-07-15T08:14:06.459097Z  WARN codex_rollout::state_db: failed to initialize state runtime: failed to initialize state runtime at /Users/liadgoren/.codex: failed to open state DB at /Users/liadgoren/.codex/state_5.sqlite: error returned from database: (code: 8) attempt to write a readonly database: error returned from database: (code: 8) attempt to write a readonly database: (code: 8) attempt to write a readonly database\nError: failed to initialize in-process app-server client: Operation not permitted (os error 1)\n",
+  "file_authoring_run_ref": "agents/maintenance/file-authoring-agent-result.json",
+  "project_key": "class-kit",
+  "report": {
+    "dispositions": [],
+    "evidence_paths": [],
+    "known_gaps": [
+      "file-authoring agent failed: WARNING: proceeding, even though we could not create PATH aliases: Operation not permitted (os error 1)\n2026-07-15T08:14:06.459069Z  WARN codex_state::runtime: failed to open state db at /Users/liadgoren/.codex/state_5.sqlite: failed to open state DB at /Users/liadgoren/.codex/state_5.sqlite: error returned from database: (code: 8) attempt to write a readonly database\n2026-07-15T08:14:06.459097Z  WARN codex_rollout::state_db: failed to initialize state runtime: failed to initialize state runtime at /Users/liadgoren/.codex: failed to open state DB at /Users/liadgoren/.codex/state_5.sqlite: error returned from database: (code: 8) attempt to write a readonly database: error returned from database: (code: 8) attempt to write a readonly database: (code: 8) attempt to write a readonly database\nError: failed to initialize in-process app-server client: Operation not permitted (os error 1)\n"
+    ],
+    "project_key": "class-kit",
+    "schema_version": 1,
+    "status": "failed",
+    "touched_paths": []
+  },
+  "report_ref": "reports/documentation-maintenance-report.json",
+  "source_consumptions": [],
+  "status": "failed"
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "stage_id": "subject-identity-product-access-and-authorization",
+  "status": "completed",
+  "provider_mode": "live",
+  "provider": "codex",
+  "model": "gpt-5.6-terra",
+  "sandbox": "workspace-write",
+  "cwd": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T06-24-40.624Z-run/agents/subject-identity-product-access-and-authorization",
+  "target_repo_snapshot": "target-repo (removed after invocation)",
+  "allowed_output_roots": [
+    {
+      "name": "draft_wiki",
+      "relativePath": "draft-wiki"
+    },
+    {
+      "name": "subject_reports",
+      "relativePath": "reports"
+    }
+  ],
+  "discovered_outputs": [
+    {
+      "root_name": "draft_wiki",
+      "relative_path": "draft-wiki/identity-product-access-and-authorization.md",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T06-24-40.624Z-run/agents/subject-identity-product-access-and-authorization/draft-wiki/identity-product-access-and-authorization.md",
+      "size_bytes": 9055
+    },
+    {
+      "root_name": "subject_reports",
+      "relative_path": "reports/subject-report.json",
+      "absolute_path": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T06-24-40.624Z-run/agents/subject-identity-product-access-and-authorization/reports/subject-report.json",
+      "size_bytes": 1198
+    }
+  ],
+  "result_ref": "file-authoring-agent-result.json"
+}

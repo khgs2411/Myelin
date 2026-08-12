@@ -1,0 +1,15 @@
+{
+  "project_key": "llm-wiki",
+  "source_run_dir": "projects/llm-wiki/runs/project-learn/2026-07-05T11-17-57.039Z-run",
+  "status": "curated",
+  "updated_at": "2026-07-05T11:17:57.152Z",
+  "content_quality": {
+    "status": "trusted",
+    "checked_at": "2026-07-05T11:17:57.152Z",
+    "contract_version": 1
+  },
+  "retrieval_readiness": {
+    "status": "pending",
+    "checked_at": "2026-07-05T11:17:57.152Z"
+  }
+}

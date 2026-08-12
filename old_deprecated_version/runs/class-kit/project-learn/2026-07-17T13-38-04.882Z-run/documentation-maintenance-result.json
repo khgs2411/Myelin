@@ -1,0 +1,23 @@
+{
+  "degraded_reasons": [
+    "agent wrote outside allowed output roots: documentation-maintenance-report.json"
+  ],
+  "draft_wiki_dir": "/Users/liadgoren/Repositories/llm-wiki/runs/class-kit/project-learn/2026-07-17T13-38-04.882Z-run/agents/maintenance/draft-wiki",
+  "error": "agent wrote outside allowed output roots: documentation-maintenance-report.json",
+  "file_authoring_run_ref": "agents/maintenance/file-authoring-agent-result.json",
+  "project_key": "class-kit",
+  "report": {
+    "dispositions": [],
+    "evidence_paths": [],
+    "known_gaps": [
+      "agent wrote outside allowed output roots: documentation-maintenance-report.json"
+    ],
+    "project_key": "class-kit",
+    "schema_version": 1,
+    "status": "failed",
+    "touched_paths": []
+  },
+  "report_ref": "reports/documentation-maintenance-report.json",
+  "source_consumptions": [],
+  "status": "failed"
+}

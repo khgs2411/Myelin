@@ -1,0 +1,403 @@
+{
+  "concurrency_limit": 4,
+  "draft_wiki_dir": "/Users/liadgoren/Repositories/llm-wiki/projects/class-kit/runs/project-learn/2026-07-15T06-24-40.624Z-run/agents/create/draft-wiki",
+  "file_authoring_run_refs": [
+    "agents/create/file-authoring-agent-result.json",
+    "agents/subject-architecture-and-repository-boundaries/file-authoring-agent-result.json",
+    "agents/subject-backend-api-and-data-contracts/file-authoring-agent-result.json",
+    "agents/subject-class-operations-and-lifecycle/file-authoring-agent-result.json",
+    "agents/subject-deployment-and-releases/file-authoring-agent-result.json",
+    "agents/subject-design-history-and-unresolved-proposals/file-authoring-agent-result.json",
+    "agents/subject-identity-product-access-and-authorization/file-authoring-agent-result.json",
+    "agents/subject-platform-administration-and-pm-integration/file-authoring-agent-result.json",
+    "agents/subject-product-integration-roadmap/file-authoring-agent-result.json",
+    "agents/subject-product-operations/file-authoring-agent-result.json",
+    "agents/subject-sdk-integration/file-authoring-agent-result.json"
+  ],
+  "manifest": {
+    "project_key": "class-kit",
+    "schema_version": 1,
+    "subjects": [
+      {
+        "purpose": "Explain the ClassKit product boundary and ownership split between the documentation shell, backend API, SDK facade, and consuming applications.",
+        "subject_id": "architecture-and-repository-boundaries",
+        "suggested_repo_paths": [
+          "README.md",
+          "docs/getting-started.md",
+          "docs/repositories/structure.md",
+          "docs/product-shape.md",
+          "docs/shared/context.md"
+        ],
+        "title": "Architecture and Repository Boundaries",
+        "wiki_path": "architecture-and-repository-boundaries.md"
+      },
+      {
+        "purpose": "Document the supported browser-facing @class-kit/react installation, configuration, React provider, product context, and public facade usage.",
+        "subject_id": "sdk-integration",
+        "suggested_repo_paths": [
+          "docs/sdk/client-sdk.md",
+          "docs/getting-started.md",
+          "docs/changelog.md"
+        ],
+        "title": "SDK Integration",
+        "wiki_path": "sdk-integration.md"
+      },
+      {
+        "purpose": "Capture Edge Function ownership, request and response contracts, function/action map, schema responsibilities, and backend change expectations.",
+        "subject_id": "backend-api-and-data-contracts",
+        "suggested_repo_paths": [
+          "docs/api/backend-api.md",
+          "docs/api/class-api-map.md",
+          "docs/product-shape.md"
+        ],
+        "title": "Backend API and Data Contracts",
+        "wiki_path": "backend-api-and-data-contracts.md"
+      },
+      {
+        "purpose": "Describe the separation of Supabase identity from product access and the role, permission, origin, and auth-policy enforcement model.",
+        "subject_id": "identity-product-access-and-authorization",
+        "suggested_repo_paths": [
+          "docs/shared/authentication.md",
+          "docs/product-shape.md",
+          "docs/adr/0001-scoped-product-permission-layer.md",
+          "docs/api/backend-api.md"
+        ],
+        "title": "Identity, Product Access, and Authorization",
+        "wiki_path": "identity-product-access-and-authorization.md"
+      },
+      {
+        "purpose": "Document customer class flows and management lifecycle semantics for classes, registrations, attendance, templates, schedules, and generated classes.",
+        "subject_id": "class-operations-and-lifecycle",
+        "suggested_repo_paths": [
+          "docs/api/class-api-map.md",
+          "docs/sdk/client-sdk.md",
+          "docs/api/backend-api.md",
+          "docs/design/2026-06-25-schedule-lifecycle-management/spec.md"
+        ],
+        "title": "Class Operations and Lifecycle",
+        "wiki_path": "class-operations-and-lifecycle.md"
+      },
+      {
+        "purpose": "Cover operational product capabilities outside the core class lifecycle: memberships, documents, signup links, and change requests.",
+        "subject_id": "product-operations",
+        "suggested_repo_paths": [
+          "docs/sdk/client-sdk.md",
+          "docs/api/backend-api.md",
+          "docs/api/class-api-map.md",
+          "docs/changelog.md"
+        ],
+        "title": "Product Operations",
+        "wiki_path": "product-operations.md"
+      },
+      {
+        "purpose": "Separate platform-admin product control operations from product-manager workflows and record the admin-only external PM integration boundary.",
+        "subject_id": "platform-administration-and-pm-integration",
+        "suggested_repo_paths": [
+          "docs/sdk/client-sdk.md",
+          "docs/api/backend-api.md",
+          "docs/changelog.md",
+          "docs/design/2026-07-08-pm-software-integration/pseudocode/README.md",
+          "docs/design/2026-07-08-pm-software-integration/pseudocode/AgreedImplementationShape.md"
+        ],
+        "title": "Platform Administration and PM Integration",
+        "wiki_path": "platform-administration-and-pm-integration.md"
+      },
+      {
+        "purpose": "Record shared Supabase deployment ownership, private SDK tag consumption, static-host deploy-key requirements, and local/remote environment boundaries.",
+        "subject_id": "deployment-and-releases",
+        "suggested_repo_paths": [
+          "docs/shared/deployment.md",
+          "docs/repositories/structure.md",
+          "docs/getting-started.md",
+          "docs/changelog.md"
+        ],
+        "title": "Deployment and Releases",
+        "wiki_path": "deployment-and-releases.md"
+      },
+      {
+        "purpose": "Preserve the reusable ordered roadmap for integrating a product website without bypassing the SDK or backend authority boundaries.",
+        "subject_id": "product-integration-roadmap",
+        "suggested_repo_paths": [
+          "docs/shared/product_implementation_roadmap.md",
+          "docs/getting-started.md",
+          "docs/sdk/client-sdk.md"
+        ],
+        "title": "Product Integration Roadmap",
+        "wiki_path": "product-integration-roadmap.md"
+      },
+      {
+        "purpose": "Provide a controlled entrypoint to archived designs, pseudocode, and plans, distinguishing accepted durable decisions from drafts and unfinished proposals.",
+        "subject_id": "design-history-and-unresolved-proposals",
+        "suggested_repo_paths": [
+          "docs/design/2026-06-22-class-kit-api-pattern/spec.md",
+          "docs/design/2026-06-23-product-permission-bundle-views/pseudocode/README.md",
+          "docs/design/2026-06-25-schedule-lifecycle-management/spec.md",
+          "docs/design/2026-07-08-pm-software-integration/pseudocode/README.md"
+        ],
+        "title": "Design History and Unresolved Proposals",
+        "wiki_path": "design-history-and-unresolved-proposals.md"
+      }
+    ]
+  },
+  "planner_report_ref": "reports/documentation-planner-report.json",
+  "pre_maintenance_wiki_ref": "pre-maintenance-wiki",
+  "project_key": "class-kit",
+  "retry_limit": 1,
+  "status": "completed",
+  "subject_manifest_ref": "reports/documentation-subject-manifest.json",
+  "subject_report_refs": [
+    "agents/subject-architecture-and-repository-boundaries/reports/subject-report.json",
+    "agents/subject-backend-api-and-data-contracts/reports/subject-report.json",
+    "agents/subject-class-operations-and-lifecycle/reports/subject-report.json",
+    "agents/subject-deployment-and-releases/reports/subject-report.json",
+    "agents/subject-design-history-and-unresolved-proposals/reports/subject-report.json",
+    "agents/subject-identity-product-access-and-authorization/reports/subject-report.json",
+    "agents/subject-platform-administration-and-pm-integration/reports/subject-report.json",
+    "agents/subject-product-integration-roadmap/reports/subject-report.json",
+    "agents/subject-product-operations/reports/subject-report.json",
+    "agents/subject-sdk-integration/reports/subject-report.json"
+  ],
+  "subject_reports": [
+    {
+      "evidence_paths": [
+        "README.md",
+        "docs/getting-started.md",
+        "docs/repositories/structure.md",
+        "docs/product-shape.md",
+        "docs/shared/context.md"
+      ],
+      "known_gaps": [
+        "The snapshot documents ownership and supported integration boundaries, but does not include the separate class-kit-api or class-kit-sdk source repositories for implementation-level verification."
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "architecture-and-repository-boundaries",
+      "touched_paths": [
+        "draft-wiki/architecture-and-repository-boundaries.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "architecture-and-repository-boundaries.md"
+    },
+    {
+      "evidence_paths": [
+        "docs/api/backend-api.md",
+        "docs/api/class-api-map.md",
+        "docs/product-shape.md",
+        "class-kit-api/package.json",
+        "class-kit-api/supabase/functions/_shared/context.ts",
+        "class-kit-api/supabase/functions/_shared/errors.ts",
+        "class-kit-api/supabase/functions/_shared/permissions.ts",
+        "class-kit-api/supabase/functions/_shared/class_schema.ts",
+        "class-kit-api/supabase/migrations/"
+      ],
+      "known_gaps": [
+        "The subject summarizes stable shared contracts and ownership; it intentionally does not duplicate every action-specific request and response field from the living API map.",
+        "Individual migration SQL files and each endpoint implementation were not exhaustively audited; use the cited migration and function paths when changing a specific contract.",
+        "subject report status was complete"
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "backend-api-and-data-contracts",
+      "touched_paths": [
+        "draft-wiki/backend-api-and-data-contracts.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "backend-api-and-data-contracts.md"
+    },
+    {
+      "evidence_paths": [
+        "docs/api/class-api-map.md",
+        "docs/sdk/client-sdk.md",
+        "docs/api/backend-api.md",
+        "docs/design/2026-06-25-schedule-lifecycle-management/spec.md"
+      ],
+      "known_gaps": [
+        "The target repository snapshot contains documentation only; runtime and test sources were unavailable for direct implementation verification.",
+        "docs/design/2026-06-25-schedule-lifecycle-management/spec.md is a working draft, so its proposed ensure/refresh, override, exclusion, and stale-cleanup semantics are documented as future direction rather than current behavior."
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "class-operations-and-lifecycle",
+      "touched_paths": [
+        "draft-wiki/class-operations-and-lifecycle.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "class-operations-and-lifecycle.md"
+    },
+    {
+      "evidence_paths": [
+        "docs/shared/deployment.md",
+        "docs/repositories/structure.md",
+        "docs/getting-started.md",
+        "docs/changelog.md"
+      ],
+      "known_gaps": [
+        "The snapshot contains canonical deployment documentation but not the class-kit-api deployment scripts or a consuming website CI workflow; their executable behavior and configured secrets were not independently verified.",
+        "The SDK tag v0.1.18 is documented as current, but tag availability in the private SDK repository was not live-verified from this snapshot."
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "deployment-and-releases",
+      "touched_paths": [
+        "draft-wiki/deployment-and-releases.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "deployment-and-releases.md"
+    },
+    {
+      "evidence_paths": [
+        "docs/design/2026-06-22-class-kit-api-pattern/spec.md",
+        "docs/design/2026-06-22-class-kit-api-pattern/agenda.md",
+        "docs/design/2026-06-23-product-permission-bundle-views/pseudocode/README.md",
+        "docs/design/2026-06-25-schedule-lifecycle-management/spec.md",
+        "docs/design/2026-06-25-schedule-lifecycle-management/agenda.md",
+        "docs/design/2026-07-08-pm-software-integration/pseudocode/README.md",
+        "docs/design/2026-07-08-pm-software-integration/pseudocode/AgreedImplementationShape.md",
+        "docs/adr/0001-scoped-product-permission-layer.md",
+        "docs/shared/context.md",
+        "docs/api/class-api-map.md",
+        "docs/sdk/client-sdk.md",
+        "docs/api/backend-api.md",
+        "docs/changelog.md"
+      ],
+      "known_gaps": [
+        "The archive has no single completion/supersession ledger for every historical implementation plan.",
+        "The schedule lifecycle design remains a working draft with removal/skip/cancel and safe-cleanup decisions unresolved.",
+        "The PM pseudocode predates the released configured-label-mapping capability."
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "design-history-and-unresolved-proposals",
+      "touched_paths": [
+        "draft-wiki/design-history-and-unresolved-proposals.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "design-history-and-unresolved-proposals.md"
+    },
+    {
+      "evidence_paths": [
+        "docs/shared/authentication.md",
+        "docs/product-shape.md",
+        "docs/adr/0001-scoped-product-permission-layer.md",
+        "docs/api/backend-api.md",
+        "class-kit-api/supabase/functions/_shared/context.ts",
+        "class-kit-api/supabase/functions/_shared/permissions.ts",
+        "class-kit-api/supabase/functions/class-kit-product-context/index.ts",
+        "class-kit-api/supabase/migrations/20260629133541_product_access_entries.sql"
+      ],
+      "known_gaps": [
+        "This subject is based on the repository snapshot; it does not verify the live Supabase Auth redirect allow list, provider configuration, or deployed RLS policy state.",
+        "The accepted ADR still describes an earlier proposed product_invitations table. Current implementation evidence uses class_kit.product_access_entries, which is documented here as the current lifecycle record.",
+        "subject report status was complete"
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "identity-product-access-and-authorization",
+      "touched_paths": [
+        "draft-wiki/identity-product-access-and-authorization.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "identity-product-access-and-authorization.md"
+    },
+    {
+      "evidence_paths": [
+        "docs/sdk/client-sdk.md",
+        "docs/api/backend-api.md",
+        "docs/api/class-api-map.md",
+        "docs/product-shape.md",
+        "docs/changelog.md",
+        "docs/design/2026-07-08-pm-software-integration/pseudocode/README.md",
+        "docs/design/2026-07-08-pm-software-integration/pseudocode/AgreedImplementationShape.md"
+      ],
+      "known_gaps": [
+        "The subject is grounded in the repository snapshot's living documentation rather than a live deployed Trello or Supabase environment.",
+        "The July 8 PM pseudocode is historical planning material and conflicts with the released label-mapping behavior; the wiki records the living v0.1.18 contract as authoritative.",
+        "subject report schema_version was normalized from 1.0"
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "platform-administration-and-pm-integration",
+      "touched_paths": [
+        "draft-wiki/platform-administration-and-pm-integration.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "platform-administration-and-pm-integration.md"
+    },
+    {
+      "evidence_paths": [
+        "docs/shared/product_implementation_roadmap.md",
+        "docs/getting-started.md",
+        "docs/sdk/client-sdk.md",
+        "docs/product-shape.md",
+        "docs/shared/authentication.md",
+        "docs/shared/deployment.md"
+      ],
+      "known_gaps": [
+        "The source roadmap has duplicate Phase 16 headings for responsiveness/accessibility and performance/deployment hardening; this subject preserves their order and treats hardening as the final release gate.",
+        "subject report status was complete"
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "product-integration-roadmap",
+      "touched_paths": [
+        "draft-wiki/product-integration-roadmap.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "product-integration-roadmap.md"
+    },
+    {
+      "evidence_paths": [
+        "docs/sdk/client-sdk.md",
+        "docs/api/backend-api.md",
+        "docs/api/class-api-map.md",
+        "docs/changelog.md"
+      ],
+      "known_gaps": [
+        "This subject is grounded in the snapshot's living API and SDK documentation; implementation-source behavior was not separately inspected.",
+        "Platform administration and the Trello PM integration are intentionally summarized only as boundaries because they belong to the separate platform-administration subject."
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "product-operations",
+      "touched_paths": [
+        "draft-wiki/product-operations.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "product-operations.md"
+    },
+    {
+      "evidence_paths": [
+        "docs/sdk/client-sdk.md",
+        "docs/getting-started.md",
+        "docs/changelog.md",
+        "docs/api/class-api-map.md",
+        "docs/product-shape.md",
+        "docs/shared/authentication.md",
+        "docs/shared/deployment.md",
+        "docs/shared/product_implementation_roadmap.md"
+      ],
+      "known_gaps": [
+        "The snapshot's canonical SDK integration contract is documentation-led; this subject does not independently inspect the separate private class-kit-sdk implementation or release repository.",
+        "subject report status was complete"
+      ],
+      "project_key": "class-kit",
+      "schema_version": 1,
+      "status": "completed",
+      "subject_id": "sdk-integration",
+      "touched_paths": [
+        "draft-wiki/sdk-integration.md",
+        "reports/subject-report.json"
+      ],
+      "wiki_path": "sdk-integration.md"
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "project_key", "category", "entries"],
+  "properties": {
+    "schema_version": { "type": "integer", "enum": [1] },
+    "project_key": { "type": "string", "minLength": 1 },
+    "category": { "type": ["string", "null"] },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "wiki_path",
+          "section_id",
+          "section_hash",
+          "keywords",
+          "aliases",
+          "topics",
+          "query_phrases",
+          "confidence"
+        ],
+        "properties": {
+          "wiki_path": { "type": "string", "minLength": 1 },
+          "section_id": { "type": "string", "minLength": 1 },
+          "section_hash": { "type": "string", "minLength": 1 },
+          "keywords": { "$ref": "#/$defs/stringArray" },
+          "aliases": { "$ref": "#/$defs/stringArray" },
+          "topics": { "$ref": "#/$defs/stringArray" },
+          "query_phrases": { "$ref": "#/$defs/stringArray" },
+          "confidence": { "type": "string", "enum": ["low", "medium", "high"] }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "stringArray": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "batch_size": 50,
+  "degraded": false,
+  "failed": 0,
+  "failures": [],
+  "hints_orphaned": 0,
+  "hints_stale": 0,
+  "hints_valid": 89,
+  "indexed": 89,
+  "pending_remaining": 0,
+  "project_key": "llm-wiki",
+  "selected": 89,
+  "structural_sections_seen": 89
+}

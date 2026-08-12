@@ -1,0 +1,155 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "session_memories",
+    "memory_candidates",
+    "handoff_instructions",
+    "memory_supersessions",
+    "memory_retractions",
+    "memory_noops",
+    "no_output_tombstone_ids",
+    "terminal_summary"
+  ],
+  "properties": {
+    "session_memories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "source_event_refs", "memory_kind", "title", "summary", "payload", "confidence", "risk"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "source_event_refs": { "$ref": "#/$defs/stringArray" },
+          "memory_kind": { "type": "string", "enum": ["continuity", "decision", "blocker", "next_action", "verification"] },
+          "title": { "type": ["string", "null"] },
+          "summary": { "type": "string", "minLength": 1 },
+          "payload": { "$ref": "#/$defs/emptyObject" },
+          "confidence": { "type": "string", "minLength": 1 },
+          "risk": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "memory_candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "source_event_refs",
+          "scope",
+          "status",
+          "candidate_type",
+          "title",
+          "summary",
+          "evidence",
+          "proposed_payload",
+          "confidence",
+          "risk",
+          "reason"
+        ],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "source_event_refs": { "$ref": "#/$defs/stringArray" },
+          "scope": { "type": "string", "enum": ["session", "project", "practice", "personal"] },
+          "status": { "type": "string", "enum": ["pending", "needs_review"] },
+          "candidate_type": { "type": "string", "minLength": 1 },
+          "title": { "type": ["string", "null"] },
+          "summary": { "type": "string", "minLength": 1 },
+          "evidence": { "$ref": "#/$defs/emptyObject" },
+          "proposed_payload": { "$ref": "#/$defs/emptyObject" },
+          "confidence": { "type": "string", "minLength": 1 },
+          "risk": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "handoff_instructions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "target_scope",
+          "status",
+          "objective",
+          "prompt_text",
+          "source_session_memory_ids",
+          "source_event_refs",
+          "suggested_actions",
+          "reason",
+          "confidence",
+          "risk"
+        ],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "target_scope": { "type": "string", "enum": ["project", "practice", "personal"] },
+          "status": { "type": "string", "enum": ["pending", "needs_review"] },
+          "objective": { "type": "string", "minLength": 1 },
+          "prompt_text": { "type": "string", "minLength": 1 },
+          "source_session_memory_ids": { "$ref": "#/$defs/stringArray" },
+          "source_event_refs": { "$ref": "#/$defs/stringArray" },
+          "suggested_actions": { "$ref": "#/$defs/stringArray" },
+          "reason": { "type": "string", "minLength": 1 },
+          "confidence": { "type": "string", "minLength": 1 },
+          "risk": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "memory_supersessions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["superseded_memory_id", "superseding_memory_id", "relationship", "reason", "source_event_refs"],
+        "properties": {
+          "superseded_memory_id": { "type": "string", "minLength": 1 },
+          "superseding_memory_id": { "type": "string", "minLength": 1 },
+          "relationship": { "type": "string", "enum": ["supersedes", "refines", "contradicts", "duplicates"] },
+          "reason": { "type": "string", "minLength": 1 },
+          "source_event_refs": { "$ref": "#/$defs/stringArray" }
+        }
+      }
+    },
+    "memory_retractions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["memory_id", "reason", "source_event_refs"],
+        "properties": {
+          "memory_id": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 },
+          "source_event_refs": { "$ref": "#/$defs/stringArray" }
+        }
+      }
+    },
+    "memory_noops": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["memory_id", "reason"],
+        "properties": {
+          "memory_id": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "no_output_tombstone_ids": { "$ref": "#/$defs/stringArray" },
+    "terminal_summary": { "type": ["string", "null"] }
+  },
+  "$defs": {
+    "stringArray": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "emptyObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    }
+  }
+}

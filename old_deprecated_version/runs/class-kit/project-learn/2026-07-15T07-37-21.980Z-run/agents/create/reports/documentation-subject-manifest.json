@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subjects": [
+    {
+      "subject_id": "repository-identity-and-boundaries",
+      "wiki_path": "draft-wiki/repository-identity-and-boundaries.md",
+      "title": "Repository Identity And Product Boundaries",
+      "purpose": "Record repository topology, documentation ownership, and the supported frontend-to-backend boundary while preserving the remote-identity contradiction.",
+      "suggested_repo_paths": ["README.md", "docs/getting-started.md", "docs/repositories/structure.md", "repository-identity.json"]
+    },
+    {
+      "subject_id": "product-access-policy",
+      "wiki_path": "draft-wiki/product-access-policy.md",
+      "title": "Product Resolution, Authentication, And Access",
+      "purpose": "Document origin resolution, auth-mode/provider values, product-access states, and their gate ordering.",
+      "suggested_repo_paths": ["docs/shared/authentication.md", "docs/product-shape.md", "docs/api/backend-api.md", "docs/sdk/client-sdk.md"]
+    },
+    {
+      "subject_id": "authorization-and-role-grants",
+      "wiki_path": "draft-wiki/authorization-and-role-grants.md",
+      "title": "Authorization And Role Grants",
+      "purpose": "Document platform/product scope, numeric levels, explicit permission keys, roles, and dashboard capability hints.",
+      "suggested_repo_paths": ["docs/product-shape.md", "docs/adr/0001-scoped-product-permission-layer.md", "docs/api/backend-api.md", "docs/shared/context.md"]
+    },
+    {
+      "subject_id": "class-lifecycle-and-registrations",
+      "wiki_path": "draft-wiki/class-lifecycle-and-registrations.md",
+      "title": "Class Lifecycle And Registrations",
+      "purpose": "Document concrete-class lifecycle, customer registration, management transitions, and attendance gates.",
+      "suggested_repo_paths": ["docs/api/class-api-map.md", "docs/api/backend-api.md", "docs/sdk/client-sdk.md"]
+    },
+    {
+      "subject_id": "templates-schedules-and-generation",
+      "wiki_path": "draft-wiki/templates-schedules-and-generation.md",
+      "title": "Templates, Schedules, And Generated Classes",
+      "purpose": "Document creation provenance, schedule recurrence/status values, generation, and protected generated-class behavior.",
+      "suggested_repo_paths": ["docs/shared/context.md", "docs/api/class-api-map.md", "docs/api/backend-api.md", "docs/sdk/client-sdk.md"]
+    },
+    {
+      "subject_id": "memberships-and-entitlements",
+      "wiki_path": "draft-wiki/memberships-and-entitlements.md",
+      "title": "Memberships And Entitlements",
+      "purpose": "Document membership modes, grant transitions, stock accounting, and their relationship to registration eligibility.",
+      "suggested_repo_paths": ["docs/api/class-api-map.md", "docs/api/backend-api.md", "docs/sdk/client-sdk.md"]
+    },
+    {
+      "subject_id": "product-content-and-pm-workflows",
+      "wiki_path": "draft-wiki/product-content-and-pm-workflows.md",
+      "title": "Product Documents, Change Requests, And PM Mirroring",
+      "purpose": "Document immutable document acceptance, request lifecycle, private attachments, and admin-only Trello mirroring.",
+      "suggested_repo_paths": ["docs/api/backend-api.md", "docs/sdk/client-sdk.md", "docs/changelog.md"]
+    },
+    {
+      "subject_id": "sdk-and-control-plane-surfaces",
+      "wiki_path": "draft-wiki/sdk-and-control-plane-surfaces.md",
+      "title": "SDK And Control-Plane Surfaces",
+      "purpose": "Document customer, management, and admin SDK namespace boundaries and the no-raw-backend-call rule.",
+      "suggested_repo_paths": ["docs/api/class-api-map.md", "docs/sdk/client-sdk.md", "docs/getting-started.md"]
+    }
+  ]
+}

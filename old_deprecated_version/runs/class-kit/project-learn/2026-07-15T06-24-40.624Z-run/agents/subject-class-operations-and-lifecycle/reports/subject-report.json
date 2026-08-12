@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "class-operations-and-lifecycle",
+  "wiki_path": "class-operations-and-lifecycle.md",
+  "status": "completed",
+  "evidence_paths": [
+    "docs/api/class-api-map.md",
+    "docs/sdk/client-sdk.md",
+    "docs/api/backend-api.md",
+    "docs/design/2026-06-25-schedule-lifecycle-management/spec.md"
+  ],
+  "touched_paths": [
+    "draft-wiki/class-operations-and-lifecycle.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "The target repository snapshot contains documentation only; runtime and test sources were unavailable for direct implementation verification.",
+    "docs/design/2026-06-25-schedule-lifecycle-management/spec.md is a working draft, so its proposed ensure/refresh, override, exclusion, and stale-cleanup semantics are documented as future direction rather than current behavior."
+  ]
+}

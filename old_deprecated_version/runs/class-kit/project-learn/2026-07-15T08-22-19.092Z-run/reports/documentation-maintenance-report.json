@@ -1,0 +1,331 @@
+{
+  "dispositions": [
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is a contingent review-workflow instruction, not durable ClassKit product knowledge.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_sdk_prompt_bypass_risk_20260715"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/product-truncation.md",
+        "draft-wiki/index.md"
+      ],
+      "reason": "Current Edge Function, RPC, SDK, and SQL regression evidence establish the destructive truncation contract.",
+      "source_kind": "project_candidate",
+      "source_ref": "project_inbox:class-kit:2026-07-15T08-14-06.014Z_e5b6b2"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [
+        "draft-wiki/repository-identity-and-boundaries.md"
+      ],
+      "reason": "The deterministic manifest identifies only the parent checkout; it does not prove API or SDK Symphony registration roots.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_verify_child_repo_roots_20260715"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "Available source establishes SDK/API ownership but not whether an isolated SDK card requires a sibling API checkout at execution time.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_sdk_isolated_boundary_20260715"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/product-access-and-authorization.md",
+        "draft-wiki/repository-identity-and-boundaries.md"
+      ],
+      "reason": "Current documentation already records database-managed product origins and auth redirects as runtime configuration.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_db_redirect_registry_20260628"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The proposed generated-class skip/cancel product decision is not verified as a current implementation contract.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_generated_class_actions_20260628"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "This is a tentative schema-naming proposal rather than verified current behavior.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_users_table_naming_20260628"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "No current implementation or regression evidence establishes the proposed controlled-field protection rule.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_b7a1e0"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "Schedule skips are implemented, but no evidence establishes generated-class deletion as a skip-producing behavior.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_4f9c2d"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/templates-and-schedules.md"
+      ],
+      "reason": "The existing schedule subject records current historical-generation behavior and its dedicated backfill regression, so the unverified bug report does not change durable documentation.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_schedule_backfill_bug_20260623"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/sdk-and-api-facade.md",
+        "draft-wiki/class-discovery-registration-and-lifecycle.md"
+      ],
+      "reason": "Current facade documentation records the supported explicit class lifecycle verbs; proposed additional verbs are not implemented.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_manager_class_lifecycle_followup_20260622"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/sdk-and-api-facade.md"
+      ],
+      "reason": "Current documentation already records the implemented classes list/get and management registration facade surface.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_class_api_slice_20260622"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The snapshot cannot establish external consumers of removed SDK exports.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_public_api_break_20260622"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The source identifies an unresolved planning contract; the available snapshot does not establish its final visibility matrix.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_read_capability_contract"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "A complete action-path guard audit is not established by the available implementation and regression evidence.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_permission_guard_scope"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is an unresolved migration strategy, not durable verified project behavior.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_guard_migration_scope"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is a brainstorming proposal for sequencing future work.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_first_slice_proof"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "The source explicitly leaves the dashboard information architecture undecided.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_dashboard_ia"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "Symphony card-routing configuration is external operational state, not project-memory product documentation.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_symphony_routing_20260614_01"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "Historical plan readiness is drift-prone and no current authoritative readiness state was verified.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_plan_ready_reverify_20260614_01"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is immediate review sequencing, not durable repository knowledge.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_api_first_sdk_followup_20260715"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [
+        "draft-wiki/repository-identity-and-boundaries.md"
+      ],
+      "reason": "The available checkout evidence does not identify the child-repository reviewer registration roots.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_verify_registration_roots_20260715"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "Correcting Symphony reviewer registration is external workflow configuration rather than durable ClassKit documentation.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_reviewer_repo_root_fix_20260715"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is an immediate harness-monitoring instruction.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_harness_cards_20260715"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "Editing Symphony card descriptions belongs to the external work-tracking layer.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_rewrite_symphony_cards_20260715"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The source asks for a boundary verification that current repository evidence does not conclusively answer.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_verify_sdk_independence_20260715"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The generated-class deletion and controlled-field rules remain unconfirmed design questions.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_9f2b1a"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is a pending UI implementation instruction, not verified durable product behavior.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_admin_demo_nested_rework_20260625"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is an open UX-follow-up task.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_programs_dashboard_ui_followup_20260625"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is a proposed cross-layer feature task without current implementation evidence.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_permissions_view_bundle_20260625"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/templates-and-schedules.md"
+      ],
+      "reason": "The schedule subject records the current historical-backfill implementation and regression; the handoff asks for investigation rather than supplying a new durable fact.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_schedule_backfill_investigation_20260623"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is a pending seed-data implementation task.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_demo2_seed_slice_20260623"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is a review task, not a source of durable project knowledge.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_review_branch_diff_20260623"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/sdk-and-api-facade.md",
+        "draft-wiki/class-discovery-registration-and-lifecycle.md"
+      ],
+      "reason": "The current supported manager class lifecycle verbs are already documented; the handoff's extra verbs remain unimplemented.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_manager_class_ops_followup_20260622"
+    },
+    {
+      "disposition": "already_covered",
+      "output_refs": [
+        "draft-wiki/sdk-and-api-facade.md"
+      ],
+      "reason": "The currently implemented class discovery/detail and management-registration namespaces are already documented.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_class_api_slice_20260622"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "External package consumers cannot be determined from this checkout snapshot.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_external_consumer_audit_20260622"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is a pending planning and implementation task.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_feature_matrix_split_20260621"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The handoff identifies an unresolved capability decision, not a verified current contract.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_resolve_read_flags_then_plan"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is a targeted review and polish task.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_demo2_p09_review"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is a brainstorming handoff rather than durable verified behavior.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_manager_dashboard_bringup"
+    }
+  ],
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/class-kit-api/supabase/functions/class-kit-admin-products/index.ts",
+    "target-repo/class-kit-api/supabase/functions/_shared/admin_api.ts",
+    "target-repo/class-kit-api/supabase/migrations/20260702120000_truncate_product_admin_action.sql",
+    "target-repo/class-kit-api/supabase/tests/truncate_product_admin_action.sql",
+    "target-repo/class-kit-sdk/src/admin/admin-api.ts",
+    "target-repo/class-kit-sdk/src/client/class-kit-client.ts"
+  ],
+  "known_gaps": [
+    "The available truncation regression calls the private RPC directly; it does not cover the Edge Function level-100 guard, SDK mapping, or UI exact-key confirmation flow.",
+    "The deterministic identity record establishes only the parent checkout and cannot verify API/SDK Symphony registration roots or external package consumers.",
+    "No complete current guard audit was available for every ClassKit action path, so unresolved permission-scope candidates were not promoted.",
+    "Generated-class deletion/protection and dashboard read-capability proposals lack sufficient implementation and regression evidence for durable documentation."
+  ],
+  "project_key": "class-kit",
+  "schema_version": 1,
+  "status": "completed",
+  "touched_paths": [
+    "draft-wiki/product-truncation.md",
+    "draft-wiki/index.md",
+    "reports/documentation-maintenance-report.json"
+  ]
+}

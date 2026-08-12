@@ -1,0 +1,223 @@
+{
+  "curator_output_ref": "documentation-maintenance-result.json",
+  "expected_writes": [
+    {
+      "before_sha256": "4cc5d51c365a59c3693e3f766512d79e51683757badb4a2c7913a82d89b985ca",
+      "canonical_path": "projects/class-kit/architecture-and-boundaries.md",
+      "page_ids": [
+        "architecture-and-boundaries.md"
+      ],
+      "staged_output_ref": "staged/001-wiki_page-architecture-and-boundaries.md",
+      "write_kind": "wiki_page",
+      "write_order": 1
+    },
+    {
+      "before_sha256": "7543d6964e5a511d14bd12138c23f562a4a90ee93b99edfb82644c573108c7d2",
+      "canonical_path": "projects/class-kit/authorization-and-roles.md",
+      "page_ids": [
+        "authorization-and-roles.md"
+      ],
+      "staged_output_ref": "staged/002-wiki_page-authorization-and-roles.md",
+      "write_kind": "wiki_page",
+      "write_order": 2
+    },
+    {
+      "before_sha256": "f115b1daad8f6ecb976cfef56431d0d3b7810f025fb0ad7fae39f68f33dda5ef",
+      "canonical_path": "projects/class-kit/change-requests-and-pm-integration.md",
+      "page_ids": [
+        "change-requests-and-pm-integration.md"
+      ],
+      "staged_output_ref": "staged/003-wiki_page-change-requests-and-pm-integration.md",
+      "write_kind": "wiki_page",
+      "write_order": 3
+    },
+    {
+      "before_sha256": "fa8b711cea8b1c365f137d7d4d8db04e7c67dfd67af4a47cde5bb3e74a2a922c",
+      "canonical_path": "projects/class-kit/classes-and-registrations.md",
+      "page_ids": [
+        "classes-and-registrations.md"
+      ],
+      "staged_output_ref": "staged/004-wiki_page-classes-and-registrations.md",
+      "write_kind": "wiki_page",
+      "write_order": 4
+    },
+    {
+      "before_sha256": "bdd062dce542c7ac3cf5eaba3183c08188e355afe107a6d581e0a6fa1e7a317d",
+      "canonical_path": "projects/class-kit/index.md",
+      "page_ids": [
+        "index.md"
+      ],
+      "staged_output_ref": "staged/005-wiki_page-index.md",
+      "write_kind": "wiki_page",
+      "write_order": 5
+    },
+    {
+      "before_sha256": "5f638c24cdfeaefc0c129db40965eafa7af7632bf88cee387d724cde87822419",
+      "canonical_path": "projects/class-kit/memberships-and-entitlements.md",
+      "page_ids": [
+        "memberships-and-entitlements.md"
+      ],
+      "staged_output_ref": "staged/006-wiki_page-memberships-and-entitlements.md",
+      "write_kind": "wiki_page",
+      "write_order": 6
+    },
+    {
+      "before_sha256": "563cf2d6fb959d0342c5e5c072c62a94e36af02b197a7b1dc0e35cdc7099041f",
+      "canonical_path": "projects/class-kit/operator-workflows-and-local-apps.md",
+      "page_ids": [
+        "operator-workflows-and-local-apps.md"
+      ],
+      "staged_output_ref": "staged/007-wiki_page-operator-workflows-and-local-apps.md",
+      "write_kind": "wiki_page",
+      "write_order": 7
+    },
+    {
+      "before_sha256": "54aab88d9afaa73f926698fad4fa7ffbaaa94e3a5a36250fea3617b00c1acb3d",
+      "canonical_path": "projects/class-kit/product-access-and-authentication.md",
+      "page_ids": [
+        "product-access-and-authentication.md"
+      ],
+      "staged_output_ref": "staged/008-wiki_page-product-access-and-authentication.md",
+      "write_kind": "wiki_page",
+      "write_order": 8
+    },
+    {
+      "before_sha256": "f73b70c006deea098556ad4e74f84f35d0bdd3c0919b9514cc593b8c91c62001",
+      "canonical_path": "projects/class-kit/product-administration-and-reset.md",
+      "page_ids": [
+        "product-administration-and-reset.md"
+      ],
+      "staged_output_ref": "staged/009-wiki_page-product-administration-and-reset.md",
+      "write_kind": "wiki_page",
+      "write_order": 9
+    },
+    {
+      "before_sha256": "7555f3c1ce5fbec5b0f047126ba343a4704ba688162b5215bec696b8cba49854",
+      "canonical_path": "projects/class-kit/product-documents-and-signup-links.md",
+      "page_ids": [
+        "product-documents-and-signup-links.md"
+      ],
+      "staged_output_ref": "staged/010-wiki_page-product-documents-and-signup-links.md",
+      "write_kind": "wiki_page",
+      "write_order": 10
+    },
+    {
+      "before_sha256": "c9068fc62d222a5312c44085ffb390db950b293490a148a8e21dd7742254764a",
+      "canonical_path": "projects/class-kit/sdk-and-product-api.md",
+      "page_ids": [
+        "sdk-and-product-api.md"
+      ],
+      "staged_output_ref": "staged/011-wiki_page-sdk-and-product-api.md",
+      "write_kind": "wiki_page",
+      "write_order": 11
+    },
+    {
+      "before_sha256": "2dcb144bbd296fc5a0137dacca3d753eba7d36c76f2ac568ab9cd1d7c4b2b0ad",
+      "canonical_path": "projects/class-kit/templates-schedules-and-attendance.md",
+      "page_ids": [
+        "templates-schedules-and-attendance.md"
+      ],
+      "staged_output_ref": "staged/012-wiki_page-templates-schedules-and-attendance.md",
+      "write_kind": "wiki_page",
+      "write_order": 12
+    },
+    {
+      "before_sha256": "92ec549e1d20b5af1f4034f8f92d92e5461513aa2f42ef515afc400bc7be92f1",
+      "canonical_path": "state/class-kit/project-memory-source-consumptions.json",
+      "staged_output_ref": "staged/013-source_consumption_state-project-memory-source-consumptions.json",
+      "write_kind": "source_consumption_state",
+      "write_order": 13
+    },
+    {
+      "before_sha256": "9810ee630fddf76984ec350feced21d994d3b35d042fbe7d75f5aaeca4a0d5d3",
+      "canonical_path": "state/class-kit/project-memory.json",
+      "staged_output_ref": "staged/014-project_state-project-memory.json",
+      "write_kind": "project_state",
+      "write_order": 14
+    }
+  ],
+  "mode": "maintain",
+  "observed_promotions": [
+    {
+      "after_sha256": "4cc5d51c365a59c3693e3f766512d79e51683757badb4a2c7913a82d89b985ca",
+      "canonical_path": "projects/class-kit/architecture-and-boundaries.md",
+      "promoted_at": "2026-07-20T06:18:01.133Z"
+    },
+    {
+      "after_sha256": "7543d6964e5a511d14bd12138c23f562a4a90ee93b99edfb82644c573108c7d2",
+      "canonical_path": "projects/class-kit/authorization-and-roles.md",
+      "promoted_at": "2026-07-20T06:18:01.133Z"
+    },
+    {
+      "after_sha256": "f115b1daad8f6ecb976cfef56431d0d3b7810f025fb0ad7fae39f68f33dda5ef",
+      "canonical_path": "projects/class-kit/change-requests-and-pm-integration.md",
+      "promoted_at": "2026-07-20T06:18:01.134Z"
+    },
+    {
+      "after_sha256": "fa8b711cea8b1c365f137d7d4d8db04e7c67dfd67af4a47cde5bb3e74a2a922c",
+      "canonical_path": "projects/class-kit/classes-and-registrations.md",
+      "promoted_at": "2026-07-20T06:18:01.134Z"
+    },
+    {
+      "after_sha256": "bdd062dce542c7ac3cf5eaba3183c08188e355afe107a6d581e0a6fa1e7a317d",
+      "canonical_path": "projects/class-kit/index.md",
+      "promoted_at": "2026-07-20T06:18:01.134Z"
+    },
+    {
+      "after_sha256": "5f638c24cdfeaefc0c129db40965eafa7af7632bf88cee387d724cde87822419",
+      "canonical_path": "projects/class-kit/memberships-and-entitlements.md",
+      "promoted_at": "2026-07-20T06:18:01.135Z"
+    },
+    {
+      "after_sha256": "563cf2d6fb959d0342c5e5c072c62a94e36af02b197a7b1dc0e35cdc7099041f",
+      "canonical_path": "projects/class-kit/operator-workflows-and-local-apps.md",
+      "promoted_at": "2026-07-20T06:18:01.135Z"
+    },
+    {
+      "after_sha256": "54aab88d9afaa73f926698fad4fa7ffbaaa94e3a5a36250fea3617b00c1acb3d",
+      "canonical_path": "projects/class-kit/product-access-and-authentication.md",
+      "promoted_at": "2026-07-20T06:18:01.136Z"
+    },
+    {
+      "after_sha256": "f73b70c006deea098556ad4e74f84f35d0bdd3c0919b9514cc593b8c91c62001",
+      "canonical_path": "projects/class-kit/product-administration-and-reset.md",
+      "promoted_at": "2026-07-20T06:18:01.136Z"
+    },
+    {
+      "after_sha256": "7555f3c1ce5fbec5b0f047126ba343a4704ba688162b5215bec696b8cba49854",
+      "canonical_path": "projects/class-kit/product-documents-and-signup-links.md",
+      "promoted_at": "2026-07-20T06:18:01.137Z"
+    },
+    {
+      "after_sha256": "c9068fc62d222a5312c44085ffb390db950b293490a148a8e21dd7742254764a",
+      "canonical_path": "projects/class-kit/sdk-and-product-api.md",
+      "promoted_at": "2026-07-20T06:18:01.137Z"
+    },
+    {
+      "after_sha256": "2dcb144bbd296fc5a0137dacca3d753eba7d36c76f2ac568ab9cd1d7c4b2b0ad",
+      "canonical_path": "projects/class-kit/templates-schedules-and-attendance.md",
+      "promoted_at": "2026-07-20T06:18:01.137Z"
+    },
+    {
+      "after_sha256": "0cedf9bcc8be909cc3202185b0a61ebd329ee779d46e7a3313c7f2a96887cd8d",
+      "canonical_path": "state/class-kit/project-memory-source-consumptions.json",
+      "promoted_at": "2026-07-20T06:18:01.138Z"
+    },
+    {
+      "after_sha256": "afa870a5f2e167061b78be64551281dde248cf8ca37871b94d0a35ff40d44520",
+      "canonical_path": "state/class-kit/project-memory.json",
+      "promoted_at": "2026-07-20T06:18:01.139Z"
+    }
+  ],
+  "packet_ref": "input-packet.json",
+  "project_key": "class-kit",
+  "recovery": {
+    "last_attempt_at": "2026-07-20T06:18:01.139Z",
+    "required_before_new_curator": false
+  },
+  "run_dir": "runs/class-kit/project-learn/2026-07-20T06-15-44.867Z-run",
+  "schema_version": 1,
+  "staged_outputs_dir": "staged",
+  "status": "applied",
+  "validation_ref": "curator-validation.json"
+}

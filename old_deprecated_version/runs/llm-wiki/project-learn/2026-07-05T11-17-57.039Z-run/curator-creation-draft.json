@@ -1,0 +1,1411 @@
+{
+  "brain_intent": {
+    "first_brain_summary": "Myelin Project Memory documentation",
+    "name": "llm-wiki",
+    "untrusted_existing_markdown_policy": "rewrite"
+  },
+  "documentation_contract": {
+    "curator_added_surfaces": [],
+    "inspected_default_surfaces": [
+      "AGENTS.md",
+      "MYELIN.md",
+      "CONTEXT.md",
+      "package.json",
+      "Makefile",
+      "docs/CLI.md",
+      "docs/ROADMAP.md",
+      "docs/adr/0063-use-answer-domain-project-memory-documentation-map.md",
+      "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md",
+      "docs/adr/0065-require-independent-first-create-usefulness-critique.md",
+      "docs/adr/0066-allow-clean-project-shell-rebootstrap-reset.md",
+      "docs/design/2026-07-05-project-memory-rendered-create-contract/spec.md",
+      "src/cli.ts",
+      "src/project/project-memory-curator-service.ts",
+      "src/memory/db.ts",
+      "src/ingest/ingest-service.ts",
+      "src/query/project-memory-query-service.ts",
+      "src/commands/project.ts",
+      "src/runtime/config.ts",
+      "README.md"
+    ],
+    "missing_coverage": [],
+    "missing_orientation_surfaces": [],
+    "shallow_summary_findings": []
+  },
+  "evidence_refs": [
+    {
+      "kind": "repo_citation",
+      "ref": "MYELIN.md"
+    },
+    {
+      "kind": "repo_citation",
+      "ref": "docs/ROADMAP.md"
+    }
+  ],
+  "explicit_noop_decisions": [],
+  "mode": "create",
+  "packet_context": {
+    "budgets": {
+      "max_content_chars": 4000,
+      "max_items": 25
+    },
+    "degraded": false,
+    "degraded_reasons": []
+  },
+  "packet_ref": {
+    "artifact": "input-packet.json",
+    "packet_schema_version": 1,
+    "run_dir": "projects/llm-wiki/runs/project-learn/stub"
+  },
+  "pages": [
+    {
+      "answer_domains": [
+        "product_memory_model"
+      ],
+      "apply_payload": {
+        "pages": [
+          {
+            "evidence_refs": [
+              {
+                "kind": "repo_citation",
+                "ref": "MYELIN.md"
+              },
+              {
+                "kind": "repo_citation",
+                "ref": "MY_VISION.md"
+              }
+            ],
+            "inference": null,
+            "page_path": "index.md",
+            "purpose": "Project Memory orientation and product model",
+            "repo_citations": [
+              {
+                "line_start": 1,
+                "path": "MYELIN.md",
+                "reason": "product model"
+              },
+              {
+                "line_start": 1,
+                "path": "MY_VISION.md",
+                "reason": "user product vision"
+              }
+            ],
+            "sections": [
+              {
+                "body": {
+                  "paragraphs": [
+                    "Project Memory in Myelin is the repository documentation layer: curated markdown under projects/<key>/wiki that future agents can read before rediscovering the codebase.",
+                    "Session Memory is separate continuity from captured conversations; it can produce candidates and handoffs, but those records are leads until project learn verifies repo evidence.",
+                    "Canonical Project Memory truth stays in markdown plus project state, while SQLite and vector rows are serving indexes that point back to current markdown sections."
+                  ]
+                },
+                "evidence_refs": [
+                  {
+                    "kind": "repo_citation",
+                    "ref": "MYELIN.md"
+                  },
+                  {
+                    "kind": "repo_citation",
+                    "ref": "MY_VISION.md"
+                  }
+                ],
+                "heading": "Overview",
+                "inference": null,
+                "level": 2,
+                "repo_citations": [
+                  {
+                    "line_start": 1,
+                    "path": "MYELIN.md",
+                    "reason": "product model"
+                  },
+                  {
+                    "line_start": 1,
+                    "path": "MY_VISION.md",
+                    "reason": "user product vision"
+                  }
+                ]
+              },
+              {
+                "body": {
+                  "paragraphs": [
+                    "The create path starts with project learn, writes input-packet.json and project-memory-evidence-map.json, asks the curator for sectioned pages, validates rendered markdown, then applies only trusted output.",
+                    "The index page should orient an agent to the major answer domains: product model, storage and retrieval, command workflows, curation and apply lifecycle, evidence boundaries, and current roadmap decisions.",
+                    "A useful page names the actual commands and artifacts, including memory query, memory index project, curator-validation.json, retrieval sections, and the project-memory changeset."
+                  ]
+                },
+                "evidence_refs": [
+                  {
+                    "kind": "repo_citation",
+                    "ref": "MYELIN.md"
+                  },
+                  {
+                    "kind": "repo_citation",
+                    "ref": "MY_VISION.md"
+                  }
+                ],
+                "heading": "Operational Details",
+                "inference": null,
+                "level": 2,
+                "repo_citations": [
+                  {
+                    "line_start": 1,
+                    "path": "MYELIN.md",
+                    "reason": "product model"
+                  },
+                  {
+                    "line_start": 1,
+                    "path": "MY_VISION.md",
+                    "reason": "user product vision"
+                  }
+                ]
+              },
+              {
+                "body": {
+                  "paragraphs": [
+                    "MYELIN.md, MY_VISION.md, README.md, AGENTS.md, docs/ROADMAP.md, and ADRs are durable sources for the product shape and repository operating contract.",
+                    "Candidates, handoffs, and Session Memory should be cited as source leads only; durable claims need repo docs, source files, tests, or ADR evidence.",
+                    "The boundary prevents a conversation summary from silently becoming documentation without the target repository being inspected from its own cwd."
+                  ]
+                },
+                "evidence_refs": [
+                  {
+                    "kind": "repo_citation",
+                    "ref": "MYELIN.md"
+                  },
+                  {
+                    "kind": "repo_citation",
+                    "ref": "MY_VISION.md"
+                  }
+                ],
+                "heading": "Evidence And Boundaries",
+                "inference": null,
+                "level": 2,
+                "repo_citations": [
+                  {
+                    "line_start": 1,
+                    "path": "MYELIN.md",
+                    "reason": "product model"
+                  },
+                  {
+                    "line_start": 1,
+                    "path": "MY_VISION.md",
+                    "reason": "user product vision"
+                  }
+                ]
+              }
+            ],
+            "title": "Project Memory Index"
+          }
+        ],
+        "schema_version": 1
+      },
+      "content_intent": "Document Project Memory Index",
+      "evidence_refs": [
+        {
+          "kind": "repo_citation",
+          "ref": "MYELIN.md"
+        },
+        {
+          "kind": "repo_citation",
+          "ref": "MY_VISION.md"
+        }
+      ],
+      "id": "index",
+      "inspected_surface_refs": [
+        "AGENTS.md",
+        "MYELIN.md",
+        "CONTEXT.md",
+        "package.json",
+        "Makefile",
+        "docs/CLI.md",
+        "docs/ROADMAP.md",
+        "docs/adr/0063-use-answer-domain-project-memory-documentation-map.md",
+        "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md",
+        "docs/adr/0065-require-independent-first-create-usefulness-critique.md",
+        "docs/adr/0066-allow-clean-project-shell-rebootstrap-reset.md",
+        "docs/design/2026-07-05-project-memory-rendered-create-contract/spec.md",
+        "src/cli.ts",
+        "src/project/project-memory-curator-service.ts",
+        "src/memory/db.ts",
+        "src/ingest/ingest-service.ts",
+        "src/query/project-memory-query-service.ts",
+        "src/commands/project.ts",
+        "src/runtime/config.ts"
+      ],
+      "notes_for_apply": [],
+      "purpose": "Project Memory orientation and product model",
+      "repo_citations": [
+        {
+          "line_start": 1,
+          "path": "MYELIN.md",
+          "reason": "product model"
+        },
+        {
+          "line_start": 1,
+          "path": "MY_VISION.md",
+          "reason": "user product vision"
+        }
+      ],
+      "representative_questions": [
+        "What is Project Memory in Myelin?",
+        "How does Session Memory feed Project Memory without becoming truth?"
+      ],
+      "required_topics": [
+        "Project Memory product model",
+        "Session Memory distinction",
+        "canonical markdown truth"
+      ],
+      "target": {
+        "path": "index.md",
+        "path_kind": "new_wiki_page"
+      },
+      "title": "Project Memory Index"
+    },
+    {
+      "answer_domains": [
+        "storage_retrieval"
+      ],
+      "apply_payload": {
+        "pages": [
+          {
+            "evidence_refs": [
+              {
+                "kind": "repo_citation",
+                "ref": "src/memory/db.ts"
+              },
+              {
+                "kind": "repo_citation",
+                "ref": "src/memory/project-memory-retrieval-indexer.ts"
+              }
+            ],
+            "inference": null,
+            "page_path": "storage-retrieval.md",
+            "purpose": "SQLite, embeddings, and markdown retrieval",
+            "repo_citations": [
+              {
+                "line_start": 1,
+                "path": "src/memory/db.ts",
+                "reason": "root SQLite database and memory tables"
+              },
+              {
+                "line_start": 1,
+                "path": "src/memory/project-memory-retrieval-indexer.ts",
+                "reason": "Project Memory retrieval rows"
+              }
+            ],
+            "sections": [
+              {
+                "body": {
+                  "paragraphs": [
+                    "The root SQLite database is state/memory.db, and it stores Session Memory records, memory candidates, handoffs, experience-log state, embeddings, and retrieval serving metadata keyed by project.",
+                    "Session Memory rows are durable conversation-derived memory items; Project Memory retrieval rows are derived pointers generated from canonical wiki markdown sections.",
+                    "This distinction matters because memory query can return recent Session Memory directly, while Project Memory lookup should resolve index hits back to markdown content or a file reference."
+                  ]
+                },
+                "evidence_refs": [
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/memory/db.ts"
+                  },
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/memory/project-memory-retrieval-indexer.ts"
+                  }
+                ],
+                "heading": "Overview",
+                "inference": null,
+                "level": 2,
+                "repo_citations": [
+                  {
+                    "line_start": 1,
+                    "path": "src/memory/db.ts",
+                    "reason": "root SQLite database and memory tables"
+                  },
+                  {
+                    "line_start": 1,
+                    "path": "src/memory/project-memory-retrieval-indexer.ts",
+                    "reason": "Project Memory retrieval rows"
+                  }
+                ]
+              },
+              {
+                "body": {
+                  "paragraphs": [
+                    "Project Memory retrieval indexing reads rendered wiki sections, combines section text with generated hints, embeds those serving texts, and stores rows that can be refreshed when markdown hashes change.",
+                    "The query service hydrates vector hits by reading the current markdown section and refuses stale inline content when the stored hash no longer matches the canonical file.",
+                    "Session Memory indexing is a separate operator command through memory index session, using pending embedding rows and branch-aware retrieval semantics."
+                  ]
+                },
+                "evidence_refs": [
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/memory/db.ts"
+                  },
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/memory/project-memory-retrieval-indexer.ts"
+                  }
+                ],
+                "heading": "Operational Details",
+                "inference": null,
+                "level": 2,
+                "repo_citations": [
+                  {
+                    "line_start": 1,
+                    "path": "src/memory/db.ts",
+                    "reason": "root SQLite database and memory tables"
+                  },
+                  {
+                    "line_start": 1,
+                    "path": "src/memory/project-memory-retrieval-indexer.ts",
+                    "reason": "Project Memory retrieval rows"
+                  }
+                ]
+              },
+              {
+                "body": {
+                  "paragraphs": [
+                    "src/memory/db.ts and src/memory/migrations.ts own the SQLite schema and migration lifecycle for root memory state.",
+                    "src/memory/project-memory-retrieval-indexer.ts and src/query/project-memory-query-service.ts own the derived Project Memory retrieval/index hydration behavior.",
+                    "The canonical Project Memory page is still markdown; a SQLite row is only a fast pointer and must not become the source of truth."
+                  ]
+                },
+                "evidence_refs": [
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/memory/db.ts"
+                  },
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/memory/project-memory-retrieval-indexer.ts"
+                  }
+                ],
+                "heading": "Evidence And Boundaries",
+                "inference": null,
+                "level": 2,
+                "repo_citations": [
+                  {
+                    "line_start": 1,
+                    "path": "src/memory/db.ts",
+                    "reason": "root SQLite database and memory tables"
+                  },
+                  {
+                    "line_start": 1,
+                    "path": "src/memory/project-memory-retrieval-indexer.ts",
+                    "reason": "Project Memory retrieval rows"
+                  }
+                ]
+              }
+            ],
+            "title": "Storage And Retrieval"
+          }
+        ],
+        "schema_version": 1
+      },
+      "content_intent": "Document Storage And Retrieval",
+      "evidence_refs": [
+        {
+          "kind": "repo_citation",
+          "ref": "src/memory/db.ts"
+        },
+        {
+          "kind": "repo_citation",
+          "ref": "src/memory/project-memory-retrieval-indexer.ts"
+        }
+      ],
+      "id": "storage",
+      "inspected_surface_refs": [
+        "AGENTS.md",
+        "MYELIN.md",
+        "CONTEXT.md",
+        "package.json",
+        "Makefile",
+        "docs/CLI.md",
+        "docs/ROADMAP.md",
+        "docs/adr/0063-use-answer-domain-project-memory-documentation-map.md",
+        "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md",
+        "docs/adr/0065-require-independent-first-create-usefulness-critique.md",
+        "docs/adr/0066-allow-clean-project-shell-rebootstrap-reset.md",
+        "docs/design/2026-07-05-project-memory-rendered-create-contract/spec.md",
+        "src/cli.ts",
+        "src/project/project-memory-curator-service.ts",
+        "src/memory/db.ts",
+        "src/ingest/ingest-service.ts",
+        "src/query/project-memory-query-service.ts",
+        "src/commands/project.ts",
+        "src/runtime/config.ts"
+      ],
+      "notes_for_apply": [],
+      "purpose": "SQLite, embeddings, and markdown retrieval",
+      "repo_citations": [
+        {
+          "line_start": 1,
+          "path": "src/memory/db.ts",
+          "reason": "root SQLite database and memory tables"
+        },
+        {
+          "line_start": 1,
+          "path": "src/memory/project-memory-retrieval-indexer.ts",
+          "reason": "Project Memory retrieval rows"
+        }
+      ],
+      "representative_questions": [
+        "Where is the SQLite database stored?",
+        "How do retrieval rows differ from Session Memory rows?"
+      ],
+      "required_topics": [
+        "state/memory.db",
+        "Session Memory rows",
+        "Project Memory retrieval rows"
+      ],
+      "target": {
+        "path": "storage-retrieval.md",
+        "path_kind": "new_wiki_page"
+      },
+      "title": "Storage And Retrieval"
+    },
+    {
+      "answer_domains": [
+        "command_workflows"
+      ],
+      "apply_payload": {
+        "pages": [
+          {
+            "evidence_refs": [
+              {
+                "kind": "repo_citation",
+                "ref": "src/commands/project.ts"
+              },
+              {
+                "kind": "repo_citation",
+                "ref": "src/commands/memory.ts"
+              }
+            ],
+            "inference": null,
+            "page_path": "command-workflows.md",
+            "purpose": "CLI commands and operator workflows",
+            "repo_citations": [
+              {
+                "line_start": 1,
+                "path": "src/commands/project.ts",
+                "reason": "project learn and reset commands"
+              },
+              {
+                "line_start": 1,
+                "path": "src/commands/memory.ts",
+                "reason": "memory query and index commands"
+              }
+            ],
+            "sections": [
+              {
+                "body": {
+                  "paragraphs": [
+                    "Operators create or refresh Project Memory with project learn <key>, query memory through memory query <key> <question>, and rebuild retrieval serving rows through memory index project <key>.",
+                    "The Makefile wraps these V2 commands, but new automation should call bun src/cli.ts or the myelin binary with Myelin vocabulary rather than old compile/update terms.",
+                    "The CLI layer is the dogfood interface inside this repository; MCP wrapping is intentionally later and should expose stable CLI behavior to agents in other projects."
+                  ]
+                },
+                "evidence_refs": [
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/commands/project.ts"
+                  },
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/commands/memory.ts"
+                  }
+                ],
+                "heading": "Overview",
+                "inference": null,
+                "level": 2,
+                "repo_citations": [
+                  {
+                    "line_start": 1,
+                    "path": "src/commands/project.ts",
+                    "reason": "project learn and reset commands"
+                  },
+                  {
+                    "line_start": 1,
+                    "path": "src/commands/memory.ts",
+                    "reason": "memory query and index commands"
+                  }
+                ]
+              },
+              {
+                "body": {
+                  "paragraphs": [
+                    "project reset <key> --clean --confirm <key> is the explicit clean rebootstrap path that deletes the project shell and preserves root state/memory.db unless a separate memory wipe exists.",
+                    "memory inbox create and memory inbox intake provide the runtime candidate intake path, turning source items into project candidates for later evidence-backed learning.",
+                    "top-level ingest <key> drains captured Experience Log rows into Session Memory and candidate outputs, while project ingest is reserved for project-memory source/inbox material."
+                  ]
+                },
+                "evidence_refs": [
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/commands/project.ts"
+                  },
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/commands/memory.ts"
+                  }
+                ],
+                "heading": "Operational Details",
+                "inference": null,
+                "level": 2,
+                "repo_citations": [
+                  {
+                    "line_start": 1,
+                    "path": "src/commands/project.ts",
+                    "reason": "project learn and reset commands"
+                  },
+                  {
+                    "line_start": 1,
+                    "path": "src/commands/memory.ts",
+                    "reason": "memory query and index commands"
+                  }
+                ]
+              },
+              {
+                "body": {
+                  "paragraphs": [
+                    "src/commands/project.ts owns project packet, project learn, project reset, and project-list command behavior.",
+                    "src/commands/memory.ts owns memory query, inbox create/intake, candidate inspection, and memory indexing command surfaces.",
+                    "AGENTS.md and docs/CLI.md describe the product vocabulary that command implementations should preserve."
+                  ]
+                },
+                "evidence_refs": [
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/commands/project.ts"
+                  },
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/commands/memory.ts"
+                  }
+                ],
+                "heading": "Evidence And Boundaries",
+                "inference": null,
+                "level": 2,
+                "repo_citations": [
+                  {
+                    "line_start": 1,
+                    "path": "src/commands/project.ts",
+                    "reason": "project learn and reset commands"
+                  },
+                  {
+                    "line_start": 1,
+                    "path": "src/commands/memory.ts",
+                    "reason": "memory query and index commands"
+                  }
+                ]
+              }
+            ],
+            "title": "Command Workflows"
+          }
+        ],
+        "schema_version": 1
+      },
+      "content_intent": "Document Command Workflows",
+      "evidence_refs": [
+        {
+          "kind": "repo_citation",
+          "ref": "src/commands/project.ts"
+        },
+        {
+          "kind": "repo_citation",
+          "ref": "src/commands/memory.ts"
+        }
+      ],
+      "id": "commands",
+      "inspected_surface_refs": [
+        "AGENTS.md",
+        "MYELIN.md",
+        "CONTEXT.md",
+        "package.json",
+        "Makefile",
+        "docs/CLI.md",
+        "docs/ROADMAP.md",
+        "docs/adr/0063-use-answer-domain-project-memory-documentation-map.md",
+        "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md",
+        "docs/adr/0065-require-independent-first-create-usefulness-critique.md",
+        "docs/adr/0066-allow-clean-project-shell-rebootstrap-reset.md",
+        "docs/design/2026-07-05-project-memory-rendered-create-contract/spec.md",
+        "src/cli.ts",
+        "src/project/project-memory-curator-service.ts",
+        "src/memory/db.ts",
+        "src/ingest/ingest-service.ts",
+        "src/query/project-memory-query-service.ts",
+        "src/commands/project.ts",
+        "src/runtime/config.ts"
+      ],
+      "notes_for_apply": [],
+      "purpose": "CLI commands and operator workflows",
+      "repo_citations": [
+        {
+          "line_start": 1,
+          "path": "src/commands/project.ts",
+          "reason": "project learn and reset commands"
+        },
+        {
+          "line_start": 1,
+          "path": "src/commands/memory.ts",
+          "reason": "memory query and index commands"
+        }
+      ],
+      "representative_questions": [
+        "Which CLI commands operate Project Memory?",
+        "How do operators create and query memory?"
+      ],
+      "required_topics": [
+        "project learn",
+        "memory query",
+        "project reset"
+      ],
+      "target": {
+        "path": "command-workflows.md",
+        "path_kind": "new_wiki_page"
+      },
+      "title": "Command Workflows"
+    },
+    {
+      "answer_domains": [
+        "curation_apply_lifecycle"
+      ],
+      "apply_payload": {
+        "pages": [
+          {
+            "evidence_refs": [
+              {
+                "kind": "repo_citation",
+                "ref": "src/project/project-memory-curator-service.ts"
+              },
+              {
+                "kind": "repo_citation",
+                "ref": "src/project/project-memory-markdown-applier.ts"
+              }
+            ],
+            "inference": null,
+            "page_path": "curation-apply-lifecycle.md",
+            "purpose": "Project learn curation, validation, apply, and retrieval lifecycle",
+            "repo_citations": [
+              {
+                "line_start": 1,
+                "path": "src/project/project-memory-curator-service.ts",
+                "reason": "curator orchestration"
+              },
+              {
+                "line_start": 1,
+                "path": "src/project/project-memory-markdown-applier.ts",
+                "reason": "canonical markdown apply"
+              }
+            ],
+            "sections": [
+              {
+                "body": {
+                  "paragraphs": [
+                    "The project learn create lifecycle builds an input packet, writes a deterministic evidence map, invokes the curator, validates the returned JSON, critiques usefulness, and only then applies markdown.",
+                    "Deterministic validation owns schema shape, sectioned rendered markdown, answer-domain coverage, orientation-surface inspection, evidence-map support, citations, answerability, and shallow-content detection.",
+                    "The independent usefulness critique is a model-backed second gate that can return pass, review_only, or fail after reading rendered markdown and the evidence map."
+                  ]
+                },
+                "evidence_refs": [
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/project/project-memory-curator-service.ts"
+                  },
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/project/project-memory-markdown-applier.ts"
+                  }
+                ],
+                "heading": "Overview",
+                "inference": null,
+                "level": 2,
+                "repo_citations": [
+                  {
+                    "line_start": 1,
+                    "path": "src/project/project-memory-curator-service.ts",
+                    "reason": "curator orchestration"
+                  },
+                  {
+                    "line_start": 1,
+                    "path": "src/project/project-memory-markdown-applier.ts",
+                    "reason": "canonical markdown apply"
+                  }
+                ]
+              },
+              {
+                "body": {
+                  "paragraphs": [
+                    "Markdown apply stages canonical writes, records project-memory-apply-journal.json, produces project-memory-changeset.json, and finalizes project-memory.json only after safe promotion.",
+                    "First-create is all-or-nothing: shallow, blocked, review-only, or failed output remains in run artifacts and must not become trusted wiki state.",
+                    "A completed_with_pending_index result means content quality was trusted and markdown was applied, but retrieval hints or vector indexing still need follow-up work."
+                  ]
+                },
+                "evidence_refs": [
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/project/project-memory-curator-service.ts"
+                  },
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/project/project-memory-markdown-applier.ts"
+                  }
+                ],
+                "heading": "Operational Details",
+                "inference": null,
+                "level": 2,
+                "repo_citations": [
+                  {
+                    "line_start": 1,
+                    "path": "src/project/project-memory-curator-service.ts",
+                    "reason": "curator orchestration"
+                  },
+                  {
+                    "line_start": 1,
+                    "path": "src/project/project-memory-markdown-applier.ts",
+                    "reason": "canonical markdown apply"
+                  }
+                ]
+              },
+              {
+                "body": {
+                  "paragraphs": [
+                    "src/project/project-memory-curator-service.ts orchestrates packet creation, evidence-map writing, provider calls, validation, critique, apply, and retrieval lifecycle results.",
+                    "src/project/project-memory-curator-validator.ts and project-memory-rendered-quality.ts enforce the create-mode quality contract before canonical writes.",
+                    "src/project/project-memory-markdown-applier.ts owns staged markdown mutation and recovery semantics."
+                  ]
+                },
+                "evidence_refs": [
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/project/project-memory-curator-service.ts"
+                  },
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/project/project-memory-markdown-applier.ts"
+                  }
+                ],
+                "heading": "Evidence And Boundaries",
+                "inference": null,
+                "level": 2,
+                "repo_citations": [
+                  {
+                    "line_start": 1,
+                    "path": "src/project/project-memory-curator-service.ts",
+                    "reason": "curator orchestration"
+                  },
+                  {
+                    "line_start": 1,
+                    "path": "src/project/project-memory-markdown-applier.ts",
+                    "reason": "canonical markdown apply"
+                  }
+                ]
+              }
+            ],
+            "title": "Curation And Apply Lifecycle"
+          }
+        ],
+        "schema_version": 1
+      },
+      "content_intent": "Document Curation And Apply Lifecycle",
+      "evidence_refs": [
+        {
+          "kind": "repo_citation",
+          "ref": "src/project/project-memory-curator-service.ts"
+        },
+        {
+          "kind": "repo_citation",
+          "ref": "src/project/project-memory-markdown-applier.ts"
+        }
+      ],
+      "id": "curation",
+      "inspected_surface_refs": [
+        "AGENTS.md",
+        "MYELIN.md",
+        "CONTEXT.md",
+        "package.json",
+        "Makefile",
+        "docs/CLI.md",
+        "docs/ROADMAP.md",
+        "docs/adr/0063-use-answer-domain-project-memory-documentation-map.md",
+        "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md",
+        "docs/adr/0065-require-independent-first-create-usefulness-critique.md",
+        "docs/adr/0066-allow-clean-project-shell-rebootstrap-reset.md",
+        "docs/design/2026-07-05-project-memory-rendered-create-contract/spec.md",
+        "src/cli.ts",
+        "src/project/project-memory-curator-service.ts",
+        "src/memory/db.ts",
+        "src/ingest/ingest-service.ts",
+        "src/query/project-memory-query-service.ts",
+        "src/commands/project.ts",
+        "src/runtime/config.ts"
+      ],
+      "notes_for_apply": [],
+      "purpose": "Project learn curation, validation, apply, and retrieval lifecycle",
+      "repo_citations": [
+        {
+          "line_start": 1,
+          "path": "src/project/project-memory-curator-service.ts",
+          "reason": "curator orchestration"
+        },
+        {
+          "line_start": 1,
+          "path": "src/project/project-memory-markdown-applier.ts",
+          "reason": "canonical markdown apply"
+        }
+      ],
+      "representative_questions": [
+        "How is Project Memory created and applied?",
+        "What blocks shallow output?"
+      ],
+      "required_topics": [
+        "curator validation",
+        "apply journal",
+        "usefulness critique"
+      ],
+      "target": {
+        "path": "curation-apply-lifecycle.md",
+        "path_kind": "new_wiki_page"
+      },
+      "title": "Curation And Apply Lifecycle"
+    },
+    {
+      "answer_domains": [
+        "evidence_provenance_candidates"
+      ],
+      "apply_payload": {
+        "pages": [
+          {
+            "evidence_refs": [
+              {
+                "kind": "repo_citation",
+                "ref": "src/project/project-memory-evidence-map.ts"
+              },
+              {
+                "kind": "repo_citation",
+                "ref": "src/memory/candidates.ts"
+              }
+            ],
+            "inference": null,
+            "page_path": "evidence-provenance-candidates.md",
+            "purpose": "Candidate, handoff, session, and provenance boundaries",
+            "repo_citations": [
+              {
+                "line_start": 1,
+                "path": "src/project/project-memory-evidence-map.ts",
+                "reason": "evidence map"
+              },
+              {
+                "line_start": 1,
+                "path": "src/memory/candidates.ts",
+                "reason": "memory candidates"
+              }
+            ],
+            "sections": [
+              {
+                "body": {
+                  "paragraphs": [
+                    "Project Memory candidates and handoffs are leads created by producers such as Session Memory, runtime inbox intake, or future maintenance flows.",
+                    "A lead can explain why something is worth documenting, but project learn must inspect target-repo evidence before writing a durable Project Memory page.",
+                    "The evidence map bridges the lead to repo truth by listing answer domains, representative questions, inspected paths, search terms, search results, and evidence refs."
+                  ]
+                },
+                "evidence_refs": [
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/project/project-memory-evidence-map.ts"
+                  },
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/memory/candidates.ts"
+                  }
+                ],
+                "heading": "Overview",
+                "inference": null,
+                "level": 2,
+                "repo_citations": [
+                  {
+                    "line_start": 1,
+                    "path": "src/project/project-memory-evidence-map.ts",
+                    "reason": "evidence map"
+                  },
+                  {
+                    "line_start": 1,
+                    "path": "src/memory/candidates.ts",
+                    "reason": "memory candidates"
+                  }
+                ]
+              },
+              {
+                "body": {
+                  "paragraphs": [
+                    "The evidence-map builder starts from default orientation surfaces and answer-domain path hints, then runs bounded rg searches with generated-path exclusions and result caps.",
+                    "Runtime inbox items become normalized candidates through memory inbox intake, while source-consumption reconciliation marks candidates and handoffs processed only after terminal apply or accepted no-op disposition.",
+                    "Producer priority can weight candidates during maintenance, but producer metadata never grants write authority without deterministic validation."
+                  ]
+                },
+                "evidence_refs": [
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/project/project-memory-evidence-map.ts"
+                  },
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/memory/candidates.ts"
+                  }
+                ],
+                "heading": "Operational Details",
+                "inference": null,
+                "level": 2,
+                "repo_citations": [
+                  {
+                    "line_start": 1,
+                    "path": "src/project/project-memory-evidence-map.ts",
+                    "reason": "evidence map"
+                  },
+                  {
+                    "line_start": 1,
+                    "path": "src/memory/candidates.ts",
+                    "reason": "memory candidates"
+                  }
+                ]
+              },
+              {
+                "body": {
+                  "paragraphs": [
+                    "src/project/project-memory-candidate-intake-service.ts owns runtime inbox to candidate normalization.",
+                    "src/project/project-memory-source-consumption-reconciler.ts owns terminal candidate and handoff consumption after apply/no-op decisions.",
+                    "src/project/project-memory-producer-boundary.ts documents producer-kind weighting without turning candidates into canonical truth."
+                  ]
+                },
+                "evidence_refs": [
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/project/project-memory-evidence-map.ts"
+                  },
+                  {
+                    "kind": "repo_citation",
+                    "ref": "src/memory/candidates.ts"
+                  }
+                ],
+                "heading": "Evidence And Boundaries",
+                "inference": null,
+                "level": 2,
+                "repo_citations": [
+                  {
+                    "line_start": 1,
+                    "path": "src/project/project-memory-evidence-map.ts",
+                    "reason": "evidence map"
+                  },
+                  {
+                    "line_start": 1,
+                    "path": "src/memory/candidates.ts",
+                    "reason": "memory candidates"
+                  }
+                ]
+              }
+            ],
+            "title": "Evidence Provenance And Candidates"
+          }
+        ],
+        "schema_version": 1
+      },
+      "content_intent": "Document Evidence Provenance And Candidates",
+      "evidence_refs": [
+        {
+          "kind": "repo_citation",
+          "ref": "src/project/project-memory-evidence-map.ts"
+        },
+        {
+          "kind": "repo_citation",
+          "ref": "src/memory/candidates.ts"
+        }
+      ],
+      "id": "evidence",
+      "inspected_surface_refs": [
+        "AGENTS.md",
+        "MYELIN.md",
+        "CONTEXT.md",
+        "package.json",
+        "Makefile",
+        "docs/CLI.md",
+        "docs/ROADMAP.md",
+        "docs/adr/0063-use-answer-domain-project-memory-documentation-map.md",
+        "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md",
+        "docs/adr/0065-require-independent-first-create-usefulness-critique.md",
+        "docs/adr/0066-allow-clean-project-shell-rebootstrap-reset.md",
+        "docs/design/2026-07-05-project-memory-rendered-create-contract/spec.md",
+        "src/cli.ts",
+        "src/project/project-memory-curator-service.ts",
+        "src/memory/db.ts",
+        "src/ingest/ingest-service.ts",
+        "src/query/project-memory-query-service.ts",
+        "src/commands/project.ts",
+        "src/runtime/config.ts"
+      ],
+      "notes_for_apply": [],
+      "purpose": "Candidate, handoff, session, and provenance boundaries",
+      "repo_citations": [
+        {
+          "line_start": 1,
+          "path": "src/project/project-memory-evidence-map.ts",
+          "reason": "evidence map"
+        },
+        {
+          "line_start": 1,
+          "path": "src/memory/candidates.ts",
+          "reason": "memory candidates"
+        }
+      ],
+      "representative_questions": [
+        "How do candidates become Project Memory?",
+        "What counts as durable evidence?"
+      ],
+      "required_topics": [
+        "candidate leads",
+        "repo evidence",
+        "source provenance"
+      ],
+      "target": {
+        "path": "evidence-provenance-candidates.md",
+        "path_kind": "new_wiki_page"
+      },
+      "title": "Evidence Provenance And Candidates"
+    },
+    {
+      "answer_domains": [
+        "current_work_roadmap_decisions"
+      ],
+      "apply_payload": {
+        "pages": [
+          {
+            "evidence_refs": [
+              {
+                "kind": "repo_citation",
+                "ref": "docs/ROADMAP.md"
+              },
+              {
+                "kind": "repo_citation",
+                "ref": "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md"
+              }
+            ],
+            "inference": null,
+            "page_path": "current-work-roadmap-decisions.md",
+            "purpose": "Current roadmap, ADRs, and implementation decisions",
+            "repo_citations": [
+              {
+                "line_start": 1,
+                "path": "docs/ROADMAP.md",
+                "reason": "current roadmap"
+              },
+              {
+                "line_start": 1,
+                "path": "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md",
+                "reason": "evidence workflow ADR"
+              }
+            ],
+            "sections": [
+              {
+                "body": {
+                  "paragraphs": [
+                    "docs/ROADMAP.md is the workload guide for Myelin, and the current Step 5/6 work focuses on making Project Memory first-create useful before Step 7 maintenance automation.",
+                    "The July 5 design records the product correction: Project Memory must be living repo documentation organized by answer domains, not six shallow role pages.",
+                    "The roadmap intentionally places MCP wrapping near the end because dogfood inside Myelin should use CLI commands until the behavior is stable."
+                  ]
+                },
+                "evidence_refs": [
+                  {
+                    "kind": "repo_citation",
+                    "ref": "docs/ROADMAP.md"
+                  },
+                  {
+                    "kind": "repo_citation",
+                    "ref": "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md"
+                  }
+                ],
+                "heading": "Overview",
+                "inference": null,
+                "level": 2,
+                "repo_citations": [
+                  {
+                    "line_start": 1,
+                    "path": "docs/ROADMAP.md",
+                    "reason": "current roadmap"
+                  },
+                  {
+                    "line_start": 1,
+                    "path": "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md",
+                    "reason": "evidence workflow ADR"
+                  }
+                ]
+              },
+              {
+                "body": {
+                  "paragraphs": [
+                    "ADR 0063 chooses answer-domain documentation, ADR 0064 chooses the two-pass evidence workflow, ADR 0065 requires independent usefulness critique, and ADR 0066 allows clean project-shell rebootstrap preserving state/memory.db.",
+                    "The execution plan splits renderer, answer domains, rendered quality, evidence map, schema validation, writer flow, critique, promotion state, reset, and dogfood regression into separate chunks.",
+                    "Current dogfood acceptance requires clean reset preservation, trusted content before canonical writes, real markdown sections, repo citations, evidence-map artifacts, and clear separation from retrieval readiness."
+                  ]
+                },
+                "evidence_refs": [
+                  {
+                    "kind": "repo_citation",
+                    "ref": "docs/ROADMAP.md"
+                  },
+                  {
+                    "kind": "repo_citation",
+                    "ref": "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md"
+                  }
+                ],
+                "heading": "Operational Details",
+                "inference": null,
+                "level": 2,
+                "repo_citations": [
+                  {
+                    "line_start": 1,
+                    "path": "docs/ROADMAP.md",
+                    "reason": "current roadmap"
+                  },
+                  {
+                    "line_start": 1,
+                    "path": "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md",
+                    "reason": "evidence workflow ADR"
+                  }
+                ]
+              },
+              {
+                "body": {
+                  "paragraphs": [
+                    "docs/design/2026-07-05-project-memory-rendered-create-contract/spec.md and agenda.md capture the settled design and answered questions.",
+                    "docs/design/2026-06-30-project-memory-shape-creation-maintenance/dogfood-validation.md records the failed trusted-but-shallow output that this slice must prevent.",
+                    "Future practice and personal memory work should wait until Project Memory create and maintenance behavior can dogfood Myelin itself."
+                  ]
+                },
+                "evidence_refs": [
+                  {
+                    "kind": "repo_citation",
+                    "ref": "docs/ROADMAP.md"
+                  },
+                  {
+                    "kind": "repo_citation",
+                    "ref": "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md"
+                  }
+                ],
+                "heading": "Evidence And Boundaries",
+                "inference": null,
+                "level": 2,
+                "repo_citations": [
+                  {
+                    "line_start": 1,
+                    "path": "docs/ROADMAP.md",
+                    "reason": "current roadmap"
+                  },
+                  {
+                    "line_start": 1,
+                    "path": "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md",
+                    "reason": "evidence workflow ADR"
+                  }
+                ]
+              }
+            ],
+            "title": "Current Work Roadmap And Decisions"
+          }
+        ],
+        "schema_version": 1
+      },
+      "content_intent": "Document Current Work Roadmap And Decisions",
+      "evidence_refs": [
+        {
+          "kind": "repo_citation",
+          "ref": "docs/ROADMAP.md"
+        },
+        {
+          "kind": "repo_citation",
+          "ref": "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md"
+        }
+      ],
+      "id": "roadmap",
+      "inspected_surface_refs": [
+        "AGENTS.md",
+        "MYELIN.md",
+        "CONTEXT.md",
+        "package.json",
+        "Makefile",
+        "docs/CLI.md",
+        "docs/ROADMAP.md",
+        "docs/adr/0063-use-answer-domain-project-memory-documentation-map.md",
+        "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md",
+        "docs/adr/0065-require-independent-first-create-usefulness-critique.md",
+        "docs/adr/0066-allow-clean-project-shell-rebootstrap-reset.md",
+        "docs/design/2026-07-05-project-memory-rendered-create-contract/spec.md",
+        "src/cli.ts",
+        "src/project/project-memory-curator-service.ts",
+        "src/memory/db.ts",
+        "src/ingest/ingest-service.ts",
+        "src/query/project-memory-query-service.ts",
+        "src/commands/project.ts",
+        "src/runtime/config.ts"
+      ],
+      "notes_for_apply": [],
+      "purpose": "Current roadmap, ADRs, and implementation decisions",
+      "repo_citations": [
+        {
+          "line_start": 1,
+          "path": "docs/ROADMAP.md",
+          "reason": "current roadmap"
+        },
+        {
+          "line_start": 1,
+          "path": "docs/adr/0064-use-two-pass-project-memory-evidence-workflow.md",
+          "reason": "evidence workflow ADR"
+        }
+      ],
+      "representative_questions": [
+        "Where are roadmap and decisions captured?",
+        "Which ADRs govern this create redesign?"
+      ],
+      "required_topics": [
+        "docs/ROADMAP.md",
+        "ADR decisions",
+        "current Step 5 and Step 6 work"
+      ],
+      "target": {
+        "path": "current-work-roadmap-decisions.md",
+        "path_kind": "new_wiki_page"
+      },
+      "title": "Current Work Roadmap And Decisions"
+    }
+  ],
+  "project_key": "llm-wiki",
+  "quality_diagnostics": {
+    "answerability_findings": [],
+    "candidate_dispositions": [],
+    "content_quality": {
+      "reasons": [],
+      "status": "trusted"
+    },
+    "domain_coverage": [
+      {
+        "body_chars_seen": 1200,
+        "citations_seen": 2,
+        "domain": "product_memory_model",
+        "missing_topics": [],
+        "page_refs": [
+          "index.md"
+        ],
+        "representative_questions": [
+          "How does product_memory_model work?"
+        ],
+        "section_refs": [
+          "index.md#overview"
+        ]
+      },
+      {
+        "body_chars_seen": 1200,
+        "citations_seen": 2,
+        "domain": "storage_retrieval",
+        "missing_topics": [],
+        "page_refs": [
+          "storage-retrieval.md"
+        ],
+        "representative_questions": [
+          "How does storage_retrieval work?"
+        ],
+        "section_refs": [
+          "storage-retrieval.md#overview"
+        ]
+      },
+      {
+        "body_chars_seen": 1200,
+        "citations_seen": 2,
+        "domain": "command_workflows",
+        "missing_topics": [],
+        "page_refs": [
+          "command-workflows.md"
+        ],
+        "representative_questions": [
+          "How does command_workflows work?"
+        ],
+        "section_refs": [
+          "command-workflows.md#overview"
+        ]
+      },
+      {
+        "body_chars_seen": 1200,
+        "citations_seen": 2,
+        "domain": "curation_apply_lifecycle",
+        "missing_topics": [],
+        "page_refs": [
+          "curation-apply-lifecycle.md"
+        ],
+        "representative_questions": [
+          "How does curation_apply_lifecycle work?"
+        ],
+        "section_refs": [
+          "curation-apply-lifecycle.md#overview"
+        ]
+      },
+      {
+        "body_chars_seen": 1200,
+        "citations_seen": 2,
+        "domain": "evidence_provenance_candidates",
+        "missing_topics": [],
+        "page_refs": [
+          "evidence-provenance-candidates.md"
+        ],
+        "representative_questions": [
+          "How does evidence_provenance_candidates work?"
+        ],
+        "section_refs": [
+          "evidence-provenance-candidates.md#overview"
+        ]
+      },
+      {
+        "body_chars_seen": 1200,
+        "citations_seen": 2,
+        "domain": "current_work_roadmap_decisions",
+        "missing_topics": [],
+        "page_refs": [
+          "current-work-roadmap-decisions.md"
+        ],
+        "representative_questions": [
+          "How does current_work_roadmap_decisions work?"
+        ],
+        "section_refs": [
+          "current-work-roadmap-decisions.md#overview"
+        ]
+      }
+    ],
+    "missing_coverage": [],
+    "retrieval_readiness": {
+      "reason": null,
+      "status": "not_applicable"
+    },
+    "schema_version": 1,
+    "shallow_summary_findings": []
+  },
+  "repo_citations": [
+    {
+      "line_start": 1,
+      "path": "MYELIN.md",
+      "reason": "product model"
+    },
+    {
+      "line_start": 1,
+      "path": "docs/ROADMAP.md",
+      "reason": "roadmap"
+    }
+  ],
+  "risk": {
+    "level": "low",
+    "reasons": [],
+    "requires_quarantine": false
+  },
+  "schema_version": 1,
+  "state_intent": {
+    "freshness_intent": "initialize",
+    "mark_project_memory_curated": true
+  },
+  "summary": "Create repo-grounded Project Memory documentation for Myelin."
+}

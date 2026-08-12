@@ -1,0 +1,11 @@
+{
+  "accepted_entries": 0,
+  "category": null,
+  "degraded": true,
+  "degraded_reason": "hint generation output did not match ProjectMemoryHintFile",
+  "project_key": "llm-wiki",
+  "rejected_entries": 0,
+  "required": true,
+  "run_ref": "projects/llm-wiki/runs/project-memory-hints/2026-07-06T12-59-36.577Z-run",
+  "status": "failed"
+}

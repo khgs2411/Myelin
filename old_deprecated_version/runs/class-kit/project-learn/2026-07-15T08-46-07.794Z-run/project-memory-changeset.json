@@ -1,0 +1,1320 @@
+{
+  "applied_at": "2026-07-15T08:51:34.664Z",
+  "curator_output_ref": "documentation-maintenance-result.json",
+  "file_changes": [
+    {
+      "after_sha256": "d7fa908346367b1e27ece1c45617ef689e68a1b3befc121122554911cb6d6945",
+      "before_sha256": "d7fa908346367b1e27ece1c45617ef689e68a1b3befc121122554911cb6d6945",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "admin-pm-integration.md"
+      ],
+      "path": "projects/class-kit/wiki/admin-pm-integration.md",
+      "staged_output_ref": "staged/001-wiki_page-admin-pm-integration.md"
+    },
+    {
+      "after_sha256": "18b113cf170a6873c4b87d3f64ad32674a3835c9f707dc47769acafd0f1cb063",
+      "before_sha256": "18b113cf170a6873c4b87d3f64ad32674a3835c9f707dc47769acafd0f1cb063",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "attendance-lifecycle.md"
+      ],
+      "path": "projects/class-kit/wiki/attendance-lifecycle.md",
+      "staged_output_ref": "staged/002-wiki_page-attendance-lifecycle.md"
+    },
+    {
+      "after_sha256": "1fde29603337a7db69e625bd40bb9658f5caa3f47ffc0e99af544b8d28e9463c",
+      "before_sha256": "1fde29603337a7db69e625bd40bb9658f5caa3f47ffc0e99af544b8d28e9463c",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "class-discovery-registration-and-lifecycle.md"
+      ],
+      "path": "projects/class-kit/wiki/class-discovery-registration-and-lifecycle.md",
+      "staged_output_ref": "staged/003-wiki_page-class-discovery-registration-and-lifecycle.md"
+    },
+    {
+      "after_sha256": "d3c3d4de59c77aaea6c035bee997cfb414672307137cfb6fb1889bd6d409fd9b",
+      "before_sha256": "d3c3d4de59c77aaea6c035bee997cfb414672307137cfb6fb1889bd6d409fd9b",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "index.md"
+      ],
+      "path": "projects/class-kit/wiki/index.md",
+      "staged_output_ref": "staged/004-wiki_page-index.md"
+    },
+    {
+      "after_sha256": "687f1bc548f5a2f9f5679c7252f0f91d5a4262f851391a5c9a351a2c5135cb13",
+      "before_sha256": "687f1bc548f5a2f9f5679c7252f0f91d5a4262f851391a5c9a351a2c5135cb13",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "memberships-and-stock.md"
+      ],
+      "path": "projects/class-kit/wiki/memberships-and-stock.md",
+      "staged_output_ref": "staged/005-wiki_page-memberships-and-stock.md"
+    },
+    {
+      "after_sha256": "d656f19a49157a3988e6ef879b7d378a344a15e9ca36a21c4f45006a9bed63c4",
+      "before_sha256": "20a629f44aac101a2627d5bd01b6b510babab53997555abd42608cf60591a5be",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "product-access-and-authorization.md"
+      ],
+      "path": "projects/class-kit/wiki/product-access-and-authorization.md",
+      "staged_output_ref": "staged/006-wiki_page-product-access-and-authorization.md"
+    },
+    {
+      "after_sha256": "454ccd9779484230656672c630206d9fb436fa51aac87faf75fe75315897e444",
+      "before_sha256": "454ccd9779484230656672c630206d9fb436fa51aac87faf75fe75315897e444",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "product-documents-and-change-requests.md"
+      ],
+      "path": "projects/class-kit/wiki/product-documents-and-change-requests.md",
+      "staged_output_ref": "staged/007-wiki_page-product-documents-and-change-requests.md"
+    },
+    {
+      "after_sha256": "a737bfd709f49474cc176e66e13353c742c1f6440524e468a96ffa2e425c822f",
+      "before_sha256": "a737bfd709f49474cc176e66e13353c742c1f6440524e468a96ffa2e425c822f",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "product-truncation.md"
+      ],
+      "path": "projects/class-kit/wiki/product-truncation.md",
+      "staged_output_ref": "staged/008-wiki_page-product-truncation.md"
+    },
+    {
+      "after_sha256": "b8f5dd116576164ef45f9c4dcecb6d9fbb6b15995b20183668a0290a131a8aa7",
+      "before_sha256": "b8f5dd116576164ef45f9c4dcecb6d9fbb6b15995b20183668a0290a131a8aa7",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "repository-identity-and-boundaries.md"
+      ],
+      "path": "projects/class-kit/wiki/repository-identity-and-boundaries.md",
+      "staged_output_ref": "staged/009-wiki_page-repository-identity-and-boundaries.md"
+    },
+    {
+      "after_sha256": "ae7e8194a461e728db35376071e7a5ac89ea9ff1a0800d80581ad9f7bb6bf2ed",
+      "before_sha256": "ae7e8194a461e728db35376071e7a5ac89ea9ff1a0800d80581ad9f7bb6bf2ed",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "sdk-and-api-facade.md"
+      ],
+      "path": "projects/class-kit/wiki/sdk-and-api-facade.md",
+      "staged_output_ref": "staged/010-wiki_page-sdk-and-api-facade.md"
+    },
+    {
+      "after_sha256": "db23d5603bb59df0a4a0b05b68483d43bb791a40cd99211de716f25daa5e39a7",
+      "before_sha256": "db23d5603bb59df0a4a0b05b68483d43bb791a40cd99211de716f25daa5e39a7",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "templates-and-schedules.md"
+      ],
+      "path": "projects/class-kit/wiki/templates-and-schedules.md",
+      "staged_output_ref": "staged/011-wiki_page-templates-and-schedules.md"
+    },
+    {
+      "after_sha256": "673017f34e2db32a3e73e4135fc03e0d01c816a3089fc38d298fc65692f4b89c",
+      "before_sha256": "34509ce184b4c30ab1ff5d9317e7d08b7197f198dfa25a0ae37d7b3a986311c3",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [],
+      "path": "projects/class-kit/state/project-memory-source-consumptions.json",
+      "staged_output_ref": "staged/012-source_consumption_state-project-memory-source-consumptions.json"
+    },
+    {
+      "after_sha256": "b692d190f8368a3d5e18d119f9ebb54685a8913a3fc589379c2685d7f3a6436d",
+      "before_sha256": "9b10f59c3fbb427af8bbd690efa7fd33a122dd8ea7a2c96da0fed7c36eaf2271",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [],
+      "path": "projects/class-kit/state/project-memory.json",
+      "staged_output_ref": "staged/013-project_state-project-memory.json"
+    }
+  ],
+  "item_changes": [],
+  "packet_ref": {
+    "artifact": "input-packet.json",
+    "packet_schema_version": 1
+  },
+  "page_changes": [],
+  "project_key": "class-kit",
+  "risk": {
+    "level": "low",
+    "reasons": [],
+    "requires_quarantine": false
+  },
+  "run_dir": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+  "schema_version": 1,
+  "source_consumptions": [
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_chunk08_guard_20260614_01",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T10-12-52.575Z_368d77_cand_project_admin_manager_plan_readiness",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_project_chunk08_authmode_guard_01",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_project_card266_blocker_classification_01",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_722bc10a_card264_ready_for_review",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T10-04-28.710Z_e38db1_cand_project_card266_blocker_category",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_project_admin_manager_plan_readiness",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_project_card266_blocker_category",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_publish_clears_draft_20260715",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_draft_save_policy_20260715",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_version_activation_semantics_20260715",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_reactivation_semantics_20260715",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_nonactive_state_term_20260715",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_manager_history_restore_semantics_20260715",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_admin_pages_build_20260715",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_manager_history_api_gap_20260715",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_design_guides_20260629",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [
+        "target-repo/docs/shared/authentication.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_auth_md_20260629",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [
+        "target-repo/docs/repositories/structure.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_demo_app_docs_env_scope_20260629",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_platform_admin_role_20260628",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_document_lifecycle_refactor_20260715",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_versioning_contract_sync_20260715",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_docs_version_api_alignment_20260715",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_sdk_contract_followup_20260715",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_admin_pages_build_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_manager_history_20260715",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_demo_public_pages_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_unblock_github_pages_20260629",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_demo_guides_20260629",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [
+        "target-repo/docs/shared/authentication.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_auth_md_20260629",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_publish_pages_20260629",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [
+        "draft-wiki/repository-identity-and-boundaries.md",
+        "target-repo/docs/shared/deployment.md",
+        "target-repo/docs/shared/authentication.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_shared_remote_split_20260629",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [
+        "draft-wiki/product-access-and-authorization.md",
+        "target-repo/docs/shared/authentication.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_db_redirect_registry_20260628",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_remote_bootstrap_and_smoke_20260628",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [
+        "target-repo/docs/design/2026-06-25-schedule-lifecycle-management/agenda.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_generated_class_actions_20260628",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_verify_local_supabase_auth",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_deploy_split_next",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_remote_seed_20260628",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [
+        "draft-wiki/repository-identity-and-boundaries.md",
+        "target-repo/docs/shared/deployment.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_namespace_implementation_plan_20260628",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-15T07:49:54.173Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T07-49-54.173Z-run",
+      "output_refs": [
+        "target-repo/docs/design/2026-06-25-schedule-lifecycle-management/spec.md",
+        "target-repo/docs/design/2026-06-25-schedule-lifecycle-management/agenda.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_schedule_lifecycle_spec_20260625",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [
+        "draft-wiki/product-truncation.md",
+        "draft-wiki/index.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "project_inbox:class-kit:2026-07-15T08-14-06.014Z_e5b6b2",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [
+        "draft-wiki/repository-identity-and-boundaries.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_verify_child_repo_roots_20260715",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_sdk_isolated_boundary_20260715",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [
+        "draft-wiki/product-access-and-authorization.md",
+        "draft-wiki/repository-identity-and-boundaries.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_db_redirect_registry_20260628",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_generated_class_actions_20260628",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_users_table_naming_20260628",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_b7a1e0",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_4f9c2d",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [
+        "draft-wiki/templates-and-schedules.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_schedule_backfill_bug_20260623",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [
+        "draft-wiki/sdk-and-api-facade.md",
+        "draft-wiki/class-discovery-registration-and-lifecycle.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_manager_class_lifecycle_followup_20260622",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [
+        "draft-wiki/sdk-and-api-facade.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_class_api_slice_20260622",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_public_api_break_20260622",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_read_capability_contract",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_permission_guard_scope",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_guard_migration_scope",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_first_slice_proof",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_dashboard_ia",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_symphony_routing_20260614_01",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_plan_ready_reverify_20260614_01",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:15:59.621Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-15-59.621Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T11-14-34.534Z_49b567_cand_wave_d_blocker_classification_003",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [
+        "draft-wiki/repository-identity-and-boundaries.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_verify_registration_roots_20260715",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_reviewer_repo_root_fix_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_harness_cards_20260715",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_rewrite_symphony_cards_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_verify_sdk_independence_20260715",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_9f2b1a",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_admin_demo_nested_rework_20260625",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_programs_dashboard_ui_followup_20260625",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_permissions_view_bundle_20260625",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [
+        "draft-wiki/templates-and-schedules.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_schedule_backfill_investigation_20260623",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_demo2_seed_slice_20260623",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_review_branch_diff_20260623",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [
+        "draft-wiki/sdk-and-api-facade.md",
+        "draft-wiki/class-discovery-registration-and-lifecycle.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_manager_class_ops_followup_20260622",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [
+        "draft-wiki/sdk-and-api-facade.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_class_api_slice_20260622",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_external_consumer_audit_20260622",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_feature_matrix_split_20260621",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_resolve_read_flags_then_plan",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_demo2_p09_review",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_manager_dashboard_bringup",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T08:15:59.621Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-15-59.621Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_verify_plan_ready_20260614_01",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_sdk_prompt_bypass_risk_20260715",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T08:22:19.092Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-22-19.092Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_api_first_sdk_followup_20260715",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_symphony_running_task_move",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [
+        "draft-wiki/admin-pm-integration.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T11-14-34.534Z_49b567_cand_trello_stale_label_warning_001",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [
+        "draft-wiki/product-access-and-authorization.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T11-14-34.534Z_49b567_cand_auth_scalability_duplicate_email_002",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T11-14-34.534Z_49b567_cand_admin_ux_followup_scope",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_wave_e_manual_smoke_verification_004",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_admin_cleanup_merge_state_006",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [
+        "draft-wiki/admin-pm-integration.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T11-14-34.555Z_3e583c_cand_trello_stale_label_warning_001_2",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [
+        "draft-wiki/product-access-and-authorization.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T11-14-34.555Z_3e583c_cand_auth_scalability_duplicate_email_002_2",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_wave_e_manual_smoke_verification_003",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_wavec_todo_queue",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T11-14-34.555Z_3e583c_cand_wave_e_manual_smoke_verification",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T11-14-34.555Z_3e583c_cand_wave_d_blocker_classification_003",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [
+        "draft-wiki/admin-pm-integration.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T11-14-34.555Z_3e583c_cand_trello_stale_label_warning_001",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [
+        "draft-wiki/product-access-and-authorization.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T11-14-34.555Z_3e583c_cand_auth_scalability_duplicate_email_002",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T11-14-34.555Z_3e583c_cand_admin_ux_followup_scope",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T11-14-34.555Z_3e583c_cand_admin_cleanup_merge_state",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_admin_manager_review_gate_b2",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T10-12-52.575Z_368d77_cand_project_symphony_routing_observation",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T10-12-52.575Z_368d77_cand_project_symphony_review_gate",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_candidate",
+      "source_ref": "ingest_2026-06-14T10-12-52.575Z_368d77_cand_5eb2c1",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_symphony_running_task_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_api_repair_and_resubmit_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_api_review_20260715",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_4f2b71",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "ingest_2026-06-14T11-14-34.534Z_49b567_handoff_project_admin_reviewer_001",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "ingest_2026-06-14T11-14-34.534Z_49b567_handoff_admin_review_pack",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [
+        "draft-wiki/product-access-and-authorization.md",
+        "draft-wiki/admin-pm-integration.md"
+      ],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "ingest_2026-06-14T11-14-34.555Z_3e583c_handoff_project_ck_ingest_followup_001",
+      "terminal_decision": "already_covered"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "ingest_2026-06-14T11-14-34.555Z_3e583c_handoff_project_admin_reviewer_001",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "ingest_2026-06-14T11-14-34.555Z_3e583c_handoff_admin_review_pack",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_review_admin_manager_workflow_b2",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "ingest_2026-06-14T10-12-52.575Z_368d77_handoff_verify_admin_manager_plan_readiness",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "ingest_2026-06-14T10-12-52.575Z_368d77_handoff_2f8a91",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_project_verify_plan_readiness_before_mem_promote",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_project_card266_blocker_resolution_path",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_confirm_plan_readiness_before_execution",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_368d77_validate_project_candidates",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_next_queue_01",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_1f4e",
+      "terminal_decision": "insufficient_evidence"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_project_next_wave_review",
+      "terminal_decision": "belongs_to_other_layer"
+    },
+    {
+      "consumed_at": "2026-07-15T08:46:07.794Z",
+      "consumed_by_run": "projects/class-kit/runs/project-learn/2026-07-15T08-46-07.794Z-run",
+      "output_refs": [],
+      "project_key": "class-kit",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_wavec_review_completion",
+      "terminal_decision": "insufficient_evidence"
+    }
+  ],
+  "validation_ref": "curator-validation.json"
+}

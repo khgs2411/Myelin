@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "subject_id": "roadmap-decisions-and-docs",
+  "wiki_path": "roadmap-decisions-and-docs.md",
+  "status": "complete",
+  "evidence_paths": [
+    "target-repo/docs/README.md",
+    "target-repo/docs/ROADMAP.md",
+    "target-repo/docs/IMPLEMENTATION_ALIGNMENT.md",
+    "target-repo/MYELIN.md",
+    "target-repo/CONTEXT.md",
+    "target-repo/docs/archive/README.md",
+    "target-repo/docs/adr/"
+  ],
+  "touched_paths": [
+    "draft-wiki/roadmap-decisions-and-docs.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "Did not inspect every ADR in full; used ADR filenames plus targeted decision excerpts and MYELIN.md's decision index to map authority.",
+    "docs/archive/README.md appears stale where it names docs/DONE.md and docs/TODO.md as current inventory; live docs/README.md and docs/ROADMAP.md make docs/ROADMAP.md canonical."
+  ]
+}

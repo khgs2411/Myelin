@@ -1,0 +1,123 @@
+import type { MachineLocator } from "./machine-locator-contracts.ts";
+import type { PlannedInstalledVersion } from "./version-contracts.ts";
+
+export type InstallMode = "preview" | "apply" | "uninstall";
+
+export type ProviderName = "codex";
+
+export type ProviderInstallPlan = {
+  provider: ProviderName;
+  detected: boolean;
+  provider_root: string;
+  hooks_path: string;
+  state_dir: string;
+  actions: string[];
+  warnings: string[];
+};
+
+export type ProviderInstallOptions = {
+  providerRoot?: string;
+  myelinRoot: string;
+  mode: InstallMode;
+};
+
+export type MachineInstallOperation = "install" | "uninstall";
+
+export type MachineActionId =
+  | "promote_launcher"
+  | "promote_locator"
+  | "promote_version"
+  | "verify_activation"
+  | "prune_versions"
+  | "remove_version_store"
+  | "remove_launcher"
+  | "remove_locator"
+  | `apply_provider:${ProviderName}`
+  | `remove_provider:${ProviderName}`;
+
+export type MachineActionState = "pending" | "complete";
+
+export type MachineInstallAction = {
+  id: MachineActionId;
+  description: string;
+  path: string;
+  expected_sha256: string | null;
+  backup_path: string | null;
+};
+
+export type MachineInstallPlan = {
+  operation: MachineInstallOperation;
+  mode: "preview" | "apply";
+  myelin_root: string;
+  source_root: string;
+  launcher_path: string;
+  locator_path: string;
+  journal_path: string;
+  store_root: string;
+  active_version: string | null;
+  previous_version: string | null;
+  current_root: string | null;
+  rebind: boolean;
+  path_active: boolean;
+  actions: MachineInstallAction[];
+  warnings: string[];
+  desired_manifest: MachineLocator | null;
+};
+
+export type InstallJournalV1 = {
+  schema_version: 1;
+  transaction_id: string;
+  operation: MachineInstallOperation;
+  myelin_root: string;
+  source_root: string;
+  launcher_path: string;
+  locator_path: string;
+  desired_manifest: MachineLocator | null;
+  previous_manifest: MachineLocator | null;
+  version_plan: PlannedInstalledVersion | null;
+  prune: boolean;
+  actions: Array<MachineInstallAction & { state: MachineActionState }>;
+  created_at: string;
+};
+
+export type InstallFailurePoint =
+  | "before_launcher_promotion"
+  | "after_launcher_promotion"
+  | "before_locator_promotion";
+
+export type InstallServiceDeps = {
+  myelinRoot: string;
+  sourceRoot?: string;
+  homeDir?: string;
+  binDir?: string;
+  locatorPath?: string;
+  journalPath?: string;
+  env?: NodeJS.ProcessEnv;
+  now?: () => Date;
+  failAt?: (point: InstallFailurePoint) => void | Promise<void>;
+  codexRoot?: string;
+  storeRoot?: string;
+  detectedProviders?: string[];
+  supportedProviders?: string[];
+  activationVerifier?: (input: { launcherPath: string; locator: MachineLocator }) => void | Promise<void>;
+};
+
+export type InstallInput = {
+  apply: boolean;
+  rebind: boolean;
+  binDir: string | null;
+  commandOnly: boolean;
+  providers: string[];
+  prune?: boolean;
+  rollback?: boolean;
+};
+
+export type UninstallInput = {
+  apply: boolean;
+  providers: string[];
+};
+
+export type InstallResult = {
+  mode: "preview" | "apply";
+  plan: MachineInstallPlan;
+};

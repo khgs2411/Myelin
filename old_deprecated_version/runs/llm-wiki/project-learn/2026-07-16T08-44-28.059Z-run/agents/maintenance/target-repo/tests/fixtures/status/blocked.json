@@ -1,0 +1,32 @@
+{
+  "contract_version": "myelin.status.v1",
+  "kind": "project_operational_status",
+  "generated_at": "2026-07-10T12:00:00.000Z",
+  "overall_state": "blocked",
+  "project": { "key": "demo", "name": "Demo", "repo_paths": ["/repos/demo"], "resolved_from": "argument" },
+  "installation": {
+    "state": "attention", "lifecycle": "not_installed", "evidence_ids": ["e1"],
+    "myelin_root": "/repos/myelin", "launcher_path": null, "locator_path": "/home/me/.myelin/install.json", "locator_schema_version": null, "providers": []
+  },
+  "session_memory": {
+    "state": "blocked", "lifecycle": "stale_lock", "evidence_ids": ["e2", "e3"],
+    "capture": { "queued_events": 8, "unleased_events": 3, "leased_events": 5 },
+    "ingest": { "running_jobs": 1, "failed_jobs": 0, "terminal_tombstones": 2, "latest_log_path": "runs/demo/logs/ingest.log" },
+    "maintenance": { "enabled": true, "lifecycle": "stale_lock", "lock": { "lifecycle": "stale", "path": "state/demo/.auto-memory-maintenance.lock", "run_id": "dead-run", "pid": 42 }, "last_run_id": "dead-run", "last_log_path": "runs/demo/logs/dead-run.log" },
+    "retrieval": { "active_contract": { "provider": "ollama_nomic", "model": "nomic-embed-text:v1.5", "dimensions": 768, "format_version": 1 }, "desired_contract": { "provider": "ollama_nomic", "model": "nomic-embed-text:v1.5", "dimensions": 768, "format_version": 1 }, "migration_required": false, "provider_state": "unavailable", "indexed_count": 1, "pending_count": 0, "failed_count": 0, "historical": { "contract_count": 0, "row_count": 0 } }
+  },
+  "project_memory": {
+    "state": "attention", "lifecycle": "attention", "evidence_ids": ["e2"],
+    "inbox": { "pending_items": 1 }, "candidates": { "pending": 1, "needs_review": 0 },
+    "maintenance": { "enabled": false, "lifecycle": "never_run", "lock": { "lifecycle": "absent", "path": "state/demo/.auto-project-memory-maintenance.lock", "run_id": null, "pid": null }, "last_run_id": null, "last_log_path": null },
+    "curation": { "lifecycle": "not_curated", "canonical_wiki_path": "projects/demo", "latest_run_path": null },
+    "retrieval": { "active_contract": null, "desired_contract": null, "migration_required": false, "provider_state": "not_checked", "indexed_count": 0, "pending_count": 0, "failed_count": 0, "historical": { "contract_count": 0, "row_count": 0 } }
+  },
+  "warnings": [{ "code": "SESSION_MAINTENANCE_STALE_LOCK", "severity": "blocked", "section": "session_memory", "message": "Recorded maintenance owner is not alive.", "evidence_ids": ["e3"] }],
+  "actions": [{ "command": "myelin ingest demo", "reason": "Drain queued Experience Log rows.", "section": "session_memory" }],
+  "evidence": [
+    { "id": "e1", "kind": "file", "path": "/home/me/.myelin/install.json" },
+    { "id": "e2", "kind": "sqlite", "path": "state/memory/memory.db" },
+    { "id": "e3", "kind": "file", "path": "state/demo/.auto-memory-maintenance.lock/owner.json" }
+  ]
+}

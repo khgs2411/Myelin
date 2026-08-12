@@ -1,0 +1,185 @@
+{
+  "applied_at": "2026-07-06T13:14:25.098Z",
+  "curator_output_ref": "documentation-maintenance-result.json",
+  "file_changes": [
+    {
+      "after_sha256": "4def51c9a14673e725f2e117cacf75550f4d71085a450121e9a421b5cf07e1ed",
+      "before_sha256": "be99309abadfe9f8e609b335073286251903da2efb7d6a5dab3f48389c9cfa38",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "command-workflows.md"
+      ],
+      "path": "projects/llm-wiki/wiki/command-workflows.md",
+      "staged_output_ref": "staged/001-wiki_page-command-workflows.md"
+    },
+    {
+      "after_sha256": "a00fcdd92ccbb47a761167ee278970fa17b8978541235f651b1fc5531cfa52cb",
+      "before_sha256": null,
+      "item_ids": [],
+      "operation": "create",
+      "page_ids": [
+        "external-boundaries-and-integrations.md"
+      ],
+      "path": "projects/llm-wiki/wiki/external-boundaries-and-integrations.md",
+      "staged_output_ref": "staged/002-wiki_page-external-boundaries-and-integrations.md"
+    },
+    {
+      "after_sha256": "8273066bb5af66b53cedcb2d498336a12165a681c6637c0634e3756cee0db334",
+      "before_sha256": "47f215ad67be2277b269e847856e17da14cecf9556d6237b407152db84117c0e",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [
+        "index.md"
+      ],
+      "path": "projects/llm-wiki/wiki/index.md",
+      "staged_output_ref": "staged/003-wiki_page-index.md"
+    },
+    {
+      "after_sha256": "7199689a11cee1f9c69d1ec8bc5d3049e3028227ecf5f1cae448364d590cc24b",
+      "before_sha256": null,
+      "item_ids": [],
+      "operation": "create",
+      "page_ids": [
+        "product-and-memory-model.md"
+      ],
+      "path": "projects/llm-wiki/wiki/product-and-memory-model.md",
+      "staged_output_ref": "staged/004-wiki_page-product-and-memory-model.md"
+    },
+    {
+      "after_sha256": "9e1a23b2e864cb5b524d7b55953cf162b79f56093f639fdb5d5f4efb9b4b6104",
+      "before_sha256": null,
+      "item_ids": [],
+      "operation": "create",
+      "page_ids": [
+        "project-memory-lifecycle.md"
+      ],
+      "path": "projects/llm-wiki/wiki/project-memory-lifecycle.md",
+      "staged_output_ref": "staged/005-wiki_page-project-memory-lifecycle.md"
+    },
+    {
+      "after_sha256": "6c584573433961de281ff70ad21a864c2493ef573349738fe994221647788fff",
+      "before_sha256": null,
+      "item_ids": [],
+      "operation": "create",
+      "page_ids": [
+        "roadmap-decisions-and-docs.md"
+      ],
+      "path": "projects/llm-wiki/wiki/roadmap-decisions-and-docs.md",
+      "staged_output_ref": "staged/006-wiki_page-roadmap-decisions-and-docs.md"
+    },
+    {
+      "after_sha256": "4b9241daecf493a59d6ed547a163adde025e31e7303dfffa3d639ce2d6099d84",
+      "before_sha256": null,
+      "item_ids": [],
+      "operation": "create",
+      "page_ids": [
+        "schema-config-and-runtime.md"
+      ],
+      "path": "projects/llm-wiki/wiki/schema-config-and-runtime.md",
+      "staged_output_ref": "staged/007-wiki_page-schema-config-and-runtime.md"
+    },
+    {
+      "after_sha256": "74aced3fc625fa2191d1ff4b270f9060bcd2e7a0ad0315e0a055b09a9d7e5999",
+      "before_sha256": null,
+      "item_ids": [],
+      "operation": "create",
+      "page_ids": [
+        "session-memory-and-experience-ingest.md"
+      ],
+      "path": "projects/llm-wiki/wiki/session-memory-and-experience-ingest.md",
+      "staged_output_ref": "staged/008-wiki_page-session-memory-and-experience-ingest.md"
+    },
+    {
+      "after_sha256": "444ae0764929332550f619fdadf97eb25f0146d1ec12f94acd5be726385fd4ba",
+      "before_sha256": null,
+      "item_ids": [],
+      "operation": "create",
+      "page_ids": [
+        "storage-retrieval-and-query.md"
+      ],
+      "path": "projects/llm-wiki/wiki/storage-retrieval-and-query.md",
+      "staged_output_ref": "staged/009-wiki_page-storage-retrieval-and-query.md"
+    },
+    {
+      "after_sha256": "e54287058214b63faf8b42f4834e7f4a213a89a110c760d86c19dcde9994a152",
+      "before_sha256": null,
+      "item_ids": [],
+      "operation": "create",
+      "page_ids": [
+        "verification-and-quality-gates.md"
+      ],
+      "path": "projects/llm-wiki/wiki/verification-and-quality-gates.md",
+      "staged_output_ref": "staged/010-wiki_page-verification-and-quality-gates.md"
+    },
+    {
+      "after_sha256": "2f597a32bbe5e296445e3f7726b056ce7e17e17ad152d9ce491354c298555ad3",
+      "before_sha256": null,
+      "item_ids": [],
+      "operation": "create",
+      "page_ids": [],
+      "path": "projects/llm-wiki/state/project-memory-source-consumptions.json",
+      "staged_output_ref": "staged/011-source_consumption_state-project-memory-source-consumptions.json"
+    },
+    {
+      "after_sha256": "cac3edfc667a7c6f083aa8a4f343d436a001b19161a7384f7b5dde029443eda4",
+      "before_sha256": "29bfc64173ff3963c9679f4332c12b06aa28425253e894ddc396a7ad617b5602",
+      "item_ids": [],
+      "operation": "update",
+      "page_ids": [],
+      "path": "projects/llm-wiki/state/project-memory.json",
+      "staged_output_ref": "staged/012-project_state-project-memory.json"
+    }
+  ],
+  "item_changes": [],
+  "packet_ref": {
+    "artifact": "input-packet.json",
+    "packet_schema_version": 1
+  },
+  "page_changes": [],
+  "project_key": "llm-wiki",
+  "risk": {
+    "level": "low",
+    "reasons": [],
+    "requires_quarantine": false
+  },
+  "run_dir": "projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run",
+  "schema_version": 1,
+  "source_consumptions": [
+    {
+      "consumed_at": "2026-07-06T12:59:36.577Z",
+      "consumed_by_run": "projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run",
+      "output_refs": [
+        "draft-wiki/storage-retrieval-and-query.md",
+        "draft-wiki/external-boundaries-and-integrations.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_oo_mcp_project_followup",
+      "terminal_decision": "applied_to_project_memory"
+    },
+    {
+      "consumed_at": "2026-07-06T12:59:36.577Z",
+      "consumed_by_run": "projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run",
+      "output_refs": [
+        "draft-wiki/session-memory-and-experience-ingest.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_retry_failed_auto_ingest",
+      "terminal_decision": "not_durable"
+    },
+    {
+      "consumed_at": "2026-07-06T12:59:36.577Z",
+      "consumed_by_run": "projects/llm-wiki/runs/project-learn/2026-07-06T12-59-36.577Z-run",
+      "output_refs": [
+        "draft-wiki/session-memory-and-experience-ingest.md"
+      ],
+      "project_key": "llm-wiki",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_llmwiki_ingest_status_audit",
+      "terminal_decision": "applied_to_project_memory"
+    }
+  ],
+  "validation_ref": "curator-validation.json"
+}

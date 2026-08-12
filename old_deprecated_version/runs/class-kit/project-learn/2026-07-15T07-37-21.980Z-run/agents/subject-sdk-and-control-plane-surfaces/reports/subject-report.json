@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "sdk-and-control-plane-surfaces",
+  "wiki_path": "sdk-and-control-plane-surfaces.md",
+  "status": "documented_contracts_unverified",
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/docs/getting-started.md",
+    "target-repo/docs/sdk/client-sdk.md",
+    "target-repo/docs/api/class-api-map.md",
+    "target-repo/docs/api/backend-api.md",
+    "target-repo/docs/product-shape.md",
+    "target-repo/docs/repositories/structure.md"
+  ],
+  "touched_paths": [
+    "draft-wiki/sdk-and-control-plane-surfaces.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "The supplied snapshot contains documentation but no API, SDK, app, migration, or regression-test source, so the documented namespace and authorization contracts are not implementation-verified.",
+    "Complete SDK method/type inventories and exhaustive user-visible gate precedence are not available from the supplied evidence.",
+    "Repository Structure's no-remote claim conflicts with repository-identity.json and needs review."
+  ]
+}

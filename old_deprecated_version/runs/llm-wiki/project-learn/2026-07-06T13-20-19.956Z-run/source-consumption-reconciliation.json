@@ -1,0 +1,16 @@
+{
+  "already_terminal_refs": [
+    "project_handoff:handoff_llmwiki_oo_mcp_project_followup",
+    "project_handoff:handoff_llmwiki_retry_failed_auto_ingest",
+    "project_handoff:handoff_llmwiki_ingest_status_audit"
+  ],
+  "blocking": false,
+  "degraded": false,
+  "degraded_reasons": [],
+  "missing_refs": [],
+  "processed_candidates": [],
+  "processed_project_handoffs": [],
+  "project_key": "llm-wiki",
+  "skipped_refs": [],
+  "source_consumption_state_path": "/Users/liadgoren/Repositories/llm-wiki/projects/llm-wiki/state/project-memory-source-consumptions.json"
+}

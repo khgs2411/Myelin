@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "project_key": "llm-wiki",
+  "subject_id": "schema-and-documentation-contracts",
+  "wiki_path": "schema-and-documentation-contracts.md",
+  "status": "completed",
+  "evidence_paths": [
+    "schema/global.md",
+    "schema/schema-context.md",
+    "schema/rules/source-classification.json",
+    "schema/rules/memory-scopes.json",
+    "schema/rules/page-taxonomy.json",
+    "src/schema/types.ts",
+    "src/schema/validators.ts",
+    "src/schema/compiler.ts",
+    "src/schema/schema-service.ts",
+    "src/commands/schema.ts",
+    "src/runtime/project-run-infrastructure.ts",
+    "src/project/project-memory-curator-service.ts",
+    "src/project/project-memory-agent-create-service.ts",
+    "src/project/project-memory-agent-contracts.ts",
+    "src/project/project-memory-curator-output-schema.ts",
+    "src/project/project-memory-quality-contract.ts",
+    "src/project/project-memory-rendered-quality.ts",
+    "tests/schema/schema-service.test.ts",
+    "docs/CLI.md",
+    "docs/IMPLEMENTATION_ALIGNMENT.md",
+    "docs/adr/0033-schema-build-writes-by-default.md",
+    "docs/adr/0039-schema-check-is-read-only.md",
+    "docs/adr/0049-phase-0-ships-thin-global-only-schema.md",
+    "docs/adr/0067-use-agent-authored-project-memory-documentation.md"
+  ],
+  "touched_paths": [
+    "draft-wiki/schema-and-documentation-contracts.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "schema/schema-context.md documents project ingest in cli_vocabulary, but src/schema/compiler.ts currently omits project ingest from REQUIRED_CONTEXT_COMMANDS.",
+    "Project-local schema, schema overrides, schema candidates, and schema apply lifecycle are documented target design but deferred past Phase 0.",
+    "Structured documentation quality diagnostics still exist in curator schema code and tests, while ADR 0067 says agent-authored create-mode documentation has no schema quality gate.",
+    "docs/CLI.md describes schema check primarily as generated-context validation, but implementation also validates authored global schema inputs and only validates generated context when present."
+  ]
+}

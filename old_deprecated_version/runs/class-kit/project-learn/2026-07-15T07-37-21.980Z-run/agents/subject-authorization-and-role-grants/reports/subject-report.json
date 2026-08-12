@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "authorization-and-role-grants",
+  "wiki_path": "authorization-and-role-grants.md",
+  "status": "complete_with_known_gaps",
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/docs/product-shape.md",
+    "target-repo/docs/adr/0001-scoped-product-permission-layer.md",
+    "target-repo/docs/api/backend-api.md",
+    "target-repo/docs/shared/context.md",
+    "target-repo/class-kit-api/supabase/migrations/20260612120000_permission_layer_foundation.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260612124000_product_role_management_rpc.sql",
+    "target-repo/class-kit-api/supabase/functions/_shared/permissions.ts",
+    "target-repo/class-kit-api/supabase/functions/_shared/context.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-product-context/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-product-roles/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-product-user-roles/index.ts"
+  ],
+  "touched_paths": [
+    "draft-wiki/authorization-and-role-grants.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "No authorization or role-grant regression test files were present in the snapshot.",
+    "Level/key inheritance and platform fallback behavior are implemented but not regression-tested here.",
+    "No test evidence verifies default bundles, role-loss invariants, or product-context dashboard capability derivation.",
+    "The persisted function_permission_requirements catalog is not itself a runtime guard dispatcher; branch-by-branch alignment needs tests or audit coverage."
+  ]
+}

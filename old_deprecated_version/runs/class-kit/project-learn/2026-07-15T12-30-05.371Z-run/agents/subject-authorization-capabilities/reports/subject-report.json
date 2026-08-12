@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "authorization-capabilities",
+  "wiki_path": "authorization-and-capabilities.md",
+  "status": "complete_with_known_gaps",
+  "evidence_paths": [
+    "repository-identity.json",
+    "class-kit-api/supabase/functions/_shared/permissions.ts",
+    "class-kit-api/supabase/functions/_shared/context.ts",
+    "class-kit-api/supabase/functions/class-kit-product-context/index.ts",
+    "class-kit-api/supabase/functions/class-kit-product-roles/index.ts",
+    "class-kit-api/supabase/functions/class-kit-product-user-roles/index.ts",
+    "class-kit-api/supabase/functions/class-kit-admin-products/index.ts",
+    "class-kit-api/supabase/migrations/20260612120000_permission_layer_foundation.sql",
+    "class-kit-api/supabase/migrations/20260612121000_permission_helper_functions.sql",
+    "class-kit-api/supabase/migrations/20260612122000_permission_requirement_catalog.sql",
+    "class-kit-api/supabase/migrations/20260623120000_permission_catalog_display_metadata.sql",
+    "class-kit-api/supabase/migrations/20260707144646_product_change_requests.sql",
+    "class-kit-sdk/src/types.ts",
+    "class-kit-sdk/src/context/product-provider.tsx"
+  ],
+  "touched_paths": [
+    "draft-wiki/authorization-and-capabilities.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "No focused automated coverage was found for permission-helper precedence, inactive assignment exclusion, product-context aggregation, or dashboard projection.",
+    "The final built-in manager initializer omits users.metadata.manage, creating a migration-history-dependent default bundle that is not regression-tested.",
+    "The platform permission catalog declares products.manage, product_origins.manage, and platform_users.manage without an inspected built-in platform-admin grant.",
+    "The is_protected flag is not generally enforced by the product-role handler; only manager-key protection is verified in code."
+  ]
+}

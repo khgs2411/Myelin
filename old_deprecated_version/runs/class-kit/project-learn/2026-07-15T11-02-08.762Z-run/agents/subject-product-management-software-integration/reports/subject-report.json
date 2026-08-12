@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "product-management-software-integration",
+  "wiki_path": "product-management-software-integration.md",
+  "status": "complete",
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/class-kit-api/supabase/functions/class-kit-admin-pm-integrations/index.ts",
+    "target-repo/class-kit-api/supabase/functions/_shared/pm/types.ts",
+    "target-repo/class-kit-api/supabase/functions/_shared/pm/factory.ts",
+    "target-repo/class-kit-api/supabase/functions/_shared/pm/facade/product_management_software.ts",
+    "target-repo/class-kit-api/supabase/functions/_shared/pm/providers/trello_provider.ts",
+    "target-repo/class-kit-api/supabase/migrations/20260708110703_pm_software_integrations.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260708131835_pm_trello_labels.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260709072033_pm_board_snapshots.sql",
+    "target-repo/class-kit-sdk/src/admin/admin-api.ts",
+    "target-repo/class-kit-sdk/src/client/class-kit-client.ts"
+  ],
+  "touched_paths": [
+    "draft-wiki/product-management-software-integration.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "No PM/Trello-focused Supabase or SDK regression tests were found in the snapshot.",
+    "No inspected webhook, polling scheduler, retry queue, or automatic synchronization mechanism exists.",
+    "Only the Trello provider is implemented; multi-provider behavior is not verifiable.",
+    "Configuration does not verify distinct routes or force a connection test before enabling."
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "class-template-schedule-lifecycle",
+  "wiki_path": "class-template-and-schedule-lifecycle.md",
+  "status": "complete",
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/class-kit-api/supabase/migrations/20260607134535_template_class_core.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260607143000_schedule_rule_model.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260607153000_schedule_generation_engine.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260608030000_generated_class_source_integrity.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260607160000_registration_engine.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260607170000_attendance_engine.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260609120000_schedule_generation_count.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260623080614_backfill_schedule_generation_from_start.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260702121000_public_class_discovery_non_cancelled.sql",
+    "target-repo/class-kit-api/supabase/functions/class-kit-classes/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-templates/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-schedules/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-schedule-generate/index.ts",
+    "target-repo/class-kit-api/supabase/tests/schedule_generation_backfill.sql",
+    "target-repo/docs/api/class-api-map.md"
+  ],
+  "touched_paths": [
+    "draft-wiki/class-template-and-schedule-lifecycle.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "No dedicated automated tests were found for schedule status transitions, skip-after-generation behavior, template deactivation effects, visibility/membership combinations, or direct class lifecycle transition rejection.",
+    "No source-level reconciliation policy was found for ordinary edits to already generated class snapshots after their schedule rule changes."
+  ]
+}

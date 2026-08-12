@@ -1,0 +1,150 @@
+{
+  "project_key": "llm-wiki",
+  "schema_version": 1,
+  "subjects": [
+    {
+      "purpose": "Explains the memory layers, provenance, canonical markdown versus generated SQLite state, source preservation, and detached integration boundary.",
+      "subject_id": "product-model",
+      "suggested_repo_paths": [
+        "MYELIN.md",
+        "CONTEXT.md",
+        "src/runtime/layout.ts",
+        "src/memory/db.ts",
+        "src/query/"
+      ],
+      "title": "Product model and storage boundaries",
+      "wiki_path": "product-model.md"
+    },
+    {
+      "purpose": "Covers every registered public CLI command, its machine-readable contracts, argument validation, and compatibility-facing names.",
+      "subject_id": "cli-json-contracts",
+      "suggested_repo_paths": [
+        "src/cli.ts",
+        "src/commands/register.ts",
+        "src/commands/",
+        "docs/CLI.md",
+        "tests/commands/register.test.ts"
+      ],
+      "title": "CLI and JSON interfaces",
+      "wiki_path": "cli-and-json-contracts.md"
+    },
+    {
+      "purpose": "Covers bootstrap, project inventory and packets, create/maintenance/recreate/resume learning, publication, layout migration, and project-shell reset.",
+      "subject_id": "project-memory-lifecycle",
+      "suggested_repo_paths": [
+        "src/commands/project.ts",
+        "src/project/",
+        "src/bootstrap/",
+        "tests/commands/project.test.ts",
+        "tests/project/"
+      ],
+      "title": "Project Memory lifecycle",
+      "wiki_path": "project-memory-lifecycle.md"
+    },
+    {
+      "purpose": "Covers detached ingest jobs, tombstone-backed leases, Session Memory and manual-session state, candidates, handoffs, and reconciliation.",
+      "subject_id": "ingest-session-memory",
+      "suggested_repo_paths": [
+        "src/commands/ingest.ts",
+        "src/commands/session.ts",
+        "src/ingest/",
+        "src/memory/ingest-types.ts",
+        "tests/ingest/",
+        "tests/memory/"
+      ],
+      "title": "Experience Log ingest and Session Memory",
+      "wiki_path": "ingest-and-session-memory.md"
+    },
+    {
+      "purpose": "Covers query layers, retrieval quality/freshness, indexing, embedding provider contracts, migrations, rollback, and protected pruning.",
+      "subject_id": "retrieval-embedding-lifecycle",
+      "suggested_repo_paths": [
+        "src/commands/memory.ts",
+        "src/query/",
+        "src/memory/embedding-contract-lifecycle-service.ts",
+        "src/memory/session-memory-index-service.ts",
+        "src/memory/project-memory-retrieval-index-service.ts",
+        "tests/memory/",
+        "tests/query/"
+      ],
+      "title": "Retrieval and embedding lifecycle",
+      "wiki_path": "retrieval-and-embedding-lifecycle.md"
+    },
+    {
+      "purpose": "Covers schema check/build and the preserved Project Memory inbox proposal and candidate-intake path.",
+      "subject_id": "schema-runtime-inbox",
+      "suggested_repo_paths": [
+        "src/commands/schema.ts",
+        "src/schema/",
+        "src/inbox/",
+        "src/project/project-memory-candidate-intake-service.ts",
+        "tests/commands/schema.test.ts",
+        "tests/inbox/"
+      ],
+      "title": "Schema and runtime inbox workflows",
+      "wiki_path": "schema-and-runtime-inbox.md"
+    },
+    {
+      "purpose": "Covers preview-first installation, immutable runtime versions, launcher/locator ownership, provider hook capture, and provider-scoped removal.",
+      "subject_id": "installation-capture",
+      "suggested_repo_paths": [
+        "src/commands/install.ts",
+        "src/install/",
+        "src/capture/",
+        "tests/install/",
+        "tests/capture/"
+      ],
+      "title": "Installation and capture integration",
+      "wiki_path": "installation-and-capture.md"
+    },
+    {
+      "purpose": "Covers the operational status contract, inspection evidence, maintenance worker lifecycle, auto-scheduling, and operator review.",
+      "subject_id": "status-maintenance",
+      "suggested_repo_paths": [
+        "src/commands/status.ts",
+        "src/commands/maintenance.ts",
+        "src/status/",
+        "src/maintenance/",
+        "tests/status/",
+        "tests/maintenance/"
+      ],
+      "title": "Status and maintenance operations",
+      "wiki_path": "status-and-maintenance.md"
+    },
+    {
+      "purpose": "Defines user-visible lifecycle enums, retrieval and status modes, state-transition outcomes, and the ordering of validation, identity, eligibility, authority, and protection gates.",
+      "subject_id": "behavior-states-gates",
+      "suggested_repo_paths": [
+        "src/memory/ingest-types.ts",
+        "src/project/project-memory-curator-contracts.ts",
+        "src/project/project-memory-agent-contracts.ts",
+        "src/project/project-memory-retrieval-contracts.ts",
+        "src/memory/embedding-contract-types.ts",
+        "src/status/contracts.ts",
+        "tests/ingest/",
+        "tests/memory/",
+        "tests/status/"
+      ],
+      "title": "Behavior states and gate precedence",
+      "wiki_path": "behavior-states-and-gates.md"
+    },
+    {
+      "purpose": "Covers reset, uninstall, rollback, prune, and failed-job resolution, including their confirmations, previews, protected state, and irreversible effects.",
+      "subject_id": "destructive-operations",
+      "suggested_repo_paths": [
+        "src/project/project-reset-service.ts",
+        "src/commands/project.ts",
+        "src/install/install-service.ts",
+        "src/commands/install.ts",
+        "src/memory/embedding-contract-lifecycle-service.ts",
+        "src/commands/ingest.ts",
+        "tests/commands/project.test.ts",
+        "tests/install/install-service.test.ts",
+        "tests/memory/embedding-contract-lifecycle-service.test.ts",
+        "tests/commands/ingest.test.ts"
+      ],
+      "title": "Destructive operations",
+      "wiki_path": "destructive-operations.md"
+    }
+  ]
+}

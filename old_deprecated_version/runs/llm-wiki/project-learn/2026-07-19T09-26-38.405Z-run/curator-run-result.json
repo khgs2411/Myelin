@@ -1,0 +1,30 @@
+{
+  "artifacts": {
+    "curator_output": "documentation-maintenance-result.json",
+    "curator_run_result": "curator-run-result.json",
+    "curator_validation": "curator-validation.json",
+    "file_authoring_runs": [
+      "agents/maintenance/file-authoring-agent-result.json"
+    ],
+    "input_packet": "input-packet.json",
+    "maintenance_report": "reports/documentation-maintenance-report.json",
+    "publication_validation": "canonical-publication-validation.json",
+    "repository_identity": "repository-identity.json",
+    "review_checkpoint": "review-checkpoint.json",
+    "runtime_inbox_intake": "runtime-inbox-intake.json",
+    "summary": "summary.md"
+  },
+  "content_quality_status": "trusted",
+  "curation_kind": "agent_authored",
+  "dry_run": false,
+  "mode": "maintain",
+  "project_key": "llm-wiki",
+  "review": true,
+  "run_dir": "runs/llm-wiki/project-learn/2026-07-19T09-26-38.405Z-run",
+  "run_id": "2026-07-19T09-26-38.405Z-run",
+  "run_kind": "maintenance",
+  "status": "needs_review",
+  "stopped_before_writes": true,
+  "stopped_reason": "review requested",
+  "validation_ok": true
+}

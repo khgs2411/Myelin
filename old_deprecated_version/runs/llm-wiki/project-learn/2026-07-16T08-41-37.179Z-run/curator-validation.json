@@ -1,0 +1,18 @@
+{
+  "eligible_item_ids": [],
+  "global_findings": [
+    {
+      "category": "provider",
+      "code": "project_memory_not_curated",
+      "message": "Project Memory is not curated; run myelin project learn llm-wiki first.",
+      "severity": "blocker"
+    }
+  ],
+  "item_results": [],
+  "mode": "maintain",
+  "noop_refs": [],
+  "ok": false,
+  "project_key": "llm-wiki",
+  "quarantined_item_ids": [],
+  "rejected_item_ids": []
+}

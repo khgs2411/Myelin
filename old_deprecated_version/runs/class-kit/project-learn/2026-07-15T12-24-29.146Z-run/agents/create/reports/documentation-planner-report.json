@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/README.md",
+    "target-repo/docs/product-shape.md",
+    "target-repo/docs/shared/context.md",
+    "target-repo/docs/shared/authentication.md",
+    "target-repo/docs/sdk/client-sdk.md",
+    "target-repo/docs/api/backend-api.md",
+    "target-repo/docs/api/class-api-map.md",
+    "target-repo/docs/adr/0001-scoped-product-permission-layer.md",
+    "target-repo/docs/changelog.md"
+  ],
+  "known_gaps": [
+    "The supplied target-repo snapshot contains documentation only; no application source, SDK source, Supabase migrations, Edge Functions, package manifests, or test directories are available.",
+    "No regression-test evidence is available for product-origin resolution, auth-policy/provider gates, access-state transitions, permission inheritance, class/registration/attendance transitions, schedule generation, membership stock behavior, product documents, or Trello synchronization.",
+    "Historical design directories are present but were not used as sole evidence for current behavior; current-looking API maps, SDK documentation, backend documentation, and changelog entries are the documentation evidence.",
+    "Runtime behavior must be verified against the registered repository before these documented contracts are treated as complete implementation truth."
+  ]
+}

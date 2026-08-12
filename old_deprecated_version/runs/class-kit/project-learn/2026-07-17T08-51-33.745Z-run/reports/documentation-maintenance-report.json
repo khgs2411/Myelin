@@ -1,0 +1,165 @@
+{
+  "dispositions": [
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The snapshot documents ClassKit's generic To-do route but contains no verified Symphony board/list record that establishes whether Trello's visible canonical name is Todo or Planning.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_20260717_todo_planning_alias"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/sdk-and-product-api.md"
+      ],
+      "reason": "SDK source, emitted output, and runtime-test loader verify the strict Node ESM compatibility gap and its repository-local workaround.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_node_esm_extensionless_imports_20260716"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The candidate is ambiguous, but the current snapshot only verifies Demo2's existing Terms editor and does not establish a different requested legal artifact or its intended scope.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_demo2_tos_ambiguity_20260716"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "No repository evidence establishes the reviewed rejection scope or whether Symphony audit files were harness- or agent-authored.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_rejection_scope_and_audit_provenance_20260716"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "This is an unresolved review-process question, not a verified ClassKit implementation or documentation fact.",
+      "source_kind": "project_candidate",
+      "source_ref": "cand_classkit_audits_provenance_and_rejection_scope_20260716"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "Retrieving live Symphony/Trello cards is an external board-operation task, not durable ClassKit Project Memory without preserved, verified card evidence.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_20260717_084925_pull_planning_cards"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "Commit, push, deploy, and stop-hook closeout steps are session-specific operational work; they do not by themselves add a verified enduring contract.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_closeout_20260716"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/sdk-and-product-api.md"
+      ],
+      "reason": "The snapshot verifies that strict Node ESM requires the bundled extension-resolution loader, so the supported-runtime uncertainty is now documented as a concrete compatibility gap.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_node_esm_runtime_fix_20260716"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/product-documents-and-signup-links.md"
+      ],
+      "reason": "The current forward migration and product-document regression test verify the stream foreign key and PostgREST cache repair.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_doc_history_fk_migration_20260716"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/product-documents-and-signup-links.md",
+        "draft-wiki/operator-workflows-and-local-apps.md"
+      ],
+      "reason": "Demo2 now pins SDK v0.1.19 and its implementation verifies a Terms editor composed from the current draft/history lifecycle.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_demo2_v019_tos_20260716"
+    },
+    {
+      "disposition": "applied_to_project_memory",
+      "output_refs": [
+        "draft-wiki/operator-workflows-and-local-apps.md"
+      ],
+      "reason": "The root Makefile and included reviewer makefile verify the current registration target, required project setting, prompt composition, and override boundary.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_docs_changelog_symphony_reviewer_20260716"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The supplied repository snapshot does not contain the cited tombstone or conclusive audit-provenance evidence.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_verify_scope_and_audits_20260716"
+    },
+    {
+      "disposition": "insufficient_evidence",
+      "output_refs": [],
+      "reason": "The needed reviewer-thread and audit provenance are absent from the snapshot, so this cannot become durable Project Memory.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_reviewer_provenance_check_20260716"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "This is an active-card implementation checklist, not verified stable repository behavior.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_api_card331_rework_20260716_v1"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "The rejected-card repair instructions are session/workflow state and do not establish a durable product contract.",
+      "source_kind": "project_handoff",
+      "source_ref": "ingest_2026-07-16T07-05-41.984Z_f4fcb7_handoff_classkit_api_rework_20260716"
+    },
+    {
+      "disposition": "not_durable",
+      "output_refs": [],
+      "reason": "The rework request is an ephemeral review queue item; no completed, verified change is supplied for Project Memory.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_api_rework_20260716"
+    },
+    {
+      "disposition": "belongs_to_other_layer",
+      "output_refs": [],
+      "reason": "Symphony startup, environment loading, and continuation recovery belong to the orchestration harness rather than ClassKit's durable repository documentation.",
+      "source_kind": "project_handoff",
+      "source_ref": "handoff_classkit_symphony_restart_recovery_20260716"
+    }
+  ],
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/class-kit-api/supabase/migrations/20260715082037_product_document_publication_history.sql",
+    "target-repo/class-kit-api/supabase/migrations/20260716082959_add_product_document_versions_stream_foreign_key.sql",
+    "target-repo/class-kit-api/supabase/tests/product_document_publication_history.sql",
+    "target-repo/class-kit-api/supabase/functions/class-kit-product-documents/index.ts",
+    "target-repo/class-kit-sdk/tests/product-documents.test.mjs",
+    "target-repo/class-kit-sdk/tsconfig.json",
+    "target-repo/class-kit-sdk/tests/dist-extension-loader.mjs",
+    "target-repo/apps/demo2/src/product-document-manager.tsx",
+    "target-repo/apps/demo2/package.json",
+    "target-repo/apps/class-kit-admin/package.json",
+    "target-repo/.symphony-reviewer/reviewer.mk"
+  ],
+  "known_gaps": [
+    "No repository evidence establishes whether the Symphony/Trello list's canonical visible name is Todo or Planning.",
+    "Strict Node ESM direct import without the repository's extension-resolution loader is not covered by the SDK runtime suite.",
+    "The snapshot lacks end-to-end deployed coverage for public document fallback, acceptance persistence, manager permission denial, and Demo2's visual Terms workflow.",
+    "No supplied evidence resolves the requested ToS artifact ambiguity or the provenance and scope questions for Symphony audits/rejections."
+  ],
+  "project_key": "class-kit",
+  "schema_version": 1,
+  "status": "completed",
+  "touched_paths": [
+    "draft-wiki/product-documents-and-signup-links.md",
+    "draft-wiki/sdk-and-product-api.md",
+    "draft-wiki/operator-workflows-and-local-apps.md",
+    "draft-wiki/architecture-and-boundaries.md",
+    "draft-wiki/product-administration-and-reset.md",
+    "reports/documentation-maintenance-report.json"
+  ]
+}

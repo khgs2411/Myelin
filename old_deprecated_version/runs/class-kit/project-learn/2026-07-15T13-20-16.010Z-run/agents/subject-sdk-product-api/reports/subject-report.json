@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "project_key": "class-kit",
+  "subject_id": "sdk-product-api",
+  "wiki_path": "sdk-and-product-api.md",
+  "status": "completed",
+  "evidence_paths": [
+    "repository-identity.json",
+    "target-repo/class-kit-sdk/src/index.ts",
+    "target-repo/class-kit-sdk/src/client/class-kit-client.ts",
+    "target-repo/class-kit-sdk/src/client/product-api.ts",
+    "target-repo/class-kit-sdk/src/context/product-context-state.ts",
+    "target-repo/class-kit-sdk/src/context/product-provider.tsx",
+    "target-repo/class-kit-sdk/src/types.ts",
+    "target-repo/class-kit-sdk/src/manager/manager-api.ts",
+    "target-repo/class-kit-sdk/src/admin/admin-api.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-product-context/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-profile/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-classes/index.ts",
+    "target-repo/class-kit-api/supabase/functions/class-kit-register-class/index.ts",
+    "target-repo/class-kit-api/supabase/tests/member_auto_approve_registration.sql",
+    "target-repo/class-kit-api/supabase/tests/pending_registration_cancellation.sql",
+    "target-repo/docs/api/backend-api.md"
+  ],
+  "touched_paths": [
+    "draft-wiki/sdk-and-product-api.md",
+    "reports/subject-report.json"
+  ],
+  "known_gaps": [
+    "No focused endpoint-level regression evidence was found for product-context origin/access transitions, profile mutation, or SDK transport/header behavior.",
+    "Documents, signup links, and most manager/admin facade actions are implementation- and backend-reference-grounded in this snapshot, but lack focused regression tests in the located evidence.",
+    "The page relies on the current implementation and docs/api/backend-api.md for the full manager/admin function map; only the listed four product-facing Edge Function implementations were directly traced line by line."
+  ]
+}
