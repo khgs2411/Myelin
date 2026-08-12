@@ -5,6 +5,8 @@ import { projectForRepoPath, type Project } from "../runtime/projects.ts";
 import { readGitWorktreeContext, type GitContextRunner } from "./git-context.ts";
 import { AutoMemoryMaintenanceService } from "../maintenance/auto-memory-maintenance.ts";
 import type { AutoMemoryMaintenanceScheduleResult } from "../maintenance/maintenance-contracts.ts";
+import type { SessionMaintenanceWakeKind } from "../maintenance/session-maintenance-eligibility.ts";
+import type { ProviderInput, ProviderInputMetadata } from "../inputs/contracts.ts";
 
 export type NormalizedCaptureEvent = {
   id?: string;
@@ -23,13 +25,15 @@ export type NormalizedCaptureEvent = {
 
 export type CaptureResult =
   | { status: "stored"; project_key: string; event_id: string }
+  | { status: "control-signaled"; project_key: string; signal_kind: "session.start" }
+  | { status: "ignored"; reason: string }
   | { status: "dropped-unregistered-repo" }
   | { status: "failed-open"; error_message: string };
 
 export type AutoMemoryMaintenanceScheduler = {
   maybeSchedule: (
     projectKey: string,
-    options?: { forceIngest?: boolean },
+    options?: { wakeKind?: SessionMaintenanceWakeKind },
   ) => Promise<AutoMemoryMaintenanceScheduleResult>;
 };
 
@@ -38,12 +42,30 @@ export async function handleCaptureEvent(
   event: NormalizedCaptureEvent,
   deps: { gitContextRunner?: GitContextRunner; maintenanceScheduler?: AutoMemoryMaintenanceScheduler } = {},
 ): Promise<CaptureResult> {
-  try {
-    if (!event.cwd) return { status: "dropped-unregistered-repo" };
+  return handleProviderInput(root, providerInputFromNormalizedEvent(event), deps);
+}
 
-    const project = await projectForRepoPath(root, event.cwd);
+export async function handleProviderInput(
+  root: string,
+  input: ProviderInput,
+  deps: { gitContextRunner?: GitContextRunner; maintenanceScheduler?: AutoMemoryMaintenanceScheduler } = {},
+): Promise<CaptureResult> {
+  if (input.kind === "ignored") return { status: "ignored", reason: input.diagnostic.reason };
+
+  const metadata = input.kind === "experience" ? input.event : input.signal;
+  try {
+    if (!metadata.cwd) return { status: "dropped-unregistered-repo" };
+
+    const project = await projectForRepoPath(root, metadata.cwd);
     if (!project) return { status: "dropped-unregistered-repo" };
-    const repoPath = matchingRepoPath(project, event.cwd);
+
+    if (input.kind === "control") {
+      await scheduleAutoMemoryMaintenance(root, project.key, "session_start", deps.maintenanceScheduler);
+      return { status: "control-signaled", project_key: project.key, signal_kind: input.signal.signal_kind };
+    }
+
+    const event = input.event;
+    const repoPath = matchingRepoPath(project, event.cwd ?? "");
     const gitContext = await readGitWorktreeContext(repoPath, deps.gitContextRunner);
 
     const eventId = event.id ?? crypto.randomUUID();
@@ -63,7 +85,7 @@ export async function handleCaptureEvent(
         raw_text: event.raw_text ?? null,
         raw_payload_json: event.raw_payload_json,
         source: event.source,
-        status: event.status,
+        status: "valid",
         repo_path: gitContext.repo_path,
         git_branch: gitContext.git_branch,
         git_commit: gitContext.git_commit,
@@ -73,7 +95,7 @@ export async function handleCaptureEvent(
     } finally {
       db.close();
     }
-    await scheduleAutoMemoryMaintenance(root, project.key, event.event_kind === "session.start", deps.maintenanceScheduler);
+    await scheduleAutoMemoryMaintenance(root, project.key, "capture", deps.maintenanceScheduler);
     return { status: "stored", project_key: project.key, event_id: storedEventId };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -84,12 +106,12 @@ export async function handleCaptureEvent(
       try {
         recordHookError(db, fallbackPath, {
           occurred_at: new Date().toISOString(),
-          provider: event.provider,
-          source: event.source,
-          cwd: event.cwd ?? null,
-          hook_event_name: event.hook_event_name ?? null,
+          provider: metadata.provider,
+          source: metadata.source,
+          cwd: metadata.cwd,
+          hook_event_name: metadata.hook_event_name,
           error_message: message,
-          raw_payload_json: event.raw_payload_json,
+          raw_payload_json: metadata.raw_payload_json,
         });
       } finally {
         db.close();
@@ -97,12 +119,12 @@ export async function handleCaptureEvent(
     } catch {
       recordHookError(null, fallbackPath, {
         occurred_at: new Date().toISOString(),
-        provider: event.provider,
-        source: event.source,
-        cwd: event.cwd ?? null,
-        hook_event_name: event.hook_event_name ?? null,
+        provider: metadata.provider,
+        source: metadata.source,
+        cwd: metadata.cwd,
+        hook_event_name: metadata.hook_event_name,
         error_message: message,
-        raw_payload_json: event.raw_payload_json,
+        raw_payload_json: metadata.raw_payload_json,
       });
     }
 
@@ -110,14 +132,50 @@ export async function handleCaptureEvent(
   }
 }
 
+function providerInputFromNormalizedEvent(event: NormalizedCaptureEvent): ProviderInput {
+  const metadata: ProviderInputMetadata = {
+    id: event.id,
+    occurred_at: event.occurred_at,
+    hook_event_name: event.hook_event_name ?? null,
+    cwd: event.cwd ?? null,
+    provider: event.provider,
+    provider_session_id: event.provider_session_id ?? null,
+    turn_id: event.turn_id ?? null,
+    raw_payload_json: event.raw_payload_json,
+    source: event.source,
+  };
+
+  if (event.status === "valid" && event.event_kind === "session.start") {
+    return { kind: "control", signal: { ...metadata, signal_kind: "session.start" } };
+  }
+  if (
+    event.status === "valid"
+    && (event.event_kind === "user.prompt" || event.event_kind === "assistant.response")
+    && typeof event.raw_text === "string"
+    && event.raw_text.trim().length > 0
+  ) {
+    return {
+      kind: "experience",
+      event: { ...metadata, event_kind: event.event_kind, raw_text: event.raw_text },
+    };
+  }
+  return {
+    kind: "ignored",
+    diagnostic: {
+      ...metadata,
+      reason: event.status === "invalid" ? "malformed-payload" : "unsupported-event",
+    },
+  };
+}
+
 async function scheduleAutoMemoryMaintenance(
   root: string,
   projectKey: string,
-  forceIngest: boolean,
+  wakeKind: SessionMaintenanceWakeKind,
   scheduler: AutoMemoryMaintenanceScheduler | undefined,
 ): Promise<void> {
   try {
-    await (scheduler ?? new AutoMemoryMaintenanceService(root)).maybeSchedule(projectKey, { forceIngest });
+    await (scheduler ?? new AutoMemoryMaintenanceService(root)).maybeSchedule(projectKey, { wakeKind });
   } catch {
     // Capture hooks must remain fail-open; maintenance state/logs carry operator detail.
   }

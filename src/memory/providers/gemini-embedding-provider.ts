@@ -10,6 +10,7 @@ import {
   parseEmbeddingVector,
   validateEmbeddingVector,
 } from "../embedding-validation.ts";
+import { wrapEmbeddingProviderTransportError } from "../embedding-provider-errors.ts";
 
 export class GeminiEmbeddingProvider implements EmbeddingClient {
   readonly provider = "gemini" as const;
@@ -20,22 +21,34 @@ export class GeminiEmbeddingProvider implements EmbeddingClient {
   async initialize(): Promise<EmbeddingClientInitialization> {
     return this.input.apiKey
       ? { available: true }
-      : { available: false, reason: "Gemini API key is required" };
+      : {
+        available: false,
+        failure_kind: "configuration",
+        reason: "Gemini API key is required",
+      };
   }
 
   async embed(request: EmbeddingRequest): Promise<EmbeddingResult> {
     const apiKey = this.requireApiKey();
-    const response = await (this.input.fetch ?? fetch)(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(request.contract.model)}:embedContent?key=${encodeURIComponent(apiKey)}`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          content: { parts: [{ text: formatGeminiEmbeddingText(request) }] },
-          outputDimensionality: request.contract.dimensions,
-        }),
-      },
-    );
+    let response: Response;
+    try {
+      response = await (this.input.fetch ?? fetch)(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(request.contract.model)}:embedContent?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            content: { parts: [{ text: formatGeminiEmbeddingText(request) }] },
+            outputDimensionality: request.contract.dimensions,
+          }),
+        },
+      );
+    } catch (error) {
+      throw wrapEmbeddingProviderTransportError(error, {
+        provider: this.provider,
+        operation: "embedding request",
+      });
+    }
     if (!response.ok) throw new Error(await httpError("Gemini embedding request failed", response));
     const embedding = parseSingleResponse(await response.json());
     validateEmbeddingVector(embedding, request.contract.dimensions);
@@ -47,20 +60,28 @@ export class GeminiEmbeddingProvider implements EmbeddingClient {
     assertCompatibleEmbeddingBatch(requests);
     const apiKey = this.requireApiKey();
     const contract = requests[0]!.contract;
-    const response = await (this.input.fetch ?? fetch)(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(contract.model)}:batchEmbedContents?key=${encodeURIComponent(apiKey)}`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          requests: requests.map((request) => ({
-            model: `models/${contract.model}`,
-            content: { parts: [{ text: formatGeminiEmbeddingText(request) }] },
-            outputDimensionality: contract.dimensions,
-          })),
-        }),
-      },
-    );
+    let response: Response;
+    try {
+      response = await (this.input.fetch ?? fetch)(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(contract.model)}:batchEmbedContents?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            requests: requests.map((request) => ({
+              model: `models/${contract.model}`,
+              content: { parts: [{ text: formatGeminiEmbeddingText(request) }] },
+              outputDimensionality: contract.dimensions,
+            })),
+          }),
+        },
+      );
+    } catch (error) {
+      throw wrapEmbeddingProviderTransportError(error, {
+        provider: this.provider,
+        operation: "embedding batch request",
+      });
+    }
     if (!response.ok) throw new Error(await httpError("Gemini embedding batch request failed", response));
     const embeddings = parseBatchResponse(await response.json());
     if (embeddings.length !== requests.length) {

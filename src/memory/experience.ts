@@ -2,6 +2,12 @@ import type { Database } from "bun:sqlite";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import type { TombstoneState } from "./ingest-types.ts";
+import {
+  withAnchorLifecycleAdmission,
+  withAnchorPrepareAdmission,
+  withCompatibilityEventFinalizeAdmission,
+  withCompatibilityEventLeaseAdmission,
+} from "./session-memory-write-firewall.ts";
 
 export type ExperienceStatus = "valid" | "invalid";
 
@@ -45,6 +51,12 @@ export type ExperienceEventRow = Required<
   dedupe_key: string | null;
   inserted_at: string;
 };
+
+export type ExperienceContentFields = Pick<ExperienceEventRow, "status" | "event_kind" | "raw_text">;
+
+// Eligibility trims only this SQLite-reproducible boundary set: SPACE, TAB, LF, CR, and NBSP.
+// Keeping the set explicit prevents JavaScript and SQLite from assigning the same row differently.
+const EXPERIENCE_CONTENT_BOUNDARY_WHITESPACE = /^[ \t\n\r\u00a0]+|[ \t\n\r\u00a0]+$/gu;
 
 export type ClaimedExperienceTombstone = {
   id: string;
@@ -178,6 +190,45 @@ export function listExperienceEvents(db: Database, projectKey: string): Experien
     .all(projectKey) as ExperienceEventRow[];
 }
 
+export function listExperienceEventPreparationCandidates(
+  db: Database,
+  projectKey: string,
+): ExperienceEventRow[] {
+  return db
+    .query(
+      `SELECT e.*
+       FROM experience_events e
+       WHERE e.project_key = ?
+         AND NOT EXISTS (
+           SELECT 1
+           FROM experience_event_tombstones t
+           WHERE t.project_key = e.project_key
+             AND t.state = 'claimed'
+             AND (
+               t.original_event_id = e.id
+               OR (e.dedupe_key IS NOT NULL AND t.dedupe_key = e.dedupe_key)
+             )
+         )
+       ORDER BY e.inserted_at, e.id`,
+    )
+    .all(projectKey) as ExperienceEventRow[];
+}
+
+export function isExperienceContentEvent(event: ExperienceContentFields): boolean {
+  return event.status === "valid"
+    && (event.event_kind === "user.prompt" || event.event_kind === "assistant.response")
+    && event.raw_text !== null
+    && normalizeExperienceContentTextForEligibility(event.raw_text).length > 0;
+}
+
+export function normalizeExperienceContentTextForEligibility(rawText: string): string {
+  return rawText.replace(EXPERIENCE_CONTENT_BOUNDARY_WHITESPACE, "");
+}
+
+export function isExperienceNoAgentEvent(event: ExperienceContentFields): boolean {
+  return !isExperienceContentEvent(event);
+}
+
 export function countExperienceEvents(db: Database, projectKey: string): number {
   const row = db
     .query("SELECT count(*) AS count FROM experience_events WHERE project_key = ?")
@@ -185,8 +236,37 @@ export function countExperienceEvents(db: Database, projectKey: string): number 
   return row.count;
 }
 
+export function countExperienceContentEvents(db: Database, projectKey: string): number {
+  return countRows(
+    db,
+    `SELECT count(*) AS count
+     FROM experience_events e
+     WHERE e.project_key = ? AND ${experienceContentPredicate("e")}`,
+    projectKey,
+  );
+}
+
+export function oldestExperienceContentInsertedAt(db: Database, projectKey: string): string | null {
+  const row = db.query(
+    `SELECT min(e.inserted_at) AS inserted_at
+     FROM experience_events e
+     WHERE e.project_key = ? AND ${experienceContentPredicate("e")}`,
+  ).get(projectKey) as { inserted_at: string | null };
+  return row.inserted_at;
+}
+
 export function reconcileTerminalExperienceEventReplays(db: Database, projectKey: string): number {
-  const result = db
+  const consumed = db.query(
+    `SELECT 1
+     FROM experience_events e
+     JOIN experience_event_tombstones t
+       ON t.project_key = e.project_key
+      AND (t.original_event_id = e.id OR (e.dedupe_key IS NOT NULL AND t.dedupe_key = e.dedupe_key))
+     WHERE e.project_key = ? AND t.state IN ('output', 'no_output')
+     LIMIT 1`,
+  ).get(projectKey);
+  if (!consumed) return 0;
+  const result = withCompatibilityEventFinalizeAdmission(db, projectKey, () => db
     .query(
       `DELETE FROM experience_events
        WHERE project_key = ?
@@ -194,7 +274,7 @@ export function reconcileTerminalExperienceEventReplays(db: Database, projectKey
            SELECT 1
            FROM experience_event_tombstones t
            WHERE t.project_key = experience_events.project_key
-             AND t.state <> 'claimed'
+             AND t.state IN ('output', 'no_output')
              AND (
                t.original_event_id = experience_events.id
                OR (
@@ -204,7 +284,7 @@ export function reconcileTerminalExperienceEventReplays(db: Database, projectKey
              )
          )`,
     )
-    .run(projectKey);
+    .run(projectKey));
   return result.changes;
 }
 
@@ -218,6 +298,17 @@ export function countLeasedExperienceEvents(db: Database, projectKey: string): n
     )
     .get(projectKey) as { count: number };
   return row.count;
+}
+
+export function countLeasedExperienceContentEvents(db: Database, projectKey: string): number {
+  return countRows(
+    db,
+    `SELECT count(*) AS count
+     FROM experience_event_tombstones t
+     JOIN experience_events e ON e.id = t.original_event_id AND e.project_key = t.project_key
+     WHERE t.project_key = ? AND t.state = 'claimed' AND ${experienceContentPredicate("e")}`,
+    projectKey,
+  );
 }
 
 export function countUnleasedExperienceEvents(db: Database, projectKey: string): number {
@@ -241,6 +332,27 @@ export function countUnleasedExperienceEvents(db: Database, projectKey: string):
   return row.count;
 }
 
+export function countUnleasedExperienceContentEvents(db: Database, projectKey: string): number {
+  return countRows(
+    db,
+    `SELECT count(*) AS count
+     FROM experience_events e
+     WHERE e.project_key = ?
+       AND ${experienceContentPredicate("e")}
+       AND NOT EXISTS (
+         SELECT 1
+         FROM experience_event_tombstones t
+         WHERE t.project_key = e.project_key
+           AND t.state = 'claimed'
+           AND (
+             t.original_event_id = e.id
+             OR (e.dedupe_key IS NOT NULL AND t.dedupe_key = e.dedupe_key)
+           )
+       )`,
+    projectKey,
+  );
+}
+
 export function claimExperienceEvents(db: Database, input: ClaimExperienceEventsInput): ClaimedExperienceTombstone[] {
   if (!Number.isInteger(input.limit) || input.limit <= 0) {
     throw new Error("Claim limit must be a positive integer");
@@ -248,7 +360,13 @@ export function claimExperienceEvents(db: Database, input: ClaimExperienceEvents
 
   const claim = db.transaction(() => {
     const rows = db
-      .query("SELECT * FROM experience_events WHERE project_key = ? ORDER BY occurred_at, id LIMIT ?")
+      .query(
+        `SELECT e.*
+         FROM experience_events e
+         WHERE e.project_key = ?
+         ORDER BY CASE WHEN ${experienceContentPredicate("e")} THEN 0 ELSE 1 END, e.occurred_at, e.id
+         LIMIT ?`,
+      )
       .all(input.project_key, input.limit) as ExperienceEventRow[];
     const claimed: ClaimedExperienceTombstone[] = [];
     let claimedPromptChars = 0;
@@ -269,7 +387,8 @@ export function claimExperienceEvents(db: Database, input: ClaimExperienceEvents
         break;
       }
       insertClaimedTombstone(db, tombstone, row.dedupe_key);
-      db.query("DELETE FROM experience_events WHERE id = ? AND project_key = ?").run(row.id, row.project_key);
+      withCompatibilityEventFinalizeAdmission(db, row.project_key, () =>
+        db.query("DELETE FROM experience_events WHERE id = ? AND project_key = ?").run(row.id, row.project_key));
       claimed.push(tombstone);
       claimedPromptChars += tombstonePromptChars;
     }
@@ -338,6 +457,58 @@ export function leaseExperienceEvents(db: Database, input: LeaseExperienceEvents
   return lease();
 }
 
+export function leaseExperienceEventForAnchorInOpenTransaction(
+  db: Database,
+  input: {
+    ingest_job_id: string;
+    project_key: string;
+    source_id: string;
+    tombstone_id: string;
+    provider_session_id?: string | null;
+    claimed_at: string;
+    owner_epoch: number;
+  },
+): LeasedExperienceEvent {
+  if (!db.inTransaction) throw new Error("SMC evidence leasing requires an open transaction");
+  const row = db.query(
+    `SELECT * FROM experience_events
+     WHERE id = ? AND project_key = ?`,
+  ).get(input.source_id, input.project_key) as ExperienceEventRow | null;
+  if (!row) throw new Error(`SMC evidence source is no longer available: ${input.source_id}`);
+  const lease = buildLeasedExperienceEvent(row, {
+    id: input.tombstone_id,
+    ingest_job_id: input.ingest_job_id,
+    provider_session_id: input.provider_session_id,
+    claimed_at: input.claimed_at,
+  });
+  const result = withAnchorPrepareAdmission(db, {
+    projectKey: input.project_key,
+    ownerId: input.ingest_job_id,
+    ownerEpoch: input.owner_epoch,
+    phase: "preparing",
+  }, () => db.query(
+    `INSERT INTO experience_event_tombstones
+      (id, original_event_id, dedupe_key, project_key, ingest_job_id, provider, provider_session_id,
+       claimed_at, finalized_at, state, terminal_decision, source_metadata_json, retained_evidence_json,
+       output_references_json)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 'claimed', NULL, ?, ?, ?)`,
+  ).run(
+    lease.id,
+    lease.original_event_id,
+    row.dedupe_key,
+    lease.project_key,
+    lease.ingest_job_id,
+    lease.provider,
+    lease.provider_session_id,
+    lease.claimed_at,
+    lease.source_metadata_json,
+    JSON.stringify({}),
+    JSON.stringify([]),
+  ));
+  if (result.changes !== 1) throw new Error(`SMC evidence source could not be leased: ${input.source_id}`);
+  return lease;
+}
+
 export function finalizeClaimedExperienceEventsInOpenTransaction(
   db: Database,
   input: FinalizeClaimedExperienceEventsInput,
@@ -348,7 +519,11 @@ export function finalizeClaimedExperienceEventsInOpenTransaction(
   }
 
   for (const id of input.tombstone_ids) {
-    const result = db
+    const tombstone = db.query(
+      "SELECT project_key FROM experience_event_tombstones WHERE id = ? AND ingest_job_id = ? AND state = 'claimed'",
+    ).get(id, input.ingest_job_id) as { project_key: string } | null;
+    if (!tombstone) throw new Error(`Unable to finalize claimed tombstone: ${id}`);
+    const result = withCompatibilityEventLeaseAdmission(db, tombstone.project_key, () => db
       .query(
         `UPDATE experience_event_tombstones
          SET finalized_at = ?, state = ?, terminal_decision = ?, output_references_json = ?
@@ -361,7 +536,7 @@ export function finalizeClaimedExperienceEventsInOpenTransaction(
         JSON.stringify(input.output_references),
         id,
         input.ingest_job_id,
-      );
+      ));
     if (result.changes !== 1) throw new Error(`Unable to finalize claimed tombstone: ${id}`);
   }
 }
@@ -393,21 +568,101 @@ export function finalizeLeasedExperienceEventsInOpenTransaction(
       .get(tombstone.original_event_id, tombstone.project_key) as ExperienceEventRow | null;
     if (!source) throw new Error(`Unable to finalize tombstone without source row: ${id}`);
 
-    db.query(
-      `UPDATE experience_event_tombstones
+    withCompatibilityEventLeaseAdmission(db, tombstone.project_key, () => {
+      db.query(
+        `UPDATE experience_event_tombstones
        SET finalized_at = ?, state = ?, terminal_decision = ?, retained_evidence_json = ?, output_references_json = ?
        WHERE id = ? AND ingest_job_id = ? AND state = 'claimed'`,
-    ).run(
-      input.finalized_at,
-      input.state,
-      input.terminal_decision,
-      JSON.stringify({ raw_text: source.raw_text, raw_payload_json: source.raw_payload_json }),
-      JSON.stringify(input.output_references),
-      id,
-      input.ingest_job_id,
-    );
-    db.query("DELETE FROM experience_events WHERE id = ? AND project_key = ?").run(source.id, source.project_key);
+      ).run(
+        input.finalized_at,
+        input.state,
+        input.terminal_decision,
+        JSON.stringify({ raw_text: source.raw_text, raw_payload_json: source.raw_payload_json }),
+        JSON.stringify(input.output_references),
+        id,
+        input.ingest_job_id,
+      );
+    });
+    withCompatibilityEventFinalizeAdmission(db, source.project_key, () =>
+      db.query("DELETE FROM experience_events WHERE id = ? AND project_key = ?").run(source.id, source.project_key));
   }
+}
+
+export function finalizeAnchorExperienceEventsInOpenTransaction(
+  db: Database,
+  input: {
+    ingest_job_id: string;
+    project_key: string;
+    owner_epoch: number;
+    finalized_at: string;
+    events: ReadonlyArray<{
+      tombstone_id: string;
+      source_event_id: string;
+      state: "output" | "no_output";
+      terminal_decision: string;
+      output_references: readonly string[];
+    }>;
+  },
+): void {
+  if (!db.inTransaction) throw new Error("SMC evidence finalization requires an open transaction");
+  withAnchorLifecycleAdmission(db, {
+    operation: "anchor_finalize",
+    projectKey: input.project_key,
+    ownerId: input.ingest_job_id,
+    ownerEpoch: input.owner_epoch,
+    phase: "finalizing",
+  }, () => {
+    const seenSources = new Set<string>();
+    const seenTombstones = new Set<string>();
+    for (const event of input.events) {
+      if (seenSources.has(event.source_event_id) || seenTombstones.has(event.tombstone_id)) {
+        throw new Error(`duplicate_smc_finalization_source: ${event.source_event_id}`);
+      }
+      seenSources.add(event.source_event_id);
+      seenTombstones.add(event.tombstone_id);
+      if (event.state === "output" && event.output_references.length === 0) {
+        throw new Error(`output_tombstone_requires_reference: ${event.source_event_id}`);
+      }
+      const tombstone = db.query(
+        `SELECT * FROM experience_event_tombstones
+         WHERE id = ? AND original_event_id = ? AND project_key = ?
+           AND ingest_job_id = ? AND state = 'claimed'`,
+      ).get(
+        event.tombstone_id,
+        event.source_event_id,
+        input.project_key,
+        input.ingest_job_id,
+      ) as ClaimedExperienceTombstone | null;
+      if (!tombstone) throw new Error(`smc_finalization_lease_mismatch: ${event.source_event_id}`);
+      const source = db.query(
+        "SELECT * FROM experience_events WHERE id = ? AND project_key = ?",
+      ).get(event.source_event_id, input.project_key) as ExperienceEventRow | null;
+      if (!source) throw new Error(`smc_finalization_source_missing: ${event.source_event_id}`);
+      const updated = db.query(
+        `UPDATE experience_event_tombstones
+         SET finalized_at = ?, state = ?, terminal_decision = ?, retained_evidence_json = ?,
+             output_references_json = ?
+         WHERE id = ? AND original_event_id = ? AND project_key = ?
+           AND ingest_job_id = ? AND state = 'claimed'`,
+      ).run(
+        input.finalized_at,
+        event.state,
+        event.terminal_decision,
+        JSON.stringify({ raw_text: source.raw_text, raw_payload_json: source.raw_payload_json }),
+        JSON.stringify([...event.output_references]),
+        event.tombstone_id,
+        event.source_event_id,
+        input.project_key,
+        input.ingest_job_id,
+      );
+      const deleted = db.query(
+        "DELETE FROM experience_events WHERE id = ? AND project_key = ?",
+      ).run(event.source_event_id, input.project_key);
+      if (updated.changes !== 1 || deleted.changes !== 1) {
+        throw new Error(`smc_finalization_source_cas_failed: ${event.source_event_id}`);
+      }
+    }
+  });
 }
 
 export function finalizeRemainingLeasedExperienceEvents(
@@ -446,13 +701,17 @@ export function finalizeRemainingClaimedExperienceEvents(
     terminal_decision: string;
   },
 ): number {
-  const result = db
+  const project = db.query(
+    "SELECT project_key FROM experience_event_tombstones WHERE ingest_job_id = ? AND state = 'claimed' LIMIT 1",
+  ).get(input.ingest_job_id) as { project_key: string } | null;
+  if (!project) return 0;
+  const result = withCompatibilityEventLeaseAdmission(db, project.project_key, () => db
     .query(
       `UPDATE experience_event_tombstones
        SET finalized_at = ?, state = ?, terminal_decision = ?, output_references_json = ?
        WHERE ingest_job_id = ? AND state = 'claimed'`,
     )
-    .run(input.finalized_at, input.state, input.terminal_decision, JSON.stringify([]), input.ingest_job_id);
+    .run(input.finalized_at, input.state, input.terminal_decision, JSON.stringify([]), input.ingest_job_id));
   return result.changes;
 }
 
@@ -483,11 +742,11 @@ export function recoverStaleTombstoneLease(
       { ingest_job_id: existing.ingest_job_id, ended_at: input.recovered_at, reason: input.reason },
     ];
 
-    db.query(
+    withCompatibilityEventLeaseAdmission(db, existing.project_key, () => db.query(
       `UPDATE experience_event_tombstones
        SET ingest_job_id = ?, claimed_at = ?, source_metadata_json = ?
        WHERE id = ? AND state = 'claimed'`,
-    ).run(input.next_ingest_job_id, input.recovered_at, JSON.stringify(metadata), input.tombstone_id);
+    ).run(input.next_ingest_job_id, input.recovered_at, JSON.stringify(metadata), input.tombstone_id));
 
     return db
       .query("SELECT * FROM experience_event_tombstones WHERE id = ?")
@@ -571,7 +830,8 @@ function claimSingleExperienceEvent(
 
   const tombstone = buildClaimedTombstone(row, input);
   insertClaimedTombstone(db, tombstone, row.dedupe_key);
-  db.query("DELETE FROM experience_events WHERE id = ? AND project_key = ?").run(row.id, row.project_key);
+  withCompatibilityEventFinalizeAdmission(db, row.project_key, () =>
+    db.query("DELETE FROM experience_events WHERE id = ? AND project_key = ?").run(row.id, row.project_key));
   return tombstone;
 }
 
@@ -591,7 +851,7 @@ function selectUnleasedExperienceEvents(db: Database, projectKey: string, limit:
                OR (e.dedupe_key IS NOT NULL AND t.dedupe_key = e.dedupe_key)
              )
          )
-       ORDER BY e.occurred_at, e.id
+       ORDER BY CASE WHEN ${experienceContentPredicate("e")} THEN 0 ELSE 1 END, e.occurred_at, e.id
        LIMIT ?`,
     )
     .all(projectKey, limit) as ExperienceEventRow[];
@@ -618,7 +878,7 @@ function selectRecoverableTombstoneLeases(
        WHERE t.project_key = ?
          AND t.state = 'claimed'
          AND j.status = 'failed'
-       ORDER BY t.claimed_at, t.id
+       ORDER BY CASE WHEN ${experienceContentPredicate("e")} THEN 0 ELSE 1 END, t.claimed_at, t.id
        LIMIT ?`,
     )
     .all(projectKey, limit) as RecoverableTombstoneLeaseRow[];
@@ -663,11 +923,11 @@ function buildRecoveredTombstoneLease(
 }
 
 function updateRecoveredTombstoneLease(db: Database, lease: LeasedExperienceEvent): void {
-  db.query(
+  withCompatibilityEventLeaseAdmission(db, lease.project_key, () => db.query(
     `UPDATE experience_event_tombstones
      SET ingest_job_id = ?, provider_session_id = ?, claimed_at = ?, source_metadata_json = ?
      WHERE id = ? AND state = 'claimed'`,
-  ).run(lease.ingest_job_id, lease.provider_session_id, lease.claimed_at, lease.source_metadata_json, lease.id);
+  ).run(lease.ingest_job_id, lease.provider_session_id, lease.claimed_at, lease.source_metadata_json, lease.id));
 }
 
 function buildLeasedExperienceEvent(
@@ -768,7 +1028,7 @@ function buildClaimedTombstone(
 }
 
 function insertTombstoneLeaseStub(db: Database, lease: LeasedExperienceEvent, dedupeKey: string | null): boolean {
-  const result = db.query(
+  const result = withCompatibilityEventLeaseAdmission(db, lease.project_key, () => db.query(
     `INSERT OR IGNORE INTO experience_event_tombstones
       (id, original_event_id, dedupe_key, project_key, ingest_job_id, provider, provider_session_id,
        claimed_at, finalized_at, state, terminal_decision, source_metadata_json, retained_evidence_json,
@@ -786,12 +1046,12 @@ function insertTombstoneLeaseStub(db: Database, lease: LeasedExperienceEvent, de
     lease.source_metadata_json,
     JSON.stringify({}),
     JSON.stringify([]),
-  );
+  ));
   return result.changes === 1;
 }
 
 function insertClaimedTombstone(db: Database, tombstone: ClaimedExperienceTombstone, dedupeKey: string | null): void {
-  db.query(
+  withCompatibilityEventLeaseAdmission(db, tombstone.project_key, () => db.query(
     `INSERT INTO experience_event_tombstones
       (id, original_event_id, dedupe_key, project_key, ingest_job_id, provider, provider_session_id,
        claimed_at, finalized_at, state, terminal_decision, source_metadata_json, retained_evidence_json,
@@ -809,7 +1069,7 @@ function insertClaimedTombstone(db: Database, tombstone: ClaimedExperienceTombst
     tombstone.source_metadata_json,
     tombstone.retained_evidence_json,
     JSON.stringify([]),
-  );
+  ));
 }
 
 function providerDedupeKey(input: ExperienceEventInput): string | null {
@@ -817,4 +1077,19 @@ function providerDedupeKey(input: ExperienceEventInput): string | null {
     return [input.provider, input.provider_session_id, input.turn_id, input.hook_event_name].join(":");
   }
   return null;
+}
+
+export function experienceContentPredicate(alias: string): string {
+  return `${alias}.status = 'valid'
+    AND ${alias}.event_kind IN ('user.prompt', 'assistant.response')
+    AND ${alias}.raw_text IS NOT NULL
+    AND length(trim(${alias}.raw_text, char(32) || char(9) || char(10) || char(13) || char(160))) > 0`;
+}
+
+export function experienceNoAgentPredicate(alias: string): string {
+  return `(CASE WHEN ${experienceContentPredicate(alias)} THEN 0 ELSE 1 END) = 1`;
+}
+
+function countRows(db: Database, sql: string, projectKey: string): number {
+  return (db.query(sql).get(projectKey) as { count: number }).count;
 }

@@ -21,6 +21,7 @@ test("human status derives from the normalized operational contract", async () =
   expect(result.exitCode).toBe(0);
   expect(result.message).toContain("Myelin status: attention");
   expect(result.message).toContain("Project: demo (Demo) [cwd]");
+  expect(result.message).toContain("Session continuity: unavailable");
   expect(result.message).toContain("Session Memory:");
   expect(result.message).toContain("Project Memory:");
 });
@@ -33,7 +34,15 @@ test("--json emits exact myelin.status.v1 and no legacy shallow fields", async (
   expect(response.contract_version).toBe("myelin.status.v1");
   expect(response.kind).toBe("project_operational_status");
   expect(response.project.resolved_from).toBe("argument");
-  expect(Object.keys(response)).toEqual(["contract_version", "kind", "generated_at", "overall_state", "project", "installation", "session_memory", "project_memory", "warnings", "actions", "evidence"]);
+  expect(Object.keys(response)).toEqual(["contract_version", "kind", "generated_at", "overall_state", "project", "installation", "session_memory", "project_memory", "briefing", "warnings", "actions", "evidence"]);
+  expect(response.briefing).toMatchObject({
+    contract_version: "myelin.status.briefing.v1",
+    session_continuity: {
+      contract_version: "myelin.session_continuity.v1",
+      kind: "session_current_continuity",
+      state: "unavailable",
+    },
+  });
   for (const key of ["answer", "confidence", "memory_scope", "citations", "candidate_ids", "degraded", "degraded_reason", "source_tools"]) expect(key in response).toBe(false);
 });
 

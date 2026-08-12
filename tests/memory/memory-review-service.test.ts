@@ -6,6 +6,12 @@ import { createMemoryCandidate } from "../../src/memory/candidates.ts";
 import { openMemoryDb } from "../../src/memory/db.ts";
 import { MemoryReviewService } from "../../src/memory/memory-review-service.ts";
 import { writeJson } from "../../src/runtime/json.ts";
+import { createIngestJob, updateIngestJobStatus } from "../../src/ingest/jobs.ts";
+import {
+  finalizeLeasedExperienceEventsInOpenTransaction,
+  leaseExperienceEvents,
+  recordExperienceEvent,
+} from "../../src/memory/experience.ts";
 
 let root: string;
 
@@ -81,25 +87,28 @@ test("reports reviewable Project Memory maintenance dispositions with run artifa
 test("reports SQLite reviewable ingest and candidate outcomes", async () => {
   const db = openMemoryDb(root);
   try {
-    db.query(
-      `INSERT INTO ingest_jobs
-        (id, project_key, status, provider, provider_session_id, requested_by, input_json, output_counts_json,
-         terminal_summary, error_json, followup_state_json, started_at, finished_at, created_at, updated_at)
-       VALUES (?, ?, 'needs_followup', 'codex', NULL, NULL, '{}', '{}', ?, NULL, NULL, NULL, NULL, ?, ?)`,
-    ).run("job_followup", "demo", "Needs operator follow-up.", "2026-07-07T10:00:00.000Z", "2026-07-07T10:01:00.000Z");
-    db.query(
-      `INSERT INTO experience_event_tombstones
-        (id, original_event_id, dedupe_key, project_key, ingest_job_id, provider, provider_session_id, claimed_at,
-         finalized_at, state, terminal_decision, source_metadata_json, retained_evidence_json, output_references_json)
-       VALUES (?, ?, NULL, ?, ?, 'codex', NULL, ?, ?, 'no_output', 'reviewed_no_output', '{}', '{}', '[]')`,
-    ).run(
-      "tomb_no_output",
-      "event_1",
-      "demo",
-      "job_followup",
-      "2026-07-07T10:02:00.000Z",
-      "2026-07-07T10:03:00.000Z",
-    );
+    createIngestJob(db, {
+      id: "job_followup", project_key: "demo", provider: "codex", input: {},
+      now: "2026-07-07T10:00:00.000Z",
+    });
+    updateIngestJobStatus(db, {
+      id: "job_followup", status: "needs_followup", terminal_summary: "Needs operator follow-up.",
+      updated_at: "2026-07-07T10:01:00.000Z",
+    });
+    recordExperienceEvent(db, {
+      id: "event_1", project_key: "demo", occurred_at: "2026-07-07T10:02:00.000Z",
+      event_kind: "user.prompt", provider: "codex", raw_text: "review me", raw_payload_json: "{}",
+      source: "test", status: "valid",
+    });
+    leaseExperienceEvents(db, {
+      ingest_job_id: "job_followup", project_key: "demo", limit: 1,
+      claimed_at: "2026-07-07T10:02:00.000Z", tombstone_id_for: () => "tomb_no_output",
+    });
+    db.transaction(() => finalizeLeasedExperienceEventsInOpenTransaction(db, {
+      ingest_job_id: "job_followup", tombstone_ids: ["tomb_no_output"],
+      finalized_at: "2026-07-07T10:03:00.000Z", state: "no_output",
+      terminal_decision: "reviewed_no_output", output_references: [],
+    }))();
     createMemoryCandidate(db, {
       id: "cand_rejected",
       project_key: "demo",

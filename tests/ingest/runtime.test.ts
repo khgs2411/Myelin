@@ -355,12 +355,11 @@ test("refresh preserves retryable lease stubs when detached worker pid is dead",
 });
 
 function updateJobToRunning(jobId: string, followupState: Record<string, unknown>): void {
-  db.query(
-    `UPDATE ingest_jobs
-     SET status = 'running',
-         started_at = '2026-06-13T10:01:00.000Z',
-         updated_at = '2026-06-13T10:01:00.000Z',
-         followup_state_json = ?
-     WHERE id = ?`,
-  ).run(JSON.stringify(followupState), jobId);
+  updateIngestJobStatus(db, {
+    id: jobId,
+    status: "running",
+    started_at: "2026-06-13T10:01:00.000Z",
+    updated_at: "2026-06-13T10:01:00.000Z",
+    followup_state: followupState,
+  });
 }

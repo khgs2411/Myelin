@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { createMemoryCandidate } from "../../src/memory/candidates.ts";
 import { openMemoryDb } from "../../src/memory/db.ts";
 import { createHandoffInstruction } from "../../src/memory/handoffs.ts";
-import { createSessionMemory } from "../../src/memory/session-memories.ts";
+import { createSessionMemory } from "../helpers/session-mutation-authority.ts";
 import { buildProjectMemoryPacket } from "../../src/project/project-memory-packet.ts";
 import { writeJson } from "../../src/runtime/json.ts";
 

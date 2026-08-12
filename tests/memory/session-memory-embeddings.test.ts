@@ -8,29 +8,31 @@ import {
   listPendingSessionMemoryEmbeddings,
   markSessionMemoryEmbeddingFailed,
   markSessionMemoryEmbeddingIndexed,
+  readExactActiveSessionMemoryEmbeddings,
   sessionMemoryEmbeddingId,
 } from "../../src/memory/session-memory-embeddings.ts";
+import { createSessionMemory, retractSessionMemory } from "../helpers/session-mutation-authority.ts";
+import {
+  configureSMCTestContract,
+  seedIndexedMemory,
+} from "../helpers/smc-preparation.ts";
 
 let db: MemoryDb;
 
 beforeEach(() => {
   db = openMemoryDbAt(":memory:");
-  db.query(
-    `INSERT INTO session_memories
-      (id, project_key, source_event_refs_json, memory_kind, summary, payload_json, confidence, risk, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    "mem_1",
-    "class-kit",
-    "[]",
-    "decision",
-    "Keep local auth open.",
-    "{}",
-    "high",
-    "low",
-    "2026-06-13T10:00:00.000Z",
-    "2026-06-13T10:00:00.000Z",
-  );
+  createSessionMemory(db, {
+    id: "mem_1",
+    project_key: "class-kit",
+    source_event_refs: [],
+    memory_kind: "decision",
+    summary: "Keep local auth open.",
+    payload: {},
+    confidence: "high",
+    risk: "low",
+    now: "2026-06-13T10:00:00.000Z",
+    embedding_contract: null,
+  });
 });
 
 afterEach(() => {
@@ -124,18 +126,36 @@ test("backfills a new embedding contract for active memories only", () => {
     failure_reason: "old provider unavailable",
     now: "2026-06-13T10:06:00.000Z",
   });
-  db.query(
-    `INSERT INTO session_memories
-      (id, project_key, source_event_refs_json, memory_kind, summary, payload_json, confidence, risk, status, created_at, updated_at)
-     VALUES
-      ('mem_2', 'class-kit', '[]', 'continuity', 'Active memory.', '{}', 'high', 'low', 'active', ?, ?),
-      ('mem_3', 'class-kit', '[]', 'continuity', 'Retracted memory.', '{}', 'high', 'low', 'retracted', ?, ?)`,
-  ).run(
-    "2026-06-13T10:01:00.000Z",
-    "2026-06-13T10:01:00.000Z",
-    "2026-06-13T10:02:00.000Z",
-    "2026-06-13T10:02:00.000Z",
-  );
+  createSessionMemory(db, {
+    id: "mem_2",
+    project_key: "class-kit",
+    source_event_refs: [],
+    memory_kind: "continuity",
+    summary: "Active memory.",
+    payload: {},
+    confidence: "high",
+    risk: "low",
+    now: "2026-06-13T10:01:00.000Z",
+    embedding_contract: null,
+  });
+  createSessionMemory(db, {
+    id: "mem_3",
+    project_key: "class-kit",
+    source_event_refs: [],
+    memory_kind: "continuity",
+    summary: "Retracted memory.",
+    payload: {},
+    confidence: "high",
+    risk: "low",
+    now: "2026-06-13T10:02:00.000Z",
+    embedding_contract: null,
+  });
+  retractSessionMemory(db, {
+    id: "mem_3",
+    projectKey: "class-kit",
+    reason: "fixture",
+    now: "2026-06-13T10:02:00.000Z",
+  });
   const ollamaContract = {
     ...DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
     provider: "ollama_qwen" as const,
@@ -161,4 +181,23 @@ test("backfills a new embedding contract for active memories only", () => {
     { session_memory_id: "mem_2", status: "pending" },
   ]);
   expect(getSessionMemoryEmbedding(db, old.id).status).toBe("failed");
+});
+
+test("reads exact raw vector bytes only for the active Session embedding contract", () => {
+  const contract = configureSMCTestContract(db);
+  seedIndexedMemory(db, { id: "mem_exact", project_key: "class-kit" });
+
+  const rows = readExactActiveSessionMemoryEmbeddings(db, {
+    project_key: "class-kit",
+    contract,
+  });
+
+  expect(rows).toHaveLength(1);
+  expect(rows[0]?.session_memory_id).toBe("mem_exact");
+  expect(rows[0]?.embedding_contract_id).toBe(contract.id);
+  expect(Array.from(new Float32Array(rows[0]!.vector_bytes.buffer))).toEqual([
+    0.10000000149011612,
+    0.20000000298023224,
+    0.30000001192092896,
+  ]);
 });

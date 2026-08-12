@@ -9,6 +9,10 @@ import {
   parseEmbeddingVector,
   validateEmbeddingVector,
 } from "../embedding-validation.ts";
+import {
+  embeddingProviderFailureKind,
+  wrapEmbeddingProviderTransportError,
+} from "../embedding-provider-errors.ts";
 
 export type OllamaProviderName = "ollama_nomic" | "ollama_qwen";
 
@@ -27,10 +31,18 @@ export class OllamaEmbeddingTransport {
       const fetcher = this.input.fetch ?? fetch;
       const tagsResponse = await fetcher(ollamaUrl(this.input.baseUrl, "/api/tags"));
       if (!tagsResponse.ok) {
-        return { available: false, reason: `Ollama tags request failed: HTTP ${tagsResponse.status}` };
+        return {
+          available: false,
+          failure_kind: "provider",
+          reason: `Ollama tags request failed: HTTP ${tagsResponse.status}`,
+        };
       }
       if (!hasOllamaModel(await tagsResponse.json(), this.input.model)) {
-        return { available: false, reason: `Ollama model is not installed: ${this.input.model}` };
+        return {
+          available: false,
+          failure_kind: "configuration",
+          reason: `Ollama model is not installed: ${this.input.model}`,
+        };
       }
       const response = await fetcher(ollamaUrl(this.input.baseUrl, "/api/embed"), {
         method: "POST",
@@ -45,6 +57,7 @@ export class OllamaEmbeddingTransport {
       if (!response.ok) {
         return {
           available: false,
+          failure_kind: "provider",
           reason: `Ollama embedding availability check failed: HTTP ${response.status}`,
         };
       }
@@ -52,13 +65,18 @@ export class OllamaEmbeddingTransport {
       if (embeddings.length !== 1) {
         return {
           available: false,
+          failure_kind: "provider",
           reason: "Ollama embedding availability check returned an invalid result count",
         };
       }
       validateEmbeddingVector(embeddings[0], this.input.dimensions);
       return { available: true };
     } catch (error) {
-      return { available: false, reason: error instanceof Error ? error.message : String(error) };
+      return {
+        available: false,
+        failure_kind: embeddingProviderFailureKind(error),
+        reason: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -75,16 +93,24 @@ export class OllamaEmbeddingTransport {
     if (contract.provider !== this.input.provider) {
       throw new Error(`Ollama provider mismatch: expected ${this.input.provider}, got ${contract.provider}`);
     }
-    const response = await (this.input.fetch ?? fetch)(ollamaUrl(this.input.baseUrl, "/api/embed"), {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        model: contract.model,
-        input: requests.map(this.input.format),
-        dimensions: contract.dimensions,
-        keep_alive: "0",
-      }),
-    });
+    let response: Response;
+    try {
+      response = await (this.input.fetch ?? fetch)(ollamaUrl(this.input.baseUrl, "/api/embed"), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          model: contract.model,
+          input: requests.map(this.input.format),
+          dimensions: contract.dimensions,
+          keep_alive: "0",
+        }),
+      });
+    } catch (error) {
+      throw wrapEmbeddingProviderTransportError(error, {
+        provider: this.input.provider,
+        operation: "embedding request",
+      });
+    }
     if (!response.ok) throw new Error(await httpError("Ollama embedding request failed", response));
     const embeddings = parseOllamaEmbeddings(await response.json());
     if (embeddings.length !== requests.length) {

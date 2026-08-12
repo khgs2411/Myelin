@@ -64,7 +64,11 @@ Goal: accurate, relevant project-scoped continuity from recent work.
 - [x] `done` ~~Ingest uses tombstone-backed leases so raw Experience Log rows are not deleted before terminal output.~~
 - [x] `done` ~~Ingest writes trusted Session Memories, Memory Candidates, layer handoff instructions, supersession links, retractions, noops, and terminal tombstone state.~~
 - [x] `done` ~~Ingest preserves branch context as metadata and does not fail just because a repo is not on `master`.~~
-- [x] `done` ~~Prompt-size packing budgets instructions, leased evidence, and reconciliation context together.~~
+- [x] `done` ~~SMC uses deterministic evidence batches, fixed evidence-seed recall, same-row repo/branch/commit constraints, coordinator-owned pagination, and phase-bounded provider envelopes instead of an all-memory prompt or recursive affected-work expansion.~~
+- [x] `done` ~~SMC preparation rejects definitely infeasible frozen budgets with zero state, while runtime turn reserve requires an explicit additive grant.~~
+- [x] `done` ~~Rolling audit selection has its own typed `SMC_AUDIT_PARTITION_LIMIT`; this repository explicitly selects at most 10 due revisions per anchor instead of coupling audit cost to the affected-work-set ceiling.~~
+- [x] `done` ~~Turn feasibility counts every evidence text formulation, one proposal per work batch, and one exact fetch per frozen audit member; root `SMC_MAX_TURNS=20` admits the 7 + 2 + 10 = 19 minimum acceptance workload.~~
+- [x] `done` ~~Policy v3 adds a trusted `audit_fetch` phase that advances one exact durable fetch receipt at a time; `proposal_ready` is withheld until all frozen audit targets are fetched, and incompatible earlier-policy anchors are abandoned and restarted.~~
 - [x] `done` ~~Session Memory writes create pending embedding metadata.~~
 - [x] `done` ~~`myelin memory index session <key>` indexes pending Session Memories through the active embedding contract.~~
 - [x] `done` ~~Query embeddings are cached.~~
@@ -85,7 +89,7 @@ Project Memory is the first durable curation layer. It should capture what the r
 
 Step 3 is complete when `project learn <key>` can safely maintain Project Memory from bounded evidence, with validated curator output and provenance-backed markdown updates.
 
-Step 3 foundation is complete. Step 3.5 completed transport, retrieval-quality, and schema-output hardening. The 2026-06-30 dogfood output proved the mechanics but not the memory-layer quality bar, so Step 4 now owns Project Memory shape, creation, maintenance, and producer-routing redesign before the core agent-facing facades and Current Briefing resume in Step 13.
+Step 3 foundation is complete. Step 3.5 completed transport, retrieval-quality, and schema-output hardening. The 2026-06-30 dogfood output proved the mechanics but not the memory-layer quality bar, so Step 4 now owns Project Memory shape, creation, maintenance, and producer-routing redesign before the core agent-facing facades and Current Briefing resume in Step 14.
 
 - [x] `retired` ~~The old Phase-0 `project learn` / `project ingest` runner scaffold has been removed from the active Project Memory command surface.~~
   - Why: `project learn` now owns Project Memory curation through the mode-scoped Project Memory Curator pre-write flow, while top-level `ingest <key>` remains Session Memory / Experience Log ingest.
@@ -397,9 +401,24 @@ Goal: review the working implementation as a whole and consolidate only the stru
   - Why: Clean-project dogfood should begin from a maintenance path that cannot silently reauthor an accepted review or misreport expected single-flight contention as failure.
   - Progress: Completed on 2026-07-19. Reviewed maintenance artifacts can be promoted byte-for-byte with drift protection, reconciled through the normal source lifecycle, and reported accurately when automatic work yields to an active explicit mutation.
 
-## Roadmap Step 12: External Project Dogfood
+## Roadmap Step 12: Memory Layer Reliability Gate
 
-Goal: prove the installed operator product on both an established repository with accumulated continuity and a genuinely clean project with no prior Myelin state.
+Goal: establish trustworthy Session Memory first, then establish trustworthy Project Memory, before any new-project bootstrap expands the product surface.
+
+- [ ] `next` Establish reliable Session Memory continuity.
+  - Description: Make Session Memory consistently capture, curate, reconcile, preserve, and retrieve the recent work, completed outcomes, active next actions, and important uncertainty that a fresh agent needs to continue correctly.
+  - Why: Session Memory is the primary continuity layer, and blind cross-session evaluation showed that correct current memories can exist and be indexed while natural onboarding questions still rank historical continuity instead.
+  - Shape: Preserve provenance and historical records while ensuring default current-continuity retrieval respects semantic relevance, temporal intent, and lifecycle state without reverting to timestamp-only ranking.
+- [ ] `open` Establish reliable Project Memory retrieval.
+  - Description: Apply the same blind, memory-first evaluation discipline to Project Memory and close retrieval, freshness, grounding, and compound-question gaps before treating its documentation as a trusted bootstrap dependency.
+  - Why: A new project should not be bootstrapped from a Project Memory layer whose natural-query behavior has not passed the same trust gate as Session Memory.
+- [ ] `open` Repeat the cross-session reliability gate across both layers.
+  - Description: Re-run frozen blind onboarding questions from fresh agent sessions until Session and Project Memory provide current, relevant, non-misleading, provenance-bearing context without relying on prior conversation or repository inspection to fill the gaps.
+  - Why: Memory reliability requires repeatable transfer across session boundaries, not a one-time successful query.
+
+## Roadmap Step 13: External Project Dogfood
+
+Goal: after the memory reliability gate passes, prove the installed operator product on both an established repository with accumulated continuity and a genuinely clean project with no prior Myelin state.
 
 Class Kit and Droplet Bot exercise complementary paths. Class Kit already has substantial Session Memory and captured Experience Log evidence, so its rebootstrap should prove that a fresh Project Memory shell can reuse preserved continuity. Droplet Bot is a Wizepal project but should enter Myelin under its own clean project identity, proving the first-run experience without inherited SQLite rows.
 
@@ -407,11 +426,11 @@ Class Kit and Droplet Bot exercise complementary paths. Class Kit already has su
   - Description: Re-register and rebuild the Class Kit project shell, then run the product loop from the beginning while preserving its existing Session Memory, captured evidence, and connected hook history in root SQLite.
   - Why: An established repository should be able to recreate Project Memory without discarding the continuity Myelin has already earned.
   - Progress: Completed on 2026-07-15. The installed product recreated a curated Project Memory from the continuity-rich Class Kit baseline, retained correct repository identity, and returned Project-layer answers for destructive product reset and member auto-approval. Progress, retry, managed-version, repository-isolation, authoring-coverage, publication, and retrieval findings exposed by the run were closed before this baseline was accepted.
-- [ ] `next` Bootstrap Droplet Bot as a clean Wizepal project.
+- [ ] `open` Bootstrap Droplet Bot as a clean Wizepal project.
   - Description: Register Droplet Bot as a new project with no pre-existing project-scoped SQLite memory, then run the same first-create and maintenance path from a genuinely clean state.
   - Why: A clean initialization exposes first-run assumptions that an established project with accumulated memory can hide.
   - Shape: Treat Droplet Bot as a distinct Myelin project identity rather than reusing the existing `wizepal` SQLite continuity.
-  - Progress: The internal Project Memory maintenance review gate is complete; this clean bootstrap is now the next product workload.
+  - Progress: The internal Project Memory maintenance review gate is complete, but the clean bootstrap is held behind the Session and Project Memory reliability gate in Step 12.
 - [ ] `open` Run the full external-project dogfood across both paths.
   - Description: Use the installed command and public CLI/JSON contracts to run create, query, maintenance, and auto-maintenance for Class Kit and Droplet Bot, then ask real Project and Session Memory questions before touching either repo directly.
   - Why: Comparing continuity-rich rebootstrap with clean initialization tests both sides of the operator product boundary.
@@ -421,7 +440,7 @@ Class Kit and Droplet Bot exercise complementary paths. Class Kit already has su
   - Why: External dogfood is a reliability gate, not a one-time demonstration.
   - Progress: Class Kit findings have been closed through an accepted recreated and queryable baseline; this item remains open for Droplet Bot findings and the final repeated comparison.
 
-## Roadmap Step 13: Core Agent-Facing Facades And Current Briefing
+## Roadmap Step 14: Core Agent-Facing Facades And Current Briefing
 
 Goal: expose Project Memory, Session Memory, and current project state through stable semantic interfaces before detached consumers wrap them.
 
@@ -443,11 +462,11 @@ The current CLI can retrieve Project and Session Memory explicitly, but the prod
   - Description: Keep `query`, `how`, and `status` contracts stable for current layers while allowing later Practice and Personal Memory scopes to join without a parallel interface.
   - Why: MCP should wrap proven semantic contracts instead of freezing an incomplete Project-only surface.
 
-## Roadmap Step 14: Detached MCP Wrapper
+## Roadmap Step 15: Detached MCP Wrapper
 
 Goal: expose proven Myelin semantic and submission contracts as globally available tools for agents working in other repositories.
 
-MCP remains detached from the core package graph. It should consume the stable CLI/JSON behavior proven across Steps 10 through 13, preserve required compatibility contracts, and never become a second implementation of memory semantics.
+MCP remains detached from the core package graph. It should consume the stable CLI/JSON behavior proven across Steps 10 through 14, preserve required compatibility contracts, and never become a second implementation of memory semantics.
 
 - [ ] `open` Define the detached MCP wrapper boundary.
   - Description: Decide which stable CLI/JSON operations become tools, what arguments and results they expose, and what remains internal to the Myelin runtime.
@@ -465,7 +484,7 @@ MCP remains detached from the core package graph. It should consume the stable C
   - Description: Keep core behavior in Myelin CLI/runtime code and keep MCP as a detached consumer of stable command and JSON contracts.
   - Why: The wrapper must not become a second implementation of memory logic.
 
-## Roadmap Step 15: Practice Memory
+## Roadmap Step 16: Practice Memory
 
 Goal: promote reusable cross-project guidance into canonical, human-reviewable memory after the core project loop and external interfaces are stable.
 
@@ -484,7 +503,7 @@ Practice Memory should reuse proven curation and retrieval mechanics where appro
   - Description: Make approved guidance available to `query` and preferentially to `how`, then extend the detached wrapper through the stable core contracts.
   - Why: Practice Memory is useful only when agents can retrieve it without bypassing project-specific overrides.
 
-## Roadmap Step 16: Personal Memory
+## Roadmap Step 17: Personal Memory
 
 Goal: maintain durable guidance about user preferences and agent behavior through explicit authority, correction, and privacy boundaries.
 

@@ -70,7 +70,7 @@ test("capture command receives an explicit launch context", async () => {
   }
 });
 
-test("captureCodexPayload stores empty Stop as invalid raw evidence", async () => {
+test("captureCodexPayload ignores empty Stop without creating Experience Log content", async () => {
   const result = await captureCodexPayload(root, {
     hook_event_name: "Stop",
     session_id: "sess_1",
@@ -80,15 +80,11 @@ test("captureCodexPayload stores empty Stop as invalid raw evidence", async () =
   });
 
   expect(result.exitCode).toBe(0);
-  expect(result.message).toBe("capture stored");
+  expect(result.message).toBe("codex hook ignored: empty-content");
 
   const db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   try {
-    const [event] = listExperienceEvents(db, "class-kit");
-    expect(event.hook_event_name).toBe("Stop");
-    expect(event.event_kind).toBeNull();
-    expect(event.status).toBe("invalid");
-    expect(event.raw_payload_json).toContain("Stop");
+    expect(listExperienceEvents(db, "class-kit")).toEqual([]);
   } finally {
     db.close();
   }

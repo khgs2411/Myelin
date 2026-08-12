@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { openMemoryDb } from "../../src/memory/db.ts";
 import { registerInitialActiveEmbeddingContract } from "../../src/memory/embedding-contract-store.ts";
 import { markSessionMemoryEmbeddingIndexed } from "../../src/memory/session-memory-embeddings.ts";
-import { createSessionMemory } from "../../src/memory/session-memories.ts";
+import { createSessionMemory } from "../helpers/session-mutation-authority.ts";
 import { DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT, loadConfig } from "../../src/runtime/config.ts";
 import { inspectEmbeddingRetrievalStatus } from "../../src/status/embedding-retrieval-status.ts";
 

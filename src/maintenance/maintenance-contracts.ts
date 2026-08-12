@@ -2,10 +2,30 @@ import type { LaunchContext } from "../runtime/launch-context.ts";
 import type {
   IngestServiceDeps,
   IngestStatusResult,
+  StartEligibleAnchorInput,
   StartIngestInput,
   StartIngestResult,
 } from "../ingest/ingest-service-contracts.ts";
 import type { DetachedSpawner, ProcessLivenessChecker } from "../ingest/runtime.ts";
+import type { SessionMaintenanceWakeKind, SessionMaintenanceEligibility } from "./session-maintenance-eligibility.ts";
+
+export type SessionMaintenanceSchedulerResult =
+  | { kind: "no_work"; project_key: string; eligibility: SessionMaintenanceEligibility }
+  | { kind: "index_only"; project_key: string; eligibility: SessionMaintenanceEligibility; indexing: AutoMemoryMaintenanceIndexResult }
+  | {
+      kind: "blocked";
+      code: "session_memory_indexing_incomplete" | "session_memory_plan_config_unavailable";
+      project_key: string;
+      eligibility: SessionMaintenanceEligibility;
+      indexing?: AutoMemoryMaintenanceIndexResult;
+      reason: string;
+    }
+  | { kind: "anchor"; project_key: string; eligibility: SessionMaintenanceEligibility; indexing: AutoMemoryMaintenanceIndexResult; result: StartIngestResult };
+
+export type SessionMaintenanceScheduler = {
+  evaluate(projectKey: string, wakeKind: SessionMaintenanceWakeKind): Promise<SessionMaintenanceEligibility>;
+  run(projectKey: string, wakeKind: SessionMaintenanceWakeKind): Promise<SessionMaintenanceSchedulerResult>;
+};
 
 export type AutoMemoryMaintenanceScheduleResult =
   | { status: "disabled"; reason: string }
@@ -15,7 +35,15 @@ export type AutoMemoryMaintenanceScheduleResult =
 export type AutoMemoryMaintenanceScheduler = {
   maybeSchedule: (
     projectKey: string,
-    options?: { forceIngest?: boolean; forceIndex?: boolean },
+    options?: {
+      wakeKind?: SessionMaintenanceWakeKind;
+      /** @deprecated Use wakeKind: "session_start". */
+      drainBelowThreshold?: boolean;
+      /** @deprecated Use wakeKind: "index_request". */
+      forceIndex?: boolean;
+      /** @deprecated Use wakeKind: "session_start". */
+      forceIngest?: boolean;
+    },
   ) => Promise<AutoMemoryMaintenanceScheduleResult>;
 };
 
@@ -62,6 +90,7 @@ export type AutoMemoryMaintenanceDeps = IngestServiceDeps & {
   sleep?: (ms: number) => Promise<void>;
   ingestService?: {
     start(input: StartIngestInput): Promise<StartIngestResult>;
+    startEligibleAnchor?(input: StartEligibleAnchorInput): Promise<StartIngestResult>;
     status(input: { jobId?: string; projectKey?: string }): Promise<IngestStatusResult>;
   };
   indexPending?: (input: {

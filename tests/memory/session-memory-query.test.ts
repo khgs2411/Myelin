@@ -4,8 +4,12 @@ import type { EmbeddingProviderClient } from "../../src/memory/embedding-types.t
 import { openMemoryDbAt, type MemoryDb } from "../../src/memory/db.ts";
 import { markSessionMemoryEmbeddingIndexed } from "../../src/memory/session-memory-embeddings.ts";
 import { querySessionMemory, type SessionMemoryQueryVectorStore } from "../../src/memory/session-memory-query.ts";
-import { createSessionMemoryContexts } from "../../src/memory/session-memory-contexts.ts";
-import { createSessionMemory } from "../../src/memory/session-memories.ts";
+import {
+  createSessionMemory,
+  createSessionMemoryContexts,
+  retractSessionMemory,
+  supersedeSessionMemory,
+} from "../helpers/session-mutation-authority.ts";
 
 let db: MemoryDb;
 
@@ -201,13 +205,13 @@ test("filters superseded memories from default query results", async () => {
     risk: "low",
     now: "2026-06-13T10:02:00.000Z",
   });
-  db.query(
-    `UPDATE session_memories
-     SET status = 'superseded',
-         superseded_by = 'mem_active',
-         lifecycle_reason = 'Updated by newer memory'
-     WHERE id = 'mem_decision'`,
-  ).run();
+  supersedeSessionMemory(db, {
+    id: "mem_decision",
+    projectKey: "class-kit",
+    supersededBy: "mem_active",
+    reason: "Updated by newer memory",
+    now: "2026-06-13T10:03:00.000Z",
+  });
   for (const row of db.query("SELECT id FROM session_memory_embeddings").all() as Array<{ id: string }>) {
     markSessionMemoryEmbeddingIndexed(db, {
       id: row.id,
@@ -235,7 +239,7 @@ test("filters superseded memories from default query results", async () => {
   expect(result.matches.map((match) => match.id)).toEqual(["mem_active"]);
 });
 
-test("reranks explicit recency questions without changing semantic distances", async () => {
+test("keeps semantic relevance authoritative for explicit recency questions", async () => {
   createSessionMemory(db, {
     id: "mem_recent",
     project_key: "class-kit",
@@ -280,11 +284,65 @@ test("reranks explicit recency questions without changing semantic distances", a
     vector_store: vectorStore,
   });
 
-  expect(recent.matches.map((match) => match.id)).toEqual(["mem_recent", "mem_decision"]);
-  expect(recent.matches[0].distance).toBe(0.2);
-  expect(recent.source_tools).toContain("session-memory-recency-rerank");
+  expect(recent.matches.map((match) => match.id)).toEqual(["mem_decision", "mem_recent"]);
+  expect(recent.matches[0].distance).toBe(0.01);
+  expect(recent.source_tools).not.toContain("session-memory-recency-rerank");
   expect(semantic.matches.map((match) => match.id)).toEqual(["mem_decision", "mem_recent"]);
   expect(semantic.source_tools).not.toContain("session-memory-recency-rerank");
+});
+
+test("expands vector search when inactive matches consume the candidate window", async () => {
+  const vectorMatches: Array<{ memory_id: string; distance: number }> = [];
+  for (let index = 0; index < 11; index += 1) {
+    const id = `mem_retracted_${index}`;
+    createSessionMemory(db, {
+      id,
+      project_key: "class-kit",
+      source_event_refs: [`tomb_retracted_${index}`],
+      memory_kind: "continuity",
+      title: `Retracted ${index}`,
+      summary: "Inactive memory should not starve active retrieval.",
+      payload: {},
+      confidence: "high",
+      risk: "low",
+      now: `2026-06-14T10:${String(index).padStart(2, "0")}:00.000Z`,
+    });
+    retractSessionMemory(db, {
+      id,
+      projectKey: "class-kit",
+      reason: "Inactive retrieval fixture",
+      now: `2026-06-14T10:${String(index).padStart(2, "0")}:30.000Z`,
+    });
+    vectorMatches.push({ memory_id: id, distance: index / 100 });
+  }
+  vectorMatches.push({ memory_id: "mem_decision", distance: 0.5 });
+  for (const row of db.query("SELECT id FROM session_memory_embeddings").all() as Array<{ id: string }>) {
+    markSessionMemoryEmbeddingIndexed(db, {
+      id: row.id,
+      normalized_text_hash: `hash_${row.id}`,
+      now: "2026-06-14T10:15:00.000Z",
+    });
+  }
+
+  const requestedLimits: number[] = [];
+  const result = await querySessionMemory(db, {
+    project_key: "class-kit",
+    question: "What did we decide about embeddings?",
+    document_contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+    provider: fixedProvider(),
+    limit: 1,
+    vector_store: {
+      ensure: () => ({ available: true }),
+      search: (_database, input) => {
+        requestedLimits.push(input.limit);
+        return vectorMatches.slice(0, input.limit);
+      },
+    },
+  });
+
+  expect(requestedLimits).toHaveLength(2);
+  expect(requestedLimits[1]).toBe(vectorMatches.length);
+  expect(result.matches.map((match) => match.id)).toEqual(["mem_decision"]);
 });
 
 
@@ -376,6 +434,43 @@ test("degrades when query embedding provider fails on a cache miss", async () =>
 
   expect(result.degraded).toBe(true);
   expect(result.degraded_reason).toBe("provider unavailable");
+  expect(result.matches).toEqual([]);
+});
+
+test("returns a stable code when query embedding is unreachable from the current process", async () => {
+  const row = db.query("SELECT id FROM session_memory_embeddings").get() as { id: string };
+  markSessionMemoryEmbeddingIndexed(db, {
+    id: row.id,
+    normalized_text_hash: "hash_1",
+    now: "2026-06-13T10:05:00.000Z",
+  });
+  const socketError = Object.assign(new Error("Was there a typo in the url or port?"), {
+    code: "FailedToOpenSocket",
+  });
+
+  const result = await querySessionMemory(db, {
+    project_key: "class-kit",
+    question: "What did we decide about embeddings?",
+    document_contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+    provider: {
+      async embed() {
+        throw socketError;
+      },
+      async embedBatch() {
+        throw socketError;
+      },
+    },
+    limit: 5,
+    vector_store: {
+      ensure: () => ({ available: true }),
+      search: () => {
+        throw new Error("search should not run");
+      },
+    },
+  });
+
+  expect(result.degraded).toBe(true);
+  expect(result.degraded_code).toBe("embedding_provider_unreachable");
   expect(result.matches).toEqual([]);
 });
 

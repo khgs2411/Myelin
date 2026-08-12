@@ -8,6 +8,12 @@ import type {
   StatusEvidence,
   StatusWarning,
 } from "./contracts.ts";
+import type { SessionCurrentContinuityV1 } from "../memory/session-current-continuity-types.ts";
+
+export type StatusBriefingV1 = {
+  contract_version: "myelin.status.briefing.v1";
+  session_continuity: SessionCurrentContinuityV1;
+};
 
 export type ProjectOperationalStatusV1 = {
   contract_version: "myelin.status.v1";
@@ -18,6 +24,7 @@ export type ProjectOperationalStatusV1 = {
   installation: InstallationStatusSection;
   session_memory: SessionMemoryStatusSection;
   project_memory: ProjectMemoryStatusSection;
+  briefing?: StatusBriefingV1;
   warnings: StatusWarning[];
   actions: StatusAction[];
   evidence: StatusEvidence[];
@@ -42,6 +49,10 @@ export function serializeStatusV1(result: OperationalStatusResult): ProjectOpera
     },
     session_memory: cloneSection(result.session_memory),
     project_memory: cloneSection(result.project_memory),
+    briefing: {
+      contract_version: "myelin.status.briefing.v1",
+      session_continuity: cloneSection(result.session_continuity),
+    },
     warnings: [...result.warnings]
       .map((item) => ({ ...item, evidence_ids: [...item.evidence_ids] }))
       .sort((a, b) => a.section.localeCompare(b.section) || a.code.localeCompare(b.code) || a.message.localeCompare(b.message)),

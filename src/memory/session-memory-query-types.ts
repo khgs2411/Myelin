@@ -30,6 +30,7 @@ export type SessionMemoryQueryResult = {
   query_log_id?: string;
   degraded: boolean;
   degraded_reason?: string;
+  degraded_code?: "embedding_provider_unreachable" | "embedding_provider_configuration" | "embedding_provider_unavailable";
   indexed_count: number;
   pending_count: number;
   query_embedding_cache_hit?: boolean;

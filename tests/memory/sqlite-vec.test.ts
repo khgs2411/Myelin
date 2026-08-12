@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { openMemoryDbAt } from "../../src/memory/db.ts";
-import { createSessionMemory } from "../../src/memory/session-memories.ts";
+import { createSessionMemory } from "../helpers/session-mutation-authority.ts";
 import {
   createSqliteVecAdapter,
   ensureProjectMemoryRetrievalVectorTable,

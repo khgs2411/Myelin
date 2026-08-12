@@ -6,6 +6,8 @@ import { tmpdir } from "node:os";
 import { openMemoryDbAt } from "../../src/memory/db.ts";
 import { writeJson } from "../../src/runtime/json.ts";
 import { StatusService } from "../../src/status/status-service.ts";
+import { registerInitialActiveEmbeddingContract } from "../../src/memory/embedding-contract-store.ts";
+import { EmbeddingProviderInitializationError } from "../../src/memory/embedding-provider-errors.ts";
 
 let root: string;
 
@@ -28,6 +30,11 @@ test("builds a normalized contract and resolves project provenance", async () =>
   expect(explicit.installation.lifecycle).toBe("not_installed");
   expect(explicit.session_memory.capture).toEqual({ queued_events: 0, unleased_events: 0, leased_events: 0 });
   expect(explicit.project_memory.curation.lifecycle).toBe("not_curated");
+  expect(explicit.session_continuity).toMatchObject({
+    contract_version: "myelin.session_continuity.v1",
+    state: "unavailable",
+    reason_codes: ["no_eligible_anchor_job"],
+  });
   expect(explicit.overall_state).toBe("attention");
   expect(explicit.generated_at).toBe("2026-07-10T12:00:00.000Z");
 });
@@ -37,6 +44,7 @@ test("missing required SQLite produces a blocked contract without creating the d
   const result = await new StatusService(root, { locatorPath: join(root, "machine", "install.json") }).summary({ projectKey: "demo" });
   expect(result.overall_state).toBe("blocked");
   expect(result.warnings.filter((item) => item.code === "ROOT_SQLITE_UNAVAILABLE")).toHaveLength(2);
+  expect(result.session_continuity.state).toBe("unavailable");
   expect(await Bun.file(dbPath).exists()).toBe(false);
 });
 
@@ -93,6 +101,43 @@ test("status leaves database bytes unchanged and creates no SQLite sidecars", as
   const sidecarsAfter = (await readdir(join(root, "state", "memory"))).filter(isSidecar).sort();
   expect(after).toBe(before);
   expect(sidecarsAfter).toEqual(sidecarsBefore);
+});
+
+test("reports provider reachability separately without replacing lifecycle or mutating status storage", async () => {
+  await seedDb();
+  const dbPath = join(root, "state", "memory", "memory.db");
+  const db = openMemoryDbAt(dbPath);
+  registerInitialActiveEmbeddingContract(db, {
+    scope: "session_memory",
+    contract: {
+      provider: "ollama_nomic",
+      model: "nomic-embed-text:v1.5",
+      dimensions: 768,
+      formatVersion: 1,
+    },
+  });
+  db.close();
+  const before = hash(await readFile(dbPath));
+  const sidecarsBefore = (await readdir(join(root, "state", "memory"))).filter(isSidecar).sort();
+
+  const result = await new StatusService(root, {
+    locatorPath: join(root, "machine", "install.json"),
+    createEmbeddingFactory: () => ({
+      async initializeContract() {
+        throw new EmbeddingProviderInitializationError(
+          "ollama_nomic",
+          "unreachable",
+          "socket could not be opened",
+        );
+      },
+    }),
+  }).summary({ projectKey: "demo" });
+
+  expect(result.session_memory.retrieval.provider_state).toBe("unreachable");
+  expect(result.session_memory.lifecycle).not.toBe("provider_unreachable");
+  expect(result.warnings.map((item) => item.code)).toContain("SESSION_EMBEDDING_PROVIDER_UNREACHABLE");
+  expect(hash(await readFile(dbPath))).toBe(before);
+  expect((await readdir(join(root, "state", "memory"))).filter(isSidecar).sort()).toEqual(sidecarsBefore);
 });
 
 test("omitted key fails outside registered repos and rejects ambiguous mappings", async () => {

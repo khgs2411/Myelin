@@ -3,7 +3,7 @@ import { DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT } from "../../src/runtime/con
 import type { EmbeddingProviderClient } from "../../src/memory/embedding-types.ts";
 import { openMemoryDbAt, type MemoryDb } from "../../src/memory/db.ts";
 import { indexSessionMemories, type SessionMemoryVectorStore } from "../../src/memory/session-memory-indexer.ts";
-import { createSessionMemory } from "../../src/memory/session-memories.ts";
+import { createSessionMemory, retractSessionMemory } from "../helpers/session-mutation-authority.ts";
 
 let db: MemoryDb;
 
@@ -114,7 +114,12 @@ test("backfills and indexes active memories after the embedding contract changes
 
 test("indexes session memories in provider batches mapped by row order", async () => {
   const contract = { ...DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT, model: "test-embedding", dimensions: 3 };
-  db.query("UPDATE session_memories SET status = 'retracted' WHERE id = 'mem_1'").run();
+  retractSessionMemory(db, {
+    id: "mem_1",
+    projectKey: "class-kit",
+    reason: "Exclude setup memory from batch fixture",
+    now: "2026-06-13T10:00:30.000Z",
+  });
   for (let index = 1; index <= 4; index += 1) {
     createSessionMemory(db, {
       id: `batch_mem_${index}`,
@@ -177,7 +182,12 @@ test("indexes session memories in provider batches mapped by row order", async (
 
 test("marks a failed provider batch retryable without deleting pending rows", async () => {
   const contract = { ...DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT, model: "test-embedding", dimensions: 3 };
-  db.query("UPDATE session_memories SET status = 'retracted' WHERE id = 'mem_1'").run();
+  retractSessionMemory(db, {
+    id: "mem_1",
+    projectKey: "class-kit",
+    reason: "Exclude setup memory from failed batch fixture",
+    now: "2026-06-13T10:00:30.000Z",
+  });
   for (let index = 1; index <= 2; index += 1) {
     createSessionMemory(db, {
       id: `failed_batch_mem_${index}`,
@@ -237,6 +247,39 @@ test("marks a failed provider batch retryable without deleting pending rows", as
     { status: "failed", retry_count: 1, failure_reason: "provider batch unavailable" },
     { status: "failed", retry_count: 1, failure_reason: "provider batch unavailable" },
   ]);
+});
+
+test("leaves rows pending when the provider is unreachable from the current process", async () => {
+  const socketError = Object.assign(new Error("Was there a typo in the url or port?"), {
+    code: "FailedToOpenSocket",
+  });
+
+  await expect(indexSessionMemories(db, {
+    project_key: "class-kit",
+    contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+    provider: {
+      async embed() {
+        throw socketError;
+      },
+      async embedBatch() {
+        throw socketError;
+      },
+    },
+    limit: 10,
+    now: () => "2026-06-13T10:05:00.000Z",
+    vector_store: {
+      ensure: () => ({ available: true }),
+      upsert: () => {
+        throw new Error("upsert should not be called");
+      },
+    },
+  })).rejects.toThrow("Was there a typo in the url or port?");
+
+  expect(db.query("SELECT status, retry_count, failure_reason FROM session_memory_embeddings").get()).toEqual({
+    status: "pending",
+    retry_count: 0,
+    failure_reason: null,
+  });
 });
 
 test("marks selected rows failed when sqlite-vec is unavailable", async () => {

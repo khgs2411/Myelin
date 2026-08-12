@@ -11,7 +11,12 @@ import {
   finalizeLeasedExperienceEventsInOpenTransaction,
   finalizeRemainingClaimedExperienceEvents,
   finalizeRemainingLeasedExperienceEvents,
+  experienceContentPredicate,
+  experienceNoAgentPredicate,
+  isExperienceContentEvent,
+  isExperienceNoAgentEvent,
   leaseExperienceEvents,
+  listExperienceEventPreparationCandidates,
   listExperienceEvents,
   recordExperienceEvent,
   recordHookError,
@@ -67,6 +72,39 @@ test("records invalid rows with minimum required fields", () => {
   expect(row?.status).toBe("invalid");
   expect(row?.hook_event_name).toBeNull();
   expect(row?.cwd).toBeNull();
+});
+
+test("preparation candidates share content classification and use inserted order", () => {
+  const content = recordExperienceEvent(db, {
+    id: "content",
+    project_key: "class-kit",
+    occurred_at: "2026-06-12T12:00:00.000Z",
+    event_kind: "assistant.response",
+    provider: "codex",
+    raw_text: "captured response",
+    raw_payload_json: "{}",
+    source: "codex-hook",
+    status: "valid",
+  }, new Date("2026-06-12T10:00:00.000Z"));
+  const control = recordExperienceEvent(db, {
+    id: "control",
+    project_key: "class-kit",
+    occurred_at: "2026-06-12T09:00:00.000Z",
+    event_kind: "session.start",
+    provider: "codex",
+    raw_payload_json: "{}",
+    source: "legacy-codex-hook",
+    status: "valid",
+  }, new Date("2026-06-12T10:01:00.000Z"));
+
+  expect(content && isExperienceContentEvent(content)).toBe(true);
+  expect(control && isExperienceNoAgentEvent(control)).toBe(true);
+  expect(listExperienceEventPreparationCandidates(db, "class-kit").map((row) => row.id))
+    .toEqual(["content", "control"]);
+  expect(db.query(`SELECT count(*) AS count FROM experience_events e WHERE ${experienceContentPredicate("e")}`).get())
+    .toEqual({ count: 1 });
+  expect(db.query(`SELECT count(*) AS count FROM experience_events e WHERE ${experienceNoAgentPredicate("e")}`).get())
+    .toEqual({ count: 1 });
 });
 
 test("deduplicates provider identity when available and keeps uncertain duplicates", () => {

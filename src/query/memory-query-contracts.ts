@@ -9,6 +9,7 @@ export type FacadeResponse = {
   candidate_ids: string[];
   degraded: boolean;
   degraded_reason: string | null;
+  degraded_code?: "embedding_provider_unreachable" | "embedding_provider_configuration" | "embedding_provider_unavailable";
   source_tools: string[];
 };
 
@@ -17,6 +18,7 @@ export type QueryLayerDiagnostic = {
   query_log_id: string | null;
   degraded: boolean;
   degraded_reason: string | null;
+  degraded_code?: "embedding_provider_unreachable" | "embedding_provider_configuration" | "embedding_provider_unavailable";
   indexed_count: number;
   pending_count: number;
   match_count: number;

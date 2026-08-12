@@ -13,6 +13,32 @@ The source form is contributor guidance, not the public operator boundary.
 
 The sections below document purpose, usage, options, output, and side effects. Commands that mutate SQLite, project files, provider hooks, or launch detached workers call that out explicitly.
 
+## Live embedding network access
+
+Live embedding operations require network access from the Myelin process. This
+includes localhost socket access for Ollama and external HTTPS access for
+Gemini. The boundary applies to provider checks in `myelin status`, query
+embedding in `myelin memory query`, embedding indexing, and embedding
+migrations.
+
+When Codex invokes one of these commands, it must run the command with network
+permission. A Myelin child process cannot elevate itself beyond the invoking
+sandbox. If the current process cannot open the provider connection, Myelin
+reports `provider_state: "unreachable"` and instructs the operator to verify both the
+provider and the process's network permission; it does not claim that the
+provider itself is down. Re-run with network permission before diagnosing a
+provider outage.
+
+Structured query failures use `degraded_code`; structured indexing and migration
+failures use `failure_code`. The stable reachability value is
+`embedding_provider_unreachable`. A reachability failure leaves embedding rows
+pending without incrementing retries, and migration does not replace the active
+contract or terminally fail a retryable staging contract.
+
+Deterministic tests must inject a provider transport or set
+`EMBEDDING_STUB_RESPONSES_DIR`; tests must not infer provider health from host
+network access.
+
 ## status
 
 ### `myelin status [project-key] [--json]`
@@ -30,12 +56,36 @@ Options:
 Output:
 
 - Human-readable project summary by default.
-- Human output includes the overall operational state, installation health,
-  Session Memory and Project Memory health, warnings, suggested actions, and
-  evidence paths.
+- Human output places a deterministic Session continuity briefing immediately
+  after the overall state and project identity, then reports installation
+  health, Session Memory and Project Memory health, warnings, suggested actions,
+  and evidence paths.
 - JSON output has `contract_version: "myelin.status.v1"` and
   `kind: "project_operational_status"`.
-- Retrieval sections report persisted active and configured desired embedding contracts, active-contract indexed/pending/failed counts, provider availability, migration state, and historical contract rows separately. Historical rows do not make current health unhealthy.
+- The current producer emits the additive `briefing` container with
+  `contract_version: "myelin.status.briefing.v1"`. Its
+  `session_continuity` member has
+  `contract_version: "myelin.session_continuity.v1"`; readers of older status
+  payloads must tolerate the whole `briefing` container being absent.
+- Session continuity groups memories by their durable `ingest_jobs.id`. The
+  newest eligible group is the `anchor_job`; this is unrelated to a worker's
+  internal prompt or evidence chunks. Items identify their relationship as
+  `anchor_job` or `prior_job`.
+- The briefing exposes current state, completed outcomes, recent decisions,
+  all eligible active blockers, and all eligible active next actions. Latest
+  channels select the latest eligible ingest job for that memory kind.
+- Eligibility is structural and fails closed: an active memory must point to an
+  existing same-project ingest job and to nonempty, same-job, finalized output
+  tombstones whose metadata and output backreferences are valid. At least one
+  source must be content-bearing. Mixed control/content provenance remains
+  eligible but reports `integrity.state: "degraded"`; control-only provenance is
+  excluded. `integrity.state: "valid"` describes provenance integrity, not the
+  semantic truth of a memory's content.
+- Continuity state is `ready`, `lagging`, `degraded`, or `unavailable`, with
+  precedence `unavailable` over `degraded` over `lagging` over `ready`.
+  Freshness counts only queued content events; `session.start` does not make a
+  briefing lagging.
+- Retrieval sections report persisted active and configured desired embedding contracts, active-contract indexed/pending/failed counts, provider reachability/availability, migration state, and historical contract rows separately. `provider_state: "unreachable"` means the current process could not open the required connection; it is distinct from a provider configuration or response failure and does not replace the section's primary lifecycle. Historical rows do not make current health unhealthy.
 
 Side effects:
 
@@ -209,9 +259,13 @@ myelin project migrate-layout class-kit
 
 Top-level `ingest` is the Experience Log to Session Memory pipeline.
 
-### `myelin ingest <project-key> [--limit N] [--batch-size N] [--provider codex|claude] [--json]`
+### `myelin ingest <project-key> [--limit N] [--evidence-chunk-size N] [--provider codex|claude] [--json]`
 
-Starts detached provider-backed workers that transform queued Experience Log rows into Session Memory, candidates, and handoff instructions.
+Starts one detached, provider-backed Session Memory Curator (SMC) anchor job. Myelin freezes the
+selected evidence, active-memory retrieval snapshot, governing identities, and work budgets under
+one durable `ingest_job_id`; bounded curator turns then stage proposals before one trusted atomic
+promotion. Repo/branch/commit evidence fields constrain retrieval candidates; they do not seed
+additional hits, and affected work-set members do not recursively expand recall.
 
 Arguments:
 
@@ -220,28 +274,66 @@ Arguments:
 Options:
 
 - `--limit N`: maximum Experience Log rows to select.
-- `--batch-size N`: rows per detached worker batch. Must be `1..500`.
+- `--evidence-chunk-size N`: rows claimed per internal evidence-selection chunk. Must be `1..500`; it does not create additional ingest jobs.
+- `--batch-size N`: compatibility alias for `--evidence-chunk-size`.
 - `--provider codex|claude`: provider override.
-- `--json`: emit structured start result.
+- `--json`: emit `myelin.ingest.start.v1` with `started`, `no_work`, or a stable blocked outcome,
+  plus trigger/workload and compatibility metadata.
+
+Session Memory curator plan configuration is all-or-nothing. `SMC_AUDIT_PARTITION_LIMIT` is a
+required positive integer alongside the evidence and workflow controls; this repository sets it to
+`10`. It caps the due audit revisions selected into each anchor independently of
+`SMC_MAX_AFFECTED_WORK_SET_SIZE`, which remains the grantable ceiling for retrieval-derived affected
+work. The scheduler and status audit selector both use the audit-partition limit; it is not an
+additive grant budget.
+
+Preparation also proves the frozen turn floor before creating anchor state:
+`min_turns = evidence text formulations + one proposal per work batch + one exact fetch per frozen
+audit member`. The root sets `SMC_MAX_TURNS=20`. For the current acceptance case, seven evidence
+formulations plus two batch proposals plus ten audit fetches require 19 turns, so the frozen plan is
+admissible with one turn above its minimum. This is a feasibility floor, not a promise that retries
+or rejected actions will fit; later exhaustion still requires an explicit `max_turns` grant.
 
 Output:
 
-- Started job count, queued count, selected count, batch size, and any terminal replay rows reconciled before selection.
+- One durable anchor job id, queued valid-content count, selected row count, evidence chunk size,
+  trigger reason, audit workload count, and any terminal replay rows reconciled before selection.
+- `smc_workflow_budget_infeasible` is returned before any anchor state when frozen controls cannot
+  satisfy the selected job's minimum work. JSON includes exact configured, required, and deficit
+  details.
 - Warns when the registered target repo is on a non-`master` branch; this is warning-only.
 
 Side effects:
 
-- Creates `ingest_jobs` rows.
-- Removes queued replay rows already represented by terminal tombstones; the preserved tombstone remains the authoritative evidence.
-- Launches detached worker processes.
-- Workers may invoke provider CLIs from the target repo cwd.
-- Workers lease Experience Log rows into tombstones, create Session Memory outputs, and finalize tombstones.
+- Creates at most one anchor job and one complete immutable manifest for the invocation. Internal
+  evidence chunks, work batches, curator turns, and retrieval pages are not jobs.
+- Runs pending derived Session Memory indexing before creating a curator anchor. Incomplete or
+  unavailable retrieval blocks before manifest acceptance.
+- Preserves selected raw evidence while the anchor is active and copies the complete job-owned
+  evidence and memory retrieval state needed for deterministic resume.
+- Launches one detached coordinator worker in the registered target repository. Codex receives
+  read-only repository access; agent shell access is not the Myelin mutation boundary.
+- Coordinator-owned exact/link/overlay retrieval and cursor continuation run without provider
+  turns. Provider turns are `text_formulation` for one trusted evidence obligation,
+  `audit_fetch` for exactly one coordinator-selected unfetched audit member, or `proposal_ready`
+  only after fixed-plan coverage and all required audit-fetch receipts are complete. An
+  `audit_fetch` envelope exposes only the next `required_action` descriptor—batch, memory, expected
+  revision, and maximum bytes—and the provider must return that exact fetch. Remaining-turn reserve
+  never auto-grants; operators must use the explicit grant command.
+- Stages curator proposals in a revisioned noncanonical overlay. The curator cannot write canonical
+  Session Memory or terminalize evidence directly.
+- Applies the accepted projection, lifecycle changes, source tombstones, audit receipts, and anchor
+  completion in one trusted atomic finalization.
+- Manual ingest starts evidence-plus-audit work when content exists, audit-only work when only audit
+  coverage is due, and returns `no_work` only when neither workload exists. Each anchor selects at
+  most the configured audit-partition limit even when more revisions remain due.
+- `session.start` is a control signal used to request a below-threshold drain; new control signals are not persisted as Experience Log content. Thresholds count valid content only.
 
 Examples:
 
 ```bash
 myelin ingest wizepal
-myelin ingest class-kit --limit 50 --batch-size 25 --json
+myelin ingest class-kit --limit 50 --evidence-chunk-size 25 --json
 ```
 
 ### `myelin ingest status <ingest-job-id> [--json]`
@@ -254,11 +346,15 @@ Arguments:
 
 Options:
 
-- `--json`: emit `{ "job": ... }`.
+- `--json`: emit `myelin.ingest.status.v1`, including a privacy-projected compatibility job and
+  authoritative anchor companion metadata when present. Raw input, follow-up, and error JSON are
+  omitted.
 
 Side effects:
 
-- May refresh a stale detached running job to `failed` if its PID is no longer alive.
+- Read-only for SMC anchors. Process liveness is diagnostic and never changes anchor ownership.
+- Legacy non-anchor jobs may still use the compatibility stale-worker refresh until authoritative
+  cutover removes that owner.
 
 ### `myelin ingest status --project <project-key> [--json]`
 
@@ -267,11 +363,11 @@ Shows project-level ingest completion status.
 Options:
 
 - `--project <project-key>`: project to inspect.
-- `--json`: emit `{ "status": ... }`.
+- `--json`: emit `myelin.ingest.status.v1` with project status.
 
 Side effects:
 
-- May refresh stale detached running jobs before counting.
+- Read-only for SMC anchor state. Legacy non-anchor compatibility jobs may still be refreshed.
 
 Examples:
 
@@ -292,7 +388,8 @@ Options:
 
 - `--status <status>`: optional job status filter.
 - `--limit N`: maximum rows to return. Default `50`.
-- `--json`: emit `{ "jobs": [...] }`.
+- `--json`: emit `myelin.ingest.jobs.v1` with privacy-projected job, anchor, reason-code, and
+  permanent-deny metadata. Raw input, follow-up, and error JSON are omitted.
 
 Side effects:
 
@@ -320,7 +417,7 @@ Options:
 - `--reason <text>`: required explanation.
 - `--code <error-code>`: optional filter against `error_json.code`.
 - `--dry-run`: show matched jobs without updating them.
-- `--json`: emit `{ "dry_run": boolean, "resolved": [...] }`.
+- `--json`: emit `myelin.ingest.jobs-resolution.v1` with privacy-projected resolved jobs.
 
 Output:
 
@@ -340,6 +437,26 @@ myelin ingest jobs resolve class-kit --all --code detached_worker_exited --reaso
 myelin ingest jobs resolve class-kit --id ingest_2026-06-17T15-58-53.443Z_afb829 --reason "obsolete branch policy failure"
 ```
 
+### Session Memory recovery commands
+
+```bash
+myelin ingest resume <project-key> <job-id> --owner-epoch N [--attempt-id ID] [--provider codex|claude] [--json]
+myelin ingest abandon <project-key> <job-id> --owner-epoch N --receipt-id ID --request-id ID --operator-id ID --reason TEXT [--json]
+myelin ingest grant <project-key> <job-id> --owner-epoch N --manifest-digest sha256:... --grant-id ID --budget max_turns|max_queries|max_cumulative_returned_result_bytes|max_provider_envelope_bytes|max_affected_work_set_size --amount N --operator-id ID --reason TEXT [--json]
+```
+
+- `resume` validates the exact manifest, frozen evidence/snapshot, overlay, journal, provider, epoch,
+  and governing identities before appending a higher-epoch attempt.
+- Session maintenance policy v3 governs the `audit_fetch` phase. An anchor frozen under an earlier
+  policy identity is incompatible: it must be explicitly abandoned and restarted from its preserved
+  raw evidence, not resumed or silently rebased.
+- `abandon` is explicit and idempotent. It writes a terminal receipt, releases the project fence,
+  preserves raw evidence for a later anchor, and never revives a permanently denied legacy owner.
+- `grant` records an additive, manifest/epoch-bound workflow budget grant. It does not change the
+  frozen evidence or memory view.
+- Stale epochs and incompatible state fail with stable reason codes; no command implicitly releases
+  or transfers ownership.
+
 ### `myelin ingest worker <ingest-job-id>`
 
 Runs the worker runtime for an existing job. This is primarily called by detached ingest workers.
@@ -350,9 +467,66 @@ Arguments:
 
 Side effects:
 
-- Leases Experience Log rows.
-- Invokes provider runtime.
-- Writes Session Memory outputs, memory candidates, handoff instructions, reconciliation links, and tombstone finalization.
+- For a prepared SMC anchor, runs the provider-neutral coordinator over the immutable manifest and
+  revisioned overlay, then invokes the trusted atomic finalizer for an accepted projection.
+- Refuses every worker invocation without an SMC anchor; no legacy one-shot execution fallback remains.
+
+## smc
+
+`myelin smc` is a machine/debug service surface over the same trusted coordinator services. It is
+not the day-to-day memory query facade and does not give the curator arbitrary SQL or canonical
+write access.
+
+```bash
+myelin smc status <project-key> [--json]
+myelin smc manifest <job-id> [--json]
+myelin smc progress <job-id> [--json]
+myelin smc batches <job-id> [--cursor N] [--limit N] [--json]
+myelin smc overlay <job-id> [--revision N] [--cursor N] [--limit N] [--json]
+myelin smc journal <job-id> [--attempt-id ID] [--cursor N] [--limit N] [--json]
+myelin smc query --request-json <json> [--json]
+myelin smc record --request-json <json> [--json]
+myelin smc proposal validate --request-json <json> [--json]
+myelin smc finalize <job-id> --owner-epoch N --accepted-projection-digest sha256:... [--json]
+myelin smc resume <project-key> <job-id> --owner-epoch N [--attempt-id ID] [--provider codex|claude] [--json]
+myelin smc abandon <project-key> <job-id> --owner-epoch N --receipt-id ID --request-id ID --operator-id ID --reason TEXT [--json]
+myelin smc grant <project-key> <job-id> --owner-epoch N --manifest-digest sha256:... --grant-id ID --budget max_turns|max_queries|max_cumulative_returned_result_bytes|max_provider_envelope_bytes|max_affected_work_set_size --amount N --operator-id ID --reason TEXT [--json]
+myelin smc cleanup <project-key> <job-id> --owner-epoch N --terminal-receipt-digest sha256:... [--json]
+```
+
+All JSON results use `myelin.smc.cli.v1`. Default manifest, progress, batch, overlay, and journal
+inspection exposes IDs, digests, counts, phases, and compact diagnostics only. Raw evidence, memory
+payloads, prompts, and query text are omitted. `record` is the explicit bounded, job-scoped record
+read. Listings use the manifest's frozen page limit and stable cursors.
+
+Mutating commands require the current job capability fields: project/job identity, owner epoch, and
+the applicable manifest, overlay, or accepted-projection digest. They call coordinator/finalizer
+services rather than duplicating lifecycle SQL.
+
+Budget grants are additive only for enforced ceilings: `max_turns`, `max_queries`,
+`max_cumulative_returned_result_bytes`, `max_provider_envelope_bytes`, and
+`max_affected_work_set_size`. Page-size and semantic-selection controls remain frozen and cannot be
+granted. The cumulative/provider-envelope byte ceilings apply to provider-visible record fetches and
+work envelopes; coordinator-owned retrieval pages remain durable internal receipts and charge zero
+provider-result bytes.
+
+The provider-facing SMC protocol does not expose obligation arrays, selectors, page limits, or
+cursors. `myelin smc query` remains a trusted low-level operator/debug wrapper over the internal
+query request; it is not the provider action contract.
+
+During `audit_fetch`, returning `insufficient_evidence` merely because the admitted audit target has
+not yet been fetched is invalid and receives a journaled action-validation result. The coordinator
+accepts only the exact required fetch (or a genuine typed transport/system blocker), persists one
+exact fetch receipt, and then emits the next required audit action. Proposal submission remains
+unavailable until every frozen audit member has that receipt.
+
+`smc status` separates incremental freshness, rolling audit coverage, indexing health, project
+mutation ownership, and scope-global embedding ownership. PID/liveness and permanent legacy-deny
+state are diagnostics; neither grants authority. `provider_state: "unreachable"` means unreachable
+from the current Myelin process and must be verified with appropriate host network permission.
+
+Forensic cleanup is disabled unless `SESSION_MAINTENANCE_FORENSIC_RETENTION_MS` is configured. Even
+then, cleanup requires a valid completion or abandonment receipt and elapsed retention period.
 
 ## memory
 
@@ -635,12 +809,36 @@ Side effects:
 
 - Read-only.
 
+### `myelin memory session repair <project-key> [--apply] [--json]`
+
+Previews or applies the active Session Memory repair policy for one project. Repair policies are versioned so layer-specific state corrections remain explicit and can be introduced gradually.
+
+The current `session-control-events-v1` policy retracts active Session Memory whose complete provenance consists of control-plane `session.start` events. Mixed control/content provenance is outside this policy and is never retracted automatically.
+
+Arguments:
+
+- `project-key`: project whose active Session Memory should be inspected.
+
+Options:
+
+- `--apply`: apply compare-and-set retractions and write a durable repair report. Without this option, the command is read-only.
+- `--json`: emit the policy, proposed dispositions, source-reference hashes, counts, and report path as structured JSON.
+
+Side effects with `--apply`:
+
+- Transitions qualifying rows from `active` to `retracted` with a stable lifecycle reason.
+- Preserves original Session Memory, source tombstones, tombstone terminal outcomes, contexts, and provenance.
+- Writes a prepared/completed journal under `runs/<project-key>/memory-session-repair/<run-id>/report.json`.
+- Is idempotent: a repeated preview after a successful apply proposes no already-applied retractions.
+
 Examples:
 
 ```bash
 myelin memory session list class-kit --status active --json
 myelin memory session show mem_sqlite_knowledge_domain
 myelin memory session links class-kit --memory mem_old --json
+myelin memory session repair llm-wiki --json
+myelin memory session repair llm-wiki --apply --json
 ```
 
 ### `myelin memory candidates <project-key> [--status pending|needs-review|processed|rejected] [--scope session|project|practice|personal] [--json]`

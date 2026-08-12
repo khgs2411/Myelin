@@ -1,6 +1,8 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { resolveInside } from "./fs.ts";
+import type { SMCEvidenceBatchBudgets } from "../session-maintenance/evidence-batch-planner.ts";
+import type { SMCWorkflowBudgets } from "../session-maintenance/manifest.ts";
 
 export type Provider = "codex" | "claude";
 export type Workload = "pipeline" | "query" | "ingest";
@@ -26,17 +28,28 @@ export type EmbeddingConfig = {
 };
 
 export type IngestConfig = {
-  batchSize: number;
-  workerConcurrency: number;
-  workerStartDelayMs: number;
+  evidenceChunkSize: number;
   llmTimeoutMs: number;
   promptCharLimit: number;
-  profiles: Partial<Record<Provider, ModelProfile>>;
 };
+
+export type SessionMaintenanceConfig = {
+  /** Null keeps destructive forensic cleanup disabled. */
+  forensicRetentionMs: number | null;
+  /** Null fails closed before any Session Memory maintenance state is persisted. */
+  planConfig: SMCPlanConfig | null;
+};
+
+export type SMCPlanConfig = Readonly<{
+  auditPartitionLimit: number;
+  evidenceBudgets: SMCEvidenceBatchBudgets;
+  workflowBudgets: SMCWorkflowBudgets;
+}>;
 
 export type AutoMemoryMaintenanceConfig = {
   enabled: boolean;
   minCapturedEvents: number;
+  maxPendingAgeMs: number;
   cooldownMs: number;
   drainPollIntervalMs: number;
   drainTimeoutMs: number;
@@ -62,6 +75,7 @@ export type MyelinConfig = {
   profiles: Record<Workload, Partial<Record<Provider, ModelProfile>>>;
   embedding: EmbeddingConfig;
   ingest: IngestConfig;
+  sessionMaintenance: SessionMaintenanceConfig;
   autoMemoryMaintenance: AutoMemoryMaintenanceConfig;
   autoProjectMemoryMaintenance: AutoProjectMemoryMaintenanceConfig;
   values: Record<string, string>;
@@ -78,14 +92,12 @@ export const DEFAULT_QWEN_EMBEDDING_DIMENSIONS = 768;
 export const DEFAULT_GEMINI_EMBEDDING_DIMENSIONS = 768;
 export const DEFAULT_EMBEDDING_BATCH_SIZE = 50;
 export const MAX_EMBEDDING_BATCH_SIZE = 500;
-export const DEFAULT_INGEST_BATCH_SIZE = 100;
-export const MAX_INGEST_BATCH_SIZE = 500;
-export const DEFAULT_INGEST_WORKER_CONCURRENCY = 1;
-export const MAX_INGEST_WORKER_CONCURRENCY = 16;
-export const DEFAULT_INGEST_WORKER_START_DELAY_MS = 750;
+export const DEFAULT_INGEST_EVIDENCE_CHUNK_SIZE = 100;
+export const MAX_INGEST_EVIDENCE_CHUNK_SIZE = 500;
 export const DEFAULT_INGEST_LLM_TIMEOUT_MS = 10 * 60 * 1000;
 export const DEFAULT_INGEST_PROMPT_CHAR_LIMIT = 180_000;
-export const DEFAULT_AUTO_MEMORY_MIN_CAPTURED_EVENTS = 10;
+export const DEFAULT_AUTO_MEMORY_MIN_CAPTURED_EVENTS = 60;
+export const DEFAULT_AUTO_MEMORY_MAX_PENDING_AGE_MS = 24 * 60 * 60 * 1000;
 export const DEFAULT_AUTO_MEMORY_COOLDOWN_MS = 5 * 60 * 1000;
 export const DEFAULT_AUTO_MEMORY_DRAIN_POLL_INTERVAL_MS = 5_000;
 export const DEFAULT_AUTO_MEMORY_DRAIN_TIMEOUT_MS = 10 * 60 * 1000;
@@ -136,19 +148,18 @@ const DEFAULT_CONFIG: MyelinConfig = {
     batchSize: DEFAULT_EMBEDDING_BATCH_SIZE,
   },
   ingest: {
-    batchSize: DEFAULT_INGEST_BATCH_SIZE,
-    workerConcurrency: DEFAULT_INGEST_WORKER_CONCURRENCY,
-    workerStartDelayMs: DEFAULT_INGEST_WORKER_START_DELAY_MS,
+    evidenceChunkSize: DEFAULT_INGEST_EVIDENCE_CHUNK_SIZE,
     llmTimeoutMs: DEFAULT_INGEST_LLM_TIMEOUT_MS,
     promptCharLimit: DEFAULT_INGEST_PROMPT_CHAR_LIMIT,
-    profiles: {
-      codex: { provider: "codex" },
-      claude: { provider: "claude" },
-    },
+  },
+  sessionMaintenance: {
+    forensicRetentionMs: null,
+    planConfig: null,
   },
   autoMemoryMaintenance: {
     enabled: false,
     minCapturedEvents: DEFAULT_AUTO_MEMORY_MIN_CAPTURED_EVENTS,
+    maxPendingAgeMs: DEFAULT_AUTO_MEMORY_MAX_PENDING_AGE_MS,
     cooldownMs: DEFAULT_AUTO_MEMORY_COOLDOWN_MS,
     drainPollIntervalMs: DEFAULT_AUTO_MEMORY_DRAIN_POLL_INTERVAL_MS,
     drainTimeoutMs: DEFAULT_AUTO_MEMORY_DRAIN_TIMEOUT_MS,
@@ -188,6 +199,7 @@ export async function loadConfig(root: string, env: NodeJS.ProcessEnv = process.
     },
     embedding: embeddingConfig(merged),
     ingest: ingestConfig(merged),
+    sessionMaintenance: sessionMaintenanceConfig(merged),
     autoMemoryMaintenance: autoMemoryMaintenanceConfig(merged),
     autoProjectMemoryMaintenance: autoProjectMemoryMaintenanceConfig(merged),
     values: merged,
@@ -274,15 +286,10 @@ function embeddingConfig(values: Record<string, string>): EmbeddingConfig {
 
 function ingestConfig(values: Record<string, string>): IngestConfig {
   return {
-    batchSize: parseIngestBatchSize(values.INGEST_BATCH_SIZE ?? String(DEFAULT_INGEST_BATCH_SIZE)),
-    workerConcurrency: parsePositiveInteger(
-      values.INGEST_WORKER_CONCURRENCY ?? String(DEFAULT_INGEST_WORKER_CONCURRENCY),
-      "Invalid ingest worker concurrency",
-      MAX_INGEST_WORKER_CONCURRENCY,
-    ),
-    workerStartDelayMs: parseNonNegativeInteger(
-      values.INGEST_WORKER_START_DELAY_MS ?? String(DEFAULT_INGEST_WORKER_START_DELAY_MS),
-      "Invalid ingest worker start delay",
+    evidenceChunkSize: parseIngestEvidenceChunkSize(
+      values.INGEST_EVIDENCE_CHUNK_SIZE
+        ?? values.INGEST_BATCH_SIZE
+        ?? String(DEFAULT_INGEST_EVIDENCE_CHUNK_SIZE),
     ),
     llmTimeoutMs: parsePositiveInteger(
       values.INGEST_LLM_TIMEOUT_MS ?? String(DEFAULT_INGEST_LLM_TIMEOUT_MS),
@@ -292,9 +299,63 @@ function ingestConfig(values: Record<string, string>): IngestConfig {
       values.INGEST_PROMPT_CHAR_LIMIT ?? String(DEFAULT_INGEST_PROMPT_CHAR_LIMIT),
       "Invalid ingest prompt char limit",
     ),
-    profiles: {
-      codex: profile("ingest", "codex", values),
-      claude: profile("ingest", "claude", values),
+  };
+}
+
+function sessionMaintenanceConfig(values: Record<string, string>): SessionMaintenanceConfig {
+  const configured = values.SESSION_MAINTENANCE_FORENSIC_RETENTION_MS;
+  return {
+    forensicRetentionMs: configured === undefined
+      ? null
+      : parseNonNegativeInteger(configured, "Invalid Session Memory forensic retention"),
+    planConfig: sessionMaintenancePlanConfig(values),
+  };
+}
+
+const SMC_PLAN_CONFIG_KEYS = [
+  "SMC_AUDIT_PARTITION_LIMIT",
+  "SMC_MAX_ITEMS_PER_BATCH",
+  "SMC_MAX_ENCODED_BYTES_PER_BATCH",
+  "SMC_MAX_ENCODED_BYTES_PER_ITEM",
+  "SMC_MAX_AFFECTED_WORK_SET_SIZE",
+  "SMC_MAX_CUMULATIVE_RETURNED_RESULT_BYTES",
+  "SMC_MAX_PROVIDER_ENVELOPE_BYTES",
+  "SMC_MAX_QUERIES",
+  "SMC_MAX_TURNS",
+  "SMC_RETRIEVAL_PAGE_ITEM_LIMIT",
+  "SMC_SEMANTIC_DISTANCE_THRESHOLD_MICROS",
+  "SMC_SEMANTIC_QUALIFYING_RESULT_CEILING",
+] as const;
+
+function sessionMaintenancePlanConfig(values: Record<string, string>): SMCPlanConfig | null {
+  const configured = SMC_PLAN_CONFIG_KEYS.filter((key) => values[key] !== undefined);
+  if (configured.length === 0) return null;
+  if (configured.length !== SMC_PLAN_CONFIG_KEYS.length) {
+    const missing = SMC_PLAN_CONFIG_KEYS.filter((key) => values[key] === undefined);
+    throw new Error(`Invalid Session Memory plan config: missing ${missing.join(", ")}`);
+  }
+  const positive = (key: typeof SMC_PLAN_CONFIG_KEYS[number], max?: number) =>
+    parsePositiveInteger(values[key]!, `Invalid Session Memory plan config ${key}`, max);
+  const evidenceBudgets = {
+    max_items_per_batch: positive("SMC_MAX_ITEMS_PER_BATCH", MAX_INGEST_EVIDENCE_CHUNK_SIZE),
+    max_encoded_bytes_per_batch: positive("SMC_MAX_ENCODED_BYTES_PER_BATCH"),
+    max_encoded_bytes_per_item: positive("SMC_MAX_ENCODED_BYTES_PER_ITEM"),
+  };
+  if (evidenceBudgets.max_encoded_bytes_per_item > evidenceBudgets.max_encoded_bytes_per_batch) {
+    throw new Error("Invalid Session Memory plan config: item bytes exceed batch bytes");
+  }
+  return {
+    auditPartitionLimit: positive("SMC_AUDIT_PARTITION_LIMIT"),
+    evidenceBudgets,
+    workflowBudgets: {
+      max_affected_work_set_size: positive("SMC_MAX_AFFECTED_WORK_SET_SIZE"),
+      max_cumulative_returned_result_bytes: positive("SMC_MAX_CUMULATIVE_RETURNED_RESULT_BYTES"),
+      max_provider_envelope_bytes: positive("SMC_MAX_PROVIDER_ENVELOPE_BYTES"),
+      max_queries: positive("SMC_MAX_QUERIES"),
+      max_turns: positive("SMC_MAX_TURNS"),
+      retrieval_page_item_limit: positive("SMC_RETRIEVAL_PAGE_ITEM_LIMIT"),
+      semantic_distance_threshold_micros: positive("SMC_SEMANTIC_DISTANCE_THRESHOLD_MICROS", 2_000_000),
+      semantic_qualifying_result_ceiling: positive("SMC_SEMANTIC_QUALIFYING_RESULT_CEILING"),
     },
   };
 }
@@ -305,6 +366,10 @@ function autoMemoryMaintenanceConfig(values: Record<string, string>): AutoMemory
     minCapturedEvents: parsePositiveInteger(
       values.AUTO_MEMORY_MIN_CAPTURED_EVENTS ?? String(DEFAULT_AUTO_MEMORY_MIN_CAPTURED_EVENTS),
       "Invalid auto memory min captured events",
+    ),
+    maxPendingAgeMs: parsePositiveInteger(
+      values.AUTO_MEMORY_MAX_PENDING_AGE_MS ?? String(DEFAULT_AUTO_MEMORY_MAX_PENDING_AGE_MS),
+      "Invalid auto memory max pending age",
     ),
     cooldownMs: parseNonNegativeInteger(
       values.AUTO_MEMORY_COOLDOWN_MS ?? String(DEFAULT_AUTO_MEMORY_COOLDOWN_MS),
@@ -397,10 +462,12 @@ function parseEmbeddingBatchSize(value: string): number {
   return parsed;
 }
 
-function parseIngestBatchSize(value: string): number {
+function parseIngestEvidenceChunkSize(value: string): number {
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > MAX_INGEST_BATCH_SIZE) {
-    throw new Error(`Invalid ingest batch size: ${value}. Expected an integer between 1 and ${MAX_INGEST_BATCH_SIZE}`);
+  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > MAX_INGEST_EVIDENCE_CHUNK_SIZE) {
+    throw new Error(
+      `Invalid ingest evidence chunk size: ${value}. Expected an integer between 1 and ${MAX_INGEST_EVIDENCE_CHUNK_SIZE}`,
+    );
   }
   return parsed;
 }

@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import type { Database } from "bun:sqlite";
 import type { ActiveEmbeddingContract } from "../runtime/config.ts";
 import type { EmbeddingTransport } from "./embedding-types.ts";
@@ -18,7 +17,10 @@ import type {
   SessionMemoryIndexResult,
   SessionMemoryVectorStore,
 } from "./session-memory-index-types.ts";
-import { normalizeSessionMemoryForEmbedding } from "./session-memory-text.ts";
+import {
+  normalizeSessionMemoryForEmbedding,
+  sessionMemoryNormalizedTextHash,
+} from "./session-memory-text.ts";
 import {
   createSqliteVecAdapter,
   upsertSessionMemoryVector,
@@ -60,20 +62,6 @@ export async function indexSessionMemories(
     include_failed: input.retry_failed,
   });
   const failures: SessionMemoryIndexFailure[] = [];
-
-  if (rows.length === 0) {
-    return {
-      project_key: input.project_key,
-      selected: 0,
-      indexed: 0,
-      failed: 0,
-      pending_remaining: pendingRemaining(db, input.project_key, input.contract),
-      degraded: false,
-      batch_size: batchSize,
-      failures,
-    };
-  }
-
   const availability = vectorStore.ensure(db, { contract: input.contract });
   if (!availability.available) {
     const reason = `sqlite-vec unavailable: ${availability.reason ?? "unknown reason"}`;
@@ -89,6 +77,18 @@ export async function indexSessionMemories(
       degraded: true,
       batch_size: batchSize,
       degraded_reason: reason,
+      failures,
+    };
+  }
+  if (rows.length === 0) {
+    return {
+      project_key: input.project_key,
+      selected: 0,
+      indexed: 0,
+      failed: 0,
+      pending_remaining: pendingRemaining(db, input.project_key, input.contract),
+      degraded: false,
+      batch_size: batchSize,
       failures,
     };
   }
@@ -128,7 +128,7 @@ export async function indexSessionMemories(
           });
           markSessionMemoryEmbeddingIndexed(db, {
             id: entry.row.id,
-            normalized_text_hash: sha256(entry.normalizedText),
+            normalized_text_hash: sessionMemoryNormalizedTextHash(entry.normalizedText),
             now: indexedAt,
           });
         })();
@@ -223,8 +223,4 @@ function markFailed(
     session_memory_id: row.session_memory_id,
     reason,
   });
-}
-
-function sha256(text: string): string {
-  return createHash("sha256").update(text).digest("hex");
 }

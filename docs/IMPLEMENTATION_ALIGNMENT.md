@@ -237,6 +237,15 @@ What exists:
   Project Memory inbox/candidates/curation/retrieval/maintenance, warnings,
   suggested actions, and evidence paths.
 - `--json` emits the exact versioned `myelin.status.v1` operational contract.
+- The current producer additively emits `myelin.status.briefing.v1`, containing
+  a deterministic `myelin.session_continuity.v1` view over structurally valid
+  Session Memory provenance. Its anchor is a durable `ingest_jobs.id` group,
+  not a worker prompt or evidence chunk.
+- Session continuity exposes current state, completed outcomes, recent
+  decisions, all eligible active blockers, and all eligible active next
+  actions. Mixed control/content provenance is eligible but degraded;
+  control-only provenance is excluded. A `valid` integrity state describes the
+  provenance graph, not semantic truth.
 - Status inspection is read-only. Successfully observed `healthy`, `attention`,
   and `blocked` states exit zero; failures that prevent contract construction
   exit nonzero.
@@ -255,28 +264,47 @@ Code evidence:
 
 Alignment:
 
-Good operational foundation. It exposes machine and memory-pipeline health
-without mutating jobs, locks, SQLite, or project files, and gives automation an
-exact contract.
+Good operational and Session-continuity foundation. It exposes machine and
+memory-pipeline health plus a bounded, deterministic cross-session handoff view
+without mutating jobs, locks, SQLite, or project files. The additive briefing
+container gives later layers room to expand without changing the operational
+severity contract.
 
 Mismatch:
 
-This is operational status, not the later agent-facing Current Briefing. It does
-not compose recent continuity and durable context into a bounded session-start
-brief, and it does not yet route across future Practice or Personal Memory.
+This is still not the broader agent-facing Current Briefing. The implemented
+briefing covers Session Memory continuity only; it does not compose canonical
+Project Memory, future Practice or Personal Memory, or provider-authored
+synthesis into a cross-layer session-start answer.
 
 Verdict:
 
-Keep the `myelin.status.v1` operational contract stable. Build the broader
-agent-facing status and Current Briefing on top of this truth in Roadmap Step 12
-instead of overloading the operational inspector.
+Keep the `myelin.status.v1` operational severity, warnings, actions, evidence,
+and exit behavior stable. Extend agent-facing context through the optional
+versioned `briefing` container, and build the broader cross-layer Current
+Briefing in its owning roadmap step rather than overloading the operational
+inspectors or semantic query ranking.
 
 ### Pipeline
 
 What exists:
 
+- `myelin ingest <key>` creates one durable Session Memory maintenance job per invocation.
+- The job freezes selected Experience Log evidence plus a complete job-owned active-memory retrieval snapshot, then presents bounded evidence work batches to the proposal-only SMC coordinator.
+- The coordinator derives a fixed evidence-seed recall plan, applies repo/branch/commit as same-row candidate constraints, exhausts deterministic non-text retrieval and cursor pages, and asks the curator only for one text formulation or a complete proposal after coverage. Affected work never recursively expands recall. Deterministic validation requires complete source and affected-work dispositions, and one trusted finalizer applies the accepted projection atomically.
+- Rolling audit selection uses the separately typed `SMC_AUDIT_PARTITION_LIMIT`; the root config sets
+  `10`, and both scheduling and status inspection pass that limit to the audit selector independently
+  of the retrieval-derived `max_affected_work_set_size` ceiling.
+- Preparation computes `min_turns` as evidence text formulations plus one proposal for every frozen
+  work batch plus one exact record fetch for every frozen audit member. Root `SMC_MAX_TURNS=20`
+  therefore admits the current 7-formulation, 2-proposal, 10-audit-fetch workload whose minimum is
+  19; runtime retries remain subject to the same frozen ceiling or an explicit grant.
+- Policy v3 makes those audit fetches explicit coordinator phases. Each `audit_fetch` envelope names
+  exactly one batch/memory/revision/byte-bound action; only its exact successful fetch advances the
+  durable receipt set. `proposal_ready` follows only after all frozen audit members are fetched, and
+  earlier-policy anchors cannot resume across the changed governing identity.
+- Provider input adapters classify `session.start` as a non-persisted control signal. Auto-maintenance thresholds count only valid content, while session start can request a below-threshold drain.
 - `myelin project learn <key>` runs agent-authored Project Memory creation or maintenance.
-- Top-level `myelin ingest <key>` remains the Session Memory / Experience Log ingest command.
 - Project Memory Curator artifacts live under `runs/<key>/project-learn/<run-id>/`.
 - File-authoring agents write a draft wiki, and a journaled promotion step publishes it to canonical markdown.
 - Recovery fails closed when staged or already-promoted files drift.
@@ -291,7 +319,12 @@ Code evidence:
 
 Alignment:
 
-This is aligned with the agent-authored Project Memory boundary. Structured curator output schemas, deterministic quality gates, and entry-level markdown mutation were retired after the planner/writer flow became authoritative.
+The Session Memory path now separates capture/control inputs, trusted recall coordination,
+provider text/proposal reasoning, editable policy, deterministic validation, and serialized commit.
+Preparation rejects definitely infeasible frozen work with zero job state; runtime turn reserve needs
+an explicit grant. The Project Memory path remains aligned with its agent-authored document boundary.
+Structured Project Memory curator output schemas, deterministic quality gates, and entry-level
+markdown mutation were retired after the planner/writer flow became authoritative.
 
 Mismatch:
 

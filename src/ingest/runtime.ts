@@ -1,5 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { appendFile } from "node:fs/promises";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import type { IngestJobRow } from "../memory/ingest-types.ts";
 import type { RunProcessResult } from "../runtime/process.ts";
 import { runProcess } from "../runtime/process.ts";
@@ -12,6 +14,8 @@ import {
   backgroundLaunchContext,
   resolveMyelinCommandInvocation,
 } from "../runtime/command-invocation.ts";
+import { readSessionMemoryMutationAuthorityMode } from "../memory/project-session-mutation-fence.ts";
+import { getSessionMemoryAnchorJob } from "../session-maintenance/job-lifecycle.ts";
 
 export type RuntimeProcessRunner = (command: string[], options?: { cwd?: string }) => Promise<RunProcessResult>;
 export type ProcessLivenessChecker = (pid: number) => boolean;
@@ -82,6 +86,12 @@ export function refreshDetachedIngestJobStatus(input: {
   now: string;
   isAlive?: ProcessLivenessChecker;
 }): IngestJobRow {
+  if (
+    readSessionMemoryMutationAuthorityMode(input.db) === "smc_v1"
+    || getSessionMemoryAnchorJob(input.db, input.job.id)
+  ) {
+    return input.job;
+  }
   if (input.job.status !== "running") return input.job;
 
   const followup = parseFollowupState(input.job.followup_state_json);
@@ -140,6 +150,44 @@ export async function spawnDetachedIngestWorker(input: {
   return { pid: proc.pid ?? null, logPath: input.logPath };
 }
 
+/** Launches the companion worker for an already-persisted SMC anchor. */
+export function launchDetachedSMCCompanionWorker(input: {
+  root: string;
+  projectKey: string;
+  jobId: string;
+  targetRepo: string;
+  env?: NodeJS.ProcessEnv;
+  spawn?: DetachedSpawner;
+  context?: LaunchContext;
+}): DetachedIngestSpawnResult {
+  const logPath = ingestJobLogPath(input.root, input.projectKey, input.jobId);
+  mkdirSync(dirname(logPath), { recursive: true });
+  const spawn = input.spawn ?? ((options) => Bun.spawn(options));
+  const context = backgroundLaunchContext({
+    myelinRoot: input.root,
+    callerCwd: input.targetRepo,
+    context: input.context,
+    env: input.env,
+  });
+  const proc = spawn({
+    cmd: resolveMyelinCommandInvocation(context, ["ingest", "worker", input.jobId]),
+    cwd: input.targetRepo,
+    stdout: Bun.file(logPath),
+    stderr: Bun.file(logPath),
+    stdin: "ignore",
+    detached: true,
+    env: {
+      ...(input.env ?? process.env),
+      ...backgroundInvocationEnv(context, "worker"),
+      MYELIN_INGEST_JOB_ID: input.jobId,
+      MYELIN_INGEST_PROJECT: input.projectKey,
+      MYELIN_CAPTURE_DISABLED: "1",
+    },
+  });
+  proc.unref();
+  return { pid: proc.pid ?? null, logPath };
+}
+
 export async function launchDetachedIngestWorker(input: {
   db: Database;
   root: string;
@@ -150,6 +198,7 @@ export async function launchDetachedIngestWorker(input: {
   runner?: RuntimeProcessRunner;
   spawn?: DetachedSpawner;
   context?: LaunchContext;
+  failure_injection?: { afterSpawnBeforeAcknowledgement?: () => void };
 }): Promise<{ status: "running"; pid: number | null; logPath: string; branch: string | null }> {
   const targetRepo = await resolveIngestTargetRepo(input.root, input.projectKey);
   const branch = await readCurrentGitBranch(targetRepo, input.runner);
@@ -170,23 +219,28 @@ export async function launchDetachedIngestWorker(input: {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await appendLaunchFailure(logPath, message);
-    updateIngestJobStatus(input.db, {
-      id: input.jobId,
-      status: "failed",
-      updated_at: input.now,
-      finished_at: input.now,
-      error: {
-        code: "detached_worker_launch_failed",
-        message,
-        log_path: logPath,
-        target_repo: targetRepo,
-      },
-    });
+    if (!getSessionMemoryAnchorJob(input.db, input.jobId)) {
+      updateIngestJobStatus(input.db, {
+        id: input.jobId,
+        status: "failed",
+        updated_at: input.now,
+        finished_at: input.now,
+        error: {
+          code: "detached_worker_launch_failed",
+          message,
+          log_path: logPath,
+          target_repo: targetRepo,
+        },
+      });
+    }
     throw error;
   }
 
+  input.failure_injection?.afterSpawnBeforeAcknowledgement?.();
+
   const latest = getIngestJob(input.db, input.jobId);
-  if (latest?.status === "starting" || latest?.status === "running") {
+  if (!getSessionMemoryAnchorJob(input.db, input.jobId)
+    && (latest?.status === "starting" || latest?.status === "running")) {
     updateIngestJobStatus(input.db, {
       id: input.jobId,
       status: "running",

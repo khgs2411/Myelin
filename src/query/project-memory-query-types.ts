@@ -31,6 +31,7 @@ export type ProjectMemoryQueryResult = {
   query_log_id?: string;
   degraded: boolean;
   degraded_reason?: string;
+  degraded_code?: "embedding_provider_unreachable" | "embedding_provider_configuration" | "embedding_provider_unavailable";
   indexed_count: number;
   pending_count: number;
   match_count: number;

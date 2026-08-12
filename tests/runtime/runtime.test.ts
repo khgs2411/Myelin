@@ -78,9 +78,7 @@ test("config exposes default embedding contract", async () => {
   const config = await loadConfig(root, {});
 
   expect(config.ingest).toMatchObject({
-    batchSize: 100,
-    workerConcurrency: 1,
-    workerStartDelayMs: 750,
+    evidenceChunkSize: 100,
     llmTimeoutMs: 600000,
     promptCharLimit: 180000,
   });
@@ -118,12 +116,21 @@ test("config exposes default embedding contract", async () => {
   });
 });
 
-test("ingest config honors file values and rejects oversized batches", async () => {
+test("ingest evidence chunk config honors current and compatibility values", async () => {
   await writeFile(join(root, "myelin.config"), "INGEST_BATCH_SIZE=200\n", "utf8");
-  await expect(loadConfig(root, {})).resolves.toMatchObject({ ingest: { batchSize: 200 } });
+  await expect(loadConfig(root, {})).resolves.toMatchObject({ ingest: { evidenceChunkSize: 200 } });
 
-  await expect(loadConfig(root, { INGEST_BATCH_SIZE: "501" })).rejects.toThrow("Invalid ingest batch size");
-  await expect(loadConfig(root, { INGEST_BATCH_SIZE: "0" })).rejects.toThrow("Invalid ingest batch size");
+  await expect(loadConfig(root, {
+    INGEST_EVIDENCE_CHUNK_SIZE: "25",
+    INGEST_BATCH_SIZE: "200",
+  })).resolves.toMatchObject({ ingest: { evidenceChunkSize: 25 } });
+
+  await expect(loadConfig(root, { INGEST_EVIDENCE_CHUNK_SIZE: "501" })).rejects.toThrow(
+    "Invalid ingest evidence chunk size",
+  );
+  await expect(loadConfig(root, { INGEST_BATCH_SIZE: "0" })).rejects.toThrow(
+    "Invalid ingest evidence chunk size",
+  );
 });
 
 test("loadConfig parses named ingest runtime profile", async () => {
@@ -131,9 +138,7 @@ test("loadConfig parses named ingest runtime profile", async () => {
     join(root, "myelin.config"),
     [
       "DEFAULT_PROVIDER=codex",
-      "INGEST_BATCH_SIZE=25",
-      "INGEST_WORKER_CONCURRENCY=2",
-      "INGEST_WORKER_START_DELAY_MS=500",
+      "INGEST_EVIDENCE_CHUNK_SIZE=25",
       "INGEST_LLM_TIMEOUT_MS=120000",
       "INGEST_PROMPT_CHAR_LIMIT=150000",
       "INGEST_CODEX_MODEL=gpt-ingest",
@@ -144,12 +149,12 @@ test("loadConfig parses named ingest runtime profile", async () => {
 
   await expect(loadConfig(root, {})).resolves.toMatchObject({
     ingest: {
-      batchSize: 25,
-      workerConcurrency: 2,
-      workerStartDelayMs: 500,
+      evidenceChunkSize: 25,
       llmTimeoutMs: 120000,
       promptCharLimit: 150000,
-      profiles: {
+    },
+    profiles: {
+      ingest: {
         codex: { provider: "codex", model: "gpt-ingest", reasoningEffort: "medium" },
       },
     },
@@ -157,8 +162,9 @@ test("loadConfig parses named ingest runtime profile", async () => {
 });
 
 test("loadConfig validates ingest runtime profile bounds", async () => {
-  await expect(loadConfig(root, { INGEST_WORKER_CONCURRENCY: "0" })).rejects.toThrow("Invalid ingest worker concurrency");
-  await expect(loadConfig(root, { INGEST_WORKER_START_DELAY_MS: "-1" })).rejects.toThrow("Invalid ingest worker start delay");
+  await expect(loadConfig(root, { INGEST_EVIDENCE_CHUNK_SIZE: "0" })).rejects.toThrow(
+    "Invalid ingest evidence chunk size",
+  );
   await expect(loadConfig(root, { INGEST_LLM_TIMEOUT_MS: "0" })).rejects.toThrow("Invalid ingest LLM timeout");
   await expect(loadConfig(root, { INGEST_PROMPT_CHAR_LIMIT: "not-a-number" })).rejects.toThrow("Invalid ingest prompt char limit");
 });
@@ -167,7 +173,8 @@ test("auto memory maintenance config is explicit and bounded", async () => {
   await expect(loadConfig(root, {})).resolves.toMatchObject({
     autoMemoryMaintenance: {
       enabled: false,
-      minCapturedEvents: 10,
+      minCapturedEvents: 60,
+      maxPendingAgeMs: 86400000,
       cooldownMs: 300000,
       drainPollIntervalMs: 5000,
       drainTimeoutMs: 600000,
@@ -179,6 +186,7 @@ test("auto memory maintenance config is explicit and bounded", async () => {
     loadConfig(root, {
       AUTO_MEMORY_MAINTENANCE: "1",
       AUTO_MEMORY_MIN_CAPTURED_EVENTS: "3",
+      AUTO_MEMORY_MAX_PENDING_AGE_MS: "7200000",
       AUTO_MEMORY_COOLDOWN_MS: "0",
       AUTO_MEMORY_DRAIN_POLL_INTERVAL_MS: "100",
       AUTO_MEMORY_DRAIN_TIMEOUT_MS: "1000",
@@ -188,6 +196,7 @@ test("auto memory maintenance config is explicit and bounded", async () => {
     autoMemoryMaintenance: {
       enabled: true,
       minCapturedEvents: 3,
+      maxPendingAgeMs: 7200000,
       cooldownMs: 0,
       drainPollIntervalMs: 100,
       drainTimeoutMs: 1000,
@@ -197,6 +206,9 @@ test("auto memory maintenance config is explicit and bounded", async () => {
 
   await expect(loadConfig(root, { AUTO_MEMORY_MIN_CAPTURED_EVENTS: "0" })).rejects.toThrow(
     "Invalid auto memory min captured events",
+  );
+  await expect(loadConfig(root, { AUTO_MEMORY_MAX_PENDING_AGE_MS: "0" })).rejects.toThrow(
+    "Invalid auto memory max pending age",
   );
   await expect(loadConfig(root, { AUTO_MEMORY_COOLDOWN_MS: "-1" })).rejects.toThrow("Invalid auto memory cooldown");
 });

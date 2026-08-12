@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Database } from "bun:sqlite";
 import type { ActiveEmbeddingContract } from "../runtime/config.ts";
+import type { StoredEmbeddingContract } from "./embedding-contract-types.ts";
 import { ensureSessionMemoryVectorTable, type SqliteVecAdapter } from "./sqlite-vec.ts";
 
 export type SessionMemoryEmbeddingStatus = "pending" | "indexed" | "failed";
@@ -22,6 +23,20 @@ export type SessionMemoryEmbeddingRow = {
   updated_at: string;
   indexed_at: string | null;
 };
+
+export type ExactActiveSessionMemoryEmbeddingRow = SessionMemoryEmbeddingRow & {
+  embedding_contract_id: string;
+  vector_bytes: Uint8Array;
+};
+
+export class SessionMemoryRetrievalSnapshotUnavailableError extends Error {
+  readonly code = "session_retrieval_provider_unavailable" as const;
+
+  constructor(message: string) {
+    super(`${"session_retrieval_provider_unavailable"}: ${message}`);
+    this.name = "SessionMemoryRetrievalSnapshotUnavailableError";
+  }
+}
 
 export function sessionMemoryEmbeddingId(input: {
   session_memory_id: string;
@@ -226,6 +241,66 @@ export function ensureSessionMemoryVectorStorage(
   });
 }
 
+export function readExactActiveSessionMemoryEmbeddings(
+  db: Database,
+  input: {
+    project_key: string;
+    contract: StoredEmbeddingContract;
+  },
+): ExactActiveSessionMemoryEmbeddingRow[] {
+  const table = sessionVectorTable(input.contract.vectorTable);
+  const exists = db.query(
+    "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+  ).get(table);
+  if (!exists) {
+    throw new SessionMemoryRetrievalSnapshotUnavailableError(
+      `active Session Memory vector table is missing: ${table}`,
+    );
+  }
+
+  try {
+    const rows = db.query(
+      `SELECT e.*, v.embedding AS vector_bytes
+       FROM session_memory_embeddings e
+       JOIN session_memories sm
+         ON sm.id = e.session_memory_id
+        AND sm.project_key = e.project_key
+        AND sm.status = 'active'
+       JOIN ${table} v
+         ON v.memory_id = e.session_memory_id
+        AND v.project_key = e.project_key
+        AND v.embedding_model = e.embedding_model
+        AND v.embedding_dimensions = e.embedding_dimensions
+        AND v.embedding_purpose = e.embedding_purpose
+        AND v.format_version = e.format_version
+       WHERE e.project_key = ?
+         AND e.embedding_provider = ?
+         AND e.embedding_model = ?
+         AND e.embedding_dimensions = ?
+         AND e.embedding_purpose = 'retrieval_document'
+         AND e.format_version = ?
+         AND e.status = 'indexed'
+       ORDER BY e.session_memory_id, e.id`,
+    ).all(
+      input.project_key,
+      input.contract.provider,
+      input.contract.model,
+      input.contract.dimensions,
+      input.contract.formatVersion,
+    ) as Array<SessionMemoryEmbeddingRow & { vector_bytes: Uint8Array }>;
+    return rows.map((row) => ({
+      ...row,
+      embedding_contract_id: input.contract.id,
+      vector_bytes: new Uint8Array(row.vector_bytes),
+    }));
+  } catch (error) {
+    if (error instanceof SessionMemoryRetrievalSnapshotUnavailableError) throw error;
+    throw new SessionMemoryRetrievalSnapshotUnavailableError(
+      `active Session Memory vectors could not be read: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 export function getSessionMemoryEmbedding(db: Database, id: string): SessionMemoryEmbeddingRow {
   const row = getSessionMemoryEmbeddingOrNull(db, id);
   if (!row) throw new Error(`Session memory embedding not found: ${id}`);
@@ -236,4 +311,13 @@ function getSessionMemoryEmbeddingOrNull(db: Database, id: string): SessionMemor
   return db.query("SELECT * FROM session_memory_embeddings WHERE id = ?").get(id) as
     | SessionMemoryEmbeddingRow
     | null;
+}
+
+function sessionVectorTable(value: string): string {
+  if (!/^session_memory_vec(?:_[a-f0-9]{16})?$/.test(value)) {
+    throw new SessionMemoryRetrievalSnapshotUnavailableError(
+      `active Session Memory vector table is not owned by Myelin: ${value}`,
+    );
+  }
+  return value;
 }

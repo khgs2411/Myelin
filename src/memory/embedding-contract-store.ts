@@ -6,6 +6,10 @@ import type {
   EmbeddingScope,
   StoredEmbeddingContract,
 } from "./embedding-contract-types.ts";
+import {
+  withCompatibilitySessionEmbeddingLifecycleAdmission,
+  withRegisterSessionEmbeddingContractAdmission,
+} from "./session-memory-write-firewall.ts";
 
 type ContractRow = {
   id: string;
@@ -97,23 +101,27 @@ export function registerInitialActiveEmbeddingContract(
   if (existing) return existing;
   const now = input.now ?? new Date().toISOString();
   const id = embeddingContractId(input.scope, input.contract);
-  db.query(
-    `INSERT INTO embedding_contracts
+  const insert = (): void => {
+    db.query(
+      `INSERT INTO embedding_contracts
       (id, scope, embedding_provider, embedding_model, embedding_dimensions, format_version,
        lifecycle, vector_table, created_at, updated_at, activated_at)
      VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)`,
-  ).run(
-    id,
-    input.scope,
-    input.contract.provider,
-    input.contract.model,
-    input.contract.dimensions,
-    input.contract.formatVersion,
-    input.vectorTable ?? versionedVectorTable(input.scope, input.contract),
-    now,
-    now,
-    now,
-  );
+    ).run(
+      id,
+      input.scope,
+      input.contract.provider,
+      input.contract.model,
+      input.contract.dimensions,
+      input.contract.formatVersion,
+      input.vectorTable ?? versionedVectorTable(input.scope, input.contract),
+      now,
+      now,
+      now,
+    );
+  };
+  if (input.scope === "session_memory") withRegisterSessionEmbeddingContractAdmission(db, insert);
+  else insert();
   return readActiveEmbeddingContract(db, input.scope)!;
 }
 
@@ -123,8 +131,9 @@ export function upsertStagingEmbeddingContract(
 ): StoredEmbeddingContract {
   const now = input.now ?? new Date().toISOString();
   const id = embeddingContractId(input.scope, input.contract);
-  db.query(
-    `INSERT INTO embedding_contracts
+  const upsert = (): void => {
+    db.query(
+      `INSERT INTO embedding_contracts
       (id, scope, embedding_provider, embedding_model, embedding_dimensions, format_version,
        lifecycle, vector_table, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, 'staging', ?, ?, ?)
@@ -133,17 +142,20 @@ export function upsertStagingEmbeddingContract(
        updated_at = excluded.updated_at,
        retired_at = NULL,
        failure_reason = NULL`,
-  ).run(
-    id,
-    input.scope,
-    input.contract.provider,
-    input.contract.model,
-    input.contract.dimensions,
-    input.contract.formatVersion,
-    versionedVectorTable(input.scope, input.contract),
-    now,
-    now,
-  );
+    ).run(
+      id,
+      input.scope,
+      input.contract.provider,
+      input.contract.model,
+      input.contract.dimensions,
+      input.contract.formatVersion,
+      versionedVectorTable(input.scope, input.contract),
+      now,
+      now,
+    );
+  };
+  if (input.scope === "session_memory") withCompatibilitySessionEmbeddingLifecycleAdmission(db, upsert);
+  else upsert();
   return readEmbeddingContract(db, id)!;
 }
 
@@ -158,21 +170,25 @@ export function activateEmbeddingContract(
   }
   const now = input.now ?? new Date().toISOString();
   db.transaction(() => {
-    db.query(
+    const activate = (): void => {
+      db.query(
       `UPDATE embedding_contracts
        SET lifecycle = 'retired', retired_at = ?, updated_at = ?
        WHERE scope = ? AND lifecycle = 'previous'`,
-    ).run(now, now, input.scope);
-    db.query(
+      ).run(now, now, input.scope);
+      db.query(
       `UPDATE embedding_contracts
        SET lifecycle = 'previous', updated_at = ?
        WHERE scope = ? AND lifecycle = 'active' AND id <> ?`,
-    ).run(now, input.scope, target.id);
-    db.query(
+      ).run(now, input.scope, target.id);
+      db.query(
       `UPDATE embedding_contracts
        SET lifecycle = 'active', activated_at = ?, retired_at = NULL, failure_reason = NULL, updated_at = ?
        WHERE id = ?`,
-    ).run(now, now, target.id);
+      ).run(now, now, target.id);
+    };
+    if (input.scope === "session_memory") withCompatibilitySessionEmbeddingLifecycleAdmission(db, activate);
+    else activate();
   })();
   return readActiveEmbeddingContract(db, input.scope)!;
 }
@@ -182,31 +198,41 @@ export function rollbackEmbeddingContract(db: Database, scope: EmbeddingScope, n
   if (!previous) throw new Error(`No previous embedding contract is available for ${scope}`);
   const active = readActiveEmbeddingContract(db, scope);
   db.transaction(() => {
-    if (active) {
-      db.query("UPDATE embedding_contracts SET lifecycle = 'staging', updated_at = ? WHERE id = ?").run(now, active.id);
-    }
-    db.query(
+    const rollback = (): void => {
+      if (active) {
+        db.query("UPDATE embedding_contracts SET lifecycle = 'staging', updated_at = ? WHERE id = ?").run(now, active.id);
+      }
+      db.query(
       `UPDATE embedding_contracts
        SET lifecycle = 'active', activated_at = ?, retired_at = NULL, updated_at = ?
        WHERE id = ?`,
-    ).run(now, now, previous.id);
-    if (active) {
-      db.query(
+      ).run(now, now, previous.id);
+      if (active) {
+        db.query(
         `UPDATE embedding_contracts
          SET lifecycle = 'previous', retired_at = NULL, updated_at = ?
          WHERE id = ?`,
-      ).run(now, active.id);
-    }
+        ).run(now, active.id);
+      }
+    };
+    if (scope === "session_memory") withCompatibilitySessionEmbeddingLifecycleAdmission(db, rollback);
+    else rollback();
   })();
   return readActiveEmbeddingContract(db, scope)!;
 }
 
 export function markEmbeddingContractFailed(db: Database, id: string, reason: string, now = new Date().toISOString()): void {
-  db.query(
+  const contract = readEmbeddingContract(db, id);
+  if (!contract) return;
+  const mark = (): void => {
+    db.query(
     `UPDATE embedding_contracts
      SET lifecycle = 'failed', failure_reason = ?, updated_at = ?
      WHERE id = ? AND lifecycle <> 'active'`,
-  ).run(reason, now, id);
+    ).run(reason, now, id);
+  };
+  if (contract.scope === "session_memory") withCompatibilitySessionEmbeddingLifecycleAdmission(db, mark);
+  else mark();
 }
 
 export function removeEmbeddingContract(db: Database, id: string): void {
@@ -215,7 +241,9 @@ export function removeEmbeddingContract(db: Database, id: string): void {
   if (contract.lifecycle === "active" || contract.lifecycle === "previous") {
     throw new Error(`Cannot remove ${contract.lifecycle} embedding contract: ${id}`);
   }
-  db.query("DELETE FROM embedding_contracts WHERE id = ?").run(id);
+  const remove = (): void => { db.query("DELETE FROM embedding_contracts WHERE id = ?").run(id); };
+  if (contract.scope === "session_memory") withCompatibilitySessionEmbeddingLifecycleAdmission(db, remove);
+  else remove();
 }
 
 function readLifecycleContract(

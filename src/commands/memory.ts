@@ -4,6 +4,7 @@ import { createRuntimeInboxItem, runtimeInboxRatings, type RuntimeInboxRating } 
 import { openMemoryDb } from "../memory/db.ts";
 import { resolveEmbeddingRuntime } from "../memory/embedding-contract-resolver.ts";
 import { EmbeddingContractLifecycleService } from "../memory/embedding-contract-lifecycle-service.ts";
+import { SessionEmbeddingLifecycleFenceError } from "../memory/session-embedding-lifecycle-fence.ts";
 import {
   SESSION_MEMORY_STATUSES,
   type MemoryCandidateStatus,
@@ -18,6 +19,11 @@ import { SessionMemoryInspectionService } from "../memory/session-memory-inspect
 import type { SessionMemoryInspectRow } from "../memory/session-memory-inspection-contracts.ts";
 import type { SessionMemoryLinkRow } from "../memory/session-memory-links.ts";
 import { SessionMemoryIndexService } from "../memory/session-memory-index-service.ts";
+import { embeddingProviderFailureCode } from "../memory/embedding-provider-errors.ts";
+import {
+  SessionMemoryRepairService,
+  type SessionMemoryRepairResult,
+} from "../memory/session-memory-repair-service.ts";
 import {
   ProjectMemoryCandidateIntakeService,
   type ProjectInboxIntakeSummary,
@@ -29,6 +35,7 @@ import {
 } from "../project/project-learn-progress.ts";
 import type { LaunchContext } from "../runtime/launch-context.ts";
 import { stableJson } from "../runtime/json.ts";
+import { findProject } from "../runtime/projects.ts";
 import { DEFAULT_EMBEDDING_BATCH_SIZE, loadConfig, MAX_EMBEDDING_BATCH_SIZE } from "../runtime/config.ts";
 import type { ProcessRunner } from "../runtime/llm-contracts.ts";
 import { queryMemory } from "../query/engine.ts";
@@ -56,6 +63,7 @@ export function registerMemoryCommands(cli: Cli, deps: MemoryCommandDeps): void 
   cli.command(["memory", "session", "list"], (args) => sessionList(args, root));
   cli.command(["memory", "session", "show"], (args) => sessionShow(args, root));
   cli.command(["memory", "session", "links"], (args) => sessionLinks(args, root));
+  cli.command(["memory", "session", "repair"], (args) => sessionRepair(args, root));
   cli.command(["memory", "review"], (args) => memoryReview(args, root));
   cli.command(["memory", "index", "session"], (args) => indexSession(args, root));
   cli.command(["memory", "index", "project"], (args) => indexProject(args, root));
@@ -86,46 +94,79 @@ export function registerMemoryCommands(cli: Cli, deps: MemoryCommandDeps): void 
 
 async function migrateEmbeddingContracts(args: string[], root: string): Promise<CommandResult> {
   const parsed = parseEmbeddingLifecycleArgs(args, "migrate");
-  if (parsed.error) return fail(parsed.error);
+  if (parsed.error) return embeddingLifecycleArgumentFailure(parsed.json, parsed.error);
   try {
     const result = await new EmbeddingContractLifecycleService(root).migrate({ apply: parsed.apply });
     const failed = result.scopes.some((scope) => Boolean(scope.error));
-    if (parsed.json) return failed ? fail(stableJson(result)) : ok(stableJson(result));
+    if (parsed.json) {
+      const jsonResult = stableJson({ contract_version: "myelin.memory.embedding-lifecycle.v1", ...result });
+      return failed ? fail(jsonResult) : ok(jsonResult);
+    }
     const lines = result.scopes.map((scope) =>
       `${scope.scope}: ${scope.action}${scope.activated ? " (activated)" : ""}`
       + (scope.error ? ` — ${scope.error}` : ""),
     );
     return failed ? fail(lines.join("\n")) : ok(lines.join("\n"));
   } catch (error) {
-    return fail(error instanceof Error ? error.message : String(error));
+    return embeddingLifecycleFailure(parsed.json, error);
   }
 }
 
 async function rollbackEmbeddingContracts(args: string[], root: string): Promise<CommandResult> {
   const parsed = parseEmbeddingLifecycleArgs(args, "rollback");
-  if (parsed.error) return fail(parsed.error);
+  if (parsed.error) return embeddingLifecycleArgumentFailure(parsed.json, parsed.error);
   try {
     const result = await new EmbeddingContractLifecycleService(root).rollback({ apply: parsed.apply });
-    if (parsed.json) return ok(stableJson(result));
+    if (parsed.json) return ok(stableJson({ contract_version: "myelin.memory.embedding-lifecycle.v1", ...result }));
     return ok(result.scopes.map((scope) => `${scope.scope}: ${scope.action}${scope.rolled_back ? " (complete)" : ""}`).join("\n"));
   } catch (error) {
-    return fail(error instanceof Error ? error.message : String(error));
+    return embeddingLifecycleFailure(parsed.json, error);
   }
 }
 
 async function pruneEmbeddingContracts(args: string[], root: string): Promise<CommandResult> {
   const parsed = parseEmbeddingLifecycleArgs(args, "prune");
-  if (parsed.error) return fail(parsed.error);
+  if (parsed.error) return embeddingLifecycleArgumentFailure(parsed.json, parsed.error);
   try {
     const result = await new EmbeddingContractLifecycleService(root).prune({ apply: parsed.apply });
-    if (parsed.json) return ok(stableJson(result));
+    if (parsed.json) return ok(stableJson({ contract_version: "myelin.memory.embedding-lifecycle.v1", ...result }));
     return ok(
       `${result.mode}: ${result.candidates.length} inactive embedding contracts; `
       + `${result.removed_metadata_rows} metadata rows and ${result.removed_query_cache_rows} query cache rows removed.`,
     );
   } catch (error) {
-    return fail(error instanceof Error ? error.message : String(error));
+    return embeddingLifecycleFailure(parsed.json, error);
   }
+}
+
+function embeddingLifecycleFailure(json: boolean, error: unknown): CommandResult {
+  const message = error instanceof Error ? error.message : String(error);
+  if (!json) return fail(message);
+  const fenceError = error instanceof SessionEmbeddingLifecycleFenceError ? error : null;
+  const code = fenceError?.code
+    ?? embeddingProviderFailureCode(error)
+    ?? "embedding_lifecycle_internal_error";
+  return fail(stableJson({
+    contract_version: "myelin.memory.embedding-lifecycle.v1",
+    ok: false,
+    kind: fenceError ? "session_embedding_lifecycle_conflict" : "embedding_lifecycle_failure",
+    reason_code: code,
+    failure_code: code,
+    message,
+    retryable: code === "embedding_provider_unreachable",
+    owner: fenceError?.owner ?? null,
+  }));
+}
+
+function embeddingLifecycleArgumentFailure(json: boolean, detail: string): CommandResult {
+  if (!json) return fail(detail);
+  return fail(stableJson({
+    contract_version: "myelin.memory.embedding-lifecycle.v1",
+    ok: false,
+    kind: "blocked",
+    reason_code: "embedding_lifecycle_invalid_arguments",
+    detail,
+  }));
 }
 
 function parseEmbeddingLifecycleArgs(
@@ -133,7 +174,7 @@ function parseEmbeddingLifecycleArgs(
   command: "migrate" | "rollback" | "prune",
 ): { apply: boolean; json: boolean; error?: string } {
   let apply = false;
-  let json = false;
+  let json = args.includes("--json");
   for (const arg of args) {
     if (arg === "--apply") apply = true;
     else if (arg === "--json") json = true;
@@ -701,6 +742,64 @@ function sessionLinks(args: string[], root: string): CommandResult {
   return ok(result.links.map(formatSessionMemoryLink).join("\n"));
 }
 
+async function sessionRepair(args: string[], root: string): Promise<CommandResult> {
+  const parsed = parseSessionRepairArgs(args);
+  if (parsed.error) return fail(parsed.error);
+
+  try {
+    await findProject(root, parsed.projectKey);
+    const service = new SessionMemoryRepairService(root);
+    const result = parsed.apply
+      ? await service.apply(parsed.projectKey)
+      : service.preview(parsed.projectKey);
+    if (parsed.json) return ok(stableJson(result));
+    return ok(formatSessionRepairResult(result));
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error));
+  }
+}
+
+function parseSessionRepairArgs(args: string[]): {
+  projectKey: string;
+  apply: boolean;
+  json: boolean;
+  error?: string;
+} {
+  let projectKey = "";
+  let apply = false;
+  let json = false;
+  for (const arg of args) {
+    if (arg === "--apply") apply = true;
+    else if (arg === "--json") json = true;
+    else if (arg.startsWith("-")) {
+      return { projectKey, apply, json, error: `Unknown memory session repair option: ${arg}` };
+    } else if (!projectKey) projectKey = arg;
+    else return { projectKey, apply, json, error: `Unexpected memory session repair argument: ${arg}` };
+  }
+  if (!projectKey) {
+    return {
+      projectKey,
+      apply,
+      json,
+      error: "Usage: myelin memory session repair <project-key> [--apply] [--json]",
+    };
+  }
+  return { projectKey, apply, json };
+}
+
+function formatSessionRepairResult(result: SessionMemoryRepairResult): string {
+  const lines = [
+    `Session Memory repair ${result.mode} for ${result.project_key} (${result.policy}).`,
+    `proposed retractions: ${result.proposed_retractions}`,
+    `applied retractions: ${result.applied_retractions}`,
+    result.report_path ? `report: ${result.report_path}` : null,
+  ].filter((line): line is string => Boolean(line));
+  for (const candidate of result.candidates) {
+    lines.push(`${candidate.disposition}: ${candidate.id} — ${candidate.reason}`);
+  }
+  return lines.join("\n");
+}
+
 function parseSessionListArgs(args: string[]): {
   projectKey: string;
   status?: SessionMemoryStatus;
@@ -874,6 +973,8 @@ async function indexSession(args: string[], root: string): Promise<CommandResult
       `Session memory index for ${parsed.projectKey}: ` +
       `${response.indexed} indexed, ${response.failed} failed, ${response.pending_remaining} pending.`;
     return response.degraded ? fail(`${message}\n${response.degraded_reason ?? "Indexing degraded."}`) : ok(message);
+  } catch (error) {
+    return embeddingIndexFailure(parsed, "session_memory", error);
   } finally {
     db.close();
   }
@@ -883,18 +984,42 @@ async function indexProject(args: string[], root: string): Promise<CommandResult
   const parsed = parseIndexProjectArgs(args);
   if (parsed.error) return fail(parsed.error);
 
-  const config = await loadConfig(root);
-  const response = await new ProjectMemoryRetrievalIndexCoordinator({ root }).indexProject({
-    projectKey: parsed.projectKey,
-    limit: parsed.limit,
-    batchSize: parsed.batchSize ?? config.embedding.batchSize,
-    retryFailed: parsed.retryFailed,
-  });
-  if (parsed.json) return ok(stableJson(response));
-  const message =
-    `Project Memory retrieval index for ${parsed.projectKey}: ` +
-    `selected ${response.selected}, indexed ${response.indexed}, failed ${response.failed}, pending ${response.pending_remaining}.`;
-  return response.degraded ? fail(`${message}\n${response.degraded_reason ?? "Indexing degraded."}`) : ok(message);
+  try {
+    const config = await loadConfig(root);
+    const response = await new ProjectMemoryRetrievalIndexCoordinator({ root }).indexProject({
+      projectKey: parsed.projectKey,
+      limit: parsed.limit,
+      batchSize: parsed.batchSize ?? config.embedding.batchSize,
+      retryFailed: parsed.retryFailed,
+    });
+    if (parsed.json) return ok(stableJson(response));
+    const message =
+      `Project Memory retrieval index for ${parsed.projectKey}: ` +
+      `selected ${response.selected}, indexed ${response.indexed}, failed ${response.failed}, pending ${response.pending_remaining}.`;
+    return response.degraded ? fail(`${message}\n${response.degraded_reason ?? "Indexing degraded."}`) : ok(message);
+  } catch (error) {
+    return embeddingIndexFailure(parsed, "project_memory", error);
+  }
+}
+
+function embeddingIndexFailure(
+  input: { projectKey: string; json: boolean },
+  layer: "session_memory" | "project_memory",
+  error: unknown,
+): CommandResult {
+  const message = error instanceof Error ? error.message : String(error);
+  const code = embeddingProviderFailureCode(error) ?? "embedding_index_failed";
+  if (!input.json) return fail(`${code}: ${message}`);
+  return fail(stableJson({
+    contract_version: "myelin.memory.embedding-index.v1",
+    kind: "embedding_index_failure",
+    project_key: input.projectKey,
+    layer,
+    failure_code: code,
+    reason_code: code,
+    message,
+    retryable: code === "embedding_provider_unreachable",
+  }));
 }
 
 function candidates(args: string[], root: string): CommandResult {

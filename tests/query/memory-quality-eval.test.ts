@@ -8,8 +8,7 @@ import type { EmbeddingProviderClient } from "../../src/memory/embedding-types.t
 import type { MemoryScope, SessionMemoryKind } from "../../src/memory/ingest-types.ts";
 import { querySessionMemory, type SessionMemoryQueryVectorStore } from "../../src/memory/session-memory-query.ts";
 import { ensurePendingSessionMemoryEmbedding, markSessionMemoryEmbeddingIndexed } from "../../src/memory/session-memory-embeddings.ts";
-import { createSessionMemoryContexts } from "../../src/memory/session-memory-contexts.ts";
-import { createSessionMemory } from "../../src/memory/session-memories.ts";
+import { createSessionMemory, createSessionMemoryContexts } from "../helpers/session-mutation-authority.ts";
 import { DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT } from "../../src/runtime/config.ts";
 
 type EvalStatus = "pass" | "warn" | "fail";

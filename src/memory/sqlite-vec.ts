@@ -23,6 +23,35 @@ export type SessionMemoryVectorMatch = {
   distance: number;
 };
 
+export function decodeFloat32Vector(bytes: Uint8Array, dimensions: number): number[] {
+  if (!Number.isSafeInteger(dimensions) || dimensions <= 0 || bytes.byteLength !== dimensions * 4) {
+    throw new Error(`Invalid float32 vector byte length: expected ${dimensions * 4}, got ${bytes.byteLength}`);
+  }
+  const copy = bytes.slice();
+  return Array.from(new Float32Array(copy.buffer, copy.byteOffset, dimensions));
+}
+
+export function cosineDistance(left: readonly number[], right: readonly number[]): number {
+  if (left.length === 0 || left.length !== right.length) {
+    throw new Error(`Vector dimensions do not match: ${left.length} versus ${right.length}`);
+  }
+  let dot = 0;
+  let leftMagnitude = 0;
+  let rightMagnitude = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    const leftValue = left[index]!;
+    const rightValue = right[index]!;
+    if (!Number.isFinite(leftValue) || !Number.isFinite(rightValue)) {
+      throw new Error("Vector contains a non-finite value");
+    }
+    dot += leftValue * rightValue;
+    leftMagnitude += leftValue * leftValue;
+    rightMagnitude += rightValue * rightValue;
+  }
+  if (leftMagnitude === 0 || rightMagnitude === 0) return 1;
+  return 1 - dot / Math.sqrt(leftMagnitude * rightMagnitude);
+}
+
 export type ProjectMemoryRetrievalVectorInput = {
   retrieval_row_id: string;
   project_key: string;

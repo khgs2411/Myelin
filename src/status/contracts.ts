@@ -1,4 +1,6 @@
 import { relative } from "node:path";
+import type { SessionCurrentContinuityV1 } from "../memory/session-current-continuity-types.ts";
+import type { SMCStatusV1 } from "../session-maintenance/status-types.ts";
 
 export type OperationalState = "healthy" | "attention" | "blocked";
 export type StatusSectionName = "installation" | "session_memory" | "project_memory";
@@ -59,7 +61,7 @@ export type RetrievalStatus = {
   active_contract: EmbeddingContractStatus | null;
   desired_contract: EmbeddingContractStatus | null;
   migration_required: boolean;
-  provider_state: "not_checked" | "available" | "unavailable";
+  provider_state: "not_checked" | "available" | "unreachable" | "unavailable";
   indexed_count: number;
   pending_count: number;
   failed_count: number;
@@ -71,6 +73,7 @@ export type SessionMemoryStatusSection = StatusSectionBase & {
   ingest: { running_jobs: number; failed_jobs: number; terminal_tombstones: number; latest_log_path: string | null };
   maintenance: MaintenanceStatus;
   retrieval: RetrievalStatus;
+  smc?: SMCStatusV1;
 };
 
 export type ProjectMemoryStatusSection = StatusSectionBase & {
@@ -88,6 +91,7 @@ export type OperationalStatusResult = {
   installation: InstallationStatusSection;
   session_memory: SessionMemoryStatusSection;
   project_memory: ProjectMemoryStatusSection;
+  session_continuity: SessionCurrentContinuityV1;
   warnings: StatusWarning[];
   actions: StatusAction[];
   evidence: StatusEvidence[];

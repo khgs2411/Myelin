@@ -1,5 +1,8 @@
 # Use detached target-repo agents for Experience Log ingest
 
+Superseded in part by ADR 0070 for curator authority, coordinator mediation, job-scoped snapshots,
+staged atomic promotion, mutation fencing, and branch-as-provenance behavior.
+
 `myelin ingest <project-key>` starts a Myelin-owned detached ingest job that launches a headless provider session from the target repository cwd, on `master` for the first implementation. The ingest agent pulls Experience Log rows through Myelin tools, decides what Session Memory or layer handoff inputs to create, and Myelin owns the simple queue/tombstone bookkeeping. Pull creates tombstone-backed lease stubs while raw rows remain in `experience_events`; accepted terminal processing then populates/finalizes the tombstone and deletes the raw row. This keeps capture non-agentic while giving the memory-processing agent full repo context and avoiding a foreground, Myelin-orchestrated classification pipeline.
 
 **Considered Options**

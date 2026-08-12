@@ -7,6 +7,8 @@ import { INGEST_COMPLETION_LAYERS } from "../../src/memory/ingest-types.ts";
 import { leaseExperienceEvents, recordExperienceEvent } from "../../src/memory/experience.ts";
 import { createIngestJob, updateIngestJobStatus } from "../../src/ingest/jobs.ts";
 import { ingestCompletionLabel, readIngestProjectStatus } from "../../src/ingest/status.ts";
+import { AuthorityActivationService } from "../../src/session-maintenance/authority-activation-service.ts";
+import { createSessionMemory } from "../helpers/session-mutation-authority.ts";
 
 let dir: string;
 let db: MemoryDb;
@@ -110,6 +112,29 @@ test("project status reports drain complete when no active work and no outputs e
   expect(status.counts.active_events).toBe(0);
 });
 
+test("active-mode status uses the companion phase and surfaces quarantined legacy work", () => {
+  createIngestJob(db, {
+    id: "legacy",
+    project_key: "demo",
+    provider: "codex",
+    input: {},
+    now: "2026-08-11T10:00:00.000Z",
+  });
+  new AuthorityActivationService({ now: () => new Date("2026-08-11T10:01:00.000Z") }).activate(db);
+
+  const status = readIngestProjectStatus(db, "demo");
+
+  expect(status).toMatchObject({
+    authority_mode: "smc_v1",
+    completion_label: "Legacy Session Memory follow-up required",
+    counts: {
+      running_jobs: 0,
+      needs_followup_jobs: 1,
+      quarantined_legacy_jobs: 1,
+    },
+  });
+});
+
 test("project status reports retrieval pending when output exists with pending embeddings", () => {
   seedSessionMemoryWithEmbedding("mem_1", "failed");
 
@@ -156,7 +181,9 @@ function seedExperienceEvent(id: string): void {
     id,
     project_key: "demo",
     occurred_at: `2026-06-15T10:00:${id.slice(-1).padStart(2, "0")}.000Z`,
+    event_kind: "user.prompt",
     provider: "codex",
+    raw_text: `content ${id}`,
     raw_payload_json: "{}",
     source: "codex-hook",
     status: "valid",
@@ -164,12 +191,19 @@ function seedExperienceEvent(id: string): void {
 }
 
 function seedSessionMemoryWithEmbedding(id: string, embeddingStatus: "pending" | "indexed" | "failed"): void {
-  db.query(
-    `INSERT INTO session_memories
-      (id, project_key, provider, provider_session_id, ingest_job_id, source_event_refs_json, memory_kind,
-       summary, payload_json, confidence, risk, created_at, updated_at)
-     VALUES (?, 'demo', 'codex', NULL, NULL, '[]', 'continuity', 'Useful continuity.', '{}', 'high', 'low', ?, ?)`,
-  ).run(id, "2026-06-15T10:00:00.000Z", "2026-06-15T10:00:00.000Z");
+  createSessionMemory(db, {
+    id,
+    project_key: "demo",
+    provider: "codex",
+    source_event_refs: [],
+    memory_kind: "continuity",
+    summary: "Useful continuity.",
+    payload: {},
+    confidence: "high",
+    risk: "low",
+    now: "2026-06-15T10:00:00.000Z",
+    embedding_contract: null,
+  });
   db.query(
     `INSERT INTO session_memory_embeddings
       (id, session_memory_id, project_key, embedding_provider, embedding_model, embedding_dimensions,

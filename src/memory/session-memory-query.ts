@@ -21,6 +21,10 @@ import type {
   SessionMemoryQueryResult,
   SessionMemoryQueryVectorStore,
 } from "./session-memory-query-types.ts";
+import {
+  embeddingProviderFailureCode,
+  type EmbeddingProviderFailureCode,
+} from "./embedding-provider-errors.ts";
 export type {
   SessionMemoryQueryFilters,
   SessionMemoryQueryInput,
@@ -67,14 +71,24 @@ export async function querySessionMemory(
       provider: input.provider,
       now: input.now,
     });
-    const matches = vectorStore.search(db, {
+    let candidateLimit = Math.min(counts.searchable_count, searchLimit(input.limit, input.filters));
+    let matches = vectorStore.search(db, {
       project_key: input.project_key,
       contract: input.document_contract,
       embedding: queryEmbedding.embedding,
-      limit: searchLimit(input.limit, input.filters),
+      limit: candidateLimit,
     });
-    const hydrated = hydrateMatches(db, matches, input.filters);
-    const recencyIntent = hasRecencyIntent(input.question);
+    let hydrated = hydrateMatches(db, matches, input.filters);
+    if (hydrated.length < input.limit && candidateLimit < counts.searchable_count) {
+      candidateLimit = counts.searchable_count;
+      matches = vectorStore.search(db, {
+        project_key: input.project_key,
+        contract: input.document_contract,
+        embedding: queryEmbedding.embedding,
+        limit: candidateLimit,
+      });
+      hydrated = hydrateMatches(db, matches, input.filters);
+    }
     return withSessionQueryLog(db, {
       project_key: input.project_key,
       question: input.question,
@@ -84,15 +98,19 @@ export async function querySessionMemory(
       query_embedding_cache_hit: queryEmbedding.cache_hit,
       query_embedding_cache_id: queryEmbedding.cache_id,
       normalized_question: queryEmbedding.normalized_question,
-      matches: (recencyIntent ? rerankForRecency(hydrated) : hydrated).slice(0, input.limit),
+      matches: hydrated.slice(0, input.limit),
       source_tools: [
         "query-embedding-cache",
         "session-memory-vector-index",
-        ...(recencyIntent ? ["session-memory-recency-rerank"] : []),
       ],
     }, input);
   } catch (error) {
-    return withSessionQueryLog(db, degraded(input, counts, error instanceof Error ? error.message : String(error)), input);
+    return withSessionQueryLog(db, degraded(
+      input,
+      counts,
+      error instanceof Error ? error.message : String(error),
+      embeddingProviderFailureCode(error),
+    ), input);
   }
 }
 
@@ -128,7 +146,7 @@ function indexCounts(
     project_key: string;
     contract: ActiveEmbeddingContract;
   },
-): { indexed_count: number; pending_count: number } {
+): { indexed_count: number; pending_count: number; searchable_count: number } {
   const row = db
     .query(
       `SELECT
@@ -155,6 +173,26 @@ function indexCounts(
   return {
     indexed_count: row.indexed_count ?? 0,
     pending_count: row.pending_count ?? 0,
+    searchable_count: (
+      db.query(
+        `SELECT count(*) AS count
+         FROM session_memory_embeddings
+         WHERE project_key = ?
+           AND embedding_provider = ?
+           AND embedding_model = ?
+           AND embedding_dimensions = ?
+           AND embedding_purpose = ?
+           AND format_version = ?
+           AND status = 'indexed'`,
+      ).get(
+        input.project_key,
+        input.contract.provider,
+        input.contract.model,
+        input.contract.dimensions,
+        input.contract.purpose,
+        input.contract.formatVersion,
+      ) as { count: number }
+    ).count,
   };
 }
 
@@ -165,12 +203,14 @@ function degraded(
   },
   counts: { indexed_count: number; pending_count: number },
   reason: string,
+  code?: EmbeddingProviderFailureCode,
 ): SessionMemoryQueryResult {
   return {
     project_key: input.project_key,
     question: input.question,
     degraded: true,
     degraded_reason: reason,
+    ...(code ? { degraded_code: code } : {}),
     indexed_count: counts.indexed_count,
     pending_count: counts.pending_count,
     matches: [],
@@ -235,19 +275,6 @@ function searchLimit(limit: number, filters?: SessionMemoryQueryFilters): number
   return (filters?.memory_kind && filters.memory_kind.length > 0) || filters?.git_branch || (filters?.status ?? ["active"]).length > 0
     ? limit * 10
     : limit;
-}
-
-function hasRecencyIntent(question: string): boolean {
-  return /\b(most recent|recently|recent work|latest|newest|last session|last work)\b/i.test(question);
-}
-
-function rerankForRecency(matches: SessionMemoryQueryMatch[]): SessionMemoryQueryMatch[] {
-  return [...matches]
-    .map((match, semanticRank) => ({ match, semanticRank }))
-    .sort((left, right) =>
-      right.match.created_at.localeCompare(left.match.created_at) || left.semanticRank - right.semanticRank
-    )
-    .map(({ match }) => match);
 }
 
 function parseJsonObject(text: string): Record<string, unknown> {

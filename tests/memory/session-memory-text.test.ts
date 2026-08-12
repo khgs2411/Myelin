@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test";
-import { normalizeSessionMemoryForEmbedding } from "../../src/memory/session-memory-text.ts";
+import {
+  normalizeSessionMemoryForEmbedding,
+  sessionMemoryNormalizedTextHash,
+} from "../../src/memory/session-memory-text.ts";
 
 test("normalizes title summary kind and safe scalar payload fields", () => {
   const text = normalizeSessionMemoryForEmbedding({
@@ -49,4 +52,13 @@ test("skips unsafe payload values", () => {
   expect(text).toContain("status: ready");
   expect(text).not.toContain("branch:");
   expect(text).not.toContain("url:");
+});
+
+test("hashes the normalized Session Memory document with one shared deterministic primitive", () => {
+  const normalized = "title: Review gate\nsummary: Approved.\nkind: verification";
+
+  expect(sessionMemoryNormalizedTextHash(normalized)).toBe(
+    "3397b23ff45d95412836acabf8568a78f7d8f1c984e5d7c5aee048ae54fdce05",
+  );
+  expect(sessionMemoryNormalizedTextHash(normalized)).toHaveLength(64);
 });

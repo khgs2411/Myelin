@@ -14,6 +14,7 @@ import { createGeminiEmbeddingProvider } from "./providers/gemini-embedding-prov
 import { createNomicEmbeddingProvider } from "./providers/nomic-embedding-provider.ts";
 import { createQwenEmbeddingProvider } from "./providers/qwen-embedding-provider.ts";
 import { createStubEmbeddingProvider } from "./providers/stub-embedding-provider.ts";
+import { EmbeddingProviderInitializationError } from "./embedding-provider-errors.ts";
 
 export type ResolvedEmbeddingClient = {
   client: EmbeddingService;
@@ -53,9 +54,18 @@ export class EmbeddingProviderFactory {
     const client = this.clientForContract(contract);
     const initialized = await client.initialize();
     if (!initialized.available) {
-      throw new Error(`Active embedding provider is unavailable (${contract.provider}): ${initialized.reason}`);
+      throw new EmbeddingProviderInitializationError(
+        contract.provider,
+        initialized.failure_kind,
+        initialized.reason,
+      );
     }
     return { client: new EmbeddingService(contract, client), contract };
+  }
+
+  /** Exact-contract initialization used by trusted coordinator retrieval and overlay indexing. */
+  async initializeTrustedCoordinatorContract(contract: ActiveEmbeddingContract): Promise<ResolvedEmbeddingClient> {
+    return this.initializeContract(contract);
   }
 
   async initializeLocalAuto(purpose: EmbeddingPurpose): Promise<ResolvedEmbeddingClient> {
@@ -68,6 +78,7 @@ export class EmbeddingProviderFactory {
     }
     const candidates = this.localCandidates();
     const unavailable: string[] = [];
+    let unreachable = false;
     for (const client of candidates) {
       const initialized = await client.initialize();
       if (initialized.available) {
@@ -78,9 +89,14 @@ export class EmbeddingProviderFactory {
           fallbackReason: unavailable.length === 0 ? undefined : unavailable.join("; "),
         };
       }
+      unreachable ||= initialized.failure_kind === "unreachable";
       unavailable.push(`${client.provider}: ${initialized.reason}`);
     }
-    throw new Error(`No local embedding client is available: ${unavailable.join("; ")}`);
+    throw new EmbeddingProviderInitializationError(
+      "ollama_nomic",
+      unreachable ? "unreachable" : "configuration",
+      `No local embedding client is available: ${unavailable.join("; ")}`,
+    );
   }
 
   private localCandidates(): Array<EmbeddingClient & { provider: EmbeddingProvider }> {

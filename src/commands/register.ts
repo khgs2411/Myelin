@@ -10,6 +10,7 @@ import type { Cli } from "./registry.ts";
 import { registerSchemaCommands } from "./schema.ts";
 import { registerSessionCommands } from "./session.ts";
 import { registerStatusCommand } from "./status.ts";
+import { registerSMCCommands } from "./smc.ts";
 
 export type CommandRegistrars = {
   status: typeof registerStatusCommand;
@@ -22,9 +23,10 @@ export type CommandRegistrars = {
   project: typeof registerProjectCommands;
   session: typeof registerSessionCommands;
   schema: typeof registerSchemaCommands;
+  smc: typeof registerSMCCommands;
 };
 
-const defaultRegistrars: CommandRegistrars = {
+export const defaultRegistrars: CommandRegistrars = {
   status: registerStatusCommand,
   bootstrap: registerBootstrapCommand,
   capture: registerCaptureCommands,
@@ -35,6 +37,7 @@ const defaultRegistrars: CommandRegistrars = {
   project: registerProjectCommands,
   session: registerSessionCommands,
   schema: registerSchemaCommands,
+  smc: registerSMCCommands,
 };
 
 export function registerCommands(
@@ -52,4 +55,5 @@ export function registerCommands(
   registrars.project(cli, { context });
   registrars.session(cli, { context });
   registrars.schema(cli, { context });
+  registrars.smc(cli, { context });
 }

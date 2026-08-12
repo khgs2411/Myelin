@@ -67,6 +67,45 @@ Project-scoped continuity about recent work, next actions, blockers, and verific
 Trusted agent-written Session Memory from Experience Log ingest lives in `session_memories`; `sessions` / `session_events` remain the existing manual session surface until a later status/current-briefing integration.
 _Avoid_: Session Brain, chat history
 
+**Session Memory Curator (SMC)**:
+The project-scoped, proposal-only agent that reconciles selected Experience Log evidence against
+Session Memory and repository evidence. SMC may query a bounded job-scoped memory view, but Myelin
+retains canonical write, lifecycle, provenance, and source-terminalization authority.
+_Avoid_: direct database writer, whole-memory prompt, Session Memory as uncurated transcript
+
+**Session Memory Anchor Job**:
+The single durable maintenance job created by one manual or automatic Session Memory invocation. It
+owns one immutable manifest, staged overlay, mutation fence, and final atomic promotion; internal
+evidence batches, tool turns, and detached provider attempts are not jobs.
+_Avoid_: batch job, prompt sub-batch, independent partial commit
+
+**SMC Manifest**:
+The immutable job-owned SQLite snapshot of selected evidence, active Session Memory state,
+retrieval state, governing identities, ordering, and budgets used for SMC reasoning and recovery.
+_Avoid_: live-row lookup, mutable prompt context, filesystem-only checkpoint
+
+**Staged Overlay**:
+Revisioned noncanonical SQLite state containing accepted SMC proposals for one anchor job. Later
+work reads it, but only Myelin's final atomic promotion can make it canonical Session Memory.
+_Avoid_: partial canonical memory, agent database writes, conversation-only draft
+
+**Curator Retrieval Contract**:
+The job-scoped, high-recall, paginated Session Memory lookup contract used by SMC over the immutable
+base snapshot and current staged overlay; it is separate from concise end-user memory query.
+_Avoid_: consumer top-k answer, live corpus query, lexical-only fallback
+
+**Rolling Session Memory Audit**:
+Bounded review of due active memory revisions that advances only when a successful Session Memory
+maintenance job includes due audit work. `session.start` is the primary below-threshold wake;
+blocked/no-work outcomes and idle projects claim no audit progress.
+_Avoid_: full-corpus scan per ingest, idle daemon, scalar cursor as coverage proof
+
+**Session Memory Mutation Fence**:
+SQLite-enforced project ownership that permits only one canonical Session Memory writer or
+anchor job at a time and rejects stale worker epochs. Scope-global embedding lifecycle uses a
+separate fence that is mutually exclusive with every Session Memory project fence.
+_Avoid_: process-local mutex, timeout ownership transfer, check-then-start guard
+
 **Session Memory Context**:
 Branch- and repo-scoped provenance rows that link Session Memory records to captured repo_path, git_branch, git_commit, git_worktree_id, and source_event_ref values for retrieval filtering.
 _Avoid_: branch partition, hidden provenance, extra memory scope
@@ -280,8 +319,10 @@ The top-level `ingest <project-key>` command that starts bounded detached agenti
 _Avoid_: update, foreground-only drain, `project ingest`, source-specific operator command
 
 **Detached Ingest Job**:
-A background/headless provider-backed ingest run started by the Ingest Command, with a durable handle for status checks and follow-up.
-_Avoid_: always-on auto mode, untracked provider run
+A legacy/general term for a background provider-backed ingest run. In the SMC workflow, the durable
+unit is the **Session Memory Anchor Job**; a detached provider process is only one resumable attempt
+inside it.
+_Avoid_: anchor job synonym, always-on auto mode, untracked provider run
 
 **Core Runtime Module**:
 The root `src/runtime/*` TypeScript module set for shared core repo behavior.
@@ -313,6 +354,25 @@ _Avoid_: shared package, embedded runtime, product logic owner
 - Memory types and storage layers are separate axes: **Experience Log**, **Session Memory**, and candidate/handoff state live in root SQLite; **Project Memory** lives in project wiki/state/sources; **Practice Memory** and **Personal Memory** canonical homes are deferred until promotion designs.
 - A **Memory Candidate** is a lead for curation, not trusted memory and not text that can be copied directly into durable memory without layer-specific evidence checks.
 - Trusted **Session Memory** is stored in root SQLite in a dedicated `session_memories` table; embeddings are retrieval support, not the canonical memory record.
+- One **Session Memory Anchor Job** owns an immutable **SMC Manifest**, one revisioned **Staged Overlay**, and one **Session Memory Mutation Fence** until atomic completion or explicit abandonment.
+- The **Legacy-Write Firewall** is the SQLite-enforced pre-migration boundary that closes writes from
+  pre-firewall Myelin binaries before incompatible Session Memory schema changes. Trusted current
+  runtime transactions use short-lived **Session Memory Write Admissions**; process liveness is not
+  the integrity boundary.
+- A **Legacy Job Deny Identity** permanently prevents a quarantined old job ID from writing again,
+  including after abandonment, fence release, or a later anchor owner.
+- The **Session Memory Curator (SMC)** uses the **Curator Retrieval Contract** to propose changes; Myelin alone promotes them to canonical **Session Memory**.
+- An **SMC Recall Seed Plan** is immutable for one batch/overlay identity and derives only from frozen
+  evidence text, evidence-explicit canonical memory references, due audit targets, and accepted
+  overlay state. Repo/branch/commit metadata constrain candidates on one context row; affected work
+  never recursively creates recall obligations.
+- An **SMC Provider Phase** is either `text_formulation`, where the provider formulates one trusted
+  text obligation, or `proposal_ready`, which is available only after coordinator-owned non-text
+  retrieval and every cursor page prove fixed-plan coverage.
+- **SMC Workflow Feasibility** compares frozen minimum turns, query materializations, provider
+  envelope payload, and mandatory audit work-set size with configured controls before preparation;
+  infeasibility creates no durable anchor/fence/lease/snapshot state.
+- **Rolling Session Memory Audit** advances only when Session Memory maintenance is invoked; `session.start` is the primary below-threshold audit/freshness wake and idle projects do no background work.
 - A future **Session Memory Query Facade** should hide the SQLite/vector implementation from MCP callers and agents.
 - Early **Experience Log** entries are explicit high-signal records for continuity or later curation, not routine tool-call logging.
 - An **Experience Log Tombstone** can reserve a raw **Experience Log** row as an in-progress lease while the raw row remains present, then receives final output or no-output metadata when ingest completes and archives the row.

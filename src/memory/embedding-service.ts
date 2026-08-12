@@ -56,3 +56,34 @@ export class EmbeddingService implements EmbeddingProviderClient {
     return results.map((result) => validateEmbeddingResult(this.contract, result));
   }
 }
+
+/**
+ * Reuses one initialized provider transport while binding each request to its
+ * exact retrieval purpose. Provider/model/dimension/format identity stays pinned.
+ */
+export function createCompatiblePurposeEmbeddingTransport(
+  initialized: EmbeddingService,
+): EmbeddingTransport {
+  return {
+    async embed(request) {
+      return EmbeddingService.bind(request.contract, initialized).embed(request);
+    },
+    async embedBatch(requests) {
+      if (requests.length === 0) return [];
+      return EmbeddingService.bind(requests[0]!.contract, initialized).embedBatch(requests);
+    },
+  };
+}
+
+export async function executeTrustedCoordinatorEmbedding(input: {
+  contract: ActiveEmbeddingContract;
+  transport: EmbeddingTransport;
+  text: string;
+  title?: string | null;
+}): Promise<EmbeddingResult> {
+  return new EmbeddingService(input.contract, input.transport).embed({
+    contract: input.contract,
+    text: input.text,
+    title: input.title,
+  });
+}

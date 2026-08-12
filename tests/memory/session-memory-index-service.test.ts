@@ -2,8 +2,11 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT } from "../../src/runtime/config.ts";
 import type { EmbeddingProviderClient } from "../../src/memory/embedding-types.ts";
 import { openMemoryDbAt, type MemoryDb } from "../../src/memory/db.ts";
-import { SessionMemoryIndexService } from "../../src/memory/session-memory-index-service.ts";
-import { createSessionMemory } from "../../src/memory/session-memories.ts";
+import {
+  requestPendingSessionMemoryIndexing,
+  SessionMemoryIndexService,
+} from "../../src/memory/session-memory-index-service.ts";
+import { createSessionMemory } from "../helpers/session-mutation-authority.ts";
 
 let db: MemoryDb;
 
@@ -55,6 +58,29 @@ test("SessionMemoryIndexService delegates pending indexing workflow", async () =
     degraded: false,
   });
   expect(upserts).toEqual(["mem_service_1"]);
+});
+
+test("pending indexing request delegates retry-safe scheduling and does no work without pending rows", async () => {
+  const scheduled: string[] = [];
+  expect(await requestPendingSessionMemoryIndexing({
+    db,
+    projectKey: "demo",
+    schedule: (projectKey) => { scheduled.push(projectKey); },
+  })).toEqual({ kind: "requested", pending: 1 });
+  expect(await requestPendingSessionMemoryIndexing({
+    db,
+    projectKey: "demo",
+    schedule: (projectKey) => { scheduled.push(projectKey); },
+  })).toEqual({ kind: "requested", pending: 1 });
+  expect(scheduled).toEqual(["demo", "demo"]);
+
+  db.query("UPDATE session_memory_embeddings SET status = 'indexed', normalized_text_hash = 'sha256:test'").run();
+  expect(await requestPendingSessionMemoryIndexing({
+    db,
+    projectKey: "demo",
+    schedule: (projectKey) => { scheduled.push(projectKey); },
+  })).toEqual({ kind: "no_work", pending: 0 });
+  expect(scheduled).toEqual(["demo", "demo"]);
 });
 
 function fixedProvider(): EmbeddingProviderClient {

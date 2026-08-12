@@ -2,7 +2,10 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { EmbeddingService } from "../../src/memory/embedding-service.ts";
+import {
+  createCompatiblePurposeEmbeddingTransport,
+  EmbeddingService,
+} from "../../src/memory/embedding-service.ts";
 import type { EmbeddingRequest } from "../../src/memory/embedding-types.ts";
 import { createGeminiEmbeddingProvider } from "../../src/memory/providers/gemini-embedding-provider.ts";
 import { createNomicEmbeddingProvider } from "../../src/memory/providers/nomic-embedding-provider.ts";
@@ -238,8 +241,37 @@ test("Ollama client reports a missing model without attempting an embedding", as
 
   await expect(client.initialize()).resolves.toEqual({
     available: false,
+    failure_kind: "configuration",
     reason: "Ollama model is not installed: qwen3-embedding:4b",
   });
+});
+
+test("Ollama client classifies a blocked socket as unreachable from the current process", async () => {
+  const socketError = Object.assign(new Error("Was there a typo in the url or port?"), {
+    code: "FailedToOpenSocket",
+  });
+  const client = createQwenEmbeddingProvider({
+    baseUrl: "http://ollama.local",
+    model: "qwen3-embedding:4b",
+    dimensions: 3,
+    fetch: async () => {
+      throw socketError;
+    },
+  });
+
+  await expect(client.initialize()).resolves.toEqual({
+    available: false,
+    failure_kind: "unreachable",
+    reason: "Was there a typo in the url or port?",
+  });
+  await expect(client.embed({
+    ...documentRequest,
+    contract: {
+      ...documentRequest.contract,
+      provider: "ollama_qwen",
+      model: "qwen3-embedding:4b",
+    },
+  })).rejects.toThrow("Embedding provider is unreachable from the current process");
 });
 
 test("stub provider reads deterministic fixture names", async () => {
@@ -297,6 +329,7 @@ test("stub provider validates dimensions", async () => {
 test("gemini initialization fails closed without an API key", async () => {
   await expect(createGeminiEmbeddingProvider({}).initialize()).resolves.toEqual({
     available: false,
+    failure_kind: "configuration",
     reason: "Gemini API key is required",
   });
 });
@@ -325,6 +358,16 @@ test("embedding facade supplies batch fallback and enforces the active contract"
   })).resolves.toMatchObject({ model: queryContract.model, dimensions: queryContract.dimensions });
   expect(() => EmbeddingService.bind({ ...queryContract, model: "other" }, service))
     .toThrow("incompatible with the initialized provider");
+
+  const coordinatorTransport = createCompatiblePurposeEmbeddingTransport(service);
+  await expect(coordinatorTransport.embed({
+    ...documentRequest,
+    contract: queryContract,
+  })).resolves.toMatchObject({ model: queryContract.model, dimensions: queryContract.dimensions });
+  await expect(coordinatorTransport.embed({
+    ...documentRequest,
+    contract: { ...queryContract, model: "other" },
+  })).rejects.toThrow("incompatible with the initialized provider");
 });
 
 test("embedding facade rejects model, declared dimension, vector length, and non-finite results", async () => {

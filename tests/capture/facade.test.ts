@@ -25,6 +25,8 @@ test("drops unbootstrapped repo events as no-ops", async () => {
     provider: "codex",
     source: "codex-hook",
     cwd: repo,
+    event_kind: "user.prompt",
+    raw_text: "hello",
     raw_payload_json: "{}",
     status: "valid",
   });
@@ -104,7 +106,7 @@ test("stored capture events schedule auto memory maintenance through injected sc
 
 test("SessionStart capture forces a bounded ingest below the ordinary threshold", async () => {
   await bootstrapProject(root, "class-kit", repo);
-  const calls: Array<{ projectKey: string; forceIngest?: boolean }> = [];
+  const calls: Array<{ projectKey: string; wakeKind?: string }> = [];
 
   await handleCaptureEvent(root, {
     id: "evt_start",
@@ -118,13 +120,13 @@ test("SessionStart capture forces a bounded ingest below the ordinary threshold"
   }, {
     maintenanceScheduler: {
       async maybeSchedule(projectKey, options) {
-        calls.push({ projectKey, forceIngest: options?.forceIngest });
+        calls.push({ projectKey, wakeKind: options?.wakeKind });
         return { status: "skipped", reason: "test scheduler" };
       },
     },
   });
 
-  expect(calls).toEqual([{ projectKey: "class-kit", forceIngest: true }]);
+  expect(calls).toEqual([{ projectKey: "class-kit", wakeKind: "session_start" }]);
 });
 
 test("auto memory maintenance scheduling failures do not break capture", async () => {
@@ -137,6 +139,8 @@ test("auto memory maintenance scheduling failures do not break capture", async (
       provider: "codex",
       source: "codex-hook",
       cwd: repo,
+      event_kind: "user.prompt",
+      raw_text: "hello",
       raw_payload_json: "{}",
       status: "valid",
     },
@@ -152,7 +156,7 @@ test("auto memory maintenance scheduling failures do not break capture", async (
   expect(result).toEqual({ status: "stored", project_key: "class-kit", event_id: "evt_1" });
 });
 
-test("stores malformed bootstrapped project events as invalid", async () => {
+test("malformed provider events are diagnostics rather than Experience Log content", async () => {
   await bootstrapProject(root, "class-kit", repo);
 
   const result = await handleCaptureEvent(root, {
@@ -163,13 +167,11 @@ test("stores malformed bootstrapped project events as invalid", async () => {
     status: "invalid",
   });
 
-  expect(result.status).toBe("stored");
+  expect(result.status).toBe("ignored");
 
   const db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
   try {
-    const [event] = listExperienceEvents(db, "class-kit");
-    expect(event.status).toBe("invalid");
-    expect(event.hook_event_name).toBeNull();
+    expect(listExperienceEvents(db, "class-kit")).toEqual([]);
   } finally {
     db.close();
   }

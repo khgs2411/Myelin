@@ -26,7 +26,11 @@ export interface EmbeddingTransport {
 
 export type EmbeddingClientInitialization =
   | { available: true }
-  | { available: false; reason: string };
+  | {
+    available: false;
+    reason: string;
+    failure_kind: "configuration" | "unreachable" | "provider";
+  };
 
 export interface EmbeddingClient extends EmbeddingTransport {
   readonly provider: EmbeddingProvider | "stub";

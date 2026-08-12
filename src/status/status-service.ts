@@ -2,7 +2,7 @@ import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { realpath } from "node:fs/promises";
 import { discoverProjects, findProject, type Project } from "../runtime/projects.ts";
-import { loadConfig } from "../runtime/config.ts";
+import { loadConfig, selectModelProfile } from "../runtime/config.ts";
 import { EmbeddingProviderFactory } from "../memory/embedding-provider-factory.ts";
 import { isProcessAlive } from "../ingest/runtime.ts";
 import { EvidenceRegistry, type OperationalStatusResult, type ProjectMemoryStatusSection, type SessionMemoryStatusSection } from "./contracts.ts";
@@ -11,12 +11,24 @@ import { inspectProjectMemory } from "./project-memory-inspector.ts";
 import { inspectSessionMemory, openStatusDatabase } from "./session-memory-inspector.ts";
 import { aggregateOverall, maxState, warning } from "./severity.ts";
 import { memoryDbPath } from "../memory/db.ts";
+import {
+  selectSessionCurrentContinuity,
+  unavailableSessionCurrentContinuity,
+} from "../memory/session-current-continuity.ts";
+import type { SessionCurrentContinuityV1 } from "../memory/session-current-continuity-types.ts";
+import { embeddingProviderFailureKind } from "../memory/embedding-provider-errors.ts";
+import type { MyelinConfig } from "../runtime/config.ts";
+import { withSMCProviderState } from "../session-maintenance/status-service.ts";
+import type { SMCStatusV1 } from "../session-maintenance/status-types.ts";
 
 export type StatusServiceDeps = {
   now?: () => Date;
   isProcessAlive?: (pid: number) => boolean;
   locatorPath?: string;
   env?: NodeJS.ProcessEnv;
+  createEmbeddingFactory?: (
+    config: MyelinConfig,
+  ) => Pick<EmbeddingProviderFactory, "initializeContract">;
 };
 
 export class StatusService {
@@ -35,11 +47,25 @@ export class StatusService {
     const alive = this.deps.isProcessAlive ?? isProcessAlive;
     let session: Awaited<ReturnType<typeof inspectSessionMemory>>;
     let project: Awaited<ReturnType<typeof inspectProjectMemory>>;
+    let sessionContinuity: SessionCurrentContinuityV1;
+    const generatedAt = (this.deps.now ?? (() => new Date()))().toISOString();
     try {
       const snapshot = openStatusDatabase(this.root);
       try {
-        session = await inspectSessionMemory({ root: this.root, projectKey: resolved.project.key, db: snapshot.db, config: config.autoMemoryMaintenance, embeddingConfig: config.embedding, evidence, isAlive: alive });
+        session = await inspectSessionMemory({
+          root: this.root,
+          projectKey: resolved.project.key,
+          db: snapshot.db,
+          config: config.autoMemoryMaintenance,
+          embeddingConfig: config.embedding,
+          sessionMaintenanceConfig: config.sessionMaintenance,
+          ingestProfile: selectModelProfile(config, "ingest"),
+          generatedAt,
+          evidence,
+          isAlive: alive,
+        });
         project = await inspectProjectMemory({ root: this.root, projectKey: resolved.project.key, db: snapshot.db, config: config.autoProjectMemoryMaintenance, embeddingConfig: config.embedding, evidence, isAlive: alive });
+        sessionContinuity = selectSessionCurrentContinuity(snapshot.db, resolved.project.key);
       } finally {
         snapshot.close();
       }
@@ -48,17 +74,19 @@ export class StatusService {
       const dbWarning = warning("ROOT_SQLITE_UNAVAILABLE", "blocked", "session_memory", errorMessage(error), [dbId]);
       session = { section: unavailableSession(resolved.project.key, dbId), warnings: [dbWarning], actions: [] };
       project = { section: unavailableProject(resolved.project.key, dbId), warnings: [warning("ROOT_SQLITE_UNAVAILABLE", "blocked", "project_memory", errorMessage(error), [dbId])], actions: [] };
+      sessionContinuity = unavailableSessionCurrentContinuity();
     }
     await this.enrichProviderAvailability(config, session, project);
     const warnings = [...installation.warnings, ...session.warnings, ...project.warnings];
     const actions = [...installation.actions, ...session.actions, ...project.actions];
     return {
-      generated_at: (this.deps.now ?? (() => new Date()))().toISOString(),
+      generated_at: generatedAt,
       overall_state: aggregateOverall([installation.section.state, session.section.state, project.section.state]),
       project: { key: resolved.project.key, name: resolved.project.config.name ?? resolved.project.key, repo_paths: resolved.project.config.repo_paths ?? [], resolved_from: resolved.from },
       installation: installation.section,
       session_memory: session.section,
       project_memory: project.section,
+      session_continuity: sessionContinuity,
       warnings,
       actions,
       evidence: evidence.all(),
@@ -70,7 +98,11 @@ export class StatusService {
     session: Awaited<ReturnType<typeof inspectSessionMemory>>,
     project: Awaited<ReturnType<typeof inspectProjectMemory>>,
   ): Promise<void> {
-    const cache = new Map<string, { available: boolean; reason?: string }>();
+    const cache = new Map<string, {
+      available: boolean;
+      state?: "unreachable" | "unavailable";
+      reason?: string;
+    }>();
     for (const [sectionName, inspection] of [
       ["session_memory", session],
       ["project_memory", project],
@@ -81,7 +113,7 @@ export class StatusService {
       let availability = cache.get(key);
       if (!availability) {
         try {
-          await new EmbeddingProviderFactory(config).initializeContract({
+          await (this.deps.createEmbeddingFactory?.(config) ?? new EmbeddingProviderFactory(config)).initializeContract({
             provider: contract.provider as "ollama_nomic" | "ollama_qwen" | "gemini",
             model: contract.model,
             dimensions: contract.dimensions,
@@ -90,16 +122,30 @@ export class StatusService {
           });
           availability = { available: true };
         } catch (error) {
-          availability = { available: false, reason: errorMessage(error) };
+          availability = {
+            available: false,
+            state: embeddingProviderFailureKind(error) === "unreachable" ? "unreachable" : "unavailable",
+            reason: errorMessage(error),
+          };
         }
         cache.set(key, availability);
       }
-      inspection.section.retrieval.provider_state = availability.available ? "available" : "unavailable";
+      inspection.section.retrieval.provider_state = availability.available
+        ? "available"
+        : availability.state ?? "unavailable";
+      if (sectionName === "session_memory") {
+        inspection.section.smc = withSMCProviderState(
+          inspection.section.smc!,
+          inspection.section.retrieval.provider_state,
+        );
+      }
       if (!availability.available) {
         inspection.section.state = maxState(inspection.section.state, "attention");
-        inspection.section.lifecycle = "provider_unavailable";
+        const unreachable = availability.state === "unreachable";
         inspection.warnings.push(warning(
-          sectionName === "session_memory" ? "SESSION_EMBEDDING_PROVIDER_UNAVAILABLE" : "PROJECT_EMBEDDING_PROVIDER_UNAVAILABLE",
+          sectionName === "session_memory"
+            ? unreachable ? "SESSION_EMBEDDING_PROVIDER_UNREACHABLE" : "SESSION_EMBEDDING_PROVIDER_UNAVAILABLE"
+            : unreachable ? "PROJECT_EMBEDDING_PROVIDER_UNREACHABLE" : "PROJECT_EMBEDDING_PROVIDER_UNAVAILABLE",
           "attention",
           sectionName,
           availability.reason ?? "The active embedding provider is unavailable.",
@@ -135,6 +181,33 @@ function unavailableSession(key: string, evidenceId: string): SessionMemoryStatu
     ingest: { running_jobs: 0, failed_jobs: 0, terminal_tombstones: 0, latest_log_path: null },
     maintenance: { enabled: false, lifecycle: "unknown", lock: { lifecycle: "absent", path: `state/${key}/.auto-memory-maintenance.lock`, run_id: null, pid: null }, last_run_id: null, last_log_path: null },
     retrieval: { active_contract: null, desired_contract: null, migration_required: false, provider_state: "not_checked", indexed_count: 0, pending_count: 0, failed_count: 0, historical: { contract_count: 0, row_count: 0 } },
+    smc: unavailableSMCStatus(key),
+  };
+}
+
+function unavailableSMCStatus(key: string): SMCStatusV1 {
+  return {
+    contract_version: "myelin.smc.status.v1",
+    kind: "session_memory_curator_status",
+    generated_at: new Date(0).toISOString(),
+    project_key: key,
+    authority_mode: "legacy_compatibility",
+    queued_content: { count: 0, oldest_inserted_at: null, oldest_age_ms: null },
+    current_anchor: null,
+    project_fence: null,
+    global_embedding_fence: null,
+    freshness: { state: "blocked", last_completed_at: null, queued_content_count: 0 },
+    audit_coverage: { active_revision_count: 0, covered_revision_count: 0, due_revision_count: 0 },
+    indexing: {
+      state: "unavailable",
+      active_memory_count: 0,
+      indexed_count: 0,
+      pending_count: 0,
+      failed_count: 0,
+      provider_state: "not_checked",
+    },
+    legacy: { permanently_denied_job_count: 0 },
+    reason_codes: ["smc_authority_not_activated"],
   };
 }
 

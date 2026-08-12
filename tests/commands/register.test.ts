@@ -28,6 +28,7 @@ test("central bootstrap registers the complete command surface without mutating 
     "project list",
     "schema check",
     "session start",
+    "smc status",
     "status",
     "uninstall",
   ]) {
@@ -67,10 +68,11 @@ test("central bootstrap forwards the exact context object to every command regis
     project: spy,
     session: spy,
     schema: spy,
+    smc: spy,
   };
 
   registerCommands(createCli("myelin"), context, registrars);
 
-  expect(seen).toHaveLength(10);
+  expect(seen).toHaveLength(11);
   expect(seen.every((received) => received === context)).toBe(true);
 });

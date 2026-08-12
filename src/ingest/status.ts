@@ -4,13 +4,15 @@ import {
   type IngestCompletionLayer,
 } from "../memory/ingest-types.ts";
 import {
-  countExperienceEvents,
-  countLeasedExperienceEvents,
-  countUnleasedExperienceEvents,
+  countExperienceContentEvents,
+  countLeasedExperienceContentEvents,
+  countUnleasedExperienceContentEvents,
 } from "../memory/experience.ts";
+import { readSessionMemoryMutationAuthorityMode } from "../memory/project-session-mutation-fence.ts";
 
 export type IngestProjectStatus = {
   project_key: string;
+  authority_mode?: "legacy_compatibility" | "smc_v1";
   completion_layer: IngestCompletionLayer;
   completion_label: string;
   counts: {
@@ -18,6 +20,8 @@ export type IngestProjectStatus = {
     unleased_events: number;
     leased_events: number;
     running_jobs: number;
+    needs_followup_jobs?: number;
+    quarantined_legacy_jobs?: number;
     failed_jobs: number;
     terminal_tombstones: number;
     session_memories: number;
@@ -41,17 +45,28 @@ export function ingestCompletionLabel(layer: IngestCompletionLayer): string {
 }
 
 export function readIngestProjectStatus(db: Database, projectKey: string): IngestProjectStatus {
-  const activeEvents = countExperienceEvents(db, projectKey);
-  const unleasedEvents = countUnleasedExperienceEvents(db, projectKey);
-  const leasedEvents = countLeasedExperienceEvents(db, projectKey);
-  const runningJobs = scalarCount(
+  const authorityMode = readSessionMemoryMutationAuthorityMode(db);
+  const activeEvents = countExperienceContentEvents(db, projectKey);
+  const unleasedEvents = countUnleasedExperienceContentEvents(db, projectKey);
+  const leasedEvents = countLeasedExperienceContentEvents(db, projectKey);
+  const runningJobs = authorityMode === "smc_v1"
+    ? scalarCount(db, `SELECT count(*) AS count FROM session_memory_anchor_jobs
+       WHERE project_key = ? AND phase IN ('preparing', 'running', 'finalizing')`, projectKey)
+    : scalarCount(db, "SELECT count(*) AS count FROM ingest_jobs WHERE project_key = ? AND status = 'running'", projectKey);
+  const needsFollowupJobs = authorityMode === "smc_v1"
+    ? scalarCount(db, "SELECT count(*) AS count FROM session_memory_anchor_jobs WHERE project_key = ? AND phase = 'needs_followup'", projectKey)
+    : scalarCount(db, "SELECT count(*) AS count FROM ingest_jobs WHERE project_key = ? AND status = 'needs_followup'", projectKey);
+  const quarantinedLegacyJobs = scalarCount(
     db,
-    "SELECT count(*) AS count FROM ingest_jobs WHERE project_key = ? AND status = 'running'",
+    `SELECT count(*) AS count FROM session_memory_anchor_jobs
+     WHERE project_key = ? AND phase = 'needs_followup' AND reason_code = 'legacy_state_missing_smc_manifest'`,
     projectKey,
   );
   const failedJobs = scalarCount(
     db,
-    "SELECT count(*) AS count FROM ingest_jobs WHERE project_key = ? AND status = 'failed'",
+    `SELECT count(*) AS count FROM ingest_jobs j
+     WHERE j.project_key = ? AND j.status = 'failed'
+       AND NOT EXISTS (SELECT 1 FROM session_memory_anchor_jobs a WHERE a.job_id = j.id)`,
     projectKey,
   );
   const terminalTombstones = scalarCount(
@@ -93,7 +108,7 @@ export function readIngestProjectStatus(db: Database, projectKey: string): Inges
 
   const outputCount = sessionMemories + memoryCandidates + projectHandoffs + practiceHandoffs + personalHandoffs;
   const completionLayer =
-    activeEvents > 0 || leasedEvents > 0 || runningJobs > 0
+    activeEvents > 0 || leasedEvents > 0 || runningJobs > 0 || needsFollowupJobs > 0
       ? INGEST_COMPLETION_LAYERS.EXPERIENCE_LOG_DRAIN_PENDING
       : outputCount === 0
         ? INGEST_COMPLETION_LAYERS.EXPERIENCE_LOG_DRAIN_COMPLETE
@@ -103,11 +118,14 @@ export function readIngestProjectStatus(db: Database, projectKey: string): Inges
 
   return {
     project_key: projectKey,
+    authority_mode: authorityMode,
     completion_layer: completionLayer,
     completion_label: ingestProjectStatusLabel(completionLayer, {
       activeEvents,
       leasedEvents,
       runningJobs,
+      needsFollowupJobs,
+      quarantinedLegacyJobs,
       failedJobs,
     }),
     counts: {
@@ -115,6 +133,8 @@ export function readIngestProjectStatus(db: Database, projectKey: string): Inges
       unleased_events: unleasedEvents,
       leased_events: leasedEvents,
       running_jobs: runningJobs,
+      needs_followup_jobs: needsFollowupJobs,
+      quarantined_legacy_jobs: quarantinedLegacyJobs,
       failed_jobs: failedJobs,
       terminal_tombstones: terminalTombstones,
       session_memories: sessionMemories,
@@ -127,10 +147,19 @@ export function readIngestProjectStatus(db: Database, projectKey: string): Inges
 
 function ingestProjectStatusLabel(
   layer: IngestCompletionLayer,
-  counts: { activeEvents: number; leasedEvents: number; runningJobs: number; failedJobs: number },
+  counts: {
+    activeEvents: number;
+    leasedEvents: number;
+    runningJobs: number;
+    needsFollowupJobs: number;
+    quarantinedLegacyJobs: number;
+    failedJobs: number;
+  },
 ): string {
   if (layer !== INGEST_COMPLETION_LAYERS.EXPERIENCE_LOG_DRAIN_PENDING) return ingestCompletionLabel(layer);
   if (counts.runningJobs > 0) return "Experience Log drain running";
+  if (counts.quarantinedLegacyJobs > 0) return "Legacy Session Memory follow-up required";
+  if (counts.needsFollowupJobs > 0) return "Session Memory follow-up required";
   if (counts.failedJobs > 0 && counts.leasedEvents > 0) return "Experience Log retry pending";
   if (counts.activeEvents > 0) return "Experience Log ingest pending";
   return ingestCompletionLabel(layer);

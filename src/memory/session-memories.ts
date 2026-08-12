@@ -4,7 +4,23 @@ import {
   type ActiveEmbeddingContract,
 } from "../runtime/config.ts";
 import type { SessionMemoryKind, SessionMemoryRow } from "./ingest-types.ts";
+import {
+  assertProjectSessionMutationAuthority,
+  type ProjectSessionMutationAuthority,
+} from "./project-session-mutation-fence.ts";
 import { ensurePendingSessionMemoryEmbedding } from "./session-memory-embeddings.ts";
+import {
+  advanceSessionMemoryRevisionInOpenTransaction,
+  assertSessionMemoryRevisionTransaction,
+  canonicalizeJson,
+  createSessionMemoryCanonicalState,
+  createSessionMemoryRevisionMutation,
+  markSessionMemoryChanged,
+  markSessionMemoryCreated,
+  sessionMemoryCanonicalStateDigest,
+  type SessionMemoryRevisionMutation,
+} from "./session-memory-revisions.ts";
+import { withProjectSessionCanonicalWriteAdmission } from "./session-memory-write-firewall.ts";
 
 export type CreateSessionMemoryInput = {
   id: string;
@@ -23,13 +39,35 @@ export type CreateSessionMemoryInput = {
   embedding_contract?: ActiveEmbeddingContract | null;
 };
 
-export function createSessionMemory(db: Database, input: CreateSessionMemoryInput): SessionMemoryRow {
-  const create = db.transaction(() => {
+export function createSessionMemory(
+  db: Database,
+  input: CreateSessionMemoryInput,
+  authority: ProjectSessionMutationAuthority,
+  revisionMutation?: SessionMemoryRevisionMutation,
+): SessionMemoryRow {
+  const payload = canonicalizeJson(input.payload);
+  const initialDigest = sessionMemoryCanonicalStateDigest(createSessionMemoryCanonicalState({
+    memory_kind: input.memory_kind,
+    title: input.title ?? null,
+    summary: input.summary,
+    payload,
+    confidence: input.confidence,
+    risk: input.risk,
+    provider: input.provider ?? null,
+    provider_session_id: input.provider_session_id ?? null,
+    ingest_job_id: input.ingest_job_id ?? null,
+    source_event_refs: input.source_event_refs,
+  }));
+  const mutation = revisionMutation ?? createSessionMemoryRevisionMutation();
+  if (revisionMutation) assertSessionMemoryRevisionTransaction(db);
+  const write = (): void => {
+    assertProjectSessionMutationAuthority(db, authority, input.project_key);
     db.query(
       `INSERT INTO session_memories
         (id, project_key, provider, provider_session_id, ingest_job_id, source_event_refs_json,
-         memory_kind, title, summary, payload_json, confidence, risk, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
+         memory_kind, title, summary, payload_json, confidence, risk, status, revision, state_digest,
+         created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1, ?, ?, ?)`,
     ).run(
       input.id,
       input.project_key,
@@ -40,12 +78,14 @@ export function createSessionMemory(db: Database, input: CreateSessionMemoryInpu
       input.memory_kind,
       input.title ?? null,
       input.summary,
-      JSON.stringify(input.payload),
+      JSON.stringify(payload),
       input.confidence,
       input.risk,
+      initialDigest,
       input.now,
       input.now,
     );
+    markSessionMemoryCreated(mutation, input.id);
 
     const embeddingContract =
       input.embedding_contract === undefined ? DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT : input.embedding_contract;
@@ -57,8 +97,16 @@ export function createSessionMemory(db: Database, input: CreateSessionMemoryInpu
         now: input.now,
       });
     }
-  });
-  create();
+  };
+  const admittedWrite = (): void => withProjectSessionCanonicalWriteAdmission(db, input.project_key, authority, write);
+  if (revisionMutation) {
+    admittedWrite();
+  } else {
+    db.transaction(() => {
+      admittedWrite();
+      advanceSessionMemoryRevisionInOpenTransaction(db, mutation, authority);
+    })();
+  }
 
   return db.query("SELECT * FROM session_memories WHERE id = ?").get(input.id) as SessionMemoryRow;
 }
@@ -78,18 +126,36 @@ export function getActiveSessionMemory(db: Database, input: { id: string; projec
 export function supersedeSessionMemory(
   db: Database,
   input: { id: string; projectKey: string; supersededBy: string; reason: string; now: string },
+  authority: ProjectSessionMutationAuthority,
+  revisionMutation?: SessionMemoryRevisionMutation,
 ): SessionMemoryRow {
-  db.query(
-    `UPDATE session_memories
-     SET status = 'superseded',
-         superseded_by = ?,
-         lifecycle_reason = ?,
-         superseded_at = ?,
-         updated_at = ?
-     WHERE id = ?
-       AND project_key = ?
-       AND status = 'active'`,
-  ).run(input.supersededBy, input.reason, input.now, input.now, input.id, input.projectKey);
+  const mutation = revisionMutation ?? createSessionMemoryRevisionMutation();
+  if (revisionMutation) assertSessionMemoryRevisionTransaction(db);
+  const write = (): void => {
+    assertProjectSessionMutationAuthority(db, authority, input.projectKey);
+    const result = db.query(
+      `UPDATE session_memories
+       SET status = 'superseded',
+           superseded_by = ?,
+           lifecycle_reason = ?,
+           superseded_at = ?,
+           updated_at = ?
+       WHERE id = ?
+         AND project_key = ?
+         AND status = 'active'`,
+    ).run(input.supersededBy, input.reason, input.now, input.now, input.id, input.projectKey);
+    if (result.changes !== 1) throw new Error(`Active session memory not found for supersession: ${input.id}`);
+    markSessionMemoryChanged(mutation, input.id);
+  };
+  const admittedWrite = (): void => withProjectSessionCanonicalWriteAdmission(db, input.projectKey, authority, write);
+  if (revisionMutation) {
+    admittedWrite();
+  } else {
+    db.transaction(() => {
+      admittedWrite();
+      advanceSessionMemoryRevisionInOpenTransaction(db, mutation, authority);
+    })();
+  }
   const row = db.query("SELECT * FROM session_memories WHERE id = ? AND project_key = ?").get(input.id, input.projectKey) as
     | SessionMemoryRow
     | null;
@@ -100,17 +166,35 @@ export function supersedeSessionMemory(
 export function retractSessionMemory(
   db: Database,
   input: { id: string; projectKey: string; reason: string; now: string },
+  authority: ProjectSessionMutationAuthority,
+  revisionMutation?: SessionMemoryRevisionMutation,
 ): SessionMemoryRow {
-  db.query(
-    `UPDATE session_memories
-     SET status = 'retracted',
-         lifecycle_reason = ?,
-         retracted_at = ?,
-         updated_at = ?
-     WHERE id = ?
-       AND project_key = ?
-       AND status = 'active'`,
-  ).run(input.reason, input.now, input.now, input.id, input.projectKey);
+  const mutation = revisionMutation ?? createSessionMemoryRevisionMutation();
+  if (revisionMutation) assertSessionMemoryRevisionTransaction(db);
+  const write = (): void => {
+    assertProjectSessionMutationAuthority(db, authority, input.projectKey);
+    const result = db.query(
+      `UPDATE session_memories
+       SET status = 'retracted',
+           lifecycle_reason = ?,
+           retracted_at = ?,
+           updated_at = ?
+       WHERE id = ?
+         AND project_key = ?
+         AND status = 'active'`,
+    ).run(input.reason, input.now, input.now, input.id, input.projectKey);
+    if (result.changes !== 1) throw new Error(`Active session memory not found for retraction: ${input.id}`);
+    markSessionMemoryChanged(mutation, input.id);
+  };
+  const admittedWrite = (): void => withProjectSessionCanonicalWriteAdmission(db, input.projectKey, authority, write);
+  if (revisionMutation) {
+    admittedWrite();
+  } else {
+    db.transaction(() => {
+      admittedWrite();
+      advanceSessionMemoryRevisionInOpenTransaction(db, mutation, authority);
+    })();
+  }
   const row = db.query("SELECT * FROM session_memories WHERE id = ? AND project_key = ?").get(input.id, input.projectKey) as
     | SessionMemoryRow
     | null;

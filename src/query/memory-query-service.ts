@@ -10,6 +10,7 @@ import {
 import type { ProjectMemoryQueryMatch, ProjectMemoryQueryResult } from "./project-memory-query-types.ts";
 import type { ActiveEmbeddingContract } from "../runtime/config.ts";
 import { attachMemoryQueryLogResponse } from "../memory/query-logs.ts";
+import { embeddingProviderFailureCode } from "../memory/embedding-provider-errors.ts";
 import type {
   MemoryQueryInput,
   QueryLayerDiagnostic,
@@ -61,7 +62,11 @@ export class MemoryQueryService {
       this.attachResponseLog("session", result.query_log_id, response);
       return response;
     } catch (error) {
-      return responseService.degraded(error instanceof Error ? error.message : String(error));
+      return responseService.degraded(
+        error instanceof Error ? error.message : String(error),
+        "session_memory",
+        embeddingProviderFailureCode(error),
+      );
     }
   }
 
@@ -84,7 +89,11 @@ export class MemoryQueryService {
       this.attachResponseLog("project", result.query_log_id, response);
       return response;
     } catch (error) {
-      return responseService.degraded(error instanceof Error ? error.message : String(error), "project_memory");
+      return responseService.degraded(
+        error instanceof Error ? error.message : String(error),
+        "project_memory",
+        embeddingProviderFailureCode(error),
+      );
     }
   }
 
@@ -113,6 +122,7 @@ export class DeterministicMemoryQueryResponseService {
       matches: result.matches,
       project_memory_matches: [],
     };
+    if (result.degraded_code) response.degraded_code = result.degraded_code;
     if (input.includeRoute) response.layers = [this.sessionMemoryDiagnostic(result)];
     return response;
   }
@@ -130,11 +140,16 @@ export class DeterministicMemoryQueryResponseService {
       matches: [],
       project_memory_matches: result.matches,
     };
+    if (result.degraded_code) response.degraded_code = result.degraded_code;
     if (input.includeRoute) response.layers = [this.projectMemoryDiagnostic(result)];
     return response;
   }
 
-  degraded(reason: string, layer: "session_memory" | "project_memory" = "session_memory"): QueryResponse {
+  degraded(
+    reason: string,
+    layer: "session_memory" | "project_memory" = "session_memory",
+    code?: QueryResponse["degraded_code"],
+  ): QueryResponse {
     return {
       answer: reason,
       confidence: 0,
@@ -146,6 +161,7 @@ export class DeterministicMemoryQueryResponseService {
       source_tools: [layer === "project_memory" ? "project-memory-vector-index" : "session-memory-vector-index"],
       matches: [],
       project_memory_matches: [],
+      ...(code ? { degraded_code: code } : {}),
     };
   }
 
@@ -209,6 +225,7 @@ export class DeterministicMemoryQueryResponseService {
       query_log_id: result.query_log_id ?? null,
       degraded: result.degraded,
       degraded_reason: result.degraded_reason ?? null,
+      ...(result.degraded_code ? { degraded_code: result.degraded_code } : {}),
       indexed_count: result.indexed_count,
       pending_count: result.pending_count,
       match_count: result.matches.length,
@@ -224,6 +241,7 @@ export class DeterministicMemoryQueryResponseService {
       query_log_id: result.query_log_id ?? null,
       degraded: result.degraded,
       degraded_reason: result.degraded_reason ?? null,
+      ...(result.degraded_code ? { degraded_code: result.degraded_code } : {}),
       indexed_count: result.indexed_count,
       pending_count: result.pending_count,
       match_count: result.matches.length,

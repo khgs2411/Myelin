@@ -20,6 +20,23 @@ export function normalizeSessionMemoryForEmbedding(input: SessionMemoryTextInput
   return lines.join("\n");
 }
 
+export function sessionMemoryNormalizedTextHash(normalizedText: string): string {
+  return createHash("sha256").update(normalizedText, "utf8").digest("hex");
+}
+
+export function normalizeSessionMemorySearchQuery(value: string): string {
+  return value.normalize("NFKC").trim().replace(/\s+/gu, " ").toLocaleLowerCase("en-US");
+}
+
+export function sessionMemorySearchTokens(value: string): string[] {
+  return [...new Set(
+    normalizeSessionMemorySearchQuery(value)
+      .split(/[^\p{L}\p{N}_./:-]+/u)
+      .map((token) => token.trim())
+      .filter(Boolean),
+  )].sort();
+}
+
 function safePayloadScalars(payloadJson: string): Array<[string, string]> {
   let payload: unknown;
   try {
@@ -47,3 +64,4 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isScalar(value: unknown): value is string | number | boolean {
   return typeof value === "string" || typeof value === "number" || typeof value === "boolean";
 }
+import { createHash } from "node:crypto";

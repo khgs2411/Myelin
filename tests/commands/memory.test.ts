@@ -9,11 +9,15 @@ import {
 } from "../../src/commands/memory.ts";
 import { createRuntimeInboxItem } from "../../src/inbox/runtime-inbox-items.ts";
 import { createMemoryCandidate, getMemoryCandidate, listMemoryCandidates } from "../../src/memory/candidates.ts";
-import { createSessionMemoryContexts } from "../../src/memory/session-memory-contexts.ts";
-import { createSessionMemoryLink } from "../../src/memory/session-memory-links.ts";
-import { createSessionMemory, supersedeSessionMemory } from "../../src/memory/session-memories.ts";
+import {
+  createSessionMemory,
+  createSessionMemoryContexts,
+  createSessionMemoryLink,
+  supersedeSessionMemory,
+} from "../helpers/session-mutation-authority.ts";
 import { openMemoryDb } from "../../src/memory/db.ts";
 import { registerInitialActiveEmbeddingContract } from "../../src/memory/embedding-contract-store.ts";
+import { acquireProjectSessionMutationFence } from "../../src/memory/project-session-mutation-fence.ts";
 import type { EmbeddingRequest } from "../../src/memory/embedding-types.ts";
 import { stubEmbeddingFilename } from "../../src/memory/providers/stub-embedding-provider.ts";
 import { normalizeQueryQuestion } from "../../src/memory/query-embedding-cache.ts";
@@ -110,12 +114,84 @@ test("memory embedding lifecycle commands are preview-first", async () => {
   const migration = await cli.run(["memory", "embeddings", "migrate", "--json"]);
   expect(migration.exitCode).toBe(0);
   expect(JSON.parse(migration.message)).toMatchObject({
+    contract_version: "myelin.memory.embedding-lifecycle.v1",
     mode: "preview",
     scopes: [{ scope: "session_memory", action: "none" }, { scope: "project_memory", action: "none" }],
   });
   const prune = await cli.run(["memory", "embeddings", "prune", "--json"]);
   expect(JSON.parse(prune.message)).toMatchObject({ mode: "preview", candidates: [] });
   expect((await cli.run(["memory", "embeddings", "rollback", "--apply", "--unknown"])).exitCode).toBe(1);
+  const malformed = await cli.run(["memory", "embeddings", "rollback", "--apply", "--unknown", "--json"]);
+  expect(malformed.exitCode).toBe(1);
+  expect(JSON.parse(malformed.message)).toMatchObject({
+    contract_version: "myelin.memory.embedding-lifecycle.v1",
+    ok: false,
+    reason_code: "embedding_lifecycle_invalid_arguments",
+  });
+});
+
+test("memory embedding lifecycle JSON wraps invalid provider configuration in a stable envelope", async () => {
+  const previousProvider = process.env.EMBEDDING_PROVIDER;
+  process.env.EMBEDDING_PROVIDER = "definitely_invalid";
+  try {
+    const cli = createCli("myelin");
+    registerMemoryCommands(cli);
+
+    const result = await cli.run(["memory", "embeddings", "migrate", "--json"]);
+    expect(result.exitCode).toBe(1);
+    expect(JSON.parse(result.message)).toMatchObject({
+      contract_version: "myelin.memory.embedding-lifecycle.v1",
+      ok: false,
+      kind: "embedding_lifecycle_failure",
+      reason_code: "embedding_lifecycle_internal_error",
+      failure_code: "embedding_lifecycle_internal_error",
+    });
+  } finally {
+    if (previousProvider === undefined) delete process.env.EMBEDDING_PROVIDER;
+    else process.env.EMBEDDING_PROVIDER = previousProvider;
+  }
+});
+
+test("memory embedding lifecycle commands surface typed Session conflicts", async () => {
+  await writeFile(join(root, "myelin.config"), "EMBEDDING_PROVIDER=ollama_qwen\n");
+  const db = openMemoryDb(root);
+  try {
+    for (const scope of ["session_memory", "project_memory"] as const) {
+      registerInitialActiveEmbeddingContract(db, {
+        scope,
+        contract: {
+          provider: "ollama_nomic",
+          model: "nomic-embed-text:v1.5",
+          dimensions: 768,
+          formatVersion: 1,
+        },
+      });
+    }
+    db.query(
+      "UPDATE session_memory_mutation_authority SET mode = 'smc_v1', updated_at = ? WHERE singleton_id = 1",
+    ).run("2026-08-11T09:59:00.000Z");
+    expect(acquireProjectSessionMutationFence(db, {
+      projectKey: "demo",
+      ownerId: "job-active",
+      ownerKind: "anchor_job",
+      phase: "running",
+      now: "2026-08-11T10:00:00.000Z",
+    }).kind).toBe("acquired");
+  } finally {
+    db.close();
+  }
+
+  const cli = createCli("myelin");
+  registerMemoryCommands(cli);
+  const response = await cli.run(["memory", "embeddings", "migrate", "--apply", "--json"]);
+  expect(response.exitCode).toBe(1);
+  expect(JSON.parse(response.message)).toMatchObject({
+    contract_version: "myelin.memory.embedding-lifecycle.v1",
+    kind: "session_embedding_lifecycle_conflict",
+    reason_code: "session_memory_project_busy",
+    failure_code: "session_memory_project_busy",
+    owner: { project_key: "demo", owner_id: "job-active" },
+  });
 });
 
 test("memory query reuses cached question embeddings", async () => {

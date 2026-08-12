@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT } from "../../src/runtime/config.ts";
 import { openMemoryDbAt, type MemoryDb } from "../../src/memory/db.ts";
-import { createSessionMemory, listSessionMemories } from "../../src/memory/session-memories.ts";
+import { listSessionMemories } from "../../src/memory/session-memories.ts";
+import { createSessionMemory } from "../helpers/session-mutation-authority.ts";
 import { sessionMemoryEmbeddingId } from "../../src/memory/session-memory-embeddings.ts";
+import { createIngestJob, updateIngestJobStatus } from "../../src/ingest/jobs.ts";
 
 let db: MemoryDb;
 
@@ -15,11 +17,19 @@ afterEach(() => {
 });
 
 test("creates trusted session memory separate from manual session tables", () => {
-  db.query(
-    `INSERT INTO ingest_jobs
-      (id, project_key, status, provider, input_json, output_counts_json, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run("job_1", "class-kit", "running", "codex", "{}", "{}", "2026-06-13T09:59:00.000Z", "2026-06-13T09:59:00.000Z");
+  createIngestJob(db, {
+    id: "job_1",
+    project_key: "class-kit",
+    provider: "codex",
+    input: {},
+    now: "2026-06-13T09:59:00.000Z",
+  });
+  updateIngestJobStatus(db, {
+    id: "job_1",
+    status: "running",
+    started_at: "2026-06-13T09:59:00.000Z",
+    updated_at: "2026-06-13T09:59:00.000Z",
+  });
 
   const row = createSessionMemory(db, {
     id: "mem_1",
@@ -38,6 +48,8 @@ test("creates trusted session memory separate from manual session tables", () =>
   expect(row.id).toBe("mem_1");
   expect(row.provider).toBe("codex");
   expect(row.ingest_job_id).toBe("job_1");
+  expect(row.revision).toBe(1);
+  expect(row.state_digest).toMatch(/^sha256:[0-9a-f]{64}$/);
   expect(JSON.parse(row.source_event_refs_json)).toEqual(["tomb_1"]);
   expect(listSessionMemories(db, "class-kit").map((item) => item.id)).toEqual(["mem_1"]);
 

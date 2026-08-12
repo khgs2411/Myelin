@@ -7,7 +7,7 @@ import { openMemoryDbAt } from "../../src/memory/db.ts";
 import { stubEmbeddingFilename } from "../../src/memory/providers/stub-embedding-provider.ts";
 import { recordExperienceEvent } from "../../src/memory/experience.ts";
 import { INGEST_COMPLETION_LAYERS, type IngestJobRow } from "../../src/memory/ingest-types.ts";
-import { createSessionMemory } from "../../src/memory/session-memories.ts";
+import { createSessionMemory } from "../helpers/session-mutation-authority.ts";
 import { normalizeSessionMemoryForEmbedding } from "../../src/memory/session-memory-text.ts";
 import type { DetachedSpawner } from "../../src/ingest/runtime.ts";
 import { bootstrapProject } from "../../src/runtime/bootstrap.ts";
@@ -98,7 +98,7 @@ test("auto memory maintenance skips below threshold without starting cooldown", 
   seedExperienceEvents(1, 2);
   const scheduled = await service.maybeSchedule("demo");
 
-  expect(skipped).toMatchObject({ status: "skipped", reason: "below captured event threshold" });
+  expect(skipped).toMatchObject({ status: "skipped", reason: "no eligible Session Memory work" });
   expect(scheduled.status).toBe("scheduled");
   expect(spawned).toHaveLength(1);
 });
@@ -162,7 +162,7 @@ test("SessionStart can force maintenance below the threshold and through cooldow
   const result = await service.maybeSchedule("demo", { forceIngest: true });
 
   expect(result).toMatchObject({ status: "scheduled", queued_count: 1 });
-  expect(spawned[0].env.MYELIN_AUTO_MEMORY_FORCE_INGEST).toBe("1");
+  expect(spawned[0].env.MYELIN_SESSION_MAINTENANCE_WAKE_KIND).toBe("session_start");
 });
 
 test("auto memory maintenance lock prevents duplicate scheduling", async () => {
@@ -244,7 +244,7 @@ test("auto memory maintenance run records completed state when no work remains",
     last_run_id: "auto_memory_test",
     last_status: "completed",
     last_check_status: "skipped",
-    last_check_reason: "below captured event threshold",
+    last_check_reason: "no eligible Session Memory work",
   });
 });
 
@@ -258,6 +258,10 @@ test("auto memory maintenance keeps SQLite open until asynchronous indexing comp
   ]);
   const dbPath = join(root, "state", "memory", "memory.db");
   const db = openMemoryDbAt(dbPath);
+  registerInitialActiveEmbeddingContract(db, {
+    scope: "session_memory",
+    contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+  });
   const memory = createSessionMemory(db, {
     id: "mem_pending",
     project_key: "demo",
@@ -296,7 +300,7 @@ test("auto memory maintenance keeps SQLite open until asynchronous indexing comp
   verificationDb.close();
 });
 
-test("auto memory maintenance runs one bounded drain window and schedules continuation above threshold", async () => {
+test("auto memory maintenance starts one durable anchor without polling or continuation", async () => {
   await writeConfig([
     "AUTO_MEMORY_MAINTENANCE=1",
     "AUTO_MEMORY_MIN_CAPTURED_EVENTS=2",
@@ -306,7 +310,7 @@ test("auto memory maintenance runs one bounded drain window and schedules contin
   ]);
   seedExperienceEvents(10);
 
-  const starts: Array<{ limit?: number; batchSize?: number }> = [];
+  const starts: Array<{ limit?: number; evidenceChunkSize?: number }> = [];
   const indexCalls: Array<{ projectKey: string; limit: number; batchSize: number; retryFailed: boolean }> = [];
   const spawned: Array<Parameters<DetachedSpawner>[0]> = [];
   let statusReads = 0;
@@ -316,18 +320,17 @@ test("auto memory maintenance runs one bounded drain window and schedules contin
     sleep: async () => {},
     ingestService: {
       async start(input) {
-        starts.push({ limit: input.limit, batchSize: input.batchSize });
+        starts.push({ limit: input.limit, evidenceChunkSize: input.evidenceChunkSize });
         return {
           kind: "started",
           project_key: input.projectKey,
           queued_count: 10,
           reconciled_count: 0,
           selected_count: input.limit ?? 10,
-          batch_size: input.batchSize ?? 4,
-          batch_count: 1,
+          evidence_chunk_size: input.evidenceChunkSize ?? 4,
           target_branch: "master",
           job: fakeIngestJob(),
-          jobs: [],
+          workload: { evidence_count: input.limit ?? 10, audit_count: 0 },
           launches: [],
         };
       },
@@ -353,31 +356,22 @@ test("auto memory maintenance runs one bounded drain window and schedules contin
   expect(result).toMatchObject({
     status: "completed",
     ingest_started: true,
-    indexed: 3,
-    queued_remaining: 4,
-    rescheduled: true,
+    indexed: 0,
+    queued_remaining: 10,
+    rescheduled: false,
   });
-  expect(starts).toEqual([{ limit: 4, batchSize: 4 }]);
-  expect(indexCalls).toEqual([{ projectKey: "demo", limit: 500, batchSize: 50, retryFailed: false }]);
-  expect(spawned).toHaveLength(1);
-  expect(spawned[0].cmd).toEqual([
-    process.execPath,
-    join(root, "src", "cli.ts"),
-    "maintenance",
-    "worker",
-    "session",
-    "demo",
-  ]);
-  expect(spawned[0].cwd).toBe(repo);
+  expect(starts).toEqual([{ limit: undefined, evidenceChunkSize: undefined }]);
+  expect(statusReads).toBe(0);
+  expect(indexCalls).toEqual([]);
+  expect(spawned).toHaveLength(0);
   await expect(readState(root, "demo")).resolves.toMatchObject({
     project_key: "demo",
-    last_status: "scheduled",
-    last_pid: 4321,
-    last_counts: { queued_count: 4 },
+    last_status: "completed",
+    last_counts: { queued_count: 10, queued_remaining: 10, rescheduled: false },
   });
 });
 
-test("auto memory maintenance stops instead of rescheduling when ingest makes no queue progress", async () => {
+test("auto memory maintenance does not infer failure from an asynchronously owned queue", async () => {
   await writeConfig([
     "AUTO_MEMORY_MAINTENANCE=1",
     "AUTO_MEMORY_MIN_CAPTURED_EVENTS=2",
@@ -397,11 +391,10 @@ test("auto memory maintenance stops instead of rescheduling when ingest makes no
           queued_count: 4,
           reconciled_count: 0,
           selected_count: 4,
-          batch_size: 4,
-          batch_count: 1,
+          evidence_chunk_size: 4,
           target_branch: "master",
           job: fakeIngestJob(),
-          jobs: [],
+          workload: { evidence_count: 4, audit_count: 0 },
           launches: [],
         };
       },
@@ -419,16 +412,14 @@ test("auto memory maintenance stops instead of rescheduling when ingest makes no
   }).run("demo", "auto_memory_no_progress");
 
   expect(result).toMatchObject({
-    status: "failed",
+    status: "completed",
     ingest_started: true,
     queued_remaining: 4,
     rescheduled: false,
-    error_message: "Auto memory maintenance made no queue progress for demo: 4 before, 4 after",
   });
   expect(spawned).toHaveLength(0);
   await expect(readState(root, "demo")).resolves.toMatchObject({
-    last_status: "failed",
-    last_reason: "Auto memory maintenance made no queue progress for demo: 4 before, 4 after",
+    last_status: "completed",
     last_counts: { queued_count: 4, queued_remaining: 4, rescheduled: false },
   });
 });
@@ -442,27 +433,23 @@ test("forced SessionStart worker ingests a below-threshold queue", async () => {
   ]);
   seedExperienceEvents(1);
   let starts = 0;
-  process.env.MYELIN_AUTO_MEMORY_FORCE_INGEST = "1";
+  process.env.MYELIN_SESSION_MAINTENANCE_WAKE_KIND = "session_start";
   try {
     const result = await new AutoMemoryMaintenanceService(root, {
       sleep: async () => {},
       ingestService: {
         async start(input) {
           starts += 1;
-          const db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
-          db.query("DELETE FROM experience_events WHERE project_key = ?").run(input.projectKey);
-          db.close();
           return {
             kind: "started",
             project_key: input.projectKey,
             queued_count: 1,
             reconciled_count: 0,
             selected_count: 1,
-            batch_size: input.batchSize ?? 1,
-            batch_count: 1,
+            evidence_chunk_size: input.evidenceChunkSize ?? 1,
             target_branch: "master",
             job: fakeIngestJob(),
-            jobs: [],
+            workload: { evidence_count: 1, audit_count: 0 },
             launches: [],
           };
         },
@@ -475,20 +462,30 @@ test("forced SessionStart worker ingests a below-threshold queue", async () => {
       },
     }).run("demo", "auto_memory_forced_start");
 
-    expect(result).toMatchObject({ status: "completed", ingest_started: true, queued_remaining: 0 });
+    expect(result).toMatchObject({ status: "completed", ingest_started: true, queued_remaining: 1 });
     expect(starts).toBe(1);
   } finally {
-    delete process.env.MYELIN_AUTO_MEMORY_FORCE_INGEST;
+    delete process.env.MYELIN_SESSION_MAINTENANCE_WAKE_KIND;
   }
 });
 
-test("auto memory maintenance schedules continuation while active embeddings remain pending", async () => {
+test("auto memory maintenance reports incomplete indexing instead of creating a continuation loop", async () => {
   await writeConfig([
     "AUTO_MEMORY_MAINTENANCE=1",
     "AUTO_MEMORY_MIN_CAPTURED_EVENTS=2",
     "AUTO_MEMORY_COOLDOWN_MS=0",
   ]);
   const spawned: Array<Parameters<DetachedSpawner>[0]> = [];
+  const db = openMemoryDbAt(join(root, "state", "memory", "memory.db"));
+  registerInitialActiveEmbeddingContract(db, {
+    scope: "session_memory",
+    contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+  });
+  createSessionMemory(db, {
+    id: "mem_pending_remaining", project_key: "demo", source_event_refs: ["source"], memory_kind: "continuity",
+    summary: "Pending", payload: {}, confidence: "high", risk: "low", now: "2026-06-17T20:00:00.000Z",
+  });
+  db.close();
 
   const result = await new AutoMemoryMaintenanceService(root, {
     async indexPending() {
@@ -501,16 +498,14 @@ test("auto memory maintenance schedules continuation while active embeddings rem
   }).run("demo", "auto_memory_pending_index");
 
   expect(result).toMatchObject({
-    status: "completed",
-    queued_remaining: 0,
-    pending_remaining: 1,
-    rescheduled: true,
+    status: "failed",
+    error_message: expect.stringContaining("session_memory_indexing_incomplete"),
   });
-  expect(spawned).toHaveLength(1);
+  expect(spawned).toHaveLength(0);
 });
 
 async function writeConfig(lines: string[]): Promise<void> {
-  await writeFile(join(root, "myelin.config"), `${lines.join("\n")}\n`, "utf8");
+  await writeFile(join(root, "myelin.config"), `${lines.join("\n")}\n${smcPlanConfig()}\n`, "utf8");
 }
 
 function seedExperienceEvents(count: number, offset = 0): void {
@@ -522,6 +517,8 @@ function seedExperienceEvents(count: number, offset = 0): void {
         id,
         project_key: "demo",
         occurred_at: `2026-06-17T20:00:${String(offset + index).padStart(2, "0")}.000Z`,
+        event_kind: index % 2 === 0 ? "user.prompt" : "assistant.response",
+        raw_text: `captured content ${offset + index + 1}`,
         provider: "codex",
         source: "codex-hook",
         raw_payload_json: "{}",
@@ -531,6 +528,16 @@ function seedExperienceEvents(count: number, offset = 0): void {
   } finally {
     db.close();
   }
+}
+
+function smcPlanConfig(): string {
+  return [
+    "SMC_AUDIT_PARTITION_LIMIT=10", "SMC_MAX_ITEMS_PER_BATCH=100", "SMC_MAX_ENCODED_BYTES_PER_BATCH=1000000",
+    "SMC_MAX_ENCODED_BYTES_PER_ITEM=100000", "SMC_MAX_AFFECTED_WORK_SET_SIZE=50",
+    "SMC_MAX_CUMULATIVE_RETURNED_RESULT_BYTES=1000000", "SMC_MAX_PROVIDER_ENVELOPE_BYTES=1000000",
+    "SMC_MAX_QUERIES=20", "SMC_MAX_TURNS=20", "SMC_RETRIEVAL_PAGE_ITEM_LIMIT=50",
+    "SMC_SEMANTIC_DISTANCE_THRESHOLD_MICROS=500000", "SMC_SEMANTIC_QUALIFYING_RESULT_CEILING=100",
+  ].join("\n");
 }
 
 function deleteExperienceEvents(count: number): void {

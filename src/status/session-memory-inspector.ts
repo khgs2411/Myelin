@@ -3,7 +3,12 @@ import { copyFileSync, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
-import type { AutoMemoryMaintenanceConfig, EmbeddingConfig } from "../runtime/config.ts";
+import type {
+  AutoMemoryMaintenanceConfig,
+  EmbeddingConfig,
+  ModelProfile,
+  SessionMaintenanceConfig,
+} from "../runtime/config.ts";
 import { configureBunSQLite } from "../memory/sqlite-runtime.ts";
 import type { EvidenceRegistry, SessionMemoryStatusSection, StatusInspection } from "./contracts.ts";
 import { inspectLock, type MaintenanceStateRecord } from "./lock-inspector.ts";
@@ -11,6 +16,12 @@ import { maxState, sessionRetrievalState, warning } from "./severity.ts";
 import { inspectEmbeddingRetrievalStatus } from "./embedding-retrieval-status.ts";
 import { memoryDbPath } from "../memory/db.ts";
 import { normalizeRecordedCheckoutPath, projectStatePath } from "../runtime/fs.ts";
+import {
+  countExperienceContentEvents,
+  countLeasedExperienceContentEvents,
+  countUnleasedExperienceContentEvents,
+} from "../memory/experience.ts";
+import { readSessionMemoryCuratorStatus } from "../session-maintenance/status-service.ts";
 
 const REQUIRED_TABLES = ["experience_events", "experience_event_tombstones", "ingest_jobs", "session_memories", "session_memory_embeddings", "memory_candidates", "project_memory_retrieval_embeddings"];
 
@@ -55,6 +66,9 @@ export async function inspectSessionMemory(input: {
   db: Database;
   config: AutoMemoryMaintenanceConfig;
   embeddingConfig: EmbeddingConfig;
+  sessionMaintenanceConfig: SessionMaintenanceConfig;
+  ingestProfile: ModelProfile;
+  generatedAt: string;
   evidence: EvidenceRegistry;
   isAlive: (pid: number) => boolean;
 }): Promise<{ section: SessionMemoryStatusSection } & StatusInspection> {
@@ -69,7 +83,15 @@ export async function inspectSessionMemory(input: {
   const actions: StatusInspection["actions"] = [];
 
   const counts = queueCounts(input.db, input.projectKey);
-  const jobs = input.db.query("SELECT id, status, followup_state_json, error_json, created_at, updated_at FROM ingest_jobs WHERE project_key = ? AND status IN ('running','failed') ORDER BY updated_at DESC, id DESC").all(input.projectKey) as JobRow[];
+  const jobs = input.db.query(
+    `SELECT id, status, followup_state_json, error_json, created_at, updated_at
+     FROM ingest_jobs
+     WHERE project_key = ? AND status IN ('running','failed')
+       AND NOT EXISTS (
+         SELECT 1 FROM session_memory_anchor_jobs a WHERE a.job_id = ingest_jobs.id
+       )
+     ORDER BY updated_at DESC, id DESC`,
+  ).all(input.projectKey) as JobRow[];
   const leasesByJob = new Map((input.db.query("SELECT ingest_job_id AS id, count(*) AS count FROM experience_event_tombstones WHERE project_key = ? AND state = 'claimed' GROUP BY ingest_job_id").all(input.projectKey) as Array<{ id: string | null; count: number }>).map((row) => [row.id, row.count]));
   let jobState: "healthy" | "attention" | "blocked" = "healthy";
   let hasLiveJob = false;
@@ -122,6 +144,14 @@ export async function inspectSessionMemory(input: {
     scope: "session_memory",
     config: input.embeddingConfig,
   });
+  const smc = readSessionMemoryCuratorStatus(input.db, {
+    project_key: input.projectKey,
+    generated_at: input.generatedAt,
+    embedding_config: input.embeddingConfig,
+    ingest_profile: input.ingestProfile,
+    plan_config: input.sessionMaintenanceConfig.planConfig,
+    is_process_alive: input.isAlive,
+  });
   const retrievalState = sessionRetrievalState(
     retrieval.active_memory_count,
     retrieval.indexed_count,
@@ -149,15 +179,17 @@ export async function inspectSessionMemory(input: {
       ingest: { running_jobs: jobs.filter((job) => job.status === "running").length, failed_jobs: jobs.filter((job) => job.status === "failed").length, terminal_tombstones: counts.terminal, latest_log_path: latestLog },
       maintenance: { enabled: input.config.enabled, lifecycle: lock.lock.lifecycle === "active" ? "running" : lock.lock.lifecycle === "stale" ? "stale_lock" : stateRead.state?.last_status ?? "never_run", lock: lock.lock, last_run_id: stateRead.state?.last_run_id ?? null, last_log_path: normalizeRecordedCheckoutPath(input.root, stateRead.state?.last_log_path ?? null) },
       retrieval,
+      smc,
     }, warnings, actions,
   };
 }
 
 function queueCounts(db: Database, key: string): { queued: number; leased: number; unleased: number; terminal: number } {
-  const queued = scalar(db, "SELECT count(*) AS count FROM experience_events WHERE project_key = ?", key);
-  const leased = scalar(db, "SELECT count(*) AS count FROM experience_event_tombstones t JOIN experience_events e ON e.id=t.original_event_id AND e.project_key=t.project_key WHERE t.project_key=? AND t.state='claimed'", key);
+  const queued = countExperienceContentEvents(db, key);
+  const leased = countLeasedExperienceContentEvents(db, key);
+  const unleased = countUnleasedExperienceContentEvents(db, key);
   const terminal = scalar(db, "SELECT count(*) AS count FROM experience_event_tombstones WHERE project_key=? AND state IN ('output','no_output','failed','unfinished')", key);
-  return { queued, leased, unleased: Math.max(0, queued - leased), terminal };
+  return { queued, leased, unleased, terminal };
 }
 
 async function readOptionalState(path: string): Promise<{ state: MaintenanceStateRecord | null; error: string | null }> {

@@ -22,6 +22,55 @@ import {
 type ContractSelectingFactory = Pick<EmbeddingProviderFactory, "initializeLocalAuto">;
 type ContractInitializingFactory = Pick<EmbeddingProviderFactory, "initializeContract" | "initializeLocalAuto">;
 
+export type EmbeddingContractPlan = {
+  scope: EmbeddingScope;
+  active: EmbeddingContractIdentity | null;
+  desired: EmbeddingContractIdentity;
+  initializationRequired: boolean;
+  migrationRequired: boolean;
+};
+
+/**
+ * Resolves lifecycle intent without registering an active contract. Global
+ * lifecycle admission uses this read-only seam before it is allowed to mutate.
+ */
+export async function planEmbeddingContract(input: {
+  db: Database;
+  config: MyelinConfig;
+  scope: EmbeddingScope;
+  factory?: ContractSelectingFactory;
+}): Promise<EmbeddingContractPlan> {
+  const active = readActiveEmbeddingContract(input.db, input.scope);
+  if (active) {
+    const desired = desiredContract(input.config, active);
+    return {
+      scope: input.scope,
+      active,
+      desired,
+      initializationRequired: false,
+      migrationRequired: !sameEmbeddingContract(active, desired),
+    };
+  }
+
+  const discovered = discoverIndexedEmbeddingContract(input.db, input.scope)?.contract ?? null;
+  const selected = discovered ?? (input.config.embedding.provider === "auto"
+    ? embeddingContractIdentity(
+      (await (input.factory ?? new EmbeddingProviderFactory(input.config))
+        .initializeLocalAuto("retrieval_document")).contract,
+    )
+    : embeddingContractIdentity(
+      selectEmbeddingContract(input.config, input.config.embedding.provider, "retrieval_document"),
+    ));
+  const desired = desiredContract(input.config, selected);
+  return {
+    scope: input.scope,
+    active: discovered,
+    desired,
+    initializationRequired: true,
+    migrationRequired: !sameEmbeddingContract(selected, desired),
+  };
+}
+
 export async function resolveEmbeddingContract(input: {
   db: Database;
   config: MyelinConfig;

@@ -5,6 +5,7 @@ import type {
   EmbeddingResult,
 } from "./embedding-types.ts";
 import { validateEmbeddingResult } from "./embedding-validation.ts";
+import { embeddingProviderFailureKind } from "./embedding-provider-errors.ts";
 
 export async function executeEmbeddingBatches<T>(input: {
   entries: T[];
@@ -32,6 +33,7 @@ export async function executeEmbeddingBatches<T>(input: {
       }
       results = results.map((result) => validateEmbeddingResult(input.contract, result));
     } catch (error) {
+      if (embeddingProviderFailureKind(error) === "unreachable") throw error;
       const reason = error instanceof Error ? error.message : String(error);
       for (const entry of batch) input.onFailure(entry, reason);
       continue;

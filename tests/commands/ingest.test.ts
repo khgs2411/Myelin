@@ -12,6 +12,14 @@ import type { DetachedSpawner } from "../../src/ingest/runtime.ts";
 import { openMemoryDb } from "../../src/memory/db.ts";
 import { leaseExperienceEvents, recordExperienceEvent } from "../../src/memory/experience.ts";
 import { writeJson } from "../../src/runtime/json.ts";
+import { registerInitialActiveEmbeddingContract } from "../../src/memory/embedding-contract-store.ts";
+import { DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT } from "../../src/runtime/config.ts";
+import { acquireProjectSessionMutationFence } from "../../src/memory/project-session-mutation-fence.ts";
+import {
+  activateSMCAuthority,
+  configureSMCTestContract,
+  seedIndexedMemory,
+} from "../helpers/smc-preparation.ts";
 
 let root: string;
 let previousCwd: string;
@@ -47,9 +55,9 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-test("top-level ingest starts one detached worker per configured batch", async () => {
+test("top-level ingest starts one durable anchor with the configured evidence chunk size", async () => {
   await seedExperienceEvents(5);
-  await writeFile(join(root, "myelin.config"), "INGEST_BATCH_SIZE=2\nINGEST_WORKER_START_DELAY_MS=250\n", "utf8");
+  await writeFile(join(root, "myelin.config"), `INGEST_EVIDENCE_CHUNK_SIZE=2\n${smcPlanConfig()}\nEMBEDDING_STUB_RESPONSES_DIR=${join(root, "embedding-stubs")}\n`, "utf8");
   const spawned: unknown[] = [];
   const spawn: DetachedSpawner = (options) => {
     spawned.push(options);
@@ -66,31 +74,132 @@ test("top-level ingest starts one detached worker per configured batch", async (
   const response = JSON.parse(result.message);
 
   expect(result.exitCode).toBe(0);
-  expect(response.batch_size).toBe(2);
-  expect(response.batch_count).toBe(3);
-  expect(response.jobs).toHaveLength(3);
-  expect(response.job.id).toStartWith("ingest_");
-  expect(response.job.status).toBe("running");
-  expect(response.jobs.map((job: { input_json: string }) => JSON.parse(job.input_json).limit)).toEqual([2, 2, 1]);
-  expect(JSON.parse(response.job.input_json)).toMatchObject({
-    limit: 2,
-    batch_size: 2,
-    batch_index: 1,
-    batch_count: 3,
-    worker_concurrency: 1,
-    target_repo: join(root, "repos", "demo"),
+  expect(response.contract_version).toBe("myelin.ingest.start.v1");
+  expect(response.ok).toBe(true);
+  expect(response.reason_code).toBeNull();
+  expect(response.evidence_chunk_size).toBe(2);
+  expect(response.job_id).toStartWith("ingest_");
+  expect(response).not.toHaveProperty("job");
+  expect(response).not.toHaveProperty("jobs");
+  expect(response).not.toHaveProperty("batch_size");
+  const db = openMemoryDb(root);
+  try {
+    const job = getIngestJob(db, response.job_id);
+    expect(job?.status).toBe("starting");
+    expect(JSON.parse(job?.input_json ?? "{}")).toMatchObject({
+      evidence_budgets: { max_items_per_batch: 2 },
+      target_context: { repo_path: join(root, "repos", "demo") },
+    });
+  } finally {
+    db.close();
+  }
+  expect(spawned).toHaveLength(1);
+});
+
+test("deprecated batch-size remains a reported boundary alias, not a second job grouping", async () => {
+  await seedExperienceEvents(3);
+  const cli = createCli("myelin");
+  registerIngestCommands(cli, {
+    now: () => new Date("2026-06-13T10:00:00.000Z"),
+    runner: async () => ({ exitCode: 0, stdout: "master\n", stderr: "" }),
+    spawn: () => ({ pid: 2468, unref: () => {} }),
   });
-  expect(JSON.parse(response.job.followup_state_json)).toMatchObject({
-    pid: 2468,
-    target_repo: join(root, "repos", "demo"),
-    branch: "master",
+
+  const result = await cli.run(["ingest", "demo", "--batch-size", "2", "--json"]);
+  const response = JSON.parse(result.message);
+
+  expect(result.exitCode).toBe(0);
+  expect(response.contract_version).toBe("myelin.ingest.start.v1");
+  expect(response.compatibility).toMatchObject({ deprecated_alias_used: "batch_size" });
+  expect(response.evidence_chunk_size).toBe(2);
+  expect(response.job_id).toStartWith("ingest_");
+  expect(response).not.toHaveProperty("jobs");
+});
+
+test("no-work JSON is a stable successful outcome and does not imply progress", async () => {
+  const cli = createCli("myelin");
+  registerIngestCommands(cli, {
+    runner: async () => ({ exitCode: 0, stdout: "master\n", stderr: "" }),
   });
-  expect(spawned).toHaveLength(3);
-  expect(spawned.map((item) => (item as { env: Record<string, string | undefined> }).env.MYELIN_INGEST_START_DELAY_MS)).toEqual([
-    "250",
-    "500",
-    "750",
-  ]);
+
+  const result = await cli.run(["ingest", "demo", "--json"]);
+  const response = JSON.parse(result.message);
+
+  expect(result.exitCode).toBe(0);
+  expect(response).toMatchObject({
+    contract_version: "myelin.ingest.start.v1",
+    ok: true,
+    kind: "no_work",
+    reason_code: "smc_no_work",
+    trigger: { reason: "manual", workload: { evidence_count: 0, audit_count: 0 } },
+  });
+  expect(response.job_id).toBeNull();
+});
+
+test("machine argument failures and recovery aliases keep versioned envelopes", async () => {
+  const cli = createCli("myelin");
+  registerIngestCommands(cli);
+
+  const invalidStart = await cli.run(["ingest", "--json"]);
+  expect(invalidStart.exitCode).toBe(1);
+  expect(JSON.parse(invalidStart.message)).toMatchObject({
+    contract_version: "myelin.ingest.start.v1",
+    ok: false,
+    reason_code: "ingest_start_invalid_arguments",
+  });
+
+  const missingValue = await cli.run(["ingest", "demo", "--limit", "--json"]);
+  expect(missingValue.exitCode).toBe(1);
+  expect(JSON.parse(missingValue.message)).toMatchObject({
+    contract_version: "myelin.ingest.start.v1",
+    reason_code: "ingest_start_invalid_arguments",
+  });
+
+  const invalidResume = await cli.run(["ingest", "resume", "--json"]);
+  expect(invalidResume.exitCode).toBe(1);
+  expect(JSON.parse(invalidResume.message)).toMatchObject({
+    contract_version: "myelin.smc.cli.v1",
+    ok: false,
+    reason_code: "smc_cli_invalid_arguments",
+  });
+});
+
+test("blocked audit-only ingest preserves the due audit workload without creating an anchor", async () => {
+  const db = openMemoryDb(root);
+  try {
+    configureSMCTestContract(db);
+    seedIndexedMemory(db, { id: "memory-audit-only" });
+    activateSMCAuthority(db);
+    const acquired = acquireProjectSessionMutationFence(db, {
+      projectKey: "demo",
+      ownerId: "repair-owner",
+      ownerKind: "repair",
+      phase: "running",
+      now: "2026-08-12T00:00:00.000Z",
+    });
+    if (acquired.kind !== "acquired") throw new Error(JSON.stringify(acquired));
+  } finally {
+    db.close();
+  }
+
+  const cli = createCli("myelin");
+  registerIngestCommands(cli, { now: () => new Date("2026-08-12T00:01:00.000Z") });
+  const result = await cli.run(["ingest", "demo", "--json"]);
+  const response = JSON.parse(result.message);
+
+  expect(result.exitCode).toBe(1);
+  expect(response).toMatchObject({
+    contract_version: "myelin.ingest.start.v1",
+    ok: false,
+    kind: "blocked",
+    trigger: { reason: "manual_audit", workload: { evidence_count: 0, audit_count: 1 } },
+  });
+  const verified = openMemoryDb(root);
+  try {
+    expect(verified.query("SELECT count(*) AS count FROM session_memory_anchor_jobs").get()).toEqual({ count: 0 });
+  } finally {
+    verified.close();
+  }
 });
 
 test("top-level ingest warns and starts on non-master branches", async () => {
@@ -111,8 +220,14 @@ test("top-level ingest warns and starts on non-master branches", async () => {
 
   expect(result.exitCode).toBe(0);
   expect(response.target_branch).toBe("feature/cli");
-  expect(response.job.status).toBe("running");
-  expect(JSON.parse(response.job.input_json)).toMatchObject({ target_branch: "feature/cli" });
+  const db = openMemoryDb(root);
+  try {
+    expect(JSON.parse(getIngestJob(db, response.job_id)?.input_json ?? "{}")).toMatchObject({
+      target_context: { git_branch: "feature/cli" },
+    });
+  } finally {
+    db.close();
+  }
   expect(spawned).toBe(true);
 });
 
@@ -126,17 +241,19 @@ test("ingest status reads stored job status", async () => {
   });
   await seedExperienceEvents(1);
   const started = await cli.run(["ingest", "demo", "--json"]);
-  const jobId = JSON.parse(started.message).job.id;
+  const jobId = JSON.parse(started.message).job_id;
 
   const status = await cli.run(["ingest", "status", jobId, "--json"]);
   const response = JSON.parse(status.message);
 
   expect(status.exitCode).toBe(0);
+  expect(response.contract_version).toBe("myelin.ingest.status.v1");
   expect(response.job.id).toBe(jobId);
-  expect(response.job.status).toBe("running");
+  expect(response.job.status).toBe("starting");
+  expect(response.job).not.toHaveProperty("input_json");
 });
 
-test("ingest status marks detached running job failed when stored pid is dead", async () => {
+test("ingest status leaves prepared anchors to durable recovery when the launcher pid is dead", async () => {
   await seedExperienceEvents(1);
   const cli = createCli("myelin");
   registerIngestCommands(cli, {
@@ -145,7 +262,7 @@ test("ingest status marks detached running job failed when stored pid is dead", 
     spawn: () => ({ pid: 2468, unref: () => {} }),
   });
   const started = await cli.run(["ingest", "demo", "--json"]);
-  const jobId = JSON.parse(started.message).job.id;
+  const jobId = JSON.parse(started.message).job_id;
 
   const statusCli = createCli("myelin");
   registerIngestCommands(statusCli, {
@@ -157,12 +274,9 @@ test("ingest status marks detached running job failed when stored pid is dead", 
 
   expect(status.exitCode).toBe(0);
   expect(response.job.id).toBe(jobId);
-  expect(response.job.status).toBe("failed");
-  expect(JSON.parse(response.job.followup_state_json)).toMatchObject({ pid: 2468 });
-  expect(JSON.parse(response.job.error_json)).toMatchObject({
-    code: "detached_worker_exited",
-    pid: 2468,
-  });
+  expect(response.job.status).toBe("starting");
+  expect(response.job).not.toHaveProperty("followup_state_json");
+  expect(response.job).not.toHaveProperty("error_json");
 });
 
 test("ingest status --project reports layered counts", async () => {
@@ -186,10 +300,15 @@ test("ingest status --project fails for unknown project keys", async () => {
   const result = await cli.run(["ingest", "status", "--project", "missing", "--json"]);
 
   expect(result.exitCode).toBe(1);
-  expect(result.message).toBe("Unknown project: missing");
+  expect(JSON.parse(result.message)).toMatchObject({
+    contract_version: "myelin.ingest.status.v1",
+    ok: false,
+    reason_code: "ingest_status_failed",
+    detail: "Unknown project: missing",
+  });
 });
 
-test("ingest status --project refreshes stale running jobs before counting", async () => {
+test("ingest status --project retains prepared anchors for durable recovery", async () => {
   await seedExperienceEvents(1);
   const cli = createCli("myelin");
   registerIngestCommands(cli, {
@@ -198,7 +317,7 @@ test("ingest status --project refreshes stale running jobs before counting", asy
     spawn: () => ({ pid: 2468, unref: () => {} }),
   });
   const started = await cli.run(["ingest", "demo", "--json"]);
-  const jobId = JSON.parse(started.message).job.id;
+  const jobId = JSON.parse(started.message).job_id;
 
   const statusCli = createCli("myelin");
   registerIngestCommands(statusCli, {
@@ -209,20 +328,20 @@ test("ingest status --project refreshes stale running jobs before counting", asy
   const response = JSON.parse(status.message);
 
   expect(status.exitCode).toBe(0);
-  expect(response.status.counts.running_jobs).toBe(0);
-  expect(response.status.counts.failed_jobs).toBe(1);
+  expect(response.status.counts.running_jobs).toBe(1);
+  expect(response.status.counts.failed_jobs).toBe(0);
 
   const db = openMemoryDb(root);
   try {
     const job = getIngestJob(db, jobId);
-    expect(job?.status).toBe("failed");
-    expect(JSON.parse(job?.input_json ?? "{}")).toMatchObject({ target_branch: "master" });
+    expect(job?.status).toBe("starting");
+    expect(JSON.parse(job?.input_json ?? "{}")).toMatchObject({ target_context: { git_branch: "master" } });
   } finally {
     db.close();
   }
 });
 
-test("ingest status preserves retryable lease stubs when detached running job pid is dead", async () => {
+test("ingest status preserves prepared anchor leases when the detached launcher pid is dead", async () => {
   await seedExperienceEvents(1);
   const cli = createCli("myelin");
   registerIngestCommands(cli, {
@@ -231,7 +350,7 @@ test("ingest status preserves retryable lease stubs when detached running job pi
     spawn: () => ({ pid: 2469, unref: () => {} }),
   });
   const started = await cli.run(["ingest", "demo", "--limit", "1", "--json"]);
-  const jobId = JSON.parse(started.message).job.id;
+  const jobId = JSON.parse(started.message).job_id;
   const db = openMemoryDb(root);
   try {
     recordExperienceEvent(db, {
@@ -263,8 +382,8 @@ test("ingest status preserves retryable lease stubs when detached running job pi
   const response = JSON.parse(status.message);
 
   expect(status.exitCode).toBe(0);
-  expect(response.job.status).toBe("failed");
-  expect(JSON.parse(response.job.error_json)).toMatchObject({ code: "detached_worker_exited" });
+  expect(response.job.status).toBe("starting");
+  expect(response.job).not.toHaveProperty("error_json");
 
   const readDb = openMemoryDb(root);
   try {
@@ -330,8 +449,12 @@ test("ingest jobs resolve can dry-run and filter failed jobs by error code", asy
 
   expect(result.exitCode).toBe(0);
   const response = JSON.parse(result.message);
+  expect(response.contract_version).toBe("myelin.ingest.jobs-resolution.v1");
   expect(response.dry_run).toBe(true);
   expect(response.resolved.map((job: { id: string }) => job.id)).toEqual(["job_env"]);
+  expect(response.resolved[0]).not.toHaveProperty("input_json");
+  expect(response.resolved[0]).not.toHaveProperty("error_json");
+  expect(response.resolved[0]).not.toHaveProperty("followup_state_json");
 
   const db = openMemoryDb(root);
   try {
@@ -404,7 +527,7 @@ test("ingest worker dispatches stored job input to the worker runtime", async ()
   });
   await seedExperienceEvents(2);
   const started = await cli.run(["ingest", "demo", "--limit", "2", "--json"]);
-  const jobId = JSON.parse(started.message).job.id;
+  const jobId = JSON.parse(started.message).job_id;
   const calls: unknown[] = [];
   process.env.MYELIN_ROOT = root;
 
@@ -423,16 +546,17 @@ test("ingest worker dispatches stored job input to the worker runtime", async ()
     root,
     projectKey: "demo",
     jobId,
-    targetRepo: join(root, "repos", "demo"),
     provider: "codex",
-    limit: 2,
+    providerSessionId: null,
   });
 
   const db = openMemoryDb(root);
   try {
     const job = getIngestJob(db, jobId);
-    expect(job?.status).toBe("running");
-    expect(JSON.parse(job?.input_json ?? "{}")).toMatchObject({ target_branch: "feature/cli" });
+    expect(job?.status).toBe("starting");
+    expect(JSON.parse(job?.input_json ?? "{}")).toMatchObject({
+      target_context: { git_branch: "feature/cli" },
+    });
   } finally {
     db.close();
   }
@@ -446,6 +570,15 @@ async function seedProject(): Promise<void> {
     name: "Demo",
     repo_paths: [repo],
   });
+  const stubDir = join(root, "embedding-stubs");
+  await mkdir(stubDir, { recursive: true });
+  await writeFile(join(root, "myelin.config"), `${smcPlanConfig()}\nEMBEDDING_STUB_RESPONSES_DIR=${stubDir}\n`, "utf8");
+  const db = openMemoryDb(root);
+  registerInitialActiveEmbeddingContract(db, {
+    scope: "session_memory",
+    contract: DEFAULT_SESSION_MEMORY_EMBEDDING_CONTRACT,
+  });
+  db.close();
 }
 
 async function seedExperienceEvents(count: number): Promise<void> {
@@ -456,6 +589,8 @@ async function seedExperienceEvents(count: number): Promise<void> {
         id: `evt_${index + 1}`,
         project_key: "demo",
         occurred_at: `2026-06-13T10:${String(index).padStart(2, "0")}:00.000Z`,
+        event_kind: index % 2 === 0 ? "user.prompt" : "assistant.response",
+        raw_text: `content ${index + 1}`,
         provider: "codex",
         raw_payload_json: "{}",
         source: "codex-hook",
@@ -465,6 +600,16 @@ async function seedExperienceEvents(count: number): Promise<void> {
   } finally {
     db.close();
   }
+}
+
+function smcPlanConfig(): string {
+  return [
+    "SMC_AUDIT_PARTITION_LIMIT=10", "SMC_MAX_ITEMS_PER_BATCH=100", "SMC_MAX_ENCODED_BYTES_PER_BATCH=1000000",
+    "SMC_MAX_ENCODED_BYTES_PER_ITEM=100000", "SMC_MAX_AFFECTED_WORK_SET_SIZE=50",
+    "SMC_MAX_CUMULATIVE_RETURNED_RESULT_BYTES=1000000", "SMC_MAX_PROVIDER_ENVELOPE_BYTES=1000000",
+    "SMC_MAX_QUERIES=20", "SMC_MAX_TURNS=20", "SMC_RETRIEVAL_PAGE_ITEM_LIMIT=50",
+    "SMC_SEMANTIC_DISTANCE_THRESHOLD_MICROS=500000", "SMC_SEMANTIC_QUALIFYING_RESULT_CEILING=100",
+  ].join("\n");
 }
 
 async function seedFailedJob(id: string, error: Record<string, unknown>): Promise<void> {

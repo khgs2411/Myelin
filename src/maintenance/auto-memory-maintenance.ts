@@ -1,12 +1,7 @@
 import { openMemoryDb } from "../memory/db.ts";
-import { countExperienceEvents } from "../memory/experience.ts";
-import { resolveEmbeddingRuntime } from "../memory/embedding-contract-resolver.ts";
-import { discoverIndexedEmbeddingContract, readActiveEmbeddingContract } from "../memory/embedding-contract-store.ts";
-import { SessionMemoryIndexService } from "../memory/session-memory-index-service.ts";
 import { isProcessAlive, resolveIngestTargetRepo } from "../ingest/runtime.ts";
 import { IngestService } from "../ingest/ingest-service.ts";
-import type { IngestProvider, StartIngestResult } from "../ingest/ingest-service-contracts.ts";
-import { loadConfig, type AutoMemoryMaintenanceConfig } from "../runtime/config.ts";
+import { loadConfig, type AutoMemoryMaintenanceConfig, type SMCPlanConfig } from "../runtime/config.ts";
 import { projectStatePath } from "../runtime/fs.ts";
 import { createId } from "../runtime/ids.ts";
 import { prepareProjectLogFile, projectLogPath } from "../runtime/project-logs.ts";
@@ -17,13 +12,14 @@ import {
 } from "../runtime/command-invocation.ts";
 import {
   type AutoMemoryMaintenanceDeps,
-  type AutoMemoryMaintenanceIndexResult,
   type AutoMemoryMaintenanceRunResult,
   type AutoMemoryMaintenanceScheduler,
   type AutoMemoryMaintenanceScheduleResult,
   type AutoMemoryMaintenanceState,
 } from "./maintenance-contracts.ts";
 import { MaintenanceRunRuntime, spawnDetachedMaintenanceWorker } from "./maintenance-run-runtime.ts";
+import { DefaultSessionMaintenanceScheduler } from "./session-maintenance-scheduler.ts";
+import type { SessionMaintenanceWakeKind } from "./session-maintenance-eligibility.ts";
 
 export type {
   AutoMemoryMaintenanceDeps,
@@ -41,26 +37,30 @@ export class AutoMemoryMaintenanceService implements AutoMemoryMaintenanceSchedu
 
   async maybeSchedule(
     projectKey: string,
-    options: { forceIngest?: boolean; forceIndex?: boolean } = {},
+    options: {
+      wakeKind?: SessionMaintenanceWakeKind;
+      drainBelowThreshold?: boolean;
+      forceIndex?: boolean;
+      forceIngest?: boolean;
+    } = {},
   ): Promise<AutoMemoryMaintenanceScheduleResult> {
+    const wakeKind = options.wakeKind
+      ?? (options.forceIndex ? "index_request" : options.drainBelowThreshold || options.forceIngest ? "session_start" : "capture");
     const config = await loadConfig(this.root);
     const maintenance = config.autoMemoryMaintenance;
     if (!maintenance.enabled) return { status: "disabled", reason: "AUTO_MEMORY_MAINTENANCE is not enabled" };
     if (process.env.MYELIN_AUTO_MEMORY_MAINTENANCE_WORKER === "1") {
       return { status: "skipped", reason: "capture disabled for Myelin-owned worker" };
     }
-    if (process.env.MYELIN_CAPTURE_DISABLED === "1" && !options.forceIndex) {
+    if (process.env.MYELIN_CAPTURE_DISABLED === "1" && wakeKind !== "index_request") {
       return { status: "skipped", reason: "capture disabled for Myelin-owned worker" };
     }
 
     const db = openMemoryDb(this.root);
     let queuedCount = 0;
-    let pendingEmbeddingCount = 0;
     try {
-      queuedCount = countExperienceEvents(db, projectKey);
-      pendingEmbeddingCount = countActivePendingEmbeddings(db, projectKey);
       const runningJobs = db
-        .query("SELECT count(*) AS count FROM ingest_jobs WHERE project_key = ? AND status = 'running'")
+        .query("SELECT count(*) AS count FROM ingest_jobs WHERE project_key = ? AND status IN ('starting', 'running')")
         .get(projectKey) as { count: number };
       if (runningJobs.count > 0) {
         return this.skip(projectKey, "ingest already running", { queuedCount, preserveActiveState: true });
@@ -69,23 +69,22 @@ export class AutoMemoryMaintenanceService implements AutoMemoryMaintenanceSchedu
       db.close();
     }
 
-    if (options.forceIndex && pendingEmbeddingCount === 0 && !options.forceIngest) {
-      return this.skip(projectKey, "no active embedding work pending", { queuedCount });
+    const eligibility = await this.scheduler(config.sessionMaintenance.planConfig ?? undefined).evaluate(projectKey, wakeKind);
+    queuedCount = eligibility.evidence.queued_count;
+    if (!eligibility.curation_due && !eligibility.index.due) {
+      return this.skip(projectKey, "no eligible Session Memory work", { queuedCount });
     }
-    if (!options.forceIngest && !options.forceIndex && queuedCount < maintenance.minCapturedEvents && pendingEmbeddingCount === 0) {
-      return this.skip(projectKey, "below captured event threshold", { queuedCount });
-    }
-    if (!options.forceIngest && !options.forceIndex && await this.isInCooldown(projectKey, maintenance)) {
+    if (wakeKind === "capture" && await this.isInCooldown(projectKey, maintenance)) {
       return this.skip(projectKey, "cooldown active", { queuedCount });
     }
 
-    return this.scheduleDetachedWorker(projectKey, queuedCount, options.forceIngest ?? false);
+    return this.scheduleDetachedWorker(projectKey, queuedCount, wakeKind);
   }
 
   private async scheduleDetachedWorker(
     projectKey: string,
     queuedCount: number,
-    forceIngest: boolean,
+    wakeKind: SessionMaintenanceWakeKind,
   ): Promise<AutoMemoryMaintenanceScheduleResult> {
     const runId = `auto_memory_${createId()}`;
     const runtime = this.runtime(projectKey);
@@ -116,7 +115,7 @@ export class AutoMemoryMaintenanceService implements AutoMemoryMaintenanceSchedu
           MYELIN_CAPTURE_DISABLED: "1",
           MYELIN_AUTO_MEMORY_MAINTENANCE_WORKER: "1",
           MYELIN_AUTO_MEMORY_RUN_ID: runId,
-          ...(forceIngest ? { MYELIN_AUTO_MEMORY_FORCE_INGEST: "1" } : {}),
+          MYELIN_SESSION_MAINTENANCE_WAKE_KIND: wakeKind,
         },
       });
       await writeState(this.root, projectKey, {
@@ -184,94 +183,14 @@ export class AutoMemoryMaintenanceService implements AutoMemoryMaintenanceSchedu
       });
 
       const config = await loadConfig(this.root);
-      let ingestResult: StartIngestResult | null = null;
-      let drainError: Error | null = null;
-      const queuedBefore = this.countQueued(projectKey);
-
-      if (process.env.MYELIN_AUTO_MEMORY_FORCE_INGEST === "1" || queuedBefore >= config.autoMemoryMaintenance.minCapturedEvents) {
-        ingestResult = await this.ingestService().start({
-          projectKey,
-          provider: config.defaultProvider as IngestProvider,
-          limit: config.ingest.batchSize,
-          batchSize: config.ingest.batchSize,
-        });
-        try {
-          await this.waitForDrain(projectKey, config.autoMemoryMaintenance);
-        } catch (error) {
-          drainError = error instanceof Error ? error : new Error(String(error));
-        }
-      }
-
-      const indexResult = await this.indexPending(projectKey, config);
-      const queuedRemaining = this.countQueued(projectKey);
-
-      if (drainError) {
-        await writeState(this.root, projectKey, {
-          ...(await readState(this.root, projectKey)),
-          project_key: projectKey,
-          last_run_id: runId,
-          last_finished_at: this.now(),
-          last_status: "failed",
-          last_reason: drainError.message,
-          last_counts: {
-            queued_count: ingestResult?.queued_count ?? queuedBefore,
-            indexed: indexResult.indexed,
-            index_failed: indexResult.failed,
-            pending_remaining: indexResult.pending_remaining,
-            reconciled_count: ingestResult?.reconciled_count ?? 0,
-            queued_remaining: queuedRemaining,
-          },
-        });
-        return {
-          status: "failed",
-          project_key: projectKey,
-          run_id: runId,
-          ingest_started: ingestResult?.kind === "started",
-          indexed: indexResult.indexed,
-          index_failed: indexResult.failed,
-          pending_remaining: indexResult.pending_remaining,
-          reconciled_count: ingestResult?.reconciled_count ?? 0,
-          queued_remaining: queuedRemaining,
-          error_message: drainError.message,
-        };
-      }
-
-      if (ingestResult?.kind === "started" && queuedRemaining >= queuedBefore) {
-        const reason = `Auto memory maintenance made no queue progress for ${projectKey}: ${queuedBefore} before, ${queuedRemaining} after`;
-        await writeState(this.root, projectKey, {
-          ...(await readState(this.root, projectKey)),
-          project_key: projectKey,
-          last_run_id: runId,
-          last_finished_at: this.now(),
-          last_status: "failed",
-          last_reason: reason,
-          last_counts: {
-            queued_count: ingestResult.queued_count,
-            indexed: indexResult.indexed,
-            index_failed: indexResult.failed,
-            pending_remaining: indexResult.pending_remaining,
-            reconciled_count: ingestResult.reconciled_count,
-            queued_remaining: queuedRemaining,
-            rescheduled: false,
-          },
-        });
-        return {
-          status: "failed",
-          project_key: projectKey,
-          run_id: runId,
-          ingest_started: true,
-          indexed: indexResult.indexed,
-          index_failed: indexResult.failed,
-          pending_remaining: indexResult.pending_remaining,
-          reconciled_count: ingestResult.reconciled_count,
-          queued_remaining: queuedRemaining,
-          rescheduled: false,
-          error_message: reason,
-        };
-      }
-
-      const shouldContinue =
-        queuedRemaining >= config.autoMemoryMaintenance.minCapturedEvents || indexResult.pending_remaining > 0;
+      const wakeKind = parseWakeKind(process.env.MYELIN_SESSION_MAINTENANCE_WAKE_KIND);
+      const scheduled = await this.scheduler(config.sessionMaintenance.planConfig ?? undefined).run(projectKey, wakeKind);
+      if (scheduled.kind === "blocked") throw new Error(`${scheduled.code}: ${scheduled.reason}`);
+      const ingestResult = scheduled.kind === "anchor" ? scheduled.result : null;
+      const indexResult = scheduled.kind === "no_work"
+        ? { indexed: 0, failed: 0, pending_remaining: 0 }
+        : scheduled.indexing;
+      const queuedRemaining = scheduled.eligibility.evidence.queued_count;
       await writeState(this.root, projectKey, {
         ...(await readState(this.root, projectKey)),
         project_key: projectKey,
@@ -279,22 +198,15 @@ export class AutoMemoryMaintenanceService implements AutoMemoryMaintenanceSchedu
         last_finished_at: this.now(),
         last_status: "completed",
         last_counts: {
-          queued_count: ingestResult?.queued_count ?? queuedBefore,
+          queued_count: ingestResult?.queued_count ?? scheduled.eligibility.evidence.queued_count,
           indexed: indexResult.indexed,
           index_failed: indexResult.failed,
           pending_remaining: indexResult.pending_remaining,
           reconciled_count: ingestResult?.reconciled_count ?? 0,
           queued_remaining: queuedRemaining,
-          rescheduled: shouldContinue,
+          rescheduled: false,
         },
       });
-
-      let rescheduled = false;
-      if (shouldContinue) {
-        await releaseLock();
-        const continuation = await this.scheduleDetachedWorker(projectKey, queuedRemaining, false);
-        rescheduled = continuation.status === "scheduled";
-      }
 
       return {
         status: "completed",
@@ -306,7 +218,7 @@ export class AutoMemoryMaintenanceService implements AutoMemoryMaintenanceSchedu
         pending_remaining: indexResult.pending_remaining,
         reconciled_count: ingestResult?.reconciled_count ?? 0,
         queued_remaining: queuedRemaining,
-        rescheduled,
+        rescheduled: false,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -333,60 +245,12 @@ export class AutoMemoryMaintenanceService implements AutoMemoryMaintenanceSchedu
     }
   }
 
-  private async waitForDrain(projectKey: string, config: AutoMemoryMaintenanceConfig): Promise<void> {
-    const started = Date.now();
-    const service = this.ingestService();
-    while (Date.now() - started <= config.drainTimeoutMs) {
-      const result = await service.status({ projectKey });
-      if (result.kind === "project" && result.status.counts.running_jobs === 0) return;
-      await (this.deps.sleep ?? sleep)(config.drainPollIntervalMs);
-    }
-    throw new Error(`Auto memory maintenance timed out waiting for ingest drain for ${projectKey}`);
-  }
-
-  private ingestService(): NonNullable<AutoMemoryMaintenanceDeps["ingestService"]> {
+  private ingestService(smcPlanConfig?: SMCPlanConfig): NonNullable<AutoMemoryMaintenanceDeps["ingestService"]> {
     return this.deps.ingestService ?? new IngestService(this.root, {
       ...this.deps,
       isProcessAlive: this.deps.isProcessAlive ?? isProcessAlive,
+      smcPlanConfig,
     });
-  }
-
-  private async indexPending(projectKey: string, config: Awaited<ReturnType<typeof loadConfig>>): Promise<AutoMemoryMaintenanceIndexResult> {
-    if (this.deps.indexPending) {
-      return this.deps.indexPending({
-        projectKey,
-        limit: config.autoMemoryMaintenance.indexLimit,
-        batchSize: config.embedding.batchSize,
-        retryFailed: false,
-      });
-    }
-
-    const db = openMemoryDb(this.root);
-    try {
-      const selection = await resolveEmbeddingRuntime({ db, config, scope: "session_memory" });
-      return await new SessionMemoryIndexService({
-        db,
-        contract: selection.runtime.contract,
-        provider: selection.runtime.client,
-        vectorTable: selection.active.vectorTable,
-      }).indexPending({
-        projectKey,
-        limit: config.autoMemoryMaintenance.indexLimit,
-        batchSize: config.embedding.batchSize,
-        retryFailed: false,
-      });
-    } finally {
-      db.close();
-    }
-  }
-
-  private countQueued(projectKey: string): number {
-    const db = openMemoryDb(this.root);
-    try {
-      return countExperienceEvents(db, projectKey);
-    } finally {
-      db.close();
-    }
   }
 
   private async isInCooldown(projectKey: string, config: AutoMemoryMaintenanceConfig): Promise<boolean> {
@@ -414,27 +278,21 @@ export class AutoMemoryMaintenanceService implements AutoMemoryMaintenanceSchedu
     return (this.deps.now ?? (() => new Date()))().toISOString();
   }
 
+  private scheduler(planConfig?: SMCPlanConfig): DefaultSessionMaintenanceScheduler {
+    const service = this.ingestService(planConfig);
+    return new DefaultSessionMaintenanceScheduler(this.root, {
+      now: this.deps.now,
+      planConfig,
+      indexPending: this.deps.indexPending,
+      startAnchor: async (input) => service.startEligibleAnchor
+        ? await service.startEligibleAnchor(input)
+        : await service.start(input),
+    });
+  }
+
   private runtime(projectKey: string): MaintenanceRunRuntime<AutoMemoryMaintenanceState> {
     return maintenanceRuntime(this.root, projectKey, () => this.now(), this.deps.isProcessAlive ?? isProcessAlive);
   }
-}
-
-function countActivePendingEmbeddings(db: ReturnType<typeof openMemoryDb>, projectKey: string): number {
-  const active = readActiveEmbeddingContract(db, "session_memory")
-    ?? discoverIndexedEmbeddingContract(db, "session_memory")?.contract;
-  if (!active) return 0;
-  return (db.query(
-    `SELECT count(*) AS count
-     FROM session_memories sm
-     WHERE sm.project_key = ? AND sm.status = 'active'
-       AND NOT EXISTS (
-         SELECT 1 FROM session_memory_embeddings e
-         WHERE e.session_memory_id = sm.id
-           AND e.embedding_provider = ? AND e.embedding_model = ? AND e.embedding_dimensions = ?
-           AND e.embedding_purpose = 'retrieval_document' AND e.format_version = ?
-           AND e.status IN ('indexed', 'failed')
-       )`,
-  ).get(projectKey, active.provider, active.model, active.dimensions, active.formatVersion) as { count: number }).count;
 }
 
 export async function readState(root: string, projectKey: string): Promise<AutoMemoryMaintenanceState> {
@@ -473,6 +331,9 @@ function maintenanceRuntime(
   });
 }
 
-async function sleep(ms: number): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, ms));
+function parseWakeKind(value: string | undefined): SessionMaintenanceWakeKind {
+  return value === "session_start" || value === "explicit_maintenance" || value === "index_request"
+    || value === "manual" || value === "capture"
+    ? value
+    : "capture";
 }

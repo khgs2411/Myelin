@@ -1,926 +1,165 @@
 import type { Database } from "bun:sqlite";
-import { join } from "node:path";
-import type { JsonObject, ProcessRunner } from "../runtime/llm-contracts.ts";
-import { invokeLlm, PROMPT_SIZE_LIMIT } from "../runtime/llm-client.ts";
-import type { LeasedExperienceEvent } from "../memory/experience.ts";
-import {
-  finalizeLeasedExperienceEventsInOpenTransaction,
-  finalizeRemainingLeasedExperienceEvents,
-  leaseExperienceEvents,
-} from "../memory/experience.ts";
-import { openMemoryDb } from "../memory/db.ts";
-import { createMemoryCandidate, getMemoryCandidate, mergeMemoryCandidateSourceRefs } from "../memory/candidates.ts";
-import { createHandoffInstruction } from "../memory/handoffs.ts";
-import {
-  HANDOFF_SCOPES,
-  MEMORY_SCOPES,
-  SESSION_MEMORY_KINDS,
-  SESSION_MEMORY_LINK_RELATIONSHIPS,
-  type HandoffScope,
-  type MemoryScope,
-  type SessionMemoryLinkRelationship,
-  type SessionMemoryKind,
-} from "../memory/ingest-types.ts";
-import { activeDocumentContract, resolveEmbeddingContract } from "../memory/embedding-contract-resolver.ts";
+import { randomUUID } from "node:crypto";
+import { invokeSMCActionTurn, type SMCTurnInvoker } from "../agents/smc-adapter.ts";
 import { EmbeddingProviderFactory } from "../memory/embedding-provider-factory.ts";
-import { createSessionMemoryLink } from "../memory/session-memory-links.ts";
-import {
-  createSessionMemory,
-  getActiveSessionMemory,
-  retractSessionMemory,
-  supersedeSessionMemory,
-} from "../memory/session-memories.ts";
-import {
-  createSessionMemoryContexts,
-  type SessionMemoryContextInput,
-} from "../memory/session-memory-contexts.ts";
-import { loadConfig, type ActiveEmbeddingContract } from "../runtime/config.ts";
-import {
-  selectSessionMemoryReconciliationContext,
-  type ReconciliationMemoryContext,
-} from "./reconciliation-context.ts";
-import { updateIngestJobStatus } from "./jobs.ts";
-import { readIngestProjectStatus, type IngestProjectStatus } from "./status.ts";
-import { AutoProjectMemoryMaintenanceService } from "../maintenance/auto-project-memory-maintenance.ts";
-import type { AutoProjectMemoryMaintenanceScheduler } from "../maintenance/maintenance-contracts.ts";
+import { createCompatiblePurposeEmbeddingTransport } from "../memory/embedding-service.ts";
+import type { EmbeddingTransport } from "../memory/embedding-types.ts";
+import { openMemoryDb } from "../memory/db.ts";
+import { requestPendingSessionMemoryIndexing } from "../memory/session-memory-index-service.ts";
 import type { AutoMemoryMaintenanceScheduler } from "../maintenance/maintenance-contracts.ts";
+import { loadConfig, type ActiveEmbeddingContract } from "../runtime/config.ts";
+import { runSMCCoordinator } from "../session-maintenance/coordinator.ts";
+import { finalizeSessionMaintenance } from "../session-maintenance/finalization-service.ts";
+import {
+  getSessionMemoryAnchorJob,
+  listSessionMemoryAnchorAttempts,
+  transitionSessionMemoryAnchorJob,
+} from "../session-maintenance/job-lifecycle.ts";
+import { readSMCManifest } from "../session-maintenance/manifest.ts";
 
-const MAX_PROMPT_RETAINED_EVIDENCE_CHARS = 6_000;
-const TRUNCATED_EVIDENCE_SUFFIX = "\n...[truncated for ingest prompt; full evidence is preserved in the tombstone audit row]";
-const INGEST_PROMPT_SAFETY_MARGIN_CHARS = 5_000;
-const INGEST_RECONCILIATION_CONTEXT_BUDGET_CHARS = 25_000;
-
-export type IngestMemoryCandidateEvidence = {
-  observed_facts: string[];
-  relevant_paths: string[];
-  uncertainties: string[];
-};
-
-export type IngestMemoryCandidateProposedPayload = {
-  durable_facts: string[];
-  change_kind: string;
-  suggested_subjects: string[];
-  verification_needed: string[];
-};
-
-export type IngestWorkerOutput = {
-  session_memories?: Array<{
-    id: string;
-    source_event_refs: string[];
-    memory_kind: SessionMemoryKind;
-    title?: string | null;
-    summary: string;
-    payload: JsonObject;
-    confidence: string;
-    risk: string;
-  }>;
-  memory_candidates?: Array<{
-    id: string;
-    source_event_refs: string[];
-    scope: MemoryScope;
-    status: "pending" | "needs_review";
-    candidate_type: string;
-    title?: string | null;
-    summary: string;
-    evidence: IngestMemoryCandidateEvidence;
-    proposed_payload: IngestMemoryCandidateProposedPayload;
-    confidence: string;
-    risk: string;
-    reason: string;
-  }>;
-  handoff_instructions?: Array<{
-    id: string;
-    target_scope: HandoffScope;
-    status: "pending" | "needs_review";
-    objective: string;
-    prompt_text: string;
-    source_session_memory_ids: string[];
-    source_event_refs: string[];
-    suggested_actions: string[];
-    reason: string;
-    confidence: string;
-    risk: string;
-  }>;
-  memory_supersessions?: Array<{
-    superseded_memory_id: string;
-    superseding_memory_id: string;
-    relationship: SessionMemoryLinkRelationship;
-    reason: string;
-    source_event_refs: string[];
-  }>;
-  memory_retractions?: Array<{
-    memory_id: string;
-    reason: string;
-    source_event_refs: string[];
-  }>;
-  memory_noops?: Array<{
-    memory_id: string;
-    reason: string;
-  }>;
-  no_output_tombstone_ids?: string[];
-  terminal_summary?: string;
-};
-
-export function parseIngestWorkerOutput(value: JsonObject): IngestWorkerOutput {
-  const output: IngestWorkerOutput = {};
-  if (value.session_memories !== undefined) {
-    output.session_memories = validateArray(value.session_memories, "session_memories").map((raw, index) => {
-      const path = `session_memories[${index}]`;
-      const memory = validateObject(raw, path);
-      return {
-        id: validateString(memory.id, `${path}.id`),
-        source_event_refs: validateNonEmptyStringArray(memory.source_event_refs, `${path}.source_event_refs`),
-        memory_kind: validateEnum(memory.memory_kind, `${path}.memory_kind`, SESSION_MEMORY_KINDS),
-        title: validateOptionalStringOrNull(memory.title, `${path}.title`),
-        summary: validateString(memory.summary, `${path}.summary`),
-        payload: validateObject(memory.payload, `${path}.payload`),
-        confidence: validateString(memory.confidence, `${path}.confidence`),
-        risk: validateString(memory.risk, `${path}.risk`),
-      };
-    });
-  }
-  if (value.memory_candidates !== undefined) {
-    output.memory_candidates = validateArray(value.memory_candidates, "memory_candidates").map((raw, index) => {
-      const path = `memory_candidates[${index}]`;
-      const candidate = validateObject(raw, path);
-      return {
-        id: validateString(candidate.id, `${path}.id`),
-        source_event_refs: validateNonEmptyStringArray(candidate.source_event_refs, `${path}.source_event_refs`),
-        scope: validateEnum(candidate.scope, `${path}.scope`, MEMORY_SCOPES),
-        status: validateEnum(candidate.status, `${path}.status`, ["pending", "needs_review"] as const),
-        candidate_type: validateString(candidate.candidate_type, `${path}.candidate_type`),
-        title: validateOptionalStringOrNull(candidate.title, `${path}.title`),
-        summary: validateString(candidate.summary, `${path}.summary`),
-        evidence: validateCandidateEvidence(candidate.evidence, `${path}.evidence`),
-        proposed_payload: validateCandidateProposedPayload(candidate.proposed_payload, `${path}.proposed_payload`),
-        confidence: validateString(candidate.confidence, `${path}.confidence`),
-        risk: validateString(candidate.risk, `${path}.risk`),
-        reason: validateString(candidate.reason, `${path}.reason`),
-      };
-    });
-  }
-  if (value.handoff_instructions !== undefined) {
-    output.handoff_instructions = validateArray(value.handoff_instructions, "handoff_instructions").map((raw, index) => {
-      const path = `handoff_instructions[${index}]`;
-      const handoff = validateObject(raw, path);
-      return {
-        id: validateString(handoff.id, `${path}.id`),
-        target_scope: validateEnum(handoff.target_scope, `${path}.target_scope`, HANDOFF_SCOPES),
-        status: validateEnum(handoff.status, `${path}.status`, ["pending", "needs_review"] as const),
-        objective: validateString(handoff.objective, `${path}.objective`),
-        prompt_text: validateString(handoff.prompt_text, `${path}.prompt_text`),
-        source_session_memory_ids: validateStringArray(handoff.source_session_memory_ids, `${path}.source_session_memory_ids`),
-        source_event_refs: validateNonEmptyStringArray(handoff.source_event_refs, `${path}.source_event_refs`),
-        suggested_actions: validateStringArray(handoff.suggested_actions, `${path}.suggested_actions`),
-        reason: validateString(handoff.reason, `${path}.reason`),
-        confidence: validateString(handoff.confidence, `${path}.confidence`),
-        risk: validateString(handoff.risk, `${path}.risk`),
-      };
-    });
-  }
-  if (value.memory_supersessions !== undefined) {
-    output.memory_supersessions = validateArray(value.memory_supersessions, "memory_supersessions").map((raw, index) => {
-      const path = `memory_supersessions[${index}]`;
-      const supersession = validateObject(raw, path);
-      return {
-        superseded_memory_id: validateString(supersession.superseded_memory_id, `${path}.superseded_memory_id`),
-        superseding_memory_id: validateString(supersession.superseding_memory_id, `${path}.superseding_memory_id`),
-        relationship: validateEnum(supersession.relationship ?? "supersedes", `${path}.relationship`, SESSION_MEMORY_LINK_RELATIONSHIPS),
-        reason: validateString(supersession.reason, `${path}.reason`),
-        source_event_refs: validateNonEmptyStringArray(supersession.source_event_refs, `${path}.source_event_refs`),
-      };
-    });
-  }
-  if (value.memory_retractions !== undefined) {
-    output.memory_retractions = validateArray(value.memory_retractions, "memory_retractions").map((raw, index) => {
-      const path = `memory_retractions[${index}]`;
-      const retraction = validateObject(raw, path);
-      return {
-        memory_id: validateString(retraction.memory_id, `${path}.memory_id`),
-        reason: validateString(retraction.reason, `${path}.reason`),
-        source_event_refs: validateNonEmptyStringArray(retraction.source_event_refs, `${path}.source_event_refs`),
-      };
-    });
-  }
-  if (value.memory_noops !== undefined) {
-    output.memory_noops = validateArray(value.memory_noops, "memory_noops").map((raw, index) => {
-      const path = `memory_noops[${index}]`;
-      const noop = validateObject(raw, path);
-      return {
-        memory_id: validateString(noop.memory_id, `${path}.memory_id`),
-        reason: validateString(noop.reason, `${path}.reason`),
-      };
-    });
-  }
-  if (value.no_output_tombstone_ids !== undefined) {
-    output.no_output_tombstone_ids = validateStringArray(value.no_output_tombstone_ids, "no_output_tombstone_ids");
-  }
-  if (value.terminal_summary !== undefined) {
-    output.terminal_summary = validateOptionalNonEmptyString(value.terminal_summary, "terminal_summary");
-  }
-  return output;
-}
-
-export function buildIngestPrompt(input: {
-  projectKey: string;
-  jobId: string;
-  leased: LeasedExperienceEvent[];
-  reconciliationContext?: ReconciliationMemoryContext[];
-  projectStatus?: IngestProjectStatus;
-  batchIndex?: number;
-  batchCount?: number;
-}): string {
-  return [
-    "You are the Myelin Session Memory ingest agent.",
-    `Project key: ${input.projectKey}`,
-    `Ingest job id: ${input.jobId}`,
-    input.batchIndex && input.batchCount
-      ? `Parallel batch: ${input.batchIndex} of ${input.batchCount}. Other ingest agents may be running for this project.`
-      : null,
-    "",
-    "You are running from the target repository cwd. Use repo context when deciding what memory matters.",
-    "Create only low-risk trusted Session Memory directly.",
-    "Create Session Memory candidates for ambiguous, risky, conflicting, or privacy-sensitive outputs.",
-    "Create Project/Practice/Personal handoff instructions only as one-hop downstream inputs.",
-    "Do not mutate curated wiki pages.",
-    "Return JSON only with keys: session_memories, memory_candidates, handoff_instructions, memory_supersessions, memory_retractions, memory_noops, no_output_tombstone_ids, terminal_summary.",
-    "Return empty arrays for output categories with no items.",
-    "Every session memory, memory candidate, and handoff instruction must include source_event_refs containing leased tombstone ids.",
-    "Reconcile existing active Session Memory when new evidence makes old memory stale.",
-    "Use Project maintenance status context as factual product state when deciding whether next_action, blocker, or verification memories are now stale.",
-    "Do not physically delete memory. To update an existing memory, create a replacement session memory and add a memory_supersessions operation.",
-    "You may only supersede, retract, or noop existing memories listed in Existing active Session Memory context.",
-    "Every memory_supersessions item must include: superseded_memory_id, superseding_memory_id, relationship, reason, source_event_refs.",
-    "Allowed memory_supersessions relationship values: supersedes, refines, contradicts, duplicates.",
-    "Every memory_retractions item must include: memory_id, reason, source_event_refs.",
-    "Use memory_retractions only when the old memory should no longer be trusted and no replacement memory is created.",
-    "Treat next_action memories as short-lived. If leased evidence shows a supplied next_action has been completed, superseded by a new next step, or made obsolete, emit memory_retractions or memory_supersessions instead of memory_noops.",
-    "Prefer retracting completed next_action memories over keeping stale instructions active.",
-    "Use memory_noops for supplied existing memory that is relevant and remains current.",
-    "Allowed session memory memory_kind values: continuity, decision, blocker, next_action, verification.",
-    "Allowed memory candidate scope values: session, project, practice, personal.",
-    "Allowed handoff target_scope values: project, practice, personal.",
-    "Allowed provider-created status values for candidates and handoffs: pending, needs_review.",
-    "Every memory candidate must include: id, source_event_refs, scope, status, candidate_type, summary, evidence, proposed_payload, confidence, risk, reason.",
-    "Use candidate_type as a stable dotted classifier, for example session.continuity, project.decision, practice.workflow, or personal.preference.",
-    "When leased evidence describes an implemented durable change to this repository's architecture, public contract, operator workflow, persistence, or layout, emit a scope=project memory candidate even if you also create Session Memory continuity or verification.",
-    "Do not represent a verified durable repository change only as Session Memory; the Project Memory candidate is the required maintenance lead.",
-    "For Project Memory candidates, capture the concrete durable change supported by the evidence. Do not substitute a speculative future risk for an evidenced project fact.",
-    "Every memory candidate evidence object must include: observed_facts (at least one), relevant_paths, uncertainties.",
-    "Every memory candidate proposed_payload object must include: durable_facts (at least one), change_kind, suggested_subjects, verification_needed.",
-    "Every handoff instruction must include: id, target_scope, status, objective, prompt_text, source_session_memory_ids, source_event_refs, suggested_actions, reason, confidence, risk.",
-    "Example session memory: {\"id\":\"mem_<short-id>\",\"source_event_refs\":[\"tomb_<claimed-id>\"],\"memory_kind\":\"continuity\",\"summary\":\"Useful continuity.\",\"payload\":{},\"confidence\":\"high\",\"risk\":\"low\"}.",
-    "Example supersession: {\"superseded_memory_id\":\"mem_old\",\"superseding_memory_id\":\"mem_new\",\"relationship\":\"supersedes\",\"reason\":\"New evidence changes the implementation truth.\",\"source_event_refs\":[\"tomb_<claimed-id>\"]}.",
-    "Example retraction: {\"memory_id\":\"mem_old\",\"reason\":\"New evidence shows this memory is false and no replacement is appropriate.\",\"source_event_refs\":[\"tomb_<claimed-id>\"]}.",
-    "Example memory candidate: {\"id\":\"cand_<short-id>\",\"source_event_refs\":[\"tomb_<claimed-id>\"],\"scope\":\"project\",\"status\":\"needs_review\",\"candidate_type\":\"project.architecture\",\"summary\":\"Project runtime layout changed.\",\"evidence\":{\"observed_facts\":[\"Canonical Project Memory markdown now lives directly under projects/<key>.\"],\"relevant_paths\":[\"src/runtime/fs.ts\"],\"uncertainties\":[]},\"proposed_payload\":{\"durable_facts\":[\"Machine state, preserved sources, and run artifacts live outside projects/<key>.\"],\"change_kind\":\"architecture.layout\",\"suggested_subjects\":[\"runtime and project layout\"],\"verification_needed\":[\"Confirm current path helpers and migration behavior.\"]},\"confidence\":\"high\",\"risk\":\"low\",\"reason\":\"The layout is durable project architecture.\"}.",
-    "Example handoff instruction: {\"id\":\"handoff_<short-id>\",\"target_scope\":\"project\",\"status\":\"pending\",\"objective\":\"Verify a durable project fact\",\"prompt_text\":\"Review the cited tombstones and update project memory if valid.\",\"source_session_memory_ids\":[],\"source_event_refs\":[\"tomb_<claimed-id>\"],\"suggested_actions\":[\"review evidence\"],\"reason\":\"May belong in project memory\",\"confidence\":\"medium\",\"risk\":\"medium\"}.",
-    "",
-    "Project maintenance status context:",
-    JSON.stringify(statusForPrompt(input.projectStatus), null, 2),
-    "",
-    "Existing active Session Memory context:",
-    JSON.stringify((input.reconciliationContext ?? []).map(memoryForPrompt), null, 2),
-    "",
-    "Leased Experience Log rows:",
-    JSON.stringify(input.leased.map(leaseForPrompt), null, 2),
-  ].filter((line) => line !== null).join("\n");
-}
-
-function buildBoundedIngestPrompt(input: {
-  projectKey: string;
-  jobId: string;
-  leased: LeasedExperienceEvent[];
-  reconciliationContext: ReconciliationMemoryContext[];
-  projectStatus: IngestProjectStatus;
-  batchIndex?: number;
-  batchCount?: number;
-}): { prompt: string; reconciliationContext: ReconciliationMemoryContext[] } {
-  let reconciliationContext = input.reconciliationContext;
-  let prompt = buildIngestPrompt({ ...input, reconciliationContext });
-  const promptLimit = promptSizeLimitWithMargin();
-  const promptWithoutContext = buildIngestPrompt({ ...input, reconciliationContext: [] });
-  const maxContextChars = Math.min(
-    INGEST_RECONCILIATION_CONTEXT_BUDGET_CHARS,
-    Math.max(0, promptLimit - promptWithoutContext.length),
-  );
-
-  while (
-    reconciliationContext.length > 0 &&
-    (prompt.length > promptLimit || prompt.length - promptWithoutContext.length > maxContextChars)
-  ) {
-    reconciliationContext = reconciliationContext.slice(0, -1);
-    prompt = buildIngestPrompt({ ...input, reconciliationContext });
-  }
-
-  if (prompt.length > PROMPT_SIZE_LIMIT) {
-    throw new Error(`ingest prompt too large after budgeting: ${prompt.length} chars exceeds ${PROMPT_SIZE_LIMIT}`);
-  }
-
-  return { prompt, reconciliationContext };
-}
-
-function leasePromptCharLimit(input: {
-  configuredLimit: number;
-  projectKey: string;
-  jobId: string;
-  projectStatus: IngestProjectStatus;
-  batchIndex?: number;
-  batchCount?: number;
-}): number {
-  const fixedPromptOverhead = buildIngestPrompt({
-    projectKey: input.projectKey,
-    jobId: input.jobId,
-    leased: [],
-    reconciliationContext: [],
-    projectStatus: input.projectStatus,
-    batchIndex: input.batchIndex,
-    batchCount: input.batchCount,
-  }).length;
-  const computedLimit = promptSizeLimitWithMargin() - fixedPromptOverhead - INGEST_RECONCILIATION_CONTEXT_BUDGET_CHARS;
-  return Math.max(1, Math.min(input.configuredLimit, computedLimit));
-}
-
-function promptSizeLimitWithMargin(): number {
-  return PROMPT_SIZE_LIMIT - INGEST_PROMPT_SAFETY_MARGIN_CHARS;
-}
-
-function statusForPrompt(status: IngestProjectStatus | undefined): JsonObject {
-  if (!status) return {};
-  return {
-    project_key: status.project_key,
-    completion_label: status.completion_label,
-    counts: status.counts,
-  };
-}
-
-function memoryForPrompt(memory: ReconciliationMemoryContext): JsonObject {
-  return {
-    id: memory.id,
-    memory_kind: memory.memory_kind,
-    title: memory.title,
-    summary: memory.summary,
-    created_at: memory.created_at,
-    updated_at: memory.updated_at,
-    selection_reasons: memory.selection_reasons,
-    contexts: memory.contexts.map((context) => ({
-      repo_path: context.repo_path,
-      git_branch: context.git_branch,
-      git_commit: context.git_commit,
-      git_worktree_id: context.git_worktree_id,
-      source_event_ref: context.source_event_ref,
-    })),
-  };
-}
-
-function leaseForPrompt(lease: LeasedExperienceEvent): JsonObject {
-  const evidence = JSON.stringify(lease.prompt_evidence);
-  const promptEvidence =
-    evidence.length <= MAX_PROMPT_RETAINED_EVIDENCE_CHARS
-      ? lease.prompt_evidence
-      : {
-          raw_text: truncatePromptEvidence(lease.prompt_evidence.raw_text),
-          raw_payload_json: truncatePromptEvidence(lease.prompt_evidence.raw_payload_json),
-        };
-  return {
-    id: lease.id,
-    original_event_id: lease.original_event_id,
-    project_key: lease.project_key,
-    ingest_job_id: lease.ingest_job_id,
-    provider: lease.provider,
-    provider_session_id: lease.provider_session_id,
-    claimed_at: lease.claimed_at,
-    state: lease.state,
-    source_metadata_json: lease.source_metadata_json,
-    prompt_evidence: promptEvidence,
-  };
-}
-
-function truncatePromptEvidence(value: string | null): string | null {
-  if (value === null || value.length <= MAX_PROMPT_RETAINED_EVIDENCE_CHARS) return value;
-  return `${value.slice(0, MAX_PROMPT_RETAINED_EVIDENCE_CHARS)}${TRUNCATED_EVIDENCE_SUFFIX}`;
-}
-
-function validateArray(value: unknown, path: string): unknown[] {
-  if (Array.isArray(value)) return value;
-  throw new Error(`IngestWorkerOutput contract violation: ${path} must be an array`);
-}
-
-function validateObject(value: unknown, path: string): JsonObject {
-  if (value !== null && typeof value === "object" && !Array.isArray(value)) return value as JsonObject;
-  throw new Error(`IngestWorkerOutput contract violation: ${path} must be an object`);
-}
-
-function validateCandidateEvidence(value: unknown, path: string): IngestMemoryCandidateEvidence {
-  const evidence = validateObject(value, path);
-  return {
-    observed_facts: validateAtLeastOneStringArray(evidence.observed_facts, `${path}.observed_facts`),
-    relevant_paths: validateStringArray(evidence.relevant_paths, `${path}.relevant_paths`),
-    uncertainties: validateStringArray(evidence.uncertainties, `${path}.uncertainties`),
-  };
-}
-
-function validateCandidateProposedPayload(value: unknown, path: string): IngestMemoryCandidateProposedPayload {
-  const payload = validateObject(value, path);
-  return {
-    durable_facts: validateAtLeastOneStringArray(payload.durable_facts, `${path}.durable_facts`),
-    change_kind: validateString(payload.change_kind, `${path}.change_kind`),
-    suggested_subjects: validateStringArray(payload.suggested_subjects, `${path}.suggested_subjects`),
-    verification_needed: validateStringArray(payload.verification_needed, `${path}.verification_needed`),
-  };
-}
-
-function validateString(value: unknown, path: string): string {
-  if (typeof value === "string" && value.trim() !== "") return value;
-  throw new Error(`IngestWorkerOutput contract violation: ${path} must be a non-empty string`);
-}
-
-function validateOptionalStringOrNull(value: unknown, path: string): string | null | undefined {
-  if (value === undefined || value === null) return value;
-  if (typeof value === "string") return value;
-  throw new Error(`IngestWorkerOutput contract violation: ${path} must be a string or null`);
-}
-
-function validateOptionalNonEmptyString(value: unknown, _path: string): string | undefined {
-  if (value === undefined || value === null) return undefined;
-  if (typeof value === "string") return value.trim() === "" ? undefined : value;
-  return undefined;
-}
-
-function validateStringArray(value: unknown, path: string): string[] {
-  if (typeof value === "string" && value.trim() !== "") return [value];
-  const items = validateArray(value, path);
-  for (let index = 0; index < items.length; index += 1) {
-    validateString(items[index], `${path}[${index}]`);
-  }
-  return items as string[];
-}
-
-function validateNonEmptyStringArray(value: unknown, path: string): string[] {
-  const items = validateStringArray(value, path);
-  if (items.length > 0) return items;
-  throw new Error(`IngestWorkerOutput contract violation: ${path} must contain at least one tombstone id`);
-}
-
-function validateAtLeastOneStringArray(value: unknown, path: string): string[] {
-  const items = validateStringArray(value, path);
-  if (items.length > 0) return items;
-  throw new Error(`IngestWorkerOutput contract violation: ${path} must contain at least one item`);
-}
-
-function validateEnum<T extends string>(value: unknown, path: string, allowed: readonly T[]): T {
-  if (typeof value === "string" && (allowed as readonly string[]).includes(value)) return value as T;
-  throw new Error(
-    `IngestWorkerOutput contract violation: ${path} must be one of ${allowed.join(", ")}`,
-  );
-}
-
-export function applyIngestWorkerOutput(
-  db: Database,
-  input: {
-    projectKey: string;
-    jobId: string;
-    provider: string;
-    providerSessionId: string | null;
-    output: IngestWorkerOutput;
-    finalizedAt: string;
-    allowedExistingMemoryIds?: string[];
-    embeddingContract?: ActiveEmbeddingContract;
-  },
-): { session_memories: number; memory_candidates: number; project_memory_candidates: number; handoff_instructions: number } {
-  const apply = db.transaction(() => {
-    let sessionMemories = 0;
-    let memoryCandidates = 0;
-    let projectMemoryCandidates = 0;
-    let handoffs = 0;
-    const outputRefsByTombstone = new Map<string, string[]>();
-    const sessionMemoryIds = new Map<string, string>();
-    const claimableTombstoneIds = new Set(
-      (
-        db.query("SELECT id FROM experience_event_tombstones WHERE ingest_job_id = ? AND state = 'claimed'").all(input.jobId) as
-          Array<{ id: string }>
-      ).map((row) => row.id),
-    );
-
-    const claimableRefs = (tombstoneIds: string[]) => tombstoneIds.filter((id) => claimableTombstoneIds.has(id));
-    const allowedExistingMemoryIds = input.allowedExistingMemoryIds ? new Set(input.allowedExistingMemoryIds) : null;
-
-    const addOutputRefs = (tombstoneIds: string[], outputRef: string): string[] => {
-      if (tombstoneIds.length === 0) throw new Error(`Output ${outputRef} must reference at least one tombstone`);
-      const validTombstoneIds = claimableRefs(tombstoneIds);
-      if (validTombstoneIds.length === 0) return [];
-      for (const tombstoneId of validTombstoneIds) {
-        const refs = outputRefsByTombstone.get(tombstoneId) ?? [];
-        refs.push(outputRef);
-        outputRefsByTombstone.set(tombstoneId, refs);
-      }
-      return validTombstoneIds;
-    };
-
-    for (const memory of input.output.session_memories ?? []) {
-      const memoryId = uniqueOutputId(db, "session_memories", memory.id, input.jobId);
-      const sourceEventRefs = addOutputRefs(memory.source_event_refs, `session_memories/${memoryId}`);
-      if (sourceEventRefs.length === 0) continue;
-      createSessionMemory(db, {
-        id: memoryId,
-        project_key: input.projectKey,
-        provider: input.provider,
-        provider_session_id: input.providerSessionId,
-        ingest_job_id: input.jobId,
-        source_event_refs: sourceEventRefs,
-        memory_kind: memory.memory_kind,
-        title: memory.title ?? null,
-        summary: memory.summary,
-        payload: memory.payload,
-        confidence: memory.confidence,
-        risk: memory.risk,
-        now: input.finalizedAt,
-        embedding_contract: input.embeddingContract,
-      });
-      createSessionMemoryContexts(db, contextsForSessionMemory(db, {
-        sessionMemoryId: memoryId,
-        projectKey: input.projectKey,
-        sourceEventRefs,
-      }));
-      sessionMemoryIds.set(memory.id, memoryId);
-      sessionMemories += 1;
-    }
-
-    const activeAllowedExistingMemory = (memoryId: string): boolean => {
-      if (allowedExistingMemoryIds && !allowedExistingMemoryIds.has(memoryId)) {
-        throw new Error(`Reconciliation operation references memory outside supplied context: ${memoryId}`);
-      }
-      const memory = getActiveSessionMemory(db, { id: memoryId, projectKey: input.projectKey });
-      return Boolean(memory);
-    };
-
-    for (const supersession of input.output.memory_supersessions ?? []) {
-      if (!activeAllowedExistingMemory(supersession.superseded_memory_id)) continue;
-      const supersedingMemoryId = sessionMemoryIds.get(supersession.superseding_memory_id) ?? supersession.superseding_memory_id;
-      const supersedingMemory = getActiveSessionMemory(db, { id: supersedingMemoryId, projectKey: input.projectKey });
-      if (!supersedingMemory) {
-        throw new Error(`Supersession replacement memory is missing or inactive: ${supersession.superseding_memory_id}`);
-      }
-      const sourceEventRefs = addOutputRefs(
-        supersession.source_event_refs,
-        `session_memory_links/${supersession.superseded_memory_id}/${supersedingMemoryId}`,
-      );
-      if (sourceEventRefs.length === 0) continue;
-      supersedeSessionMemory(db, {
-        id: supersession.superseded_memory_id,
-        projectKey: input.projectKey,
-        supersededBy: supersedingMemoryId,
-        reason: supersession.reason,
-        now: input.finalizedAt,
-      });
-      createSessionMemoryLink(db, {
-        source_memory_id: supersedingMemoryId,
-        target_memory_id: supersession.superseded_memory_id,
-        project_key: input.projectKey,
-        relationship: supersession.relationship,
-        reason: supersession.reason,
-        source_event_refs: sourceEventRefs,
-        created_at: input.finalizedAt,
-      });
-    }
-
-    for (const retraction of input.output.memory_retractions ?? []) {
-      if (!activeAllowedExistingMemory(retraction.memory_id)) continue;
-      const sourceEventRefs = addOutputRefs(
-        retraction.source_event_refs,
-        `session_memory_retractions/${retraction.memory_id}`,
-      );
-      if (sourceEventRefs.length === 0) continue;
-      retractSessionMemory(db, {
-        id: retraction.memory_id,
-        projectKey: input.projectKey,
-        reason: retraction.reason,
-        now: input.finalizedAt,
-      });
-    }
-
-    for (const noop of input.output.memory_noops ?? []) {
-      activeAllowedExistingMemory(noop.memory_id);
-    }
-
-    for (const candidate of input.output.memory_candidates ?? []) {
-      const existingCandidate = getMemoryCandidate(db, candidate.id);
-      const reusableCandidate =
-        existingCandidate?.project_key === input.projectKey && existingCandidate.scope === candidate.scope
-          ? existingCandidate
-          : null;
-      if (reusableCandidate) {
-        const sourceEventRefs = addOutputRefs(candidate.source_event_refs, `memory_candidates/${reusableCandidate.id}`);
-        if (sourceEventRefs.length === 0) continue;
-        mergeMemoryCandidateSourceRefs(db, {
-          id: reusableCandidate.id,
-          project_key: input.projectKey,
-          scope: candidate.scope,
-          source_event_refs: sourceEventRefs,
-          now: input.finalizedAt,
-        });
-        continue;
-      }
-      const candidateId = uniqueOutputId(db, "memory_candidates", candidate.id, input.jobId);
-      const sourceEventRefs = addOutputRefs(candidate.source_event_refs, `memory_candidates/${candidateId}`);
-      if (sourceEventRefs.length === 0) continue;
-      createMemoryCandidate(db, {
-        id: candidateId,
-        project_key: input.projectKey,
-        scope: candidate.scope,
-        status: candidate.status,
-        candidate_type: candidate.candidate_type,
-        title: candidate.title ?? null,
-        summary: candidate.summary,
-        source_event_refs: sourceEventRefs,
-        evidence: candidate.evidence,
-        proposed_payload: candidate.proposed_payload,
-        confidence: candidate.confidence,
-        risk: candidate.risk,
-        reason: candidate.reason,
-        now: input.finalizedAt,
-      });
-      memoryCandidates += 1;
-      if (candidate.scope === "project") projectMemoryCandidates += 1;
-    }
-
-    for (const handoff of input.output.handoff_instructions ?? []) {
-      const table = `${handoff.target_scope}_handoff_instructions`;
-      const handoffId = uniqueOutputId(db, table, handoff.id, input.jobId);
-      const sourceEventRefs = addOutputRefs(
-        handoff.source_event_refs,
-        `${table}/${handoffId}`,
-      );
-      if (sourceEventRefs.length === 0) continue;
-      createHandoffInstruction(db, {
-        id: handoffId,
-        target_scope: handoff.target_scope,
-        project_key: input.projectKey,
-        status: handoff.status,
-        objective: handoff.objective,
-        prompt_text: handoff.prompt_text,
-        source_session_memory_ids: handoff.source_session_memory_ids.map((id) => sessionMemoryIds.get(id) ?? id),
-        source_event_refs: sourceEventRefs,
-        suggested_actions: handoff.suggested_actions,
-        reason: handoff.reason,
-        confidence: handoff.confidence,
-        risk: handoff.risk,
-        now: input.finalizedAt,
-      });
-      handoffs += 1;
-    }
-
-    for (const [tombstoneId, outputRefs] of outputRefsByTombstone.entries()) {
-      finalizeLeasedExperienceEventsInOpenTransaction(db, {
-        ingest_job_id: input.jobId,
-        tombstone_ids: [tombstoneId],
-        finalized_at: input.finalizedAt,
-        state: "output",
-        terminal_decision: "output",
-        output_references: [...new Set(outputRefs)],
-      });
-    }
-
-    for (const tombstoneId of claimableRefs(input.output.no_output_tombstone_ids ?? [])) {
-      if (outputRefsByTombstone.has(tombstoneId)) {
-        continue;
-      }
-      finalizeLeasedExperienceEventsInOpenTransaction(db, {
-        ingest_job_id: input.jobId,
-        tombstone_ids: [tombstoneId],
-        finalized_at: input.finalizedAt,
-        state: "no_output",
-        terminal_decision: "no_output",
-        output_references: [],
-      });
-    }
-
-    return {
-      session_memories: sessionMemories,
-      memory_candidates: memoryCandidates,
-      project_memory_candidates: projectMemoryCandidates,
-      handoff_instructions: handoffs,
-    };
-  });
-
-  return apply();
-}
-
-function uniqueOutputId(db: Database, table: string, desiredId: string, jobId: string): string {
-  if (!db.query(`SELECT 1 FROM ${table} WHERE id = ? LIMIT 1`).get(desiredId)) return desiredId;
-  const base = `${jobId}_${desiredId}`;
-  let candidate = base;
-  let suffix = 2;
-  while (db.query(`SELECT 1 FROM ${table} WHERE id = ? LIMIT 1`).get(candidate)) {
-    candidate = `${base}_${suffix}`;
-    suffix += 1;
-  }
-  return candidate;
-}
-
-function contextsForSessionMemory(
-  db: Database,
-  input: { sessionMemoryId: string; projectKey: string; sourceEventRefs: string[] },
-): SessionMemoryContextInput[] {
-  const contexts: SessionMemoryContextInput[] = [];
-  const query = db.query(
-    "SELECT source_metadata_json FROM experience_event_tombstones WHERE id = ? AND project_key = ?",
-  );
-  for (const sourceEventRef of input.sourceEventRefs) {
-    const row = query.get(sourceEventRef, input.projectKey) as { source_metadata_json: string } | null;
-    const metadata = parseContextMetadata(row?.source_metadata_json);
-    contexts.push({
-      session_memory_id: input.sessionMemoryId,
-      project_key: input.projectKey,
-      repo_path: metadata.repo_path,
-      git_branch: metadata.git_branch,
-      git_commit: metadata.git_commit,
-      git_worktree_id: metadata.git_worktree_id,
-      source_event_ref: sourceEventRef,
-    });
-  }
-  return contexts;
-}
-
-function parseContextMetadata(value: string | undefined): {
-  repo_path: string | null;
-  git_branch: string | null;
-  git_commit: string | null;
-  git_worktree_id: string | null;
-} {
-  if (!value) return { repo_path: null, git_branch: null, git_commit: null, git_worktree_id: null };
-  try {
-    const parsed = JSON.parse(value) as Record<string, unknown>;
-    return {
-      repo_path: typeof parsed.repo_path === "string" ? parsed.repo_path : null,
-      git_branch: typeof parsed.git_branch === "string" ? parsed.git_branch : null,
-      git_commit: typeof parsed.git_commit === "string" ? parsed.git_commit : null,
-      git_worktree_id: typeof parsed.git_worktree_id === "string" ? parsed.git_worktree_id : null,
-    };
-  } catch {
-    return { repo_path: null, git_branch: null, git_commit: null, git_worktree_id: null };
-  }
-}
-
-export async function runIngestWorker(input: {
+export type IngestWorkerInput = {
   root: string;
   projectKey: string;
   jobId: string;
-  targetRepo: string;
   provider: "codex" | "claude";
   providerSessionId?: string | null;
-  limit?: number;
-  batchSize?: number;
-  batchIndex?: number;
-  batchCount?: number;
-  maxPromptChars?: number;
   now?: () => Date;
-  runner?: ProcessRunner;
-  projectMemoryMaintenanceScheduler?: AutoProjectMemoryMaintenanceScheduler | false;
   sessionMemoryMaintenanceScheduler?: AutoMemoryMaintenanceScheduler | false;
-}): Promise<void> {
+  smc?: {
+    invokeTurn?: SMCTurnInvoker;
+    documentContract?: ActiveEmbeddingContract;
+    embeddingTransport?: EmbeddingTransport;
+    requestIndexing?: (projectKey: string) => void | Promise<void>;
+  };
+};
+
+/**
+ * Runs the sole production Session Memory curator path for an already-prepared anchor.
+ * Anchor preparation, not this worker, owns evidence selection and frozen job state.
+ */
+export async function runIngestWorker(input: IngestWorkerInput): Promise<void> {
   const db = openMemoryDb(input.root);
-  const config = await loadConfig(input.root);
-  const embeddingSelection = await resolveEmbeddingContract({ db, config, scope: "session_memory" });
-  const embeddingContract = activeDocumentContract(embeddingSelection);
-  const embeddingRuntime = await new EmbeddingProviderFactory(config)
-    .initializeContract(embeddingContract)
-    .catch(() => null);
   const now = input.now ?? (() => new Date());
-  let claimedCount = 0;
-  let sessionMemories = 0;
-  let memoryCandidates = 0;
-  let projectMemoryCandidates = 0;
-  let handoffs = 0;
-  let terminalSummary: string | null = null;
 
   try {
-    updateIngestJobStatus(db, {
-      id: input.jobId,
-      status: "running",
-      started_at: now().toISOString(),
-      updated_at: now().toISOString(),
-      provider_session_id: input.providerSessionId ?? null,
-    });
-
-    while (input.limit === undefined || claimedCount < input.limit) {
-      const remaining =
-        input.limit === undefined ? (input.batchSize ?? 50) : Math.min(input.batchSize ?? 50, input.limit - claimedCount);
-      if (remaining <= 0) break;
-
-      const claimedAt = now().toISOString();
-      const projectStatus = readIngestProjectStatus(db, input.projectKey);
-      const leased = leaseExperienceEvents(db, {
-        ingest_job_id: input.jobId,
-        project_key: input.projectKey,
-        provider_session_id: input.providerSessionId ?? null,
-        limit: remaining,
-        max_prompt_chars: leasePromptCharLimit({
-          configuredLimit: input.maxPromptChars ?? config.ingest.promptCharLimit,
-          projectKey: input.projectKey,
-          jobId: input.jobId,
-          projectStatus,
-          batchIndex: input.batchIndex,
-          batchCount: input.batchCount,
-        }),
-        prompt_chars_for_lease: (lease) => JSON.stringify(leaseForPrompt(lease), null, 2).length,
-        claimed_at: claimedAt,
-        tombstone_id_for: (event) => `tomb_${input.jobId}_${event.id}`,
-      });
-      if (leased.length === 0) break;
-      claimedCount += leased.length;
-      const reconciliationContext = await selectSessionMemoryReconciliationContext({
-        db,
-        projectKey: input.projectKey,
-        leased,
-        documentContract: embeddingContract,
-        provider: embeddingRuntime?.client,
-      });
-      const boundedPrompt = buildBoundedIngestPrompt({
-        projectKey: input.projectKey,
-        jobId: input.jobId,
-        leased,
-        reconciliationContext,
-        projectStatus,
-        batchIndex: input.batchIndex,
-        batchCount: input.batchCount,
-      });
-
-      const response = await invokeLlm({
-        root: input.root,
-        workload: "ingest",
-        provider: input.provider,
-        timeoutMs: config.ingest.llmTimeoutMs,
-        outputSchema: join(input.root, "src", "ingest", "worker-output.schema.json"),
-        prompt: boundedPrompt.prompt,
-        cwd: input.targetRepo,
-        runner: input.runner,
-      });
-      const output = parseIngestWorkerOutput(response.response);
-      const counts = applyIngestWorkerOutput(db, {
-        projectKey: input.projectKey,
-        jobId: input.jobId,
-        provider: input.provider,
-        providerSessionId: input.providerSessionId ?? null,
-        output,
-        finalizedAt: now().toISOString(),
-        allowedExistingMemoryIds: boundedPrompt.reconciliationContext.map((memory) => memory.id),
-        embeddingContract: embeddingContract,
-      });
-      terminalSummary = output.terminal_summary ?? terminalSummary;
-      sessionMemories += counts.session_memories;
-      memoryCandidates += counts.memory_candidates;
-      projectMemoryCandidates += counts.project_memory_candidates;
-      handoffs += counts.handoff_instructions;
+    const anchor = getSessionMemoryAnchorJob(db, input.jobId);
+    if (!anchor || anchor.project_key !== input.projectKey) {
+      throw new Error("smc_companion_anchor_required");
     }
-
-    const finalized = finalizeRemainingLeasedExperienceEvents(db, {
-      ingest_job_id: input.jobId,
-      finalized_at: now().toISOString(),
-      state: "no_output",
-      terminal_decision: "no_output",
-    });
-    updateIngestJobStatus(db, {
-      id: input.jobId,
-      status: "completed",
-      finished_at: now().toISOString(),
-      updated_at: now().toISOString(),
-      output_counts: {
-        claimed: claimedCount,
-        auto_no_output: finalized,
-        session_memories: sessionMemories,
-        memory_candidates: memoryCandidates,
-        project_memory_candidates: projectMemoryCandidates,
-        handoff_instructions: handoffs,
-      },
-      terminal_summary: terminalSummary,
-      error: null,
-    });
-    if (projectMemoryCandidates > 0) {
-      await scheduleAutoProjectMemoryMaintenance(
-        input.root,
-        input.projectKey,
-        input.projectMemoryMaintenanceScheduler,
-      );
-    }
-    if (sessionMemories > 0) {
-      await scheduleAutoSessionMemoryIndexing(
-        input.root,
-        input.projectKey,
-        input.sessionMemoryMaintenanceScheduler,
-      );
-    }
+    await runSMCCompanionWorker(db, input, now);
   } catch (error) {
-    updateIngestJobStatus(db, {
-      id: input.jobId,
-      status: "failed",
-      finished_at: now().toISOString(),
-      updated_at: now().toISOString(),
-      error: { message: compactIngestWorkerError(error), retryable: true },
-    });
+    const anchor = getSessionMemoryAnchorJob(db, input.jobId);
+    if (anchor && (anchor.phase === "running" || anchor.phase === "finalizing")) {
+      transitionSessionMemoryAnchorJob(db, {
+        jobId: anchor.job_id,
+        projectKey: anchor.project_key,
+        expectedPhase: anchor.phase,
+        expectedOwnerEpoch: anchor.owner_epoch,
+        nextPhase: "needs_followup",
+        now: now().toISOString(),
+        reasonCode: "companion_worker_failed",
+      });
+    }
     throw error;
   } finally {
     db.close();
   }
+}
+
+async function runSMCCompanionWorker(
+  db: Database,
+  input: IngestWorkerInput,
+  now: () => Date,
+): Promise<void> {
+  let anchor = getSessionMemoryAnchorJob(db, input.jobId);
+  if (!anchor || anchor.project_key !== input.projectKey) {
+    throw new Error("smc_companion_anchor_identity_mismatch");
+  }
+
+  let attemptId: string;
+  if (anchor.phase === "preparing") {
+    attemptId = `smc_attempt_${randomUUID()}`;
+    const started = transitionSessionMemoryAnchorJob(db, {
+      jobId: anchor.job_id,
+      projectKey: anchor.project_key,
+      expectedPhase: "preparing",
+      expectedOwnerEpoch: anchor.owner_epoch,
+      nextPhase: "running",
+      now: now().toISOString(),
+      reasonCode: null,
+      resumeAttempt: {
+        id: attemptId,
+        provider: input.provider,
+        providerSessionId: input.providerSessionId ?? null,
+        processId: process.pid,
+        details: { launch_kind: "initial_companion" },
+      },
+    });
+    if (started.kind !== "updated") {
+      throw new Error(`smc_companion_start_rejected: ${started.code}`);
+    }
+    anchor = started.anchor;
+  } else if (anchor.phase === "running") {
+    const attempt = listSessionMemoryAnchorAttempts(db, anchor.job_id)
+      .find((row) => row.owner_epoch === anchor!.owner_epoch && row.status === "running");
+    if (!attempt) throw new Error("smc_companion_running_attempt_missing");
+    attemptId = attempt.id;
+  } else {
+    throw new Error(`smc_companion_wrong_phase: ${anchor.phase}`);
+  }
+
+  const manifest = readSMCManifest(db, anchor.job_id);
+  if (!manifest) throw new Error("smc_companion_manifest_missing");
+
+  let documentContract = input.smc?.documentContract;
+  let embeddingTransport = input.smc?.embeddingTransport;
+  if (!documentContract || !embeddingTransport) {
+    const config = await loadConfig(input.root);
+    documentContract = {
+      provider: manifest.embedding_provider as ActiveEmbeddingContract["provider"],
+      model: manifest.embedding_model,
+      dimensions: manifest.embedding_dimensions,
+      purpose: "retrieval_document",
+      formatVersion: manifest.embedding_format_version,
+    };
+    const initialized = await new EmbeddingProviderFactory(config)
+      .initializeTrustedCoordinatorContract(documentContract);
+    embeddingTransport = createCompatiblePurposeEmbeddingTransport(initialized.client);
+  }
+
+  const coordinated = await runSMCCoordinator(db, {
+    job_id: anchor.job_id,
+    project_key: anchor.project_key,
+    attempt_id: attemptId,
+    owner_epoch: anchor.owner_epoch,
+    invoke_turn: input.smc?.invokeTurn ?? invokeSMCActionTurn,
+    document_contract: documentContract,
+    embedding_transport: embeddingTransport,
+    now,
+  });
+  if (coordinated.kind === "needs_followup") return;
+  if (coordinated.kind === "rejected") {
+    throw new Error(`${coordinated.code}: ${coordinated.reason}`);
+  }
+
+  await finalizeSessionMaintenance(db, {
+    jobId: coordinated.job_id,
+    ownerEpoch: coordinated.owner_epoch,
+    acceptedProjectionDigest: coordinated.projection.projection_digest,
+    now,
+    requestIndexing: async (projectKey) => {
+      await requestPendingSessionMemoryIndexing({
+        db,
+        projectKey,
+        schedule: input.smc?.requestIndexing
+          ?? (async () => scheduleAutoSessionMemoryIndexing(
+            input.root,
+            projectKey,
+            input.sessionMemoryMaintenanceScheduler,
+          )),
+      });
+    },
+  });
 }
 
 async function scheduleAutoSessionMemoryIndexing(
@@ -934,34 +173,6 @@ async function scheduleAutoSessionMemoryIndexing(
       .AutoMemoryMaintenanceService(root);
     await service.maybeSchedule(projectKey, { forceIndex: true });
   } catch {
-    // Session Memory remains durable and pending if background indexing cannot be scheduled.
+    // Session Memory remains durable and pending if derived indexing cannot be scheduled.
   }
-}
-
-async function scheduleAutoProjectMemoryMaintenance(
-  root: string,
-  projectKey: string,
-  scheduler: AutoProjectMemoryMaintenanceScheduler | false | undefined,
-): Promise<void> {
-  if (scheduler === false) return;
-  try {
-    await (scheduler ?? new AutoProjectMemoryMaintenanceService(root)).maybeSchedule(
-      projectKey,
-      "session_memory_candidate_created",
-    );
-  } catch {
-    // Session ingest output should remain durable even if background project maintenance scheduling fails.
-  }
-}
-
-function compactIngestWorkerError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  if (message.length <= 4_000) return message;
-
-  const importantLines = message
-    .split(/\r?\n/)
-    .filter((line) => /\b(error|failed|exited|limit|quota|denied|unauthorized|forbidden)\b/i.test(line.trim()))
-    .slice(-12);
-  const compact = importantLines.length > 0 ? importantLines.join("\n") : message.slice(-2_000);
-  return `${compact.slice(0, 4_000)}\n...[truncated provider error]`;
 }

@@ -379,7 +379,7 @@ test("returns degraded canonical reference when markdown section is missing", as
   expect(result.matches[0].content).toBeUndefined();
 });
 
-test("keeps both subjects in the result set for compound questions", async () => {
+test("does not promote a weak facet match above stronger compound-query results", async () => {
   await writeWikiPage(
     "registration.md",
     "# Registration\n\n## Decision order\n\nClass Kit product member auto approval works after membership eligibility.\n\n## Regression evidence\n\nClass Kit product member auto approval is covered by a policy matrix regression.\n\n## Stock outcome\n\nClass Kit product member auto approval consumes stock for eligible grants.\n",
@@ -417,8 +417,9 @@ test("keeps both subjects in the result set for compound questions", async () =>
     ]),
   });
 
-  expect(result.matches.map((match) => match.retrieval_row_id)).toEqual([truncationRowId, decisionRowId]);
-  expect(result.matches.every((match) => match.rerank_reasons?.includes("compound_query_facet_match"))).toBe(true);
+  expect(result.matches.map((match) => match.retrieval_row_id)).toEqual([decisionRowId, evidenceRowId]);
+  expect(result.matches.some((match) => match.retrieval_row_id === truncationRowId)).toBe(false);
+  expect(result.matches.every((match) => !match.rerank_reasons?.includes("compound_query_facet_match"))).toBe(true);
 });
 
 async function writeWikiPage(path: string, text: string): Promise<void> {

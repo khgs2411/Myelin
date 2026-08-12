@@ -11,6 +11,20 @@ import type {
 } from "./session-memory-index-types.ts";
 export type { SessionMemoryIndexInput } from "./session-memory-index-types.ts";
 
+export async function requestPendingSessionMemoryIndexing(input: {
+  db: Database;
+  projectKey: string;
+  schedule?: (projectKey: string) => void | Promise<void>;
+}): Promise<{ kind: "no_work" | "requested"; pending: number }> {
+  const row = input.db.query(
+    `SELECT count(*) AS count FROM session_memory_embeddings
+     WHERE project_key = ? AND status = 'pending'`,
+  ).get(input.projectKey) as { count: number };
+  if (row.count === 0) return { kind: "no_work", pending: 0 };
+  await input.schedule?.(input.projectKey);
+  return { kind: "requested", pending: row.count };
+}
+
 export class SessionMemoryIndexService {
   constructor(
     private readonly deps: {

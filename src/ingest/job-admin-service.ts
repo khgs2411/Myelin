@@ -1,11 +1,34 @@
 import type { Database } from "bun:sqlite";
 import { openMemoryDb, type MemoryDb } from "../memory/db.ts";
-import type { IngestJobRow, IngestJobStatus } from "../memory/ingest-types.ts";
+import type { IngestJobRow, IngestJobStatus, SessionMemoryAnchorJobRow } from "../memory/ingest-types.ts";
 import { updateIngestJobStatus } from "./jobs.ts";
+import {
+  abandonSessionMaintenanceAnchor,
+  type AbandonSessionMaintenanceResult,
+} from "../session-maintenance/abandonment-service.ts";
+import {
+  beginSessionMaintenanceCoordinatorResume,
+  type BeginSMCResumeResult,
+  type SMCCoordinatorLauncher,
+} from "../session-maintenance/recovery-service.ts";
+import type { SMCResolvedInvocationIdentity } from "../session-maintenance/evidence-selection.ts";
+import {
+  cleanupSessionMaintenanceForensics,
+  type CleanupSessionMaintenanceForensicsResult,
+} from "../session-maintenance/forensic-cleanup-service.ts";
+import {
+  launchDetachedSMCCompanionWorker,
+  type DetachedSpawner,
+} from "./runtime.ts";
+import type { LaunchContext } from "../runtime/launch-context.ts";
 
 export type IngestJobAdminServiceDeps = {
   db?: Database;
   now?: () => Date;
+  smcCoordinator?: SMCCoordinatorLauncher;
+  spawn?: DetachedSpawner;
+  context?: LaunchContext;
+  env?: NodeJS.ProcessEnv;
 };
 
 export type ResolveFailedJobsResult = {
@@ -13,10 +36,15 @@ export type ResolveFailedJobsResult = {
   resolved: IngestJobRow[];
 };
 
+export type IngestJobAdminRow = IngestJobRow & {
+  anchor: SessionMemoryAnchorJobRow | null;
+  permanently_denied_legacy_identity: boolean;
+};
+
 export class IngestJobAdminService {
   constructor(private readonly root: string, private readonly deps: IngestJobAdminServiceDeps = {}) {}
 
-  list(input: { projectKey: string; status?: IngestJobStatus; limit?: number }): { jobs: IngestJobRow[] } {
+  list(input: { projectKey: string; status?: IngestJobStatus; limit?: number }): { jobs: IngestJobAdminRow[] } {
     return this.withDb((db) => {
       const limit = input.limit ?? 50;
       const jobs = input.status
@@ -39,7 +67,13 @@ export class IngestJobAdminService {
                LIMIT ?`,
             )
             .all(input.projectKey, limit) as IngestJobRow[]);
-      return { jobs };
+      return { jobs: jobs.map((job) => ({
+        ...job,
+        anchor: (db.query("SELECT * FROM session_memory_anchor_jobs WHERE job_id = ?").get(job.id) as SessionMemoryAnchorJobRow | null) ?? null,
+        permanently_denied_legacy_identity: Boolean(db.query(
+          "SELECT 1 FROM legacy_session_job_deny_identities WHERE job_id = ?",
+        ).get(job.id)),
+      })) };
     });
   }
 
@@ -79,6 +113,73 @@ export class IngestJobAdminService {
     });
   }
 
+  resumeSessionMaintenance(input: {
+    jobId: string;
+    projectKey: string;
+    expectedOwnerEpoch: number;
+    attemptId: string;
+    invocation: SMCResolvedInvocationIdentity;
+  }): BeginSMCResumeResult {
+    const coordinator = this.deps.smcCoordinator ?? ((launch) => {
+      launchDetachedSMCCompanionWorker({
+        root: this.root,
+        projectKey: launch.project_key,
+        jobId: launch.job_id,
+        targetRepo: launch.target_repo,
+        spawn: this.deps.spawn,
+        context: this.deps.context,
+        env: this.deps.env,
+      });
+    });
+    return this.withDb((db) => beginSessionMaintenanceCoordinatorResume(db, {
+      job_id: input.jobId,
+      project_key: input.projectKey,
+      expected_owner_epoch: input.expectedOwnerEpoch,
+      attempt_id: input.attemptId,
+      invocation: input.invocation,
+      now: (this.deps.now ?? (() => new Date()))().toISOString(),
+      coordinator,
+    }));
+  }
+
+  abandonSessionMaintenance(input: {
+    jobId: string;
+    projectKey: string;
+    expectedOwnerEpoch: number;
+    receiptId: string;
+    requestId: string;
+    operatorId: string;
+    reason: string;
+  }): AbandonSessionMaintenanceResult {
+    return this.withDb((db) => abandonSessionMaintenanceAnchor(db, {
+      job_id: input.jobId,
+      project_key: input.projectKey,
+      expected_owner_epoch: input.expectedOwnerEpoch,
+      receipt_id: input.receiptId,
+      request_id: input.requestId,
+      operator_id: input.operatorId,
+      reason: input.reason,
+      now: (this.deps.now ?? (() => new Date()))().toISOString(),
+    }));
+  }
+
+  cleanupSessionMaintenanceForensics(input: {
+    jobId: string;
+    projectKey: string;
+    expectedOwnerEpoch: number;
+    terminalReceiptDigest: string;
+    forensicRetentionMs: number | null;
+  }): CleanupSessionMaintenanceForensicsResult {
+    return this.withDb((db) => cleanupSessionMaintenanceForensics(db, {
+      job_id: input.jobId,
+      project_key: input.projectKey,
+      expected_owner_epoch: input.expectedOwnerEpoch,
+      terminal_receipt_digest: input.terminalReceiptDigest,
+      now: (this.deps.now ?? (() => new Date()))(),
+      forensic_retention_ms: input.forensicRetentionMs,
+    }));
+  }
+
   private listFailedCandidates(db: Database, projectKey: string, ids: string[]): IngestJobRow[] {
     if (ids.length === 0) {
       return db
@@ -87,6 +188,8 @@ export class IngestJobAdminService {
            FROM ingest_jobs
            WHERE project_key = ?
              AND status = 'failed'
+             AND NOT EXISTS (SELECT 1 FROM session_memory_anchor_jobs a WHERE a.job_id = ingest_jobs.id)
+             AND NOT EXISTS (SELECT 1 FROM legacy_session_job_deny_identities d WHERE d.job_id = ingest_jobs.id)
            ORDER BY created_at ASC, id ASC`,
         )
         .all(projectKey) as IngestJobRow[];
@@ -99,6 +202,8 @@ export class IngestJobAdminService {
          FROM ingest_jobs
          WHERE project_key = ?
            AND status = 'failed'
+           AND NOT EXISTS (SELECT 1 FROM session_memory_anchor_jobs a WHERE a.job_id = ingest_jobs.id)
+           AND NOT EXISTS (SELECT 1 FROM legacy_session_job_deny_identities d WHERE d.job_id = ingest_jobs.id)
            AND id IN (${placeholders})
          ORDER BY created_at ASC, id ASC`,
       )
@@ -135,4 +240,3 @@ function jsonObject(value: string | null): Record<string, unknown> {
     return {};
   }
 }
-
