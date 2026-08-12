@@ -14,6 +14,7 @@ import {
 import type { CuratorBatchChannelPlan } from "./curator-channel-plan.ts";
 import { readDurableCuratorAffectedWorkSet } from "./curator-channel-plan.ts";
 import { reconstructSMCOverlay } from "./overlay-store.ts";
+import { inspectSMCBatchProposal } from "./proposal-validator.ts";
 
 export type SMCProviderPhase =
   | Readonly<{ kind: "text_formulation"; obligation: CuratorBatchChannelPlan["obligations"][number] }>
@@ -41,6 +42,8 @@ export type SMCProviderFeedback = Readonly<{
     result: Extract<Extract<SMCResult, { result_kind: "fetch_record_result" }>["result"], { kind: "record" }>;
   }>[];
   latest_status: Readonly<Record<string, unknown>> | null;
+  best_rejected_proposal: Readonly<Record<string, unknown>> | null;
+  best_rejected_proposal_status: Readonly<Record<string, unknown>> | null;
 }>;
 
 export class SMCProviderEnvelopeBudgetError extends Error {
@@ -130,6 +133,7 @@ export function buildSMCWorkEnvelope(
   const feedback = readSMCProviderFeedback(db, {
     job_id: input.manifest.job_id,
     work_batch_id: input.work_batch_id,
+    action_identity: input.action_identity,
   });
   const fetchFeedbackDigest = digest(feedback.successful_fetches);
 
@@ -141,6 +145,7 @@ export function buildSMCWorkEnvelope(
       "Return exactly one JSON object matching action_schema. Do not return Markdown or a filesystem path.",
       "Do not execute Myelin commands, SQL, writes, or canonical mutations.",
       "Use the current same-batch feedback to revise rejected actions and to retain fetched records across stateless turns.",
+      "When prior_rejected_proposal is present, preserve that exact best-known draft and minimally correct prior_rejected_proposal_status instead of regenerating the proposal.",
     ],
     action_identity: input.action_identity,
     action_schema: smcActionJsonSchema(),
@@ -198,6 +203,10 @@ export function buildSMCWorkEnvelope(
         successful_fetch_count: feedback.successful_fetches.length,
         successful_fetch_digest: fetchFeedbackDigest,
         latest_status: feedback.latest_status,
+        best_rejected_proposal_digest: feedback.best_rejected_proposal
+          ? digest(feedback.best_rejected_proposal)
+          : null,
+        prior_rejected_proposal_status: feedback.best_rejected_proposal_status,
       },
     },
   });
@@ -206,6 +215,7 @@ export function buildSMCWorkEnvelope(
     work_kind: batch.work_kind,
     evidence,
     prior_successful_fetch_results: feedback.successful_fetches,
+    prior_rejected_proposal: feedback.best_rejected_proposal,
   });
   const prompt = [
     "BEGIN_AUTHORITATIVE_SMC_PROTOCOL_JSON",
@@ -227,7 +237,7 @@ export function buildSMCWorkEnvelope(
 
 export function readSMCProviderFeedback(
   db: Database,
-  input: { job_id: string; work_batch_id: string },
+  input: { job_id: string; work_batch_id: string; action_identity?: SMCActionIdentity },
 ): SMCProviderFeedback {
   const rows = db.query(
     `SELECT j.job_id, m.project_key, j.work_batch_id, j.attempt_id, j.sequence, j.owner_epoch,
@@ -256,6 +266,9 @@ export function readSMCProviderFeedback(
   }>;
   const fetches = new Map<string, SMCProviderFeedback["successful_fetches"][number]>();
   let latestStatus: Readonly<Record<string, unknown>> | null = null;
+  let bestRejectedProposal: Readonly<Record<string, unknown>> | null = null;
+  let bestRejectedProposalStatus: Readonly<Record<string, unknown>> | null = null;
+  let bestRejectedProposalIssueCount = Number.POSITIVE_INFINITY;
   for (const row of rows) {
     let request: unknown;
     let parsedResult: unknown;
@@ -290,6 +303,42 @@ export function readSMCProviderFeedback(
       throw new Error("SMC provider feedback journal identity mismatch");
     }
     const action = providerAction(request);
+    const rejectedProposal = rejectedProposalDraft(request, result.data);
+    const compact = compactProviderStatus(action, request, result.data);
+    if (rejectedProposal) {
+      const semantic = input.action_identity
+        ? inspectSMCBatchProposal(db, {
+          job_id: input.action_identity.job_id,
+          project_key: input.action_identity.project_key,
+          attempt_id: input.action_identity.attempt_id,
+          owner_epoch: input.action_identity.owner_epoch,
+          manifest_digest: input.action_identity.manifest_digest,
+          snapshot_token: input.action_identity.snapshot_token,
+          proposal: rejectedProposal,
+        })
+        : null;
+      const contractInvalid = semantic && !semantic.valid
+        && semantic.issues.some((issue) => issue.code === "proposal_contract_invalid");
+      const issueCount = semantic
+        ? semantic.valid
+          ? 0
+          : semantic.issues.length + (contractInvalid ? 10_000 : 0)
+        : rejectedProposalIssueCount(result.data);
+      const proposalStatus = semantic
+        ? semantic.valid
+          ? { action: "submit_proposal", result_kind: "proposal_ready_for_resubmission", issues: [] }
+          : {
+            action: "submit_proposal",
+            result_kind: "submit_proposal_result",
+            result: { kind: "rejected", code: "proposal_validation_failed", issues: semantic.issues },
+          }
+        : compact;
+      if (issueCount <= bestRejectedProposalIssueCount) {
+        bestRejectedProposal = rejectedProposal;
+        bestRejectedProposalStatus = proposalStatus;
+        bestRejectedProposalIssueCount = issueCount;
+      }
+    }
     if (action?.action === "fetch_record"
       && result.data.result_kind === "fetch_record_result"
       && result.data.result.kind === "record") {
@@ -298,10 +347,42 @@ export function readSMCProviderFeedback(
       fetches.set(key, { request: action.request, result: result.data.result });
       continue;
     }
-    const compact = compactProviderStatus(action, request, result.data);
     if (compact) latestStatus = compact;
   }
-  return { successful_fetches: [...fetches.values()], latest_status: latestStatus };
+  return {
+    successful_fetches: [...fetches.values()],
+    latest_status: latestStatus,
+    best_rejected_proposal: bestRejectedProposal,
+    best_rejected_proposal_status: bestRejectedProposalStatus,
+  };
+}
+
+function rejectedProposalIssueCount(result: SMCResult): number {
+  if (result.result_kind === "action_validation_failed") return result.issues.length;
+  if (result.result_kind === "submit_proposal_result"
+    && result.result.kind === "rejected"
+    && result.result.code === "proposal_validation_failed") {
+    return result.result.issues.length;
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
+function rejectedProposalDraft(
+  request: unknown,
+  result: SMCResult,
+): Readonly<Record<string, unknown>> | null {
+  const rejected = result.result_kind === "action_validation_failed"
+    || (result.result_kind === "submit_proposal_result"
+      && result.result.kind === "rejected"
+      && result.result.code === "proposal_validation_failed");
+  if (!rejected || !isRecord(request)) return null;
+  const nestedRequest = isRecord(request.request) ? request.request : null;
+  const proposal = nestedRequest && isRecord(nestedRequest.proposal)
+    ? nestedRequest.proposal
+    : isRecord(request.proposal)
+      ? request.proposal
+      : null;
+  return proposal ? JSON.parse(stableJson(proposal)) as Readonly<Record<string, unknown>> : null;
 }
 
 function matchesJournalIdentity(

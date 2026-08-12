@@ -1265,6 +1265,22 @@ const MIGRATIONS: Migration[] = [
   },
 ];
 
+export const LATEST_MEMORY_SCHEMA_VERSION = MIGRATIONS.at(-1)?.version ?? 0;
+
+export class MemorySchemaCompatibilityError extends Error {
+  readonly code = "installed_runtime_incompatible";
+
+  constructor(
+    readonly databaseVersion: number,
+    readonly runtimeVersion: number,
+  ) {
+    super(
+      `installed_runtime_incompatible: memory database schema ${databaseVersion} is newer than runtime schema ${runtimeVersion}`,
+    );
+    this.name = "MemorySchemaCompatibilityError";
+  }
+}
+
 function applyMigration19(db: Database): void {
   if (tableExists(db, "session_memory_write_admissions")) {
     const hasTargetColumn = db.query("PRAGMA table_info(session_memory_write_admissions)").all()
@@ -1417,6 +1433,9 @@ export function runMigrations(
   db.exec("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);");
   const row = db.query("SELECT MAX(version) AS v FROM schema_migrations").get() as { v: number | null };
   const current = row?.v ?? 0;
+  if (current > LATEST_MEMORY_SCHEMA_VERSION) {
+    throw new MemorySchemaCompatibilityError(current, LATEST_MEMORY_SCHEMA_VERSION);
+  }
 
   for (const migration of MIGRATIONS) {
     if (migration.version <= current) continue;

@@ -5,6 +5,7 @@ type CodexHookPayload = {
   session_id?: unknown;
   turn_id?: unknown;
   cwd?: unknown;
+  transcript_path?: unknown;
   prompt?: unknown;
   last_assistant_message?: unknown;
   [key: string]: unknown;
@@ -17,6 +18,7 @@ export const codexInputAdapter: InputProviderAdapter = {
 export function classifyCodexHookInput(payload: unknown, occurredAt = new Date()): ProviderInput {
   const isObject = Boolean(payload && typeof payload === "object" && !Array.isArray(payload));
   const value = isObject ? (payload as CodexHookPayload) : {};
+  const headless = stringOrNull(value.transcript_path) === null;
   const metadata: ProviderInputMetadata = {
     id: crypto.randomUUID(),
     occurred_at: occurredAt.toISOString(),
@@ -26,7 +28,7 @@ export function classifyCodexHookInput(payload: unknown, occurredAt = new Date()
     provider_session_id: stringOrNull(value.session_id),
     turn_id: stringOrNull(value.turn_id),
     raw_payload_json: serializePayload(payload),
-    source: "codex-hook",
+    source: headless ? "codex-hook-headless" : "codex-hook",
   };
 
   if (!isObject) {
@@ -34,10 +36,16 @@ export function classifyCodexHookInput(payload: unknown, occurredAt = new Date()
   }
 
   if (value.hook_event_name === "SessionStart") {
+    if (headless) {
+      return { kind: "ignored", diagnostic: { ...metadata, reason: "internal-session-start" } };
+    }
     return { kind: "control", signal: { ...metadata, signal_kind: "session.start" } };
   }
 
   if (value.hook_event_name === "UserPromptSubmit") {
+    if (headless) {
+      return { kind: "ignored", diagnostic: { ...metadata, reason: "internal-orchestration-prompt" } };
+    }
     if (typeof value.prompt === "string" && value.prompt.trim().length > 0) {
       return {
         kind: "experience",

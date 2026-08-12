@@ -38,7 +38,7 @@ import {
   type SMCActionIdentity,
   type SMCResult,
 } from "./protocol.ts";
-import { buildSMCWorkEnvelope, SMCProviderEnvelopeBudgetError } from "./work-envelope.ts";
+import { buildSMCWorkEnvelope, readSMCProviderFeedback, SMCProviderEnvelopeBudgetError } from "./work-envelope.ts";
 import type { CuratorBatchChannelPlan } from "./curator-channel-plan.ts";
 
 export type SMCCoordinatorResult =
@@ -262,7 +262,12 @@ export async function runSMCCoordinator(
         if (stableJson(turn.invocation) !== stableJson(invocation)) {
           throw new Error("provider returned a different resolved invocation identity");
         }
-        rawAction = turn.action;
+        const feedback = readSMCProviderFeedback(db, {
+          job_id: manifest.job_id,
+          work_batch_id: batch.batch_id,
+          action_identity: identity,
+        });
+        rawAction = normalizeProviderAction(turn.action, identity, feedback.best_rejected_proposal);
       } catch (error) {
         const reason = message(error);
         await journalSyntheticFailure(db, identity, { provider_transport_error: reason }, {
@@ -1074,4 +1079,192 @@ function addSafe(left: number, right: number): number {
 function message(error: unknown): string {
   const value = error instanceof Error ? error.message : String(error);
   return value.length <= 4_000 ? value : `${value.slice(0, 3_997)}...`;
+}
+
+function normalizeProviderAction(
+  value: unknown,
+  identity: SMCActionIdentity,
+  priorProposal: Readonly<Record<string, unknown>> | null,
+): unknown {
+  if (!isRecord(value)) return value;
+  const request = isRecord(value.request) ? value.request : null;
+  const rawProposal = request && isRecord(request.proposal)
+    ? request.proposal
+    : isRecord(value.proposal)
+      ? value.proposal
+      : null;
+  if (!rawProposal) return value;
+  const proposalFields = [
+    "schema_version",
+    "work_batch_id",
+    "expected_overlay_revision",
+    "source_event_dispositions",
+    "memory_dispositions",
+    "disposition_receipt_reuses",
+    "staged_operations",
+    "checked_output_refs",
+    "terminal_summary",
+  ] as const;
+  const misplacedProposalFields = request
+    ? Object.fromEntries(proposalFields.flatMap((key) => request[key] === undefined ? [] : [[key, request[key]]]))
+    : {};
+  const proposal = deriveProposalOutputReferences(mergeProposalDraft(priorProposal, {
+    ...misplacedProposalFields,
+    ...rawProposal,
+    schema_version: rawProposal.schema_version ?? 1,
+    work_batch_id: rawProposal.work_batch_id ?? identity.work_batch_id,
+    expected_overlay_revision: rawProposal.expected_overlay_revision ?? identity.expected_overlay_revision,
+    disposition_receipt_reuses: rawProposal.disposition_receipt_reuses ?? [],
+  }));
+  if (typeof value.action === "string") {
+    const normalizedRequest = request ? { ...request } : {};
+    for (const key of proposalFields) delete normalizedRequest[key];
+    return {
+      ...value,
+      request: { ...normalizedRequest, proposal },
+    };
+  }
+  return {
+    ...identity,
+    action: "submit_proposal",
+    request: { proposal },
+  };
+}
+
+function deriveProposalOutputReferences(proposal: Record<string, unknown>): Record<string, unknown> {
+  const noOutputSources = new Set(Array.isArray(proposal.source_event_dispositions)
+    ? proposal.source_event_dispositions.flatMap((disposition) =>
+      isRecord(disposition) && disposition.disposition === "no_output"
+        ? [stringField(disposition, "source_event_id")]
+        : [])
+    : []);
+  const memoryDispositions = Array.isArray(proposal.memory_dispositions)
+    ? proposal.memory_dispositions.map((disposition) =>
+      isRecord(disposition) && disposition.disposition === "keep" && Array.isArray(disposition.source_event_refs)
+        ? {
+          ...disposition,
+          source_event_refs: disposition.source_event_refs.filter((sourceId) =>
+            typeof sourceId !== "string" || !noOutputSources.has(sourceId)),
+        }
+        : disposition)
+    : proposal.memory_dispositions;
+  const normalizedProposal: Record<string, unknown> = { ...proposal, memory_dispositions: memoryDispositions };
+  const requiredBySource = new Map<string, Set<string>>();
+  const add = (sourceId: string, ref: string): void => {
+    const refs = requiredBySource.get(sourceId) ?? new Set<string>();
+    refs.add(ref);
+    requiredBySource.set(sourceId, refs);
+  };
+
+  if (Array.isArray(normalizedProposal.staged_operations)) {
+    for (const operation of normalizedProposal.staged_operations) {
+      if (!isRecord(operation) || operation.operation !== "upsert" || !isRecord(operation.value)) continue;
+      const kind = stringField(operation, "record_kind");
+      const id = stringField(operation.value, "id");
+      if (!(["memory", "candidate", "handoff"] as const).includes(kind as "memory" | "candidate" | "handoff") || !id) continue;
+      const prefix = kind === "memory" ? "session_memories" : kind === "candidate" ? "memory_candidates" : "handoff_instructions";
+      if (!Array.isArray(operation.value.source_event_refs)) continue;
+      for (const sourceId of operation.value.source_event_refs) {
+        if (typeof sourceId === "string") add(sourceId, `${prefix}/${id}`);
+      }
+    }
+  }
+
+  if (Array.isArray(normalizedProposal.memory_dispositions)) {
+    for (const disposition of normalizedProposal.memory_dispositions) {
+      if (!isRecord(disposition)) continue;
+      const memoryId = stringField(disposition, "memory_id");
+      if (!memoryId || !Array.isArray(disposition.source_event_refs)) continue;
+      for (const sourceId of disposition.source_event_refs) {
+        if (typeof sourceId === "string") add(sourceId, `memory_dispositions/${memoryId}`);
+      }
+    }
+  }
+
+  if (!Array.isArray(normalizedProposal.source_event_dispositions)) return normalizedProposal;
+  const sourceEventDispositions = normalizedProposal.source_event_dispositions.map((disposition) => {
+    if (!isRecord(disposition) || disposition.disposition !== "used") return disposition;
+    const sourceId = stringField(disposition, "source_event_id");
+    const outputRefs = [...(requiredBySource.get(sourceId) ?? [])].sort(compareText);
+    return outputRefs.length > 0
+      ? { ...disposition, output_refs: outputRefs }
+      : {
+        source_event_id: sourceId,
+        disposition: "no_output",
+        reason: disposition.reason,
+      };
+  });
+  const checkedOutputRefs: string[] = [...new Set<string>(sourceEventDispositions.flatMap((disposition): string[] =>
+    isRecord(disposition) && disposition.disposition === "used" && Array.isArray(disposition.output_refs)
+      ? disposition.output_refs.filter((ref): ref is string => typeof ref === "string")
+      : []))].sort(compareText);
+  return { ...normalizedProposal, source_event_dispositions: sourceEventDispositions, checked_output_refs: checkedOutputRefs };
+}
+
+function mergeProposalDraft(
+  prior: Readonly<Record<string, unknown>> | null,
+  current: Readonly<Record<string, unknown>>,
+): Record<string, unknown> {
+  if (!prior) return { ...current };
+  const merged: Record<string, unknown> = { ...prior, ...current };
+  merged.source_event_dispositions = mergeKeyedArray(
+    prior.source_event_dispositions,
+    current.source_event_dispositions,
+    (item) => stringField(item, "source_event_id"),
+    false,
+    true,
+  );
+  merged.memory_dispositions = mergeKeyedArray(
+    prior.memory_dispositions,
+    current.memory_dispositions,
+    (item) => stringField(item, "memory_id"),
+    false,
+    true,
+  );
+  merged.staged_operations = mergeKeyedArray(
+    prior.staged_operations,
+    current.staged_operations,
+    (item) => `${stringField(item, "record_kind")}:${stringField(item, "stable_key")}`,
+    true,
+  );
+  return merged;
+}
+
+function mergeKeyedArray(
+  prior: unknown,
+  current: unknown,
+  key: (item: Record<string, unknown>) => string,
+  mergeValue = false,
+  retainOmitted = false,
+): unknown {
+  if (!Array.isArray(current)) return prior;
+  if (!Array.isArray(prior)) return current;
+  const priorByKey = new Map(prior.filter(isRecord).map((item) => [key(item), item]));
+  const currentKeys = new Set(current.filter(isRecord).map(key));
+  const merged = current.map((item) => {
+    if (!isRecord(item)) return item;
+    const previous = priorByKey.get(key(item));
+    if (!previous) return item;
+    const merged = { ...previous, ...item };
+    if (mergeValue && isRecord(previous.value) && isRecord(item.value)) {
+      merged.value = { ...previous.value, ...item.value };
+    }
+    return merged;
+  });
+  if (retainOmitted) {
+    merged.push(...prior.filter((item) => isRecord(item) && !currentKeys.has(key(item))));
+  }
+  return merged;
+}
+
+function stringField(value: Record<string, unknown>, key: string): string {
+  return typeof value[key] === "string" ? value[key] : "";
+}
+
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

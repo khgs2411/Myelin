@@ -1,4 +1,5 @@
 import { openMemoryDb } from "../memory/db.ts";
+import { MemorySchemaCompatibilityError } from "../memory/migrations.ts";
 import { isProcessAlive, resolveIngestTargetRepo } from "../ingest/runtime.ts";
 import { IngestService } from "../ingest/ingest-service.ts";
 import { loadConfig, type AutoMemoryMaintenanceConfig, type SMCPlanConfig } from "../runtime/config.ts";
@@ -56,7 +57,15 @@ export class AutoMemoryMaintenanceService implements AutoMemoryMaintenanceSchedu
       return { status: "skipped", reason: "capture disabled for Myelin-owned worker" };
     }
 
-    const db = openMemoryDb(this.root);
+    let db;
+    try {
+      db = openMemoryDb(this.root);
+    } catch (error) {
+      if (error instanceof MemorySchemaCompatibilityError) {
+        return this.skip(projectKey, error.message);
+      }
+      throw error;
+    }
     let queuedCount = 0;
     try {
       const runningJobs = db

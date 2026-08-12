@@ -32,7 +32,12 @@ export type ControlSignalInput = {
 export type IgnoredProviderInput = {
   kind: "ignored";
   diagnostic: ProviderInputMetadata & {
-    reason: "empty-content" | "malformed-payload" | "unsupported-event";
+    reason:
+      | "empty-content"
+      | "internal-orchestration-prompt"
+      | "internal-session-start"
+      | "malformed-payload"
+      | "unsupported-event";
   };
 };
 

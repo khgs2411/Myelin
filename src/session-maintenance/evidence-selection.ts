@@ -59,14 +59,17 @@ export type SMCNoAgentReason =
   | "control_event"
   | "invalid_status"
   | "unsupported_event_kind"
-  | "empty_content";
+  | "empty_content"
+  | "internal_orchestration_prompt"
+  | "oversized_evidence_requires_review";
 
 export type SMCNoAgentTerminalIntent = {
   source_id: string;
   source_hash: `sha256:${string}`;
   reason: SMCNoAgentReason;
   terminal_state: "no_output";
-  terminal_decision: `no_agent.${SMCNoAgentReason}`;
+  terminal_decision: `no_agent.${Exclude<SMCNoAgentReason, "oversized_evidence_requires_review">}`
+    | "oversized_evidence_requires_review";
 };
 
 export type SMCEvidencePreparationPlan = {
@@ -132,14 +135,26 @@ export function planSessionMaintenanceEvidence(
 ): SMCEvidencePreparationResult {
   const selectionLimit = normalizeSelectionLimit(input.compatibility_selection_limit);
   const rows = listExperienceEventPreparationCandidates(db, input.project_key);
-  const contentRows = rows.filter(isExperienceContentEvent);
-  const noAgentRows = rows.filter(isExperienceNoAgentEvent);
+  const contentRows = rows.filter(isCuratorContentEvent);
+  const noAgentRows = rows.filter(isCuratorNoAgentEvent);
   const orderedCandidates = [...contentRows, ...noAgentRows];
   const selectedRows = selectionLimit === null
     ? orderedCandidates
     : orderedCandidates.slice(0, selectionLimit);
-  const evidence = selectedRows.filter(isExperienceContentEvent).map(normalizeSelectedEvidence);
-  const noAgentIntents = selectedRows.filter(isExperienceNoAgentEvent).map(normalizeNoAgentIntent);
+  const evidence: SMCSelectedEvidence[] = [];
+  const noAgentIntents: SMCNoAgentTerminalIntent[] = [];
+  for (const row of selectedRows) {
+    if (isCuratorContentEvent(row)) {
+      const item = normalizeSelectedEvidence(row);
+      if (item.encoded_bytes > input.budgets.max_encoded_bytes_per_item) {
+        noAgentIntents.push(normalizeNoAgentIntent(row, "oversized_evidence_requires_review"));
+      } else {
+        evidence.push(item);
+      }
+    } else {
+      noAgentIntents.push(normalizeNoAgentIntent(row));
+    }
+  }
   const selectedAudit = input.include_audit
     ? selectDueSessionMemoryAuditPartition(db, {
       project_key: input.project_key,
@@ -273,14 +288,19 @@ function normalizeSelectedEvidence(row: ExperienceEventRow): SMCSelectedEvidence
   };
 }
 
-function normalizeNoAgentIntent(row: ExperienceEventRow): SMCNoAgentTerminalIntent {
-  const reason = noAgentReason(row);
+function normalizeNoAgentIntent(
+  row: ExperienceEventRow,
+  forcedReason?: SMCNoAgentReason,
+): SMCNoAgentTerminalIntent {
+  const reason = forcedReason ?? noAgentReason(row);
   return {
     source_id: row.id,
     source_hash: digest(normalizeEvidence(row)),
     reason,
     terminal_state: "no_output",
-    terminal_decision: `no_agent.${reason}`,
+    terminal_decision: reason === "oversized_evidence_requires_review"
+      ? reason
+      : `no_agent.${reason}`,
   };
 }
 
@@ -309,12 +329,37 @@ function normalizeEvidence(row: ExperienceEventRow): SMCNormalizedEvidence {
 }
 
 function noAgentReason(row: ExperienceEventRow): SMCNoAgentReason {
+  if (isHistoricalHeadlessCodexPrompt(row)) return "internal_orchestration_prompt";
   if (row.status !== "valid") return "invalid_status";
   if (row.event_kind === "session.start") return "control_event";
   if (row.event_kind !== "user.prompt" && row.event_kind !== "assistant.response") {
     return "unsupported_event_kind";
   }
   return "empty_content";
+}
+
+function isCuratorContentEvent(row: ExperienceEventRow): boolean {
+  return isExperienceContentEvent(row) && !isHistoricalHeadlessCodexPrompt(row);
+}
+
+function isCuratorNoAgentEvent(row: ExperienceEventRow): boolean {
+  return isExperienceNoAgentEvent(row) || isHistoricalHeadlessCodexPrompt(row);
+}
+
+function isHistoricalHeadlessCodexPrompt(row: ExperienceEventRow): boolean {
+  if (row.provider !== "codex" || row.event_kind !== "user.prompt") return false;
+  try {
+    const payload = JSON.parse(row.raw_payload_json) as Record<string, unknown> | null;
+    return Boolean(
+      payload
+      && typeof payload === "object"
+      && !Array.isArray(payload)
+      && payload.hook_event_name === "UserPromptSubmit"
+      && (typeof payload.transcript_path !== "string" || payload.transcript_path.length === 0),
+    );
+  } catch {
+    return false;
+  }
 }
 
 function normalizeSelectionLimit(value: number | null | undefined): number | null {
