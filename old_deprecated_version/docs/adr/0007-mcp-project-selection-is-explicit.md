@@ -1,3 +1,0 @@
-# Require explicit project selection for MCP memory tools
-
-V2 MCP facades require callers to pass `project_key` explicitly unless the MCP server environment provides `LLM_WIKI_PROJECT`. The MCP server is installed globally and cannot reliably know the agent caller's current working directory, so it must not infer project context from cwd. The current TypeScript MCP package already follows this shape in `mcp/src/fs.ts::resolveProjectKey`; V2 facades should reuse that contract rather than adding a second resolver. `repo_paths` can support discovery and listing, but request handling stays explicit to avoid misleading hidden routing.

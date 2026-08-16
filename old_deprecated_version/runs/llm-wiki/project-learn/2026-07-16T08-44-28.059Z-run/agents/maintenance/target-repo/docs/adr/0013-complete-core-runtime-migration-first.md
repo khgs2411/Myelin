@@ -1,3 +1,0 @@
-# Complete the core TypeScript migration before SQLite memory
-
-The first V2 implementation slice is a complete migration of the core LLM Wiki runtime from Python/Bash to Bun/TypeScript, not a read-only foundation and not a thin wrapper around old scripts. The Python layer is thin enough that keeping it as a second runtime would add more long-term complexity than porting it now. SQLite memory, vector search, and hooks should land after normal core operation uses TypeScript entrypoints for compile, update, lint, measure, ask, status, inbox handling, validation, and orchestration. Python/Bash files may be used as temporary reference implementations during the port, but final acceptance requires normal core commands to run without Python or `.venv`.

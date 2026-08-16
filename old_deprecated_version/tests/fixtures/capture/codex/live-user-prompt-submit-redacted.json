@@ -1,7 +1,0 @@
-{
-  "hook_event_name": "UserPromptSubmit",
-  "session_id": "redacted-session",
-  "turn_id": "redacted-turn",
-  "cwd": "/Users/liadgoren/Repositories/class-kit",
-  "prompt": "Synthetic verification prompt for Myelin capture after approved install."
-}

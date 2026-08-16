@@ -1,8 +1,0 @@
-{
-  "hook_event_name": "Stop",
-  "session_id": "sess_123",
-  "turn_id": "turn_1",
-  "cwd": "/tmp/class-kit",
-  "model": "gpt-5.4",
-  "last_assistant_message": "Use Supabase Auth admin APIs from server-side code."
-}

@@ -1,3 +1,0 @@
-# Use one repo-root SQLite database for V2 memory
-
-V2 memory uses one repo-root SQLite database at `state/memory.db`, partitioned by `project_key`, instead of one database per project. Project wiki and state files remain the durable human-reviewable project artifact; SQLite is the generated serving, event, queue, and session substrate. The runtime that reads and writes this database should be Bun/TypeScript after the V2 runtime foundation exists. This favors cross-project Practice Memory and Personal Memory, avoids sync problems for evidence that relates to multiple projects, and leaves project portability to an explicit export command if needed later.

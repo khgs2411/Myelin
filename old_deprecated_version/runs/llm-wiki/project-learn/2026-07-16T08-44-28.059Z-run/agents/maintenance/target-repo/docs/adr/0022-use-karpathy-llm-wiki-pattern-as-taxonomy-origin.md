@@ -1,3 +1,0 @@
-# Use Karpathy's LLM Wiki pattern as the taxonomy origin
-
-V2 should keep the essence of the original LLM Wiki pattern: preserved raw sources, an LLM-maintained markdown wiki, and a schema/instructions layer that teaches agents how to maintain the wiki. The product should not drift into generic RAG or ordinary repo documentation. The curated Project Memory taxonomy should therefore be redesigned around source preservation, maintained synthesis, schema contracts, content-oriented index, and chronological log/session history. SQLite and vector search are serving infrastructure around this pattern, not replacements for the curated wiki.
