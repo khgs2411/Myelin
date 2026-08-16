@@ -3,7 +3,11 @@
 .DS_Store
 node_modules/
 
+old_deprecated_version/docs/
 old_deprecated_version/mcp/
+old_deprecated_version/src/
+old_deprecated_version/tests/
+old_deprecated_version/vendor/
 old_deprecated_version/projects
 old_deprecated_version/!projects/sample/
 old_deprecated_version/raw/inbox

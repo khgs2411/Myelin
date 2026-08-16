@@ -1,0 +1,37 @@
+{
+  "rule": "source-classification",
+  "description": "Every ingested source resolves these fields before integration. Migrated from schemas/source-classification.md.",
+  "required_fields": [
+    "source_kind",
+    "ownership",
+    "destination",
+    "update_targets",
+    "action"
+  ],
+  "source_kind": [
+    "spec",
+    "design",
+    "plan",
+    "implementation-note",
+    "api-doc",
+    "reference",
+    "session-note",
+    "decision-candidate",
+    "troubleshooting",
+    "unknown"
+  ],
+  "ownership": [
+    "project:<project-key>",
+    "concept:<concept-key>",
+    "review-required",
+    "reject"
+  ],
+  "action": [
+    "update-existing-pages",
+    "create-new-page-and-update-index",
+    "log-only",
+    "reject",
+    "needs-review"
+  ],
+  "notes": "destination and update_targets are contextual (page paths / scopes), not a fixed enum."
+}
