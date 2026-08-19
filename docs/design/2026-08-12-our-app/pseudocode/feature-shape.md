@@ -12,13 +12,14 @@ demonstrates an independently useful owner.
 
 ```text
 package.json
+config.yaml
 
 src/
   cli.ts
   application.ts
 
   capture/
-    capture.service.ts
+    evidence-capture.service.ts
     capture-adapter.ts
 
   workspace/
@@ -28,6 +29,7 @@ src/
     query.service.ts
 
   evidence/
+    evidence-item.dto.ts
     evidence-insertion.service.ts
     evidence-ingestion.service.ts
 
@@ -53,31 +55,57 @@ src/
 Defines the TypeScript package and maps the intentionally unresolved installed
 command name to the built CLI entry. It pins `sqlite-vec` to an exact compatible
 version and includes the application-owned SQLite runtime assets in supported
-packages. Build output, installation, upgrades, backups, and provider-hook
-registration remain separate unresolved concerns.
+packages. It participates in distribution but does not collapse command
+publication, machine-state initialization, provider-hook installation, and MCP
+registration into one lifecycle owner.
+
+### `config.yaml` — human-facing application defaults
+
+Defines validated operator-editable defaults, including the evidence-count and
+elapsed-time maintenance policy. Each application invocation compares the
+validated configuration digest with SQLite and creates a new immutable active
+`MaintenancePolicy` revision when the effective values change. Per-project
+effective policy remains SQLite state so evidence acceptance can evaluate one
+stable revision atomically.
+
+### Application installation owner — representation `OPEN`
+
+Owns the machine-level operation that publishes the stable command, initializes
+application state, and installs provider-specific capture mechanics once per
+machine. It may later make the separate MCP integration available through the
+same top-level installation experience. No concrete script, source file, or
+package entry has yet been justified as this owner.
 
 ### [`src/cli.ts`](./src/cli.ts.md) — process entry boundary
 
-Routes the application's three public process behaviors: automatic capture,
-brain query, and manual evidence insertion. It delegates each behavior to its
-application owner and does not implement capture, retrieval, or memory
-evolution itself. This file becomes one installed named command whose name is
-intentionally unresolved.
+Routes the application's four public process behaviors: project bootstrap,
+automatic capture, brain query, and manual evidence insertion. It delegates
+each behavior to its application owner and does not implement registration,
+capture, retrieval, or memory evolution itself. This file becomes one installed
+named command whose name is intentionally unresolved.
 
 ### [`src/application.ts`](./src/application.ts.md) — `Application`
 
 Exposes the stable provider-neutral application façade used by the CLI:
-`capture`, `query`, and `insertEvidence`. It delegates to private application
-services without exposing the service graph or implementing workflow logic.
-Its static `create` factory method owns process-scoped dependency composition
-from capability-specific runtime configuration.
+`bootstrapProject`, `capture`, `query`, and `insertEvidence`. It delegates to
+private application services without exposing the service graph or implementing
+workflow logic. Its static `create` factory method owns process-scoped
+dependency composition from capability-specific runtime configuration.
 
-### [`src/capture/capture.service.ts`](./src/capture/capture.service.ts.md) — `CaptureService`
+### Project registration application owner — filename `OPEN`
+
+Owns provider-neutral durable registration of one exact canonical directory as
+an overseen project root with an immutable application-owned identity. Its
+necessity is established by bootstrap and workspace resolution, but its source
+filename and concrete service boundary have not yet been shaped.
+
+### [`src/capture/evidence-capture.service.ts`](./src/capture/evidence-capture.service.ts.md) — `EvidenceCaptureService`
 
 Exposes one provider-neutral capture operation to the CLI. It normalizes native
-activity through its injected `CaptureAdapter`. It combines the immutable
-capture route, normalized observation, capture time, and one resolved workspace
-context into provider-neutral evidence. It then delegates durable acceptance to
+activity through its injected `CaptureAdapter`, ignores activity outside every
+overseen root, and combines managed activity with its capture origin and
+resolved workspace context to construct one capture-originated
+`EvidenceCandidateDto`. It then delegates durable acceptance to
 `EvidenceIngestionService`. It plays the facade role without placing the
 architectural pattern in the class name.
 
@@ -85,15 +113,19 @@ architectural pattern in the class name.
 
 Defines the capability contract that every capture-capable provider implements.
 It validates and converts exact native provider activity into exactly one
-evidence, ignored, or rejected outcome. It does not own route identity,
-workspace resolution, or durable evidence storage.
+provider-neutral observation draft, ignored outcome, or rejected outcome. It
+does not construct an evidence candidate or item, own route identity, resolve
+workspace context, or store evidence.
 
 ### [`src/workspace/workspace-context.service.ts`](./src/workspace/workspace-context.service.ts.md) — `WorkspaceContextService`
 
-Resolves the deterministic project, repository, location, checkout, worktree,
-and branch coordinates for the active workspace. It returns `WorkspaceContext`
-and does not own provider-session identity, source inspection for curation, or
-semantic workstream analysis.
+Matches normalized activity against durable overseen-project registrations.
+It uses the provider-observed working directory to return a managed
+`WorkspaceContext`, an unmanaged outcome, or a safe workspace failure. Managed
+context reuses registered project and repository identity and adds the active
+Git branch when available. It does not discover or register projects, own
+provider-session identity, inspect source for curation, or perform semantic
+workstream analysis.
 
 ### [`src/providers/codex/codex-capture.adapter.ts`](./src/providers/codex/codex-capture.adapter.ts.md) — `CodexCaptureAdapter`
 
@@ -111,20 +143,40 @@ query agent task, validating the untrusted agent result, and returning an
 evidence-backed answer. The lower-level SQLite retrieval owner remains
 unshaped.
 
+### [`src/evidence/evidence-item.dto.ts`](./src/evidence/evidence-item.dto.ts.md) — evidence DTO contracts
+
+Defines the immutable provider-neutral `EvidenceCandidateDto` constructed by
+capture and manual insertion and the accepted `EvidenceItemDto` created by
+ingestion. Candidate fields own capture-or-insertion origin, workspace context,
+source time, normalized string content, and exact source material. Ingestion
+adds durable application evidence identity and acceptance time. Neither DTO is
+the SQLite row shape or owns replay suppression. Both remain plain immutable
+data without a shared DTO base class or DTO-owned behavior. Runtime validation
+is an explicit ingestion-boundary contract whose concrete library and owner
+remain unshaped.
+
 ### `src/evidence/evidence-insertion.service.ts` — `EvidenceInsertionService`
 
 Owns the manual insertion workflow for attributable evidence supplied directly
-by a human or agent. It establishes trusted principal and origin, constructs
-provider-neutral evidence, validates correction authority, delegates durable
-acceptance to `EvidenceIngestionService`, and may wait for the resulting
-maintenance outcome. It performs no curation itself.
+by a human or agent. It establishes trusted origin and attribution, constructs
+provider-neutral `EvidenceCandidateDto` values, and delegates them with immediate
+maintenance intent to `EvidenceIngestionService`. It does not pass manual input
+through `EvidenceCaptureService`, directly mutate or fence memory, wait for
+agentic maintenance, or perform curation itself.
 
-### `src/evidence/evidence-ingestion.service.ts` — `EvidenceIngestionService`
+### [`src/evidence/evidence-ingestion.service.ts`](./src/evidence/evidence-ingestion.service.ts.md) — `EvidenceIngestionService`
 
 Owns the common deterministic acceptance boundary after evidence becomes
-provider-neutral: idempotent durable append plus durable recording of the
-appropriate maintenance intent. It may apply an already-authorized correction
-fence, but does not determine authority, curate memory, or publish documents.
+provider-neutral. One project-bound atomic operation validates DTOs, resolves
+operation and source replay, assigns contiguous project-local evidence
+identities, acceptance times, and sequences, appends new evidence, evaluates
+the active revisioned maintenance policy, creates or coalesces a finite pending
+request, and stores the acceptance receipt. Its accepted operation contract
+requires one immutable, project-owned SQLite operation record containing the
+versioned command fingerprint and complete versioned receipt for the owning
+project's lifetime. It owns neither the remaining Evidence Log table shape nor
+source normalization, caller authority, correction interpretation, maintenance
+execution, memory curation, or publication.
 
 ### [`src/memory/markdown/markdown-memory-document.ts`](./src/memory/markdown/markdown-memory-document.ts.md) — canonical Markdown document shape
 
@@ -160,7 +212,13 @@ curation semantics remain in their application workflows.
 
 ```text
 package.json
-  -> publishes the built cli.ts entry as the installed named command
+  -> declares the built cli.ts entry for command publication
+
+application installation owner (representation OPEN)
+  -> publishes the stable named command
+  -> initializes application-owned machine state
+  -> installs Codex capture hooks once per machine
+  -> later makes the separate MCP integration available when it exists
 
 human shell | provider hooks
   -> installed named command
@@ -173,20 +231,34 @@ human shell | provider hooks
               -> construct selected capture capability
                   codex capture configuration -> CodexCaptureAdapter
               -> inject CaptureInvocationContext and CodexCaptureAdapter
-                 directly into CaptureService
+                 directly into EvidenceCaptureService
               -> construct configured agent-execution capability
                   codex agent configuration -> CodexAgentAdapter
               -> construct application services
               -> return Application instance
 
+          -> route bootstrap command
+              -> Application.bootstrapProject(exact directory path)
+                  -> project registration application owner (filename OPEN)
+                      -> immutable ProjectIdentity
+                      -> replaceable canonical oversight root
+                      -> optional RepositoryIdentity
+
           -> route capture command
-              -> Application.capture(exact native activity, context)
-                  -> CaptureService
+              -> Application.capture(exact native activity)
+                  -> EvidenceCaptureService
                       -> injected CodexCaptureAdapter through CaptureAdapter
                       -> WorkspaceContextService
-                          -> WorkspaceContext
-                      -> EvidenceIngestionService
-                          -> durable evidence + count/time maintenance obligation
+                          -> failed workspace context
+                              -> safe capture failure
+                          -> unmanaged
+                              -> ignored without persistence
+                          -> managed WorkspaceContext
+                              -> construct capture-originated EvidenceCandidateDto
+                              -> EvidenceIngestionService
+                                  -> atomic Evidence Log acceptance
+                                  -> policy-based maintenance eligibility
+                                  -> stored acceptance receipt
 
           -> route query command
               -> Application.query(question, context)
@@ -200,8 +272,11 @@ human shell | provider hooks
           -> route insert command
               -> Application.insertEvidence(evidence, context)
                   -> EvidenceInsertionService
+                      -> construct manually supplied EvidenceCandidateDto
                       -> EvidenceIngestionService
-                          -> durable evidence + priority maintenance intent
+                          -> atomic Evidence Log acceptance
+                          -> immediate maintenance eligibility
+                          -> stored acceptance receipt
 
 canonical Markdown publication | derived indexing | query hydration
   -> canonical Markdown document shape

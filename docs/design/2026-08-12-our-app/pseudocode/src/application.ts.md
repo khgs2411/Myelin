@@ -39,9 +39,10 @@ type RuntimeApplicationConfiguration = {
 
 class Application {
   PRIVATE CONSTRUCTOR dependencies {
-    captureService
+    evidenceCaptureService
     queryService
     evidenceInsertionService
+    // OPEN: application-service owner for project registration
   }
 
   STATIC create(
@@ -53,22 +54,31 @@ class Application {
 
     agentAdapter = construct the configured agent-execution capability
 
-    captureService = construct with:
+    evidenceCaptureService = construct with:
       configuration.captureProvider.invocationContext
       captureAdapter
       workspaceContextService
       evidenceIngestionService
     queryService and evidenceInsertionService = construct with their dependencies
+    // OPEN: construct the project-registration owner once its source boundary
+    // is shaped
 
     return new Application({
-      captureService,
+      evidenceCaptureService,
       queryService,
-      evidenceInsertionService
+      evidenceInsertionService,
+      project registration owner
     })
   }
 
+  bootstrapProject(
+    input: ProjectBootstrapInput
+  ): Promise<ProjectBootstrapResult> {
+    delegate to the OPEN project-registration owner
+  }
+
   capture(input: CaptureInput): Promise<CaptureResult> {
-    return captureService.capture(input)
+    return evidenceCaptureService.capture(input)
   }
 
   query(input: QueryInput): Promise<QueryResult> {
@@ -84,12 +94,28 @@ class Application {
 
 type CaptureInput = {
   nativeActivity: ProviderNativeActivity
-  capturedAt: normalized timestamp
-  observedEnvironment: {
-    currentWorkingDirectory: string
-    // OPEN: additional admitted process observations are not yet shaped
-  }
 }
+
+type ProjectIdentity = Readonly<{
+  value: string
+}>
+
+type RepositoryIdentity = Readonly<{
+  value: string
+}>
+
+type CanonicalDirectoryPath = absolute, filesystem-normalized real path
+
+type ProjectBootstrapInput = Readonly<{
+  directoryPath: string
+}>
+
+type ProjectBootstrapResult = Readonly<{
+  projectIdentity: ProjectIdentity
+  rootPath: CanonicalDirectoryPath
+  repositoryReference?: RepositoryIdentity
+  disposition: "created" | "already-registered"
+}>
 ```
 
 ## Ownership boundary
@@ -99,13 +125,19 @@ instance per process. For a capture invocation, the CLI resolves the explicitly
 declared provider and channel into one immutable `CaptureInvocationContext`
 before composition. `Application.create` uses its route to construct one
 matching `CaptureAdapter`, then injects both the invocation context and adapter
-directly into `CaptureService`. The adapter does not declare a second provider
+directly into `EvidenceCaptureService`. The adapter does not declare a second provider
 identity. Agent execution remains independently configured; there is no
 application-wide provider.
 
 The instance owns the stable operation names and delegates each operation to
 the service that owns its workflow.
 
+`bootstrapProject` is provider-neutral. It registers one exact directory as an
+oversight root and returns an application-owned immutable identity. The source
+file and concrete application-service owner for this registration workflow
+remain `OPEN`; `Application` does not absorb that workflow merely because it
+exposes the operation.
+
 It does not expose its services, normalize native activity, curate memory, or
-persist evidence directly. `CaptureService` receives one adapter and therefore
-does not perform runtime provider lookup.
+persist evidence or project registration directly. `EvidenceCaptureService` receives
+one adapter and therefore does not perform runtime provider lookup.

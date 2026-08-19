@@ -14,23 +14,28 @@ issue is removed from this file.
 
 ## Identity and context
 
-### Stable project identity
+### Stable repository identity
 
 **Exposed by:** [workspace context resolution](src/workspace/workspace-context.service.ts.md)
 and [the project-scoped memory model](BRAIN.pseudocode.md).
 
 **Established:**
 
-- Filesystem path alone is not a stable project identity.
-- Provider-specific project identifiers cannot enter the core domain.
-- Project identity controls evidence routing, Project Memory ownership, and
-  query scope.
+- Project bootstrap creates an immutable application-owned `ProjectIdentity`.
+- The exact bootstrapped directory is a replaceable oversight root, not the
+  project identity.
+- Workspace resolution never discovers or creates projects from hook activity.
+- Git observations describe an optional repository relationship without
+  expanding the bootstrapped project scope.
+- Path, remote URL, root commit, and provider identifiers are observations;
+  none alone is durable repository identity.
 
-**Unresolved:** What stable identity makes moved checkouts, clones, forks,
-monorepo packages, and multiple machines the same or different project?
+**Unresolved:** How does our app create and reconcile one `RepositoryIdentity`
+across clones, changed remotes, forks, and multiple machines without
+merging unrelated repository lineages?
 
-**Time to address:** Before durable evidence or storage uses a project
-reference as a canonical key.
+**Time to address:** Before repository identity is used to correlate source
+state or memory across distinct checkouts.
 
 ### Durable workstream identity
 
@@ -41,15 +46,50 @@ and [Session Memory scope](BRAIN.pseudocode.md).
 
 - Session Memory distinguishes the current workspace context from concurrent
   project activity.
-- Branch, worktree, commit, and provider session are useful coordinates.
+- The active branch is the version-one workspace coordinate.
+- Provider session remains a separate evidence coordinate.
 - No single coordinate is always the workstream.
 - Concurrent work cannot contaminate another Session Memory context.
 
 **Unresolved:** How does our app correlate one recent workstream across
-provider sessions, branches, worktrees, resumed tasks, and commits?
+provider sessions, branches, resumed tasks, and commits?
 
 **Time to address:** Before Session Memory storage, curation, and query scope
 are shaped.
+
+### Session Memory branch and project scope
+
+**Exposed by:** [workspace context resolution](src/workspace/workspace-context.service.ts.md),
+[the Evidence Log acceptance boundary](src/evidence/evidence-ingestion.service.ts.md),
+and [Session Memory behavior](BRAIN.pseudocode.md).
+
+**Established:**
+
+- Non-Git projects have no branch scope; their Session Memory is project-wide.
+- Git-backed evidence preserves its observed branch and supports indexed branch
+  filtering.
+- Recall remains branch-aware and can broaden to clearly attributed memory from
+  other branches when branch-filtered recall is insufficient.
+- An empty current branch must not silently relabel another branch's work as
+  current or project-wide.
+- Branch is a scope and retrieval coordinate. It is not evidence identity.
+
+**Candidate direction:** Do not create a separate project-wide Session Memory
+classification for Git-backed projects. Session Memory is either associated
+with its observed branch or has no branch coordinate. Query first searches the
+current branch. If that result does not satisfy a future confidence contract,
+query searches all Session Memory for the project without branch filtering and
+preserves branch attribution on every result. Non-Git and branch-unavailable
+memory naturally participates through its absent branch coordinate.
+
+**Unresolved:** What evidence and curation rule makes a Git-backed Session
+Memory node branch-specific or unscoped? Should Git-backed Session Memory omit
+a project-wide classification entirely? What score or confidence contract can
+safely trigger the broader project search, and how does that search avoid
+flattening conflicting branch realities into one answer?
+
+**Time to address:** With Session Memory storage and curation, and before the
+Session Memory query scope and fallback contract are finalized.
 
 ### Exact project source state
 
@@ -69,33 +109,6 @@ committed project state it inspected without making capture expensive?
 precondition are finalized.
 
 ## Autonomous maintenance
-
-### Maintenance trigger policy
-
-**Exposed by:** [capture orchestration](src/capture/capture.service.ts.md) and
-[the autonomous maintenance lifecycle](BRAIN.pseudocode.md).
-
-**Established:**
-
-- Every accepted evidence append updates the durable count- and time-based
-  maintenance obligation.
-- The first accepted evidence after an elapsed-time condition becomes true
-  performs the next eligibility evaluation.
-- Maintenance does not depend on `SessionStart` or another provider lifecycle
-  event.
-- Maintenance is asynchronous and eventually consistent.
-- Manual evidence insertion creates a priority request whose frozen frontier
-  includes the inserted item.
-- Concurrent requests join the active or next finite run. They do not extend
-  one run without a bound.
-- No public maintenance command is established.
-- The old threshold of 25 inputs is reference evidence, not a new default.
-
-**Unresolved:** What default and per-project count, elapsed-time, priority, and
-coalescing rules make Session maintenance eligible?
-
-**Time to address:** Before the evidence-ingestion eligibility record and
-Session maintenance claim contract are shaped.
 
 ### Higher-layer trigger and catch-up policy
 
@@ -146,9 +159,28 @@ claims autonomous maintenance liveness.
 - A failed pre-publication run leaves canonical memory unchanged.
 - Evidence append and its maintenance obligation form one recoverable durable
   acceptance contract.
+- One evidence acceptance command carries an application operation identity.
+- Reliable cross-delivery suppression uses optional source replay identity
+  `(domain, scheme, key)` outside `EvidenceOrigin`.
+- Reusing a replay identity for different canonical evidence is a conflict,
+  never a correction.
+- One acceptance operation belongs to one project and commits new evidence,
+  project-local sequence allocation, replay admission, its stored receipt, and
+  maintenance eligibility atomically.
+- A successful acceptance operation creates one immutable SQLite operation
+  record. Its opaque operation identity retrieves the complete versioned
+  receipt, and a separate project foreign key records ownership.
+- Acceptance-operation records contain no pending or failed state and remain
+  for the owning project's lifetime so a late retry cannot lose idempotency.
+- Covered and scheduled frontiers prevent overlapping maintenance requests.
+- A pending request may extend; a running request keeps its frozen frontier.
+- Each execution is a separate leased `MaintenanceAttempt`. Failure or lease
+  expiry leaves its request pending and does not advance the covered cursor.
+- Completion by a replaced stale worker cannot advance the cursor.
 
-**Unresolved:** What durable states and idempotency keys coordinate work claims,
-publication, candidate disposition, and derived indexing across crashes?
+**Unresolved:** What durable claim and fencing mechanism implements attempt
+leases, and what idempotency keys coordinate canonical publication, candidate
+disposition, and derived indexing across crashes?
 
 **Time to address:** With evidence ingestion, worker claims, and the first
 canonical publication owner.
@@ -220,7 +252,7 @@ revises, or demotes a Practice Memory node?
 
 **Time to address:** When the Practice Memory curator is shaped.
 
-### Trusted principal derivation and correction authorization
+### Trusted principal derivation for inserted evidence
 
 **Exposed by:** [manual evidence insertion](src/cli.ts.md) and
 [product-specific correction behavior](BRAIN.pseudocode.md).
@@ -235,19 +267,20 @@ revises, or demotes a Practice Memory node?
   remain relevant.
 - Caller-supplied attribution cannot grant authority.
 - An AI agent cannot claim human authority through payload metadata.
-- An authorized correction fences its target from ordinary serving and future
-  publication until reconciliation reaches a terminal result.
+- Evidence insertion never directly mutates or fences memory.
+- Immediate intent schedules the same autonomous curation path used by other
+  accepted evidence.
 
 **Unresolved:** Which trusted invocation facts derive principals for humans,
-provider hooks, and the future MCP transport, and which principals can correct
-or fence each memory product?
+provider hooks, and the future MCP transport, and how do product curators weigh
+that attributable evidence without treating payload claims as authority?
 
-**Time to address:** After neutral evidence ingestion is shaped and before the
-insert command and correction targeting contract are finalized.
+**Time to address:** Before the insert command and attributable insertion
+contract are finalized.
 
 ## Project Memory
 
-### Branch and worktree divergence
+### Branch divergence
 
 **Exposed by:** [Project Memory behavior](BRAIN.pseudocode.md) and
 [workspace context](src/workspace/workspace-context.service.ts.md).
@@ -260,7 +293,7 @@ insert command and correction targeting contract are finalized.
 - Last-write-wins is not an acceptable resolution rule.
 
 **Unresolved:** How does canonical Project Memory represent and reconcile two
-simultaneously valid branch or worktree realities?
+simultaneously valid branch realities?
 
 **Time to address:** Before Project Memory publication and query scope are
 finalized.
@@ -270,11 +303,11 @@ finalized.
 **Exposed by:** [Project Memory curation](BRAIN.pseudocode.md) and
 [provider filesystem policy](architecture.pseudocode.md).
 
-**Established:** Curation must preserve source-state attribution, concurrent
-worktree isolation, and the provider's read-only project boundary.
+**Established:** Curation must preserve source-state attribution and the
+provider's read-only project boundary.
 
-**Unresolved:** Does the curator inspect a live worktree, an immutable snapshot,
-or an application-managed checkout?
+**Unresolved:** Does the curator inspect the live project directory, an
+immutable snapshot, or an application-managed checkout?
 
 **Time to address:** Before the first Project Memory curator invokes an agent.
 
@@ -387,27 +420,29 @@ and [local storage architecture](architecture.pseudocode.md).
 
 **Established:**
 
-- Normalized evidence and provenance remain durable unless an explicit
-  forgetting operation applies.
-- The first product version retains raw provider payloads with an integrity
-  hash and replay support.
+- `EvidenceItem` records and their provenance remain durable unless an
+  explicit forgetting operation applies.
+- The first product version retains exact source-material content with an
+  integrity hash.
+- Replay identity remains separate admission metadata and is retained when a
+  source supplies reliable replay coordinates.
 - Corrections append evidence and express supersession.
 - Derived chunks, FTS rows, vectors, and caches can be rebuilt.
-- A future TTL can delete raw bytes while preserving required normalized
-  evidence and integrity metadata.
+- A future TTL can delete raw bytes while preserving required `EvidenceItem`
+  fields and integrity metadata.
 - One memory's removal cannot automatically delete evidence that supports
   another memory or historical provenance.
 
 **Unresolved:** What TTL, privacy exclusions, secret handling, explicit
 forgetting guarantees, and backup behavior apply to each stored product?
 
-**Time to address:** After the evidence schema exists and before automated
-cleanup or forgetting is introduced. TTL defaults require measured storage and
-privacy evidence.
+**Time to address:** After the Evidence Log persistence schema exists and before
+automated cleanup or forgetting is introduced. TTL defaults require measured
+storage and privacy evidence.
 
 ## Provider execution and security
 
-### Installed command identity and lifecycle
+### Application installation and machine integrations
 
 **Exposed by:** [the CLI boundary](src/cli.ts.md) and
 [the application distribution architecture](architecture.pseudocode.md).
@@ -417,13 +452,17 @@ privacy evidence.
 - Our app is intentionally nameless.
 - `myelin` is a historical name, not the current command name.
 - Humans and provider hooks invoke one installed command.
+- Application installation owns machine-wide provider capture mechanics.
+- Codex hooks are installed once per machine rather than once per project.
+- Project bootstrap registers oversight scope and remains provider-neutral.
 - A future MCP server uses a formal client contract whose first implementation
   invokes that command through a versioned machine protocol.
-- Hook registration and command installation are different lifecycle concerns.
+- One top-level installer may expose command publication, provider capture, and
+  MCP setup while preserving their separate state and lifecycles.
 
 **Unresolved:** What command name, installation location, package metadata,
-upgrade and backup behavior, executable discovery, and hook-registration model
-does our app use?
+upgrade and backup behavior, executable discovery, hook installation, repair,
+removal, and later MCP-registration model does our app use?
 
 **Time to address:** When the application package and first Codex hook
 installation are shaped.
@@ -438,17 +477,19 @@ client in [the architecture](architecture.pseudocode.md).
 
 - Native provider activity stays opaque to the CLI.
 - Failure diagnostics cannot echo captured or inserted evidence.
+- Bootstrap success means an immutable project identity and its exact canonical
+  oversight root are durably registered.
 - Capture success means durable evidence acceptance, not completed maintenance.
-- Insert success means durable evidence acceptance and a durable priority
-  maintenance request unless the caller requests a terminal wait.
+- Insert success means durable evidence acceptance and durable immediate
+  maintenance eligibility, not completed maintenance.
 - Query success returns an answer, supporting references, and freshness.
 - Machine responses are stable protocol envelopes, not console text.
 - One MCP business operation maps to one application operation and one process
   request.
 
 **Unresolved:** What framing, encoding, protocol version, environment fields,
-diagnostics, exit codes, receipts, cancellation, wait semantics, and compatibility
-rules does each command expose?
+diagnostics, exit codes, receipts, cancellation, and compatibility rules does
+each command expose?
 
 **Time to address:** As each command's application operation is shaped and
 before the CLI-backed MCP client is designed.

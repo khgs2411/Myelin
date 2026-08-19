@@ -4,10 +4,10 @@
 
 Intended destination: `src/cli.ts`
 
-`src/cli.ts` is the shared process entry surface for the application's three
-public behaviors: automatic capture, brain query, and manual evidence
-insertion. It routes these behaviors but does not implement their product
-logic.
+`src/cli.ts` is the shared process entry surface for the application's four
+public behaviors: project bootstrap, automatic capture, brain query, and
+manual evidence insertion. It routes these behaviors but does not implement
+their product logic.
 
 It is published as one named command installed on the user's machine. The
 command name is intentionally unresolved. Humans and provider hooks invoke this
@@ -42,6 +42,19 @@ ON invocation
   parse the application-level command
 
   MATCH command
+    "bootstrap"
+      require exactly one existing directory path
+      application = Application.create(runtime configuration)
+
+      result = await application.bootstrapProject({
+        directoryPath: supplied directory path
+      })
+
+      return the immutable project identity, canonical oversight root,
+      and repository reference when one exists
+      success means the project registration is durable
+      bootstrap does not install, select, or configure a provider integration
+
     "capture"
       require one registered provider and channel route
       // first installed route: --provider codex --channel hook
@@ -64,13 +77,8 @@ ON invocation
         mediaType: media type established by the capture route,
         content: exact standard-input content
       }
-      record the application-owned capture timestamp
-      collect permitted observed process context
-
       result = await application.capture({
-        native activity,
-        captured at,
-        observed environment
+        native activity
       })
 
       return a safe process outcome
@@ -97,27 +105,22 @@ ON invocation
     "insert"
       require caller-supplied evidence and applicable context
       application = Application.create(runtime configuration)
-      establish principal and origin from trusted invocation context
+      establish principal and insertion-source identity from trusted invocation context
+      accept an optional client reference for replay-safe resubmission
       accept claimed attribution as evidence metadata only
-      accept an optional reference to the memory or answer being corrected
-      accept an optional wait-for-maintenance mode
 
       result = await application.insertEvidence({
         evidence,
         principal,
-        origin,
+        insertion source identity,
+        client reference?,
         claimed attribution?,
-        context,
-        correction target?,
-        wait mode
+        context
       })
 
-      return a safe maintenance receipt by default
-      receipt success means evidence and its priority maintenance request are durable
-
-      IF wait-for-maintenance was requested
-        wait for the inserted evidence's terminal maintenance outcome
-        return that outcome
+      return a safe evidence acceptance receipt
+      receipt success means evidence and its immediate maintenance eligibility
+      are durable; it does not mean maintenance completed
 
     otherwise
       return invalid invocation
@@ -143,6 +146,11 @@ reserialize provider JSON before normalization. A selected capture route is
 deterministic routing and provenance metadata, not external caller
 authentication or correction authority.
 
+The bootstrap command passes one explicit directory to the provider-neutral
+project-registration use case. It does not infer a broader project root, write
+markers into the project, or install machine-wide hooks. Application
+installation owns provider capture mechanics separately.
+
 It does not:
 
 - interpret any provider's native activity;
@@ -150,13 +158,15 @@ It does not:
 - access the application's internal service graph;
 - retrieve, rank, or synthesize memory answers;
 - write evidence or canonical memory directly;
+- persist project registration directly;
+- install, repair, or remove provider hooks;
 - decide how inserted evidence changes memory or documentation;
 - curate memory or documentation itself;
-- decide whether a claimed identity has correction authority.
+- decide whether claimed attribution has memory authority.
 
-Choosing the optional wait mode is CLI behavior. Scheduling, coalescing,
-frontier selection, correction fencing, and terminal-outcome tracking belong to
-the evidence insertion and maintenance application owners.
+The insertion command returns after atomic evidence acceptance and durable
+maintenance eligibility. Scheduling, coalescing, frontier selection, and
+maintenance execution belong to the evidence ingestion and maintenance owners.
 
 The future MCP server may expose methods that do not mirror command names, but
 its CLI-backed client maps each business operation to one machine-protocol

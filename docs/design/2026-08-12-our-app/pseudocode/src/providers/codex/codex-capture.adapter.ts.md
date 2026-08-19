@@ -65,22 +65,19 @@ class CodexCaptureAdapter implements CaptureAdapter {
           return ignored("codex.empty-user-message")
 
         return evidence({
-          sourceEventReference: stable digest of canonical tuple {
-            provider: "codex",
-            session: payload.session_id,
-            turn: payload.turn_id,
-            event: payload.hook_event_name
+          sourceReplay: {
+            scheme: "codex-hook/v1",
+            key: stable digest of canonical tuple {
+              session: payload.session_id,
+              turn: payload.turn_id,
+              event: payload.hook_event_name
+            }
           },
           providerSessionReference: payload.session_id,
-          providerTurnReference: payload.turn_id,
+          providerInteractionReference: payload.turn_id,
           nativeEventKind: payload.hook_event_name,
-          content: {
-            kind: "user.message",
-            text: payload.prompt
-          },
-          contextHints: {
-            workingDirectory: payload.cwd
-          },
+          content: payload.prompt,
+          workingDirectory: payload.cwd,
           rawSource: activity
         })
 
@@ -91,22 +88,19 @@ class CodexCaptureAdapter implements CaptureAdapter {
           return ignored("codex.empty-assistant-message")
 
         return evidence({
-          sourceEventReference: stable digest of canonical tuple {
-            provider: "codex",
-            session: payload.session_id,
-            turn: payload.turn_id,
-            event: payload.hook_event_name
+          sourceReplay: {
+            scheme: "codex-hook/v1",
+            key: stable digest of canonical tuple {
+              session: payload.session_id,
+              turn: payload.turn_id,
+              event: payload.hook_event_name
+            }
           },
           providerSessionReference: payload.session_id,
-          providerTurnReference: payload.turn_id,
+          providerInteractionReference: payload.turn_id,
           nativeEventKind: payload.hook_event_name,
-          content: {
-            kind: "assistant.message",
-            text: payload.last_assistant_message
-          },
-          contextHints: {
-            workingDirectory: payload.cwd
-          },
+          content: payload.last_assistant_message,
+          workingDirectory: payload.cwd,
           rawSource: activity
         })
 
@@ -128,8 +122,14 @@ the exact `rawSource` so additive Codex payload changes do not silently destroy
 evidence or require the CLI to understand Codex JSON.
 
 Codex does not provide an event timestamp in these hook contracts. The adapter
-therefore does not invent `providerOccurredAt`; `CaptureService` records the
-application-owned `capturedAt` time supplied by the CLI.
+therefore does not invent `providerOccurredAt`; `EvidenceIngestionService`
+assigns `receivedAt` only when it accepts new evidence.
+
+The `codex-hook/v1` replay scheme fixes the canonical tuple and digest behavior
+used for Codex hook replay detection. A future change to tuple fields,
+canonicalization, or digest behavior requires a new scheme. The capture service
+adds the application-owned `codex.hook` replay domain; the adapter does not own
+that source identity.
 
 `transcript_path` is validated as a required nullable Codex field and preserved
 in the raw source. The adapter does not read or parse the transcript. Explicit

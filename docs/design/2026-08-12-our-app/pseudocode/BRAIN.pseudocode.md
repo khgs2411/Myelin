@@ -19,7 +19,8 @@ SYSTEM OurApp
       reusable technology practices
 
   BEHAVIOR
-    capture evidence continuously
+    capture evidence continuously from projects our app oversees
+    bootstrap explicit project directories as governed evidence scopes
     accept attributable evidence inserted directly by humans and agents
     maintain memory autonomously and eventually
     expose human-readable durable knowledge
@@ -36,6 +37,34 @@ SYSTEM OurApp
 The brain is self-maintaining but not real-time. New evidence may be newer than
 the currently published memory. That delay is expected and remains visible to
 query through freshness and scope.
+
+## Overseen projects
+
+```pseudocode
+RECORD OverseenProject
+  project_identity       immutable application-owned identity
+  root_path              replaceable canonical oversight scope
+  repository_reference? application-owned repository identity when Git exists
+
+FUNCTION bootstrapProject(directory_path)
+  validate and canonicalize the exact supplied directory
+  IF that canonical root is already registered
+    return the existing project
+
+  create an immutable project identity
+  inspect bounded repository facts without changing the governed directory
+  persist the project identity, exact oversight root, and repository reference
+  return the registered project
+```
+
+Bootstrap defines which filesystem scope our app governs. It does not install,
+select, or configure a provider capture mechanism. The supplied directory is a
+replaceable project locator, not the durable project identity. Moving a project
+can therefore replace its root path without replacing its memories.
+
+Machine-wide capture integrations may invoke our app for activity outside an
+overseen root. Such activity is ignored and never enters the Evidence Log or
+raw-payload storage.
 
 ## Provider independence
 
@@ -60,39 +89,68 @@ integration boundaries.
 ## Evidence is not memory
 
 ```pseudocode
-RECORD Observation
-  provider_identity
-  provider_event_reference
-  provider_session_reference?
-  provider_turn_reference?
-  native_event_kind
-  project_reference
+RECORD EvidenceItem
+  identity
+  origin =
+    capture
+      source
+      native_event_kind
+      session_reference?
+      interaction_reference?
+    OR insertion
+      source
+      client_reference?
+  content                  one normalized string
   workspace_context
-  captured_at
-  provider_occurred_at?
-  kind
-  payload_reference
+  occurred_at?
+  received_at
+  source_material
+    media_type
+    exact_content
+    sha256_digest
 
 STORE EvidenceLog
-  append observations durably
+  append EvidenceItems durably
   preserve provenance needed for later curation
   record what happened without claiming what should be remembered
 ```
 
+`EvidenceItem` is the accepted product concept. Source workflows construct an
+immutable provider-neutral `EvidenceCandidateDto` without durable identity or
+acceptance time. Evidence ingestion admits new candidates and creates their
+`EvidenceItemDto` values with application evidence identity and `receivedAt`.
+A later persistence design maps accepted items to the Evidence Log storage
+model; neither DTO is the SQLite row.
+
+Origin records how evidence entered our app and which source coordinates apply.
+It does not assign semantic meaning to content, authenticate a caller, grant
+correction authority, or control replay suppression. Reliable replay identity
+travels beside the DTO as ingestion metadata; evidence remains admissible when
+a source cannot supply one.
+
+Source material preserves the exact content-bearing input before normalization.
+Its digest proves stored-content integrity only. It does not identify evidence,
+authenticate the source, or prove that the content is true.
+
 ```pseudocode
 TYPE WorkspaceContext
   project_reference
-  repository_reference
-  repository_location
-  checkout_reference?
-  worktree_reference?
-  branch_reference?
+  project_root
+  working_directory
+  repository?
+    repository_reference
+    repository_location
+    branch = active branch name | unavailable
 ```
 
-Workspace context is composite. Its coordinates allow Session Memory and query to
-separate current work from other concurrent activity without treating a branch
-name or worktree path as universal identity by itself. Provider-session identity
-remains a separate evidence coordinate supplied by the provider adapter.
+Workspace context attributes evidence to one bootstrapped project and, for Git
+projects, its active branch. Session Memory and query can therefore distinguish
+branch-specific recent work from recent project-wide activity. Non-Git projects
+remain valid and have project-wide scope. Provider-session identity remains a
+separate evidence coordinate supplied by the provider adapter.
+
+Version one matches only the bootstrapped project location and its descendants.
+Linked Git worktree discovery and correlation are future product behavior.
 
 ## The four memory products
 
@@ -174,11 +232,16 @@ the preferred version or mode within that subject.
 
 ```pseudocode
 Evidence accumulates for a project
-  -> every accepted evidence append updates durable maintenance eligibility
+  -> every acceptance operation belongs to exactly one project
+  -> new evidence receives a project-local sequence in the Evidence Log
+  -> evidence acceptance and maintenance eligibility commit atomically
   -> the first accepted evidence after an elapsed-time condition performs the
      next eligibility evaluation
-  -> an evidence-count or elapsed-time trigger starts maintenance asynchronously
-  -> maintenance freezes an evidence frontier
+  -> evidence-count, elapsed-time, or immediate insertion creates or promotes
+     one pending maintenance request
+  -> pending requests may coalesce; a running request keeps a frozen frontier
+  -> one leased attempt executes the request asynchronously
+  -> only successful current attempts advance the covered frontier
   -> Session Memory is curated first
   -> Session curation emits destination-specific candidate leads
   -> candidate leads update the destination memory's durable eligibility
@@ -267,23 +330,14 @@ replaces their canonical content.
 ## Manual evidence insertion and correction
 
 ```pseudocode
-FUNCTION insertEvidence(statement, context, claimed_attribution?, correction_target?)
+FUNCTION insertEvidence(statement, context, claimed_attribution?)
   establish the principal and origin from trusted invocation context
-  preserve caller-supplied attribution as a claim, not authorization
+  preserve caller-supplied attribution as a claim, not memory authority
   validate the evidence and applicable context
-  append it to the Evidence Log without treating it as memory
-  freeze a maintenance frontier that includes the inserted evidence
-
-  IF correction_target exists AND principal may correct that target
-    fence the target from ordinary serving and future publication immediately
-
-  request priority maintenance through the frozen frontier
-  coalesce eligible queued work into the active or next run
-  return a maintenance receipt after durable acceptance and durable scheduling
-
-OPTION wait_for_maintenance(receipt)
-  wait until the inserted evidence reaches a terminal maintenance outcome
-  return the outcome without requiring user confirmation
+  accept it into the Evidence Log without treating it as memory
+  set maintenance intent to immediate
+  create or promote one pending request through all unscheduled evidence
+  return an acceptance receipt after evidence and eligibility commit atomically
 
 BACKGROUND
   publish Session Memory first
@@ -298,6 +352,6 @@ BACKGROUND
 Manual insertion captures work that an automatic provider source may not have
 observed or that a human or agent wants to make explicit. Correction is one
 intent carried by inserted evidence; it does not directly mutate canonical
-memory or require the user to participate in the maintenance workflow. An
-authorized correction target is fenced immediately so the brain does not keep
-serving information it already knows is disputed while reconciliation runs.
+memory, fence an existing memory, or require the user to participate in the
+maintenance workflow. The curator evaluates whether the evidence revises,
+narrows, supersedes, or retracts an existing memory.

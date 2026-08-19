@@ -17,29 +17,19 @@ type ProviderNativeActivity = Readonly<{
   content: string
 }>
 
-type ProviderContextHints = Readonly<{
-  projectReference?: string
-  workingDirectory?: string
+type SourceReplayDraft = Readonly<{
+  scheme: string
+  key: string
 }>
 
-type ProviderMessageContent =
-  | Readonly<{
-      kind: "user.message"
-      text: string
-    }>
-  | Readonly<{
-      kind: "assistant.message"
-      text: string
-    }>
-
 type ProviderObservationDraft = Readonly<{
-  sourceEventReference: string
   providerSessionReference?: string
-  providerTurnReference?: string
+  providerInteractionReference?: string
   nativeEventKind: string
+  sourceReplay?: SourceReplayDraft
   providerOccurredAt?: normalized timestamp
-  content: ProviderMessageContent
-  contextHints: ProviderContextHints
+  content: string
+  workingDirectory: string
   rawSource: ProviderNativeActivity
 }>
 
@@ -95,22 +85,25 @@ CONTRACT CaptureAdapter.normalize
 
 - `ProviderNativeActivity.content` is the exact serialized content received by
   the capture entry point. The CLI does not parse and reserialize it first.
-- `sourceEventReference` is stable across repeat delivery of the same native
-  activity. Extraction or deterministic derivation remains provider-specific.
 - `providerSessionReference` identifies the provider-native session when the
   provider supplies one. It is not a workspace coordinate.
-- `providerTurnReference` preserves a provider-native turn coordinate when the
-  provider supplies one. It supports correlation and stable event references;
-  it does not define application Session Memory scope.
+- `providerInteractionReference` preserves a provider-native interaction
+  coordinate when supplied. Codex maps `turn_id`; Claude Code can map
+  `prompt_id`. It does not define application Session Memory scope.
 - `nativeEventKind` preserves the provider's classification for provenance. It
   does not become provider-neutral product meaning.
+- `sourceReplay` is present only when the adapter can derive a reliable stable
+  key from provider coordinates. Its versioned scheme and key become ingestion
+  metadata after the capture service adds the application-owned source domain.
+  It is not part of `EvidenceOrigin`.
 - `providerOccurredAt` is present only when the provider supplies an event
-  time. The capture entry point supplies the separate application-owned
-  `capturedAt` timestamp.
-- `ProviderMessageContent` contains only the currently established evidence
-  kinds. Another content kind requires a concrete capture source.
-- `contextHints` contains only coordinates found in the provider payload.
-  Hints are not resolved project or workspace identity and are not authority.
+  time. `EvidenceIngestionService` later assigns the separate application-owned
+  `receivedAt` time when it accepts new evidence.
+- `content` is the normalized evidence string. The adapter does not assign a
+  provider-neutral semantic content kind.
+- `workingDirectory` is the provider-observed activity directory. It is
+  required for project matching, but it is not resolved project identity or
+  authority.
 - `rawSource` preserves the original media type and content for integrity,
   replay, and later adapter improvements. It is never included in a safe
   diagnostic or ordinary capture result.
@@ -123,8 +116,9 @@ CONTRACT CaptureAdapter.normalize
 ## Ownership boundary
 
 The adapter owns provider payload parsing, required-field validation, native
-event interpretation, stable source-event correlation, raw-source preservation,
-and conversion into one provider-neutral outcome.
+event interpretation, reliable replay-key derivation when provider coordinates
+permit it, raw-source preservation, and conversion into one provider-neutral
+outcome.
 
 It does not own the provider or channel route that selected it. That route is
 an immutable application-composition fact. The adapter also does not inspect

@@ -24,6 +24,8 @@ APPLICATION OurApp {
     canonical memory publication
     semantic retrieval and query
     installed command contract and its versioned machine protocol
+    project oversight registration
+    machine integration installation contract
     shared application use cases behind the installed command
 
   doesNotOwn:
@@ -51,7 +53,7 @@ Installed Named Command <---------------- CLI-backed AppClient
                   |                                 |
                   v                            future MCP tools
 Public Application Use Cases
-  capture | insert evidence | query
+  bootstrap project | capture | insert evidence | query
                          |
                          v
 Product Contracts
@@ -82,6 +84,37 @@ The first implementation remains one logical TypeScript application. Module
 boundaries do not imply packages, services, deployments, or a distributed
 system.
 
+## Machine installation and project bootstrap
+
+Application installation and project bootstrap have independent contracts:
+
+```text
+application installation
+  -> publish one stable named command
+  -> initialize application-owned machine state
+  -> install machine-wide provider capture integrations
+      -> first integration: Codex hooks invoke the installed command
+  -> once MCP exists, make its separate agent-facing integration available
+
+project bootstrap
+  -> accept one explicit directory path
+  -> validate and canonicalize that exact oversight root
+  -> create or return one immutable application-owned ProjectIdentity
+  -> record bounded repository facts when Git is present
+  -> persist the overseen-project registration
+```
+
+Bootstrap remains provider-neutral. It neither installs hooks nor records a
+per-project provider allowlist. Machine-wide hooks may submit activity from any
+working directory; workspace resolution admits only activity within an
+overseen project root.
+
+The exact application installer, provider-integration installer, and project
+registration source owners remain `OPEN`. One user-facing installation command
+may orchestrate them, but their state and lifecycles must remain separate. MCP
+installation remains separate from provider capture even if the same top-level
+installer later makes both available.
+
 ## Application composition
 
 ```text
@@ -90,7 +123,7 @@ process starts
       -> read the immutable provider and channel from CaptureInvocationContext
       -> construct the selected capture-provider capability
       -> construct WorkspaceContextService
-      -> inject CaptureInvocationContext and that CaptureAdapter directly into CaptureService
+      -> inject CaptureInvocationContext and that CaptureAdapter directly into EvidenceCaptureService
       -> construct the configured agent-execution provider independently
       -> inject capability dependencies into application services
       -> construct and return Application façade
@@ -135,7 +168,7 @@ validated by the corresponding construction branch.
 For capture, the command's explicit provider and channel route creates one
 `CaptureInvocationContext` before `Application.create` runs. The factory uses
 its provider identity to construct one adapter. It injects the immutable
-invocation context and adapter into `CaptureService`. The route supplies
+invocation context and adapter into `EvidenceCaptureService`. The route supplies
 provider and channel provenance; the adapter supplies normalization only.
 `agentExecution` independently selects the provider used for query and
 maintenance work. Manual evidence insertion invokes neither capability.
@@ -149,6 +182,7 @@ one capture adapter.
 ```ts
 class Application {
   static create(configuration: RuntimeApplicationConfiguration): Application
+  bootstrapProject(input: ProjectBootstrapInput): Promise<ProjectBootstrapResult>
   capture(input: CaptureInput): Promise<CaptureResult>
   query(input: QueryInput): Promise<QueryResult>
   insertEvidence(input: EvidenceInsertionInput): Promise<EvidenceInsertionResult>
@@ -188,7 +222,7 @@ type AgentTask = {
 The capture command carries an explicit provider and channel route. Runtime
 configuration resolves that route before composition, and `Application.create`
 constructs exactly one matching adapter for direct injection into
-`CaptureService`. Unsupported routes fail before capture; an invalid payload
+`EvidenceCaptureService`. Unsupported routes fail before capture; an invalid payload
 never falls back to another adapter. The adapter does not declare another
 provider identity.
 
@@ -249,21 +283,30 @@ provider hook invokes the absolute installed command with an explicit route
      without parsing or reserializing it
   -> Application.create selects and injects the matching CaptureAdapter
      from CaptureInvocationContext.route.provider
-  -> CLI passes native activity, captured timestamp, and observed environment
-     to capture
-  -> CaptureService
+  -> CLI passes exact native activity to capture
+  -> EvidenceCaptureService
       -> injected CaptureAdapter returns exactly one provider-neutral outcome
       -> rejected input fails safely without evidence
       -> ignored input creates no evidence
       -> for one evidence outcome:
-          -> WorkspaceContextService resolves the active workspace once
-          -> combine capture route + normalized observation
-             + captured timestamp + WorkspaceContext
-          -> construct normalized evidence
-          -> EvidenceIngestionService
-              -> append normalized evidence idempotently
-              -> record the count/time maintenance obligation in the same
-                 recoverable durable acceptance
+          -> WorkspaceContextService consults overseen-project registrations
+             using the provider-observed working directory
+          -> IF the working directory is invalid, missing, or inaccessible
+              -> fail capture with a safe workspace diagnostic
+          -> IF no registered root contains the valid working directory
+              -> return ignored unmanaged-project outcome
+              -> persist neither normalized evidence nor raw provider activity
+          -> OTHERWISE attach the registered project and repository context
+             plus the active Git branch when available
+              -> combine capture route + normalized observation
+                 + WorkspaceContext
+              -> construct one EvidenceCandidateDto
+              -> EvidenceIngestionService
+                  -> apply reliable source replay identity when supplied
+                  -> create EvidenceItemId and receivedAt for new evidence
+                  -> persist its EvidenceItem representation idempotently
+                  -> record the count/time maintenance obligation in the same
+                     recoverable durable acceptance
       -> return
 ```
 
@@ -285,28 +328,92 @@ evidence append evaluates the durable count/time maintenance obligation. The
 first accepted evidence after the elapsed-time condition becomes true performs
 that check, so maintenance does not depend on a provider lifecycle event.
 
+Provider normalization must occur before project matching because the provider
+adapter owns extraction of its native working directory. The application
+process directory does not select the project. Unmanaged input may be parsed
+and validated in memory, but it is not durable evidence and its raw payload is
+never persisted.
+
 ## Shared evidence ingestion boundary
 
-Capture and manual insertion converge only after their inputs have become
-provider-neutral and any caller authority has been established.
+Capture and manual insertion remain separate source workflows. Each constructs
+the same provider-neutral
+[`EvidenceCandidateDto`](./src/evidence/evidence-item.dto.ts.md) contract after
+its own validation, attribution, and authority rules. They converge only at
+ingestion, which creates accepted `EvidenceItemDto` values.
 
 ```ts
-EvidenceIngestionService.accept({
-  evidence: NormalizedEvidence[],
-  maintenanceIntent: CountOrTime | PriorityThroughInsertedEvidence,
-  authorizedCorrectionFence?: AuthorizedCorrectionFence
-}) -> EvidenceAcceptanceReceipt
+type EvidenceAcceptanceItem = Readonly<{
+  candidate: EvidenceCandidateDto
+  sourceReplay?: Readonly<{
+    domain: ApplicationOwnedDedupDomainId
+    scheme: string
+    key: string
+  }>
+}>
+
+type EvidenceAcceptanceCommand = Readonly<{
+  contractVersion: EvidenceAcceptanceContractVersion,
+  operationId: ApplicationOperationId,
+  items: ReadonlyArray<EvidenceAcceptanceItem>,
+  maintenanceIntent: "policy" | "immediate"
+}>
+
+EvidenceIngestionService.accept(command) -> EvidenceAcceptanceReceipt
 ```
 
 This deterministic boundary owns idempotent evidence acceptance and durable
-recording of the associated maintenance obligation. It may apply a correction
-fence that `EvidenceInsertionService` has already authorized. It does not
-interpret provider payloads, decide caller authority, curate memory, or publish
-documentation.
+recording of the associated maintenance obligation. One command contains
+evidence for exactly one project. Different projects may run in parallel, but
+no acceptance operation, maintenance request, or maintenance attempt combines
+their state. Ingestion does not interpret provider payloads or corrections,
+decide caller authority, curate memory, or publish documentation.
 
-The evidence append and maintenance obligation form one durable acceptance
-contract. The exact transactional or recoverable persistence mechanism remains
-to be designed.
+`operationId` makes retries of one application acceptance command idempotent.
+Optional `sourceReplay` metadata suppresses repeat delivery across different
+commands only when the source exposes reliable coordinates. The Evidence Log
+enforces uniqueness on `(domain, scheme, key)`. Reusing that identity for
+different canonical evidence is a conflict, not a correction.
+
+Replay metadata is not part of `EvidenceOrigin`. Origin records provenance;
+replay metadata controls admission. Content hashes are not replay identities
+because separate valid evidence can contain identical strings.
+
+Every evidence candidate carries exact content-bearing source material with its
+media type and a SHA-256 digest over the preserved UTF-8 content. Capture
+preserves the exact provider payload. Insertion preserves the supplied evidence
+string, not the complete CLI or MCP envelope. The digest protects integrity; it
+does not provide identity, replay suppression, authentication, or truth.
+
+`EvidenceCaptureService` constructs capture-originated `EvidenceCandidateDto`
+values after provider normalization and workspace resolution.
+`EvidenceInsertionService` constructs manually supplied `EvidenceCandidateDto`
+values after its separate principal, origin, and attribution checks. Manual
+insertion does not pass through `EvidenceCaptureService`, and ingestion does
+not normalize either source.
+
+Capture origins preserve native event kind plus optional provider session and
+interaction coordinates. Insertion origins preserve the insertion source and
+an optional client reference. Codex maps `turn_id` to the shared interaction
+coordinate. Claude Code can map `prompt_id` when present. CLI and MCP callers
+may provide client references, but an insertion without one cannot claim safe
+cross-request replay suppression.
+
+The evidence append, project-local sequence allocation, operation receipt,
+source-replay admission, and maintenance obligation form one atomic SQLite
+acceptance contract. A retry of the same operation and command returns the
+stored receipt. Reusing the operation identity for another command or reusing a
+source replay identity for different evidence rejects the complete command.
+The acceptance-operation record is immutable and exists only after successful
+commit. Its opaque operation identity is the primary lookup key, while a
+separate project foreign key records ownership. It stores the fingerprint
+scheme and version, non-unique command fingerprint, receipt schema version,
+complete receipt JSON, and commit time. These records remain for the owning
+project's lifetime. The remaining Evidence Log row and SQLite table projections
+remain to be designed.
+
+The full transactional shape is defined in
+[`src/evidence/evidence-ingestion.service.ts`](./src/evidence/evidence-ingestion.service.ts.md).
 
 Manual insertion uses the same durable Evidence Log but a different trigger
 contract:
@@ -314,15 +421,17 @@ contract:
 ```text
 EvidenceInsertionService
   -> trusted invocation context establishes principal and origin
-  -> authorize any correction fence
+  -> construct insertion-originated EvidenceCandidateDto with optional client reference
+  -> IF a client reference exists
+      -> trusted invocation context selects its application-owned replay domain
+      -> construct versioned source replay identity beside the DTO
+  -> create one application operation identity for this acceptance command
   -> EvidenceIngestionService
-      -> append evidence durably
-      -> freeze a frontier containing the inserted item
-      -> apply an already-authorized correction fence
-      -> record priority maintenance through the frontier
-  -> coalesce already-eligible work into the active or next run
-  -> return a maintenance receipt
-  -> optionally wait for the inserted item's terminal maintenance outcome
+      -> atomically append evidence and assign its project-local sequence
+      -> use maintenanceIntent "immediate"
+      -> create or promote the pending request through all unscheduled evidence
+      -> persist the acceptance receipt
+  -> return after durable acceptance and durable maintenance eligibility
 ```
 
 Caller-provided attribution is evidence metadata, not authorization. An agent
@@ -332,6 +441,37 @@ payload.
 ## Eventually consistent maintenance boundary
 
 ```ts
+type MaintenancePolicy = {
+  project: ProjectIdentity
+  revision: MaintenancePolicyRevision
+  evidenceCountThreshold: positive integer
+  elapsedInterval: positive duration
+  configurationDigest: string
+}
+
+type MaintenanceCursor = {
+  project: ProjectIdentity
+  lastCoveredSequence: EvidenceSequence
+  lastSuccessfulMaintenanceAt?: Timestamp
+}
+
+type MaintenanceRequest = {
+  project: ProjectIdentity
+  fromSequenceExclusive: EvidenceSequence
+  throughSequenceInclusive: EvidenceSequence
+  state: Pending | Running | Satisfied
+  priority: Normal | Immediate
+  maintenancePolicyRevision: MaintenancePolicyRevision
+}
+
+type MaintenanceAttempt = {
+  request: MaintenanceRequestIdentity
+  state: Running | Succeeded | Failed
+  leaseOwner: MaintenanceLeaseOwner
+  leaseExpiresAt: Timestamp
+  failure?: MaintenanceFailure
+}
+
 type MaintenanceFrontier = {
   project: ProjectIdentity
   evidenceThrough: EvidenceSequence
@@ -340,9 +480,23 @@ type MaintenanceFrontier = {
 }
 ```
 
-Every maintenance run operates against a frozen frontier. Evidence accepted
-after that frontier remains pending for later maintenance and does not by itself
-invalidate the in-flight run.
+Validated YAML configuration creates immutable, revisioned `MaintenancePolicy`
+state in SQLite. Evidence acceptance reads the active policy revision inside
+its transaction. Count, elapsed-time, and immediate insertion are three triggers
+for the same pending request path.
+
+The covered frontier records successful curation. The scheduled frontier is the
+highest sequence already assigned to a pending or running request. Eligibility
+counts only evidence after the scheduled frontier, so an in-flight request is
+not scheduled twice. A pending request may extend through newly accepted
+evidence. A running request remains frozen, and later evidence belongs to one
+non-overlapping successor.
+
+Every maintenance run operates against that frozen frontier. Evidence accepted
+after it remains pending for later maintenance and does not by itself invalidate
+the in-flight run. A failed or expired attempt leaves its request eligible and
+does not advance the cursor. Lease-guarded completion prevents a replaced stale
+worker from publishing or advancing the cursor.
 
 Publication prevents regression rather than demanding real-time freshness:
 
@@ -365,8 +519,8 @@ eligible evidence, and reclaimed work cannot duplicate canonical publication.
 
 ```text
 CANONICAL
-  raw provider source payloads         SQLite during the initial product
-  Evidence Log                         durable normalized observations in SQLite
+  exact evidence source material       SQLite during the initial product
+  Evidence Log                         durable EvidenceItems in SQLite
   Session Memory                       SQLite
   Project Memory                       Markdown
   Personal Memory                      Markdown
@@ -390,9 +544,9 @@ artifacts as truth.
 Derived state may lag canonical publication and is rebuildable from canonical
 content and metadata.
 
-Raw payload bytes, normalized evidence, and provenance are retained by default
-during the initial product. Derived chunks, indexes, and caches may be deleted
-and rebuilt. A later TTL may delete raw payload bytes only through an explicit
+Source-material content, normalized evidence, and provenance are retained by
+default during the initial product. Derived chunks, indexes, and caches may be
+deleted and rebuilt. A later TTL may delete source-material content only through an explicit
 retention policy that preserves the durable normalized evidence, integrity
 hash, required replay guarantees, and any evidence still needed by active or
 historical memory. Superseding one memory does not by itself authorize deletion
@@ -559,7 +713,8 @@ Project, Personal, and Practice sources separately.
 
 ```text
 Command Runtime
-  installed named command for capture, query, and manual evidence insertion
+  installed named command for project bootstrap, capture, query,
+  and manual evidence insertion
   callable by humans and provider hooks
 
 Maintenance Runtime
@@ -588,6 +743,9 @@ payload, or cancellation costs justify another integration path.
 
 ```text
 provider-specific data stops at provider adapters
+project bootstrap defines oversight scope without provider knowledge
+machine-wide provider capture installation is independent of project registration
+activity outside every overseen project root is never persisted as evidence
 capture remains non-agentic and bounded
 accepted evidence is durable before capture acknowledges it
 maintenance runs on a frozen evidence frontier
@@ -611,8 +769,7 @@ embedding contracts never mix query and document vectors from different models
 supported application packages include their required SQLite runtime and extensions
 query preserves scope, freshness, provenance, and contradiction
 raw evidence deletion requires retention policy and cannot follow one memory lifecycle alone
-caller-supplied attribution never grants correction authority
-authorized correction targets are fenced while reconciliation is pending
+caller-supplied attribution never grants memory authority
 cross-store publication is journaled and recoverable, not assumed atomic
 the CLI machine protocol is versioned independently of human presentation
 MCP depends on an app client contract, not argv construction or console output
@@ -622,6 +779,10 @@ query and maintenance share AgentAdapter for bounded agent execution
 manual evidence insertion is deterministic even when its caller is an agent
 capture and insert share ingestion only after evidence is provider-neutral
 EvidenceIngestionService records maintenance intent but never curates memory
+one ingestion command, maintenance request, and maintenance attempt belongs to one project
+Evidence Log acceptance and maintenance eligibility commit atomically
+pending maintenance may coalesce while running maintenance keeps a frozen frontier
+failed or expired maintenance attempts never advance the covered cursor
 Application.create owns process-scoped composition of concrete infrastructure
 capture composes one selected adapter and does not require an adapter registry
 capture provider identity selects a contract but does not authenticate origin
