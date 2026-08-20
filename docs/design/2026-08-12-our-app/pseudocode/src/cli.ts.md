@@ -44,14 +44,14 @@ ON invocation
   MATCH command
     "bootstrap"
       require exactly one existing directory path
-      application = Application.create(runtime configuration)
+      application = await Application.create(runtime configuration)
 
       result = await application.bootstrapProject({
         directoryPath: supplied directory path
       })
 
       return the immutable project identity, canonical oversight root,
-      and repository reference when one exists
+      and canonical Git repository root when one exists
       success means the project registration is durable
       bootstrap does not install, select, or configure a provider integration
 
@@ -70,7 +70,7 @@ ON invocation
         invocationContext,
         settings: provider-specific settings
       }
-      application = Application.create(runtime configuration)
+      application = await Application.create(runtime configuration)
 
       read standard input as exact serialized content without parsing it
       nativeActivity = {
@@ -92,7 +92,7 @@ ON invocation
 
     "query"
       require a question
-      application = Application.create(runtime configuration)
+      application = await Application.create(runtime configuration)
       collect the caller's current context
 
       result = await application.query({
@@ -103,19 +103,27 @@ ON invocation
       return the answer, supporting memory references, and freshness
 
     "insert"
-      require caller-supplied evidence and applicable context
-      application = Application.create(runtime configuration)
-      establish principal and insertion-source identity from trusted invocation context
-      accept an optional client reference for replay-safe resubmission
-      accept claimed attribution as evidence metadata only
+      require the exact root of one bootstrapped overseen project
+      require one or more ordered evidence-content items
+      application = await Application.create(runtime configuration)
+
+      insertionSource = establish from the command route:
+        "our-app.cli" for direct CLI use
+        "our-app.mcp" for the future CLI-backed MCP client
+
+      accept clientReference as:
+        optional for direct CLI use
+        required for the future MCP client
 
       result = await application.insertEvidence({
-        evidence,
-        principal,
-        insertion source identity,
-        client reference?,
-        claimed attribution?,
-        context
+        invocationContext: {
+          source: { key: insertionSource }
+        },
+        request: {
+          projectRoot: supplied exact project root,
+          items: supplied content items in their original order,
+          clientReference: supplied reference when present
+        }
       })
 
       return a safe evidence acceptance receipt
@@ -128,6 +136,9 @@ ON invocation
 ON failure
   return an unsuccessful process outcome with a safe diagnostic
   never echo captured or manually inserted evidence
+
+ON process cleanup after application construction
+  await application.close()
 ```
 
 ## Ownership boundary
@@ -135,11 +146,12 @@ ON failure
 `src/cli.ts` owns process input, command routing, capture-route construction,
 command-specific presentation, and the versioned machine representation of
 stable application outcomes.
-It obtains one composed application instance from `Application.create`. For a
-capture invocation, it requires the provider and channel route before
-composition so runtime configuration can select exactly one capture capability.
-The installed Codex hook fixes these values as `codex` and `hook`; neither value
-is read from the native JSON payload.
+It awaits one composed application instance from `Application.create` and
+closes that instance during process cleanup. For a capture invocation, it
+requires the provider and channel route before composition so runtime
+configuration can select exactly one capture capability. The installed Codex
+hook fixes these values as `codex` and `hook`; neither value is read from the
+native JSON payload.
 
 The CLI preserves the exact serialized capture input. It does not parse and
 reserialize provider JSON before normalization. A selected capture route is
@@ -150,6 +162,12 @@ The bootstrap command passes one explicit directory to the provider-neutral
 project-registration use case. It does not infer a broader project root, write
 markers into the project, or install machine-wide hooks. Application
 installation owns provider capture mechanics separately.
+
+The insertion command requires an exact bootstrapped project root rather than
+inferring a project from the CLI process directory. It keeps the client
+reference optional for ordinary CLI use. The future agent-only MCP client must
+supply one for replay-safe resubmission. An agent may still use the CLI without
+one, but then safe retry behavior is caller responsibility.
 
 It does not:
 
@@ -162,11 +180,11 @@ It does not:
 - install, repair, or remove provider hooks;
 - decide how inserted evidence changes memory or documentation;
 - curate memory or documentation itself;
-- decide whether claimed attribution has memory authority.
+- classify inserted evidence into a memory product.
 
 The insertion command returns after atomic evidence acceptance and durable
 maintenance eligibility. Scheduling, coalescing, frontier selection, and
-maintenance execution belong to the evidence ingestion and maintenance owners.
+maintenance execution belong to the evidence acceptance and maintenance owners.
 
 The future MCP server may expose methods that do not mirror command names, but
 its CLI-backed client maps each business operation to one machine-protocol

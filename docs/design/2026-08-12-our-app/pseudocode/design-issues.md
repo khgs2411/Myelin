@@ -14,29 +14,6 @@ issue is removed from this file.
 
 ## Identity and context
 
-### Stable repository identity
-
-**Exposed by:** [workspace context resolution](src/workspace/workspace-context.service.ts.md)
-and [the project-scoped memory model](BRAIN.pseudocode.md).
-
-**Established:**
-
-- Project bootstrap creates an immutable application-owned `ProjectIdentity`.
-- The exact bootstrapped directory is a replaceable oversight root, not the
-  project identity.
-- Workspace resolution never discovers or creates projects from hook activity.
-- Git observations describe an optional repository relationship without
-  expanding the bootstrapped project scope.
-- Path, remote URL, root commit, and provider identifiers are observations;
-  none alone is durable repository identity.
-
-**Unresolved:** How does our app create and reconcile one `RepositoryIdentity`
-across clones, changed remotes, forks, and multiple machines without
-merging unrelated repository lineages?
-
-**Time to address:** Before repository identity is used to correlate source
-state or memory across distinct checkouts.
-
 ### Durable workstream identity
 
 **Exposed by:** [workspace context resolution](src/workspace/workspace-context.service.ts.md)
@@ -60,7 +37,7 @@ are shaped.
 ### Session Memory branch and project scope
 
 **Exposed by:** [workspace context resolution](src/workspace/workspace-context.service.ts.md),
-[the Evidence Log acceptance boundary](src/evidence/evidence-ingestion.service.ts.md),
+[the Evidence Log acceptance boundary](src/evidence/evidence-acceptance.service.ts.md),
 and [Session Memory behavior](BRAIN.pseudocode.md).
 
 **Established:**
@@ -164,6 +141,13 @@ claims autonomous maintenance liveness.
   `(domain, scheme, key)` outside `EvidenceOrigin`.
 - Reusing a replay identity for different canonical evidence is a conflict,
   never a correction.
+- Source-replay equality uses a versioned fingerprint of the complete
+  `EvidenceCandidateDto` and excludes the replay lookup key and
+  acceptance-owned results.
+- One optional immutable replay identity and candidate fingerprint are stored
+  as nullable all-or-none projections on the accepted `EvidenceItem` row.
+- `EvidenceAcceptanceService` owns replay classification;
+  `EvidenceLogRepository` owns transactional replay lookup and persistence.
 - One acceptance operation belongs to one project and commits new evidence,
   project-local sequence allocation, replay admission, its stored receipt, and
   maintenance eligibility atomically.
@@ -175,14 +159,15 @@ claims autonomous maintenance liveness.
 - Covered and scheduled frontiers prevent overlapping maintenance requests.
 - A pending request may extend; a running request keeps its frozen frontier.
 - Each execution is a separate leased `MaintenanceAttempt`. Failure or lease
-  expiry leaves its request pending and does not advance the covered cursor.
+  expiry leaves its request running and frozen, eligible for a replacement
+  attempt, and does not advance the covered cursor.
 - Completion by a replaced stale worker cannot advance the cursor.
 
 **Unresolved:** What durable claim and fencing mechanism implements attempt
 leases, and what idempotency keys coordinate canonical publication, candidate
 disposition, and derived indexing across crashes?
 
-**Time to address:** With evidence ingestion, worker claims, and the first
+**Time to address:** With evidence acceptance, worker claims, and the first
 canonical publication owner.
 
 ### Retry, quarantine, and terminal failure
@@ -252,9 +237,10 @@ revises, or demotes a Practice Memory node?
 
 **Time to address:** When the Practice Memory curator is shaped.
 
-### Trusted principal derivation for inserted evidence
+### MCP insertion submission context and authority
 
-**Exposed by:** [manual evidence insertion](src/cli.ts.md) and
+**Exposed by:** [manual evidence insertion](src/evidence/evidence-insertion.service.ts.md),
+[the CLI process boundary](src/cli.ts.md), and
 [product-specific correction behavior](BRAIN.pseudocode.md).
 
 **Established:**
@@ -267,16 +253,48 @@ revises, or demotes a Practice Memory node?
   remain relevant.
 - Caller-supplied attribution cannot grant authority.
 - An AI agent cannot claim human authority through payload metadata.
+- The entry boundary establishes insertion source as CLI or MCP; it does not
+  prove that a CLI caller is human.
+- The CLI keeps client correlation optional and makes safe retries caller
+  responsibility when omitted.
+- The future agent-only MCP contract requires a client reference and the full
+  context required by that transport.
 - Evidence insertion never directly mutates or fences memory.
 - Immediate intent schedules the same autonomous curation path used by other
   accepted evidence.
 
-**Unresolved:** Which trusted invocation facts derive principals for humans,
-provider hooks, and the future MCP transport, and how do product curators weigh
-that attributable evidence without treating payload claims as authority?
+**Unresolved:** Which agent and invocation facts the future MCP integration can
+establish independently of tool payload claims, and how product curators weigh
+that provenance without treating it as automatic human authority.
 
-**Time to address:** Before the insert command and attributable insertion
-contract are finalized.
+**Time to address:** When the MCP integration or a memory curator first consumes
+agent-specific insertion provenance. This does not block the direct CLI
+insertion contract.
+
+### Captured and inserted evidence curation path
+
+**Exposed by:** [automatic evidence capture](src/capture/evidence-capture.service.ts.md),
+[manual evidence insertion](src/evidence/evidence-insertion.service.ts.md), and
+[the brain evidence boundary](BRAIN.pseudocode.md).
+
+**Established:**
+
+- Raw provider activity is accepted into the Evidence Log before agentic memory
+  interpretation. Capture must remain durable and non-agentic.
+- Manual insertion supplies already-curated evidence statements and does not
+  invoke an agent before evidence acceptance.
+- Curated insertion content is still evidence rather than accepted memory.
+- Evidence acceptance is deterministic and does not create memory candidates.
+- The later memory workflow decides which Session, Project, Personal, or
+  Practice Memory candidates accepted evidence supports.
+
+**Unresolved:** How the Session Memory ingestion workflow presents raw captured
+evidence and curated inserted evidence to curation, and whether inserted
+statements use a distinct extraction path while still participating in the same
+memory-admission rules.
+
+**Time to address:** When the Session Memory ingestion and curation owner is
+shaped. This does not block evidence insertion, acceptance, or persistence.
 
 ## Project Memory
 
@@ -544,6 +562,9 @@ and before that workflow invokes the shared agent adapter.
   extension.
 - Runtime selection occurs before the first database connection.
 - Host discovery can be a development override. It is not the product contract.
+- Sequelize does not select or prove the packaged SQLite build. `SqliteRuntime`
+  must supply a compatible driver and sqlite-vec binary before
+  `SqliteDatabase` opens the ORM connection.
 
 **Unresolved:** What platform and architecture matrix, binary build, update,
 provenance, license, integrity check, development override, and unsupported-host
@@ -556,11 +577,18 @@ implemented.
 
 **Exposed by:** [the TypeScript stack](architecture.pseudocode.md).
 
-**Established:** TypeScript, strict mode, and ESM are selected. The runtime and
-package manager are separate decisions.
+**Established:**
 
-**Unresolved:** Which runtime and package manager best support the packaged
-SQLite requirement, process execution, distribution, and development workflow?
+- TypeScript, strict mode, and ESM are selected.
+- Sequelize v7 alpha is the selected ORM and uses pinned compatible
+  `@sequelize/core` and `@sequelize/sqlite3` packages.
+- One `SqliteDatabase` instance is process-scoped through `Application.create`;
+  it is not a global singleton.
+- The runtime and package manager remain separate decisions.
+
+**Unresolved:** Which runtime and package manager best support Sequelize's
+native SQLite driver, the packaged SQLite and sqlite-vec requirement, process
+execution, distribution, and development workflow?
 
 **Time to address:** Before dependencies, scripts, and distribution packaging
 are fixed.
@@ -574,6 +602,10 @@ are fixed.
 
 - `Application.create` is the process-scoped factory and composition boundary.
 - Each CLI invocation creates one application instance.
+- Storage configuration supplies the application database path and validated
+  packaged-runtime selection.
+- `Application.create` opens one process-scoped `SqliteDatabase`, and
+  `Application.close` releases it during process cleanup.
 - Capture resolves one provider configuration before construction and injects
   one capture adapter directly.
 - Agent execution is independent from capture and is shared by query and

@@ -42,18 +42,19 @@ query through freshness and scope.
 
 ```pseudocode
 RECORD OverseenProject
-  project_identity       immutable application-owned identity
+  project_identity       immutable SQLite-assigned integer identity
   root_path              replaceable canonical oversight scope
-  repository_reference? application-owned repository identity when Git exists
+  repository_root_path? canonical Git repository root when Git exists
 
 FUNCTION bootstrapProject(directory_path)
   validate and canonicalize the exact supplied directory
   IF that canonical root is already registered
     return the existing project
 
-  create an immutable project identity
+  prepare a new Project row
   inspect bounded repository facts without changing the governed directory
-  persist the project identity, exact oversight root, and repository reference
+  persist the exact oversight root and optional repository root
+  receive the immutable project identity assigned by SQLite
   return the registered project
 ```
 
@@ -117,20 +118,33 @@ STORE EvidenceLog
 
 `EvidenceItem` is the accepted product concept. Source workflows construct an
 immutable provider-neutral `EvidenceCandidateDto` without durable identity or
-acceptance time. Evidence ingestion admits new candidates and creates their
-`EvidenceItemDto` values with application evidence identity and `receivedAt`.
-A later persistence design maps accepted items to the Evidence Log storage
-model; neither DTO is the SQLite row.
+acceptance time. Evidence acceptance admits new candidates, persists their
+Evidence Log rows with acceptance metadata, receives their SQLite-assigned
+identities, and then creates their `EvidenceItemDto` values. Neither DTO is the
+SQLite row.
 
 Origin records how evidence entered our app and which source coordinates apply.
 It does not assign semantic meaning to content, authenticate a caller, grant
 correction authority, or control replay suppression. Reliable replay identity
-travels beside the DTO as ingestion metadata; evidence remains admissible when
+travels beside the DTO as acceptance metadata; evidence remains admissible when
 a source cannot supply one.
+
+Evidence acceptance does not create memory. A later Session Memory ingestion
+workflow reads accepted EvidenceItems from the Evidence Log.
+
+Capture preserves raw provider activity as evidence before any agentic memory
+interpretation. Manual insertion accepts already-curated evidence statements,
+but those statements are still evidence rather than memory. The later memory
+workflow decides which Session, Project, Personal, or Practice Memory candidates
+each accepted item supports.
 
 Source material preserves the exact content-bearing input before normalization.
 Its digest proves stored-content integrity only. It does not identify evidence,
 authenticate the source, or prove that the content is true.
+
+Inbox is the logical view of insertion-originated EvidenceItems that successful
+maintenance has not yet covered. It does not introduce another durable store or
+an evidence-item processing status.
 
 ```pseudocode
 TYPE WorkspaceContext
@@ -138,7 +152,6 @@ TYPE WorkspaceContext
   project_root
   working_directory
   repository?
-    repository_reference
     repository_location
     branch = active branch name | unavailable
 ```
@@ -241,6 +254,8 @@ Evidence accumulates for a project
      one pending maintenance request
   -> pending requests may coalesce; a running request keeps a frozen frontier
   -> one leased attempt executes the request asynchronously
+  -> a failed or expired attempt is replaced without returning the frozen
+     request to pending
   -> only successful current attempts advance the covered frontier
   -> Session Memory is curated first
   -> Session curation emits destination-specific candidate leads
@@ -330,11 +345,20 @@ replaces their canonical content.
 ## Manual evidence insertion and correction
 
 ```pseudocode
-FUNCTION insertEvidence(statement, context, claimed_attribution?)
-  establish the principal and origin from trusted invocation context
-  preserve caller-supplied attribution as a claim, not memory authority
-  validate the evidence and applicable context
-  accept it into the Evidence Log without treating it as memory
+FUNCTION insertEvidence(invocation_context, request)
+  establish CLI or MCP insertion source from invocation context
+  validate one ordered batch of curated evidence-content strings
+  require client reference for MCP and keep it optional for direct CLI use
+  resolve request.project_root as one exact bootstrapped project root
+  reject an invalid or unregistered root; never silently ignore explicit insertion
+
+  FOR EACH content item in supplied order
+    preserve the exact string as text/plain source material
+    construct one insertion-originated EvidenceCandidateDto
+    leave occurred_at absent
+    derive replay identity from client reference and item position when present
+
+  accept the complete batch into the Evidence Log without treating it as memory
   set maintenance intent to immediate
   create or promote one pending request through all unscheduled evidence
   return an acceptance receipt after evidence and eligibility commit atomically
@@ -355,3 +379,7 @@ intent carried by inserted evidence; it does not directly mutate canonical
 memory, fence an existing memory, or require the user to participate in the
 maintenance workflow. The curator evaluates whether the evidence revises,
 narrows, supersedes, or retracts an existing memory.
+
+The insertion request never selects a memory product. Its content is already a
+curated evidence statement, while the later memory workflow decides which
+memory candidates that statement supports.

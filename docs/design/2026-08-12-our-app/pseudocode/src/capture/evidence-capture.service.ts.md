@@ -6,7 +6,7 @@ Intended destination: `src/capture/evidence-capture.service.ts`
 
 `EvidenceCaptureService` is the provider-neutral application orchestrator for
 one capture invocation. It coordinates normalization, workspace resolution,
-`EvidenceCandidateDto` construction, and durable ingestion without owning any
+`EvidenceCandidateDto` construction, and durable acceptance without owning any
 provider-specific behavior.
 
 ```ts
@@ -46,7 +46,7 @@ class EvidenceCaptureService {
     private readonly invocationContext: CaptureInvocationContext,
     private readonly adapter: CaptureAdapter,
     private readonly workspaceContextService: WorkspaceContextService,
-    private readonly evidenceIngestion: EvidenceIngestionService
+    private readonly evidenceAcceptance: EvidenceAcceptanceService
   ) {}
 
   async capture(input: CaptureInput): Promise<CaptureResult> {
@@ -113,7 +113,7 @@ class EvidenceCaptureService {
 
     operationId = new application-owned operation identity for this acceptance
 
-    acceptance = await evidenceIngestion.accept({
+    acceptance = await evidenceAcceptance.accept({
       contractVersion: current EvidenceAcceptanceContractVersion,
       operationId,
       items: [acceptanceItem],
@@ -166,11 +166,11 @@ responsibility.
 
 An unmanaged result means no registered oversight root contains the observed
 working directory. `EvidenceCaptureService` returns an ignored outcome and never sends
-the normalized observation or raw provider activity to evidence ingestion.
+the normalized observation or raw provider activity to evidence acceptance.
 An invalid, missing, or inaccessible working directory fails capture with a
 safe diagnostic.
 
-## Evidence-ingestion handoff
+## Evidence-acceptance handoff
 
 The handoff contains one provider-neutral evidence candidate as a one-item
 collection. `EvidenceCaptureService` selects the capture maintenance-intent
@@ -196,7 +196,7 @@ time-based maintenance obligation as one recoverable operation. The first
 accepted evidence after an elapsed-time condition becomes true performs the
 next eligibility evaluation. No provider lifecycle signal is required.
 
-Adapter-ignored and unmanaged input do not reach evidence ingestion. Rejected
+Adapter-ignored and unmanaged input do not reach evidence acceptance. Rejected
 input fails capture. The CLI presents these outcomes through the
 provider-compatible safe process contract.
 

@@ -7,7 +7,7 @@ Intended destination: `src/capture/capture-adapter.ts`
 `CaptureAdapter` is the provider-specific validation and normalization boundary.
 It converts exactly one provider-native activity into exactly one
 provider-neutral outcome. It does not establish provider or channel identity,
-resolve workspace context, construct durable evidence, or invoke ingestion.
+resolve workspace context, construct durable evidence, or invoke acceptance.
 
 ```ts
 // intentionally illustrative pseudocode
@@ -93,11 +93,11 @@ CONTRACT CaptureAdapter.normalize
 - `nativeEventKind` preserves the provider's classification for provenance. It
   does not become provider-neutral product meaning.
 - `sourceReplay` is present only when the adapter can derive a reliable stable
-  key from provider coordinates. Its versioned scheme and key become ingestion
+  key from provider coordinates. Its versioned scheme and key become acceptance
   metadata after the capture service adds the application-owned source domain.
   It is not part of `EvidenceOrigin`.
 - `providerOccurredAt` is present only when the provider supplies an event
-  time. `EvidenceIngestionService` later assigns the separate application-owned
+  time. `EvidenceAcceptanceService` later assigns the separate application-owned
   `receivedAt` time when it accepts new evidence.
 - `content` is the normalized evidence string. The adapter does not assign a
   provider-neutral semantic content kind.

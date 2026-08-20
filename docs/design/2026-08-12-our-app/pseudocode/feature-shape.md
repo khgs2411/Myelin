@@ -31,7 +31,7 @@ src/
   evidence/
     evidence-item.dto.ts
     evidence-insertion.service.ts
-    evidence-ingestion.service.ts
+    evidence-acceptance.service.ts
 
   memory/
     markdown/
@@ -40,6 +40,14 @@ src/
   storage/
     sqlite/
       sqlite-runtime.ts
+      sqlite-database.ts
+      models/
+        project.model.ts
+        evidence-item.model.ts
+        evidence-acceptance-operation.model.ts
+      repositories/
+        evidence-log.repository.ts
+        evidence-acceptance-operation.repository.ts
 
   agent/
     agent-adapter.ts
@@ -50,14 +58,31 @@ src/
       codex-agent.adapter.ts
 ```
 
+This catalog distinguishes design depth without creating workflow status:
+
+- A linked source path has an independently useful pseudocode artifact.
+- An unlinked source path is justified by current design, but its deeper
+  pseudocode has not yet earned a standalone artifact.
+- `representation OPEN` or `filename OPEN` means that the semantic owner and
+  its established job are selectable design units, while the named source-file
+  detail is unresolved. It does not reopen the established responsibility.
+
+The current semantic owners without exact source paths are:
+
+| Design unit | Established responsibility | Unshaped edge |
+| --- | --- | --- |
+| Application installation owner | Publish the command, initialize machine state, and install provider capture mechanics | Script, package entry, or source-file representation |
+| Project registration application owner | Register one exact canonical directory through the Project model as an overseen project with immutable application identity | Concrete application service and relocation workflow |
+
 ### `package.json` — package and command publication metadata
 
 Defines the TypeScript package and maps the intentionally unresolved installed
 command name to the built CLI entry. It pins `sqlite-vec` to an exact compatible
-version and includes the application-owned SQLite runtime assets in supported
-packages. It participates in distribution but does not collapse command
-publication, machine-state initialization, provider-hook installation, and MCP
-registration into one lifecycle owner.
+version, pins compatible Sequelize v7 alpha `@sequelize/core` and
+`@sequelize/sqlite3` packages, and includes the application-owned SQLite runtime
+assets in supported packages. It participates in distribution but does not
+collapse command publication, machine-state initialization, provider-hook
+installation, and MCP registration into one lifecycle owner.
 
 ### `config.yaml` — human-facing application defaults
 
@@ -89,15 +114,19 @@ named command whose name is intentionally unresolved.
 Exposes the stable provider-neutral application façade used by the CLI:
 `bootstrapProject`, `capture`, `query`, and `insertEvidence`. It delegates to
 private application services without exposing the service graph or implementing
-workflow logic. Its static `create` factory method owns process-scoped
-dependency composition from capability-specific runtime configuration.
+workflow logic. Its asynchronous static `create` factory method owns
+process-scoped dependency composition, including one `SqliteDatabase`, from
+capability-specific runtime configuration. `close` releases that process-scoped
+infrastructure.
 
-### Project registration application owner — filename `OPEN`
+### Project registration application owner — representation `OPEN`
 
 Owns provider-neutral durable registration of one exact canonical directory as
-an overseen project root with an immutable application-owned identity. Its
-necessity is established by bootstrap and workspace resolution, but its source
-filename and concrete service boundary have not yet been shaped.
+an overseen project root. It canonicalizes the path, observes an optional Git
+repository root, creates or returns the project row, and returns its immutable
+SQLite-assigned identity. Its necessity is established by bootstrap and
+workspace resolution, but its source filename, concrete service boundary, and
+relocation workflow have not yet been shaped.
 
 ### [`src/capture/evidence-capture.service.ts`](./src/capture/evidence-capture.service.ts.md) — `EvidenceCaptureService`
 
@@ -106,7 +135,7 @@ activity through its injected `CaptureAdapter`, ignores activity outside every
 overseen root, and combines managed activity with its capture origin and
 resolved workspace context to construct one capture-originated
 `EvidenceCandidateDto`. It then delegates durable acceptance to
-`EvidenceIngestionService`. It plays the facade role without placing the
+`EvidenceAcceptanceService`. It plays the facade role without placing the
 architectural pattern in the class name.
 
 ### [`src/capture/capture-adapter.ts`](./src/capture/capture-adapter.ts.md) — `CaptureAdapter`
@@ -119,13 +148,13 @@ workspace context, or store evidence.
 
 ### [`src/workspace/workspace-context.service.ts`](./src/workspace/workspace-context.service.ts.md) — `WorkspaceContextService`
 
-Matches normalized activity against durable overseen-project registrations.
-It uses the provider-observed working directory to return a managed
-`WorkspaceContext`, an unmanaged outcome, or a safe workspace failure. Managed
-context reuses registered project and repository identity and adds the active
-Git branch when available. It does not discover or register projects, own
-provider-session identity, inspect source for curation, or perform semantic
-workstream analysis.
+Resolves workspace context through durable overseen-project registrations. For
+capture, it matches the provider-observed working directory against the most
+specific containing registration. For manual insertion, `resolveProjectRoot`
+requires an exact registered project root. Managed context reuses registered
+project identity and optional Git repository location and adds the active branch
+when available. It does not discover or register projects, own provider-session
+identity, inspect source for curation, or perform semantic workstream analysis.
 
 ### [`src/providers/codex/codex-capture.adapter.ts`](./src/providers/codex/codex-capture.adapter.ts.md) — `CodexCaptureAdapter`
 
@@ -147,36 +176,96 @@ unshaped.
 
 Defines the immutable provider-neutral `EvidenceCandidateDto` constructed by
 capture and manual insertion and the accepted `EvidenceItemDto` created by
-ingestion. Candidate fields own capture-or-insertion origin, workspace context,
-source time, normalized string content, and exact source material. Ingestion
-adds durable application evidence identity and acceptance time. Neither DTO is
-the SQLite row shape or owns replay suppression. Both remain plain immutable
-data without a shared DTO base class or DTO-owned behavior. Runtime validation
-is an explicit ingestion-boundary contract whose concrete library and owner
-remain unshaped.
+acceptance. Candidate fields own capture-or-insertion origin, workspace context,
+source time, normalized string content, and exact source material. Acceptance
+adds acceptance time, persists the row, receives its SQLite-assigned identity,
+and then constructs `EvidenceItemDto`. Neither DTO is the SQLite row shape or
+owns replay suppression. Both remain plain immutable data without a shared DTO
+base class or DTO-owned behavior. Runtime validation is an explicit
+acceptance-boundary contract whose concrete library and owner remain unshaped.
 
-### `src/evidence/evidence-insertion.service.ts` — `EvidenceInsertionService`
+### [`src/evidence/evidence-insertion.service.ts`](./src/evidence/evidence-insertion.service.ts.md) — `EvidenceInsertionService`
 
-Owns the manual insertion workflow for attributable evidence supplied directly
-by a human or agent. It establishes trusted origin and attribution, constructs
-provider-neutral `EvidenceCandidateDto` values, and delegates them with immediate
-maintenance intent to `EvidenceIngestionService`. It does not pass manual input
-through `EvidenceCaptureService`, directly mutate or fence memory, wait for
-agentic maintenance, or perform curation itself.
+Owns deterministic insertion of an ordered batch of already-curated evidence
+statements for one exact bootstrapped project root. It validates channel-specific
+client-reference rules, resolves the exact root through
+`WorkspaceContextService`, preserves each statement as exact `text/plain`
+source material, constructs one provider-neutral `EvidenceCandidateDto` per
+item, and delegates the atomic batch with immediate maintenance intent to
+`EvidenceAcceptanceService`. It returns the acceptance receipt directly. It
+does not invoke an agent, select a memory product, directly mutate memory, or
+wait for curation. Inbox is a logical view over uncovered insertion-originated
+Evidence Log items, not another store or queue.
 
-### [`src/evidence/evidence-ingestion.service.ts`](./src/evidence/evidence-ingestion.service.ts.md) — `EvidenceIngestionService`
+### [`src/evidence/evidence-acceptance.service.ts`](./src/evidence/evidence-acceptance.service.ts.md) — `EvidenceAcceptanceService`
 
 Owns the common deterministic acceptance boundary after evidence becomes
 provider-neutral. One project-bound atomic operation validates DTOs, resolves
-operation and source replay, assigns contiguous project-local evidence
-identities, acceptance times, and sequences, appends new evidence, evaluates
-the active revisioned maintenance policy, creates or coalesces a finite pending
-request, and stores the acceptance receipt. Its accepted operation contract
+operation and source replay, assigns acceptance times and contiguous
+project-local sequences, appends new evidence, receives SQLite-assigned evidence
+identities, evaluates the active revisioned maintenance policy, creates or
+coalesces a finite pending request, and stores the acceptance receipt. Its
+accepted operation contract
 requires one immutable, project-owned SQLite operation record containing the
 versioned command fingerprint and complete versioned receipt for the owning
-project's lifetime. It owns neither the remaining Evidence Log table shape nor
-source normalization, caller authority, correction interpretation, maintenance
-execution, memory curation, or publication.
+project's lifetime. It does not own the Evidence Log persistence
+representation, source normalization, caller authority, correction
+interpretation, maintenance execution, memory curation, or publication.
+
+The service supplies each validated candidate plus acceptance-owned metadata
+and owns the transaction semantics. `EvidenceLogRepository` owns row mapping,
+append, and generated-identity return. The service then constructs the accepted
+DTO. Source replay remains separate admission metadata persisted through a
+nullable immutable projections on the accepted evidence row. Replay equality
+uses a versioned fingerprint of the complete `EvidenceCandidateDto`;
+acceptance-owned results do not participate. `EvidenceAcceptanceService` owns
+replay classification, while `EvidenceLogRepository` owns lookup and storage.
+
+This owner does not ingest accepted evidence into memory. Session Memory
+ingestion is a later agentic workflow. Feature Shape does not predict its file
+until that boundary is designed.
+
+### [`src/storage/sqlite/repositories/evidence-log.repository.ts`](./src/storage/sqlite/repositories/evidence-log.repository.ts.md) — `EvidenceLogRepository`
+
+Owns append-only mapping and insertion from one validated `EvidenceCandidateDto` plus
+acceptance-owned time and project sequence to the append-only `EvidenceItem`
+model. The established projection is hybrid:
+
+- stable fields used for identity, ordering, filtering, and time queries become
+  relational columns;
+- project identity, project-local sequence, and nullable Git branch support the
+  established project and branch retrieval behavior;
+- complete nested origin, workspace context, and source-material detail remains
+  available as lossless JSON;
+- `EvidenceLogRepository` constructs one row object whose relational
+  projections and lossless JSON derive from the same immutable candidate and
+  acceptance metadata;
+- one acceptance transaction inserts the row, so projections cannot commit
+  independently; and
+- stored evidence is append-only, so a relational projection cannot later
+  diverge from its preserved JSON snapshot.
+
+Its shaped `append` method requires the transaction supplied by
+`EvidenceAcceptanceService`, stores optional replay identity and candidate
+fingerprint projections, and returns only the SQLite-generated
+`EvidenceItemId`. `reserveProjectSequenceRange` allocates one consecutive range
+for the service's new items by advancing the owning Project's durable allocation
+frontier through the caller-supplied `IMMEDIATE` transaction.
+`findByReplayIdentity` returns the existing identity, project-local sequence,
+and stored candidate fingerprint without leaking a Sequelize model. Replay
+classification remains business logic in `EvidenceAcceptanceService`. Other
+reads remain unshaped. The repository exposes no general update or delete
+operation. The migration and future explicit-forgetting owners remain `OPEN`.
+
+### [`src/storage/sqlite/repositories/evidence-acceptance-operation.repository.ts`](./src/storage/sqlite/repositories/evidence-acceptance-operation.repository.ts.md) — `EvidenceAcceptanceOperationRepository`
+
+Owns transaction-scoped lookup and immutable insertion for the
+`EvidenceAcceptanceOperation` model. `findByOperationId` returns the stored
+command fingerprint and versioned raw receipt without exposing a Sequelize
+model. `appendSuccessfulOperation` maps one validated successful operation and
+returns no internal row identity. The repository does not own transactions,
+fingerprint comparison, conflict classification, receipt validation, updates,
+or general deletion.
 
 ### [`src/memory/markdown/markdown-memory-document.ts`](./src/memory/markdown/markdown-memory-document.ts.md) — canonical Markdown document shape
 
@@ -191,10 +280,53 @@ retrieval ranking, or memory admission.
 
 Selects and initializes the application-owned SQLite runtime before any
 connection is opened. Supported application packages include a compatible
-SQLite library with FTS5 enabled and the pinned `sqlite-vec` extension, so
+SQLite driver with FTS5 enabled and the pinned `sqlite-vec` extension, so
 ordinary use does not depend on Apple SQLite, Homebrew, or another host SQLite
-installation. Platform packaging, binary provenance, and the unsupported-host
-failure contract still require deeper design.
+installation. It supplies the compatible driver and per-connection extension
+initialization to `SqliteDatabase`; Sequelize does not replace this owner.
+Platform packaging, binary provenance, and the unsupported-host failure
+contract still require deeper design.
+
+### [`src/storage/sqlite/sqlite-database.ts`](./src/storage/sqlite/sqlite-database.ts.md) — `SqliteDatabase`
+
+Owns one process-scoped Sequelize connection lifecycle. `Application.create`
+opens it after `SqliteRuntime` initializes, injects the same instance into
+SQLite repositories, and closes it during process cleanup. It provides the
+managed `IMMEDIATE` write-transaction boundary required by evidence acceptance.
+It is neither a global singleton nor a generic database base class. Additional
+repository and migration files remain absent until their concrete operations
+are shaped.
+
+### [`src/storage/sqlite/models/project.model.ts`](./src/storage/sqlite/models/project.model.ts.md) — `Project`
+
+Defines the `projects` Sequelize model populated by project bootstrap. Its base
+class owns the auto-increment integer identity, unique canonical oversight
+root, nullable Git repository root, monotonic Evidence Log allocation frontier,
+and timestamps. The exported `Project` class owns relations as their target
+models enter the design. Version one has no separate repository identity,
+sequence-counter model, or table.
+
+### [`src/storage/sqlite/models/evidence-item.model.ts`](./src/storage/sqlite/models/evidence-item.model.ts.md) — `EvidenceItem`
+
+Defines the append-only `evidence_items` Sequelize model. Its base class owns
+the auto-increment identity, project ownership and sequence, nullable branch,
+normalized origin projections, normalized content, evidence times, and
+lossless origin, workspace-context, and source-material JSON. It also owns the
+nullable all-or-none replay identity and versioned candidate-fingerprint
+projections. The exported class owns the `Project` relation. Its table contract
+owns the project foreign key, project-sequence and replay-identity uniqueness,
+origin-kind and replay-completeness checks, and established project, branch,
+and Inbox indexes. Sequelize timestamps are disabled.
+
+### [`src/storage/sqlite/models/evidence-acceptance-operation.model.ts`](./src/storage/sqlite/models/evidence-acceptance-operation.model.ts.md) — `EvidenceAcceptanceOperation`
+
+Defines the immutable `evidence_acceptance_operations` Sequelize model. Its
+base class owns the SQLite-assigned row identity, unique application operation
+identity, required project ownership, versioned command fingerprint, versioned
+complete receipt JSON, and application-assigned commit timestamp. The exported
+class owns the `Project` relation. Its table contract owns operation-identity
+uniqueness and restrictive project deletion. Sequelize timestamps are
+disabled, and successful operation rows expose no normal mutation path.
 
 ### `src/agent/agent-adapter.ts` — `AgentAdapter`
 
@@ -239,10 +371,11 @@ human shell | provider hooks
 
           -> route bootstrap command
               -> Application.bootstrapProject(exact directory path)
-                  -> project registration application owner (filename OPEN)
+                  -> project registration application owner (representation OPEN)
                       -> immutable ProjectIdentity
                       -> replaceable canonical oversight root
-                      -> optional RepositoryIdentity
+                      -> optional canonical Git repository root
+                      -> Project model
 
           -> route capture command
               -> Application.capture(exact native activity)
@@ -255,10 +388,14 @@ human shell | provider hooks
                               -> ignored without persistence
                           -> managed WorkspaceContext
                               -> construct capture-originated EvidenceCandidateDto
-                              -> EvidenceIngestionService
-                                  -> atomic Evidence Log acceptance
-                                  -> policy-based maintenance eligibility
-                                  -> stored acceptance receipt
+                              -> EvidenceAcceptanceService
+                                  -> one atomic acceptance transaction
+                                      -> EvidenceLogRepository.append
+                                          -> append hybrid EvidenceItem row through supplied transaction
+                                          -> return SQLite-generated identity
+                                      -> construct accepted EvidenceItemDto
+                                      -> policy-based maintenance eligibility
+                                      -> stored acceptance receipt
 
           -> route query command
               -> Application.query(question, context)
@@ -270,13 +407,28 @@ human shell | provider hooks
                           -> CodexAgentAdapter
 
           -> route insert command
-              -> Application.insertEvidence(evidence, context)
+              -> Application.insertEvidence(invocation context, insertion request)
                   -> EvidenceInsertionService
-                      -> construct manually supplied EvidenceCandidateDto
-                      -> EvidenceIngestionService
-                          -> atomic Evidence Log acceptance
-                          -> immediate maintenance eligibility
-                          -> stored acceptance receipt
+                      -> require exact bootstrapped project root
+                      -> require ordered evidence-content items
+                      -> WorkspaceContextService.resolveProjectRoot
+                          -> reject invalid or unregistered root
+                          -> managed WorkspaceContext
+                      -> preserve exact item strings as text/plain source material
+                      -> construct one insertion-originated EvidenceCandidateDto per item
+                      -> derive replay-safe batch operation identity when clientReference exists
+                      -> EvidenceAcceptanceService
+                          -> one atomic acceptance transaction
+                              -> EvidenceLogRepository.append for each new item
+                                  -> append hybrid EvidenceItem rows through supplied transaction
+                                  -> return SQLite-generated identities
+                              -> construct accepted EvidenceItemDto values
+                              -> immediate maintenance eligibility
+                              -> stored acceptance receipt
+
+Inbox
+  -> logical view over uncovered insertion-originated EvidenceItems
+  -> maintenance request, attempt, and cursor remain the processing owners
 
 canonical Markdown publication | derived indexing | query hydration
   -> canonical Markdown document shape
@@ -287,8 +439,15 @@ canonical Markdown publication | derived indexing | query hydration
 
 Application.create
   -> initialize packaged SQLite runtime before opening SQLite
-      -> application-owned SQLite library with FTS5
+      -> application-owned SQLite driver with FTS5
       -> pinned packaged sqlite-vec extension
+  -> SqliteDatabase.open
+      -> pinned Sequelize v7 alpha + @sequelize/sqlite3
+      -> authenticate and verify FTS5 and sqlite-vec capability
+      -> one process-scoped database instance
+      -> inject the same instance into SQLite repositories
+  -> Application.close
+      -> close the process-scoped Sequelize connection
 
 maintenance owner not yet shaped
   -> injected AgentAdapter

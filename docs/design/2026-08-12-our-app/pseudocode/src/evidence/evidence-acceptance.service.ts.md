@@ -1,10 +1,10 @@
-# `src/evidence/evidence-ingestion.service.ts`
+# `src/evidence/evidence-acceptance.service.ts`
 
 > Pseudocode artifact. Non-executable reference shape.
 
-Intended destination: `src/evidence/evidence-ingestion.service.ts`
+Intended destination: `src/evidence/evidence-acceptance.service.ts`
 
-`EvidenceIngestionService` is the deterministic, project-bound admission owner
+`EvidenceAcceptanceService` is the deterministic, project-bound admission owner
 shared by automatic capture and manual insertion. It accepts provider-neutral
 evidence, appends new evidence to the Evidence Log idempotently, and records any
 resulting Session maintenance obligation in the same SQLite transaction. It
@@ -53,7 +53,7 @@ type EvidenceAcceptanceReceipt = Readonly<{
   committedAt: normalized timestamp
 }>
 
-class EvidenceIngestionService {
+class EvidenceAcceptanceService {
   async accept(
     command: EvidenceAcceptanceCommand
   ): Promise<EvidenceAcceptanceReceipt> {
@@ -68,7 +68,10 @@ class EvidenceIngestionService {
         each sourceReplay value or explicit absence
 
     receipt = within one SQLite write transaction acquired before lookup:
-      existingOperation = find acceptance operation by command.operationId
+      existingOperation = await acceptanceOperations.findByOperationId(
+        command.operationId,
+        transaction
+      )
 
       IF existingOperation exists
         IF existingOperation.commandFingerprint != commandFingerprint
@@ -83,16 +86,26 @@ class EvidenceIngestionService {
           classifiedItems.push({ kind: "new", item })
           CONTINUE
 
-        existingReplay = find evidence by unique replay identity:
-          item.sourceReplay.domain
-          item.sourceReplay.scheme
-          item.sourceReplay.key
+        candidateFingerprint = calculate the established versioned fingerprint
+          of the complete item.candidate
+
+        existingReplay = await evidenceLog.findByReplayIdentity(
+          item.sourceReplay,
+          transaction
+        )
 
         IF existingReplay does not exist
-          classifiedItems.push({ kind: "new", item })
+          classifiedItems.push({
+            kind: "new",
+            item,
+            replayPersistence: {
+              identity: item.sourceReplay,
+              candidateFingerprint
+            }
+          })
           CONTINUE
 
-        IF existingReplay does not match item.candidate
+        IF existingReplay.candidateFingerprint != candidateFingerprint
           fail the complete command with source-replay conflict
 
         classifiedItems.push({
@@ -103,17 +116,32 @@ class EvidenceIngestionService {
         })
 
       newItems = classifiedItems where kind == "new"
-      sequenceRange = reserve one contiguous project-local range for newItems
 
-      FOR EACH new item IN command order
+      IF newItems is not empty
+        sequenceRange = await evidenceLog.reserveProjectSequenceRange(
+          projectId,
+          newItems.length,
+          transaction
+        )
+      ELSE
+        sequenceRange = empty
+
+      FOR EACH newItem IN command order
+        projectSequence = take the next sequence from sequenceRange
+        evidenceId = await evidenceLog.append(
+          newItem.item.candidate,
+          {
+            projectSequence,
+            receivedAt: transaction acceptance time,
+            sourceReplay: newItem.replayPersistence or explicit absence
+          },
+          transaction
+        )
+
         evidenceItem = construct EvidenceItemDto from:
-          item.candidate
-          id: new application-owned EvidenceItemId
+          newItem.item.candidate
+          id: evidenceId
           receivedAt: transaction acceptance time
-
-        assign evidenceItem the next sequence from sequenceRange
-        map evidenceItem to the future Evidence Log persistence shape
-        append evidenceItem and optional source replay identity
 
       maintenance = evaluateMaintenance({
         projectId,
@@ -125,16 +153,21 @@ class EvidenceIngestionService {
         accepted new items and their assigned sequences
         replayed items and their existing identities and sequences
         maintenance disposition
-        transaction commit time
+        application-assigned acceptance transaction timestamp
 
-      persist one immutable successful acceptance-operation record containing:
-        command.operationId
-        projectId
-        fingerprint scheme and version
-        commandFingerprint
-        receipt schema version
-        complete receipt JSON
-        transaction commit time
+      await acceptanceOperations.appendSuccessfulOperation(
+        {
+          operationId: command.operationId,
+          projectId,
+          commandFingerprint,
+          receipt: {
+            schemaVersion: current receipt schema version,
+            value: receipt
+          },
+          committedAt: application-assigned acceptance transaction timestamp
+        },
+        transaction
+      )
 
       return receipt
 
@@ -167,14 +200,36 @@ application commands. Matching replay identity and evidence is a successful
 conflict, never a correction. Only newly appended evidence receives a sequence
 and changes maintenance eligibility.
 
-The exact source-replay comparison projection remains `OPEN` until the Evidence
-Log persistence shape is designed. Content hashes alone cannot provide source
-replay equality because separate valid evidence can have the same content.
+Source-replay equality uses a versioned deterministic fingerprint of the
+complete `EvidenceCandidateDto`:
+
+```text
+INCLUDED
+  origin
+  content
+  workspaceContext
+  occurredAt value or explicit absence
+  sourceMaterial
+
+EXCLUDED
+  source replay identity, which is the lookup key
+  EvidenceItemId
+  receivedAt
+  project-local sequence
+  maintenance intent and disposition
+```
+
+Matching `(domain, scheme, key)` and candidate fingerprint returns the existing
+evidence as `replayed`. Matching replay identity with a different candidate
+fingerprint is a conflict. This strict comparison prevents a repeated source
+identity from silently changing project, branch, origin, content, source time,
+or preserved source material. Content hashes alone cannot provide source-replay
+equality because separate valid evidence can have the same content.
 
 ## Operation fingerprint boundary
 
 The operation fingerprint represents the caller-controlled acceptance command,
-not the durable results produced by ingestion.
+not the durable results produced by acceptance.
 
 ```text
 INCLUDED
@@ -211,6 +266,7 @@ Each successful acceptance transaction creates one immutable SQLite record:
 
 ```text
 evidence_acceptance_operations
+  id
   operation_id
   project_id
   fingerprint_scheme
@@ -221,11 +277,13 @@ evidence_acceptance_operations
   committed_at
 ```
 
-`operation_id` is an opaque application identity and the table's primary lookup
-key. It does not encode project identity. `project_id` is a separate required
-foreign key because one operation belongs to exactly one project. It supports
-relational integrity and project lifecycle without parsing an operation ID or
-receipt document.
+`id` is the SQLite-assigned row identity. `operation_id` is the unique opaque
+application identity and the service's operation lookup key. It does not encode
+project identity or enter the acceptance receipt. `project_id` is a separate
+required foreign key because one operation belongs to exactly one project. It
+supports relational integrity and project lifecycle without parsing an
+operation ID or receipt document. Restrictive project deletion prevents silent
+loss of the operation's idempotency guarantee.
 
 `command_fingerprint` is not unique. It detects conflicting reuse of the same
 `operation_id`; it does not suppress equal commands submitted under different
@@ -254,6 +312,10 @@ append duplicate evidence. Explicit project removal may delete the record with
 the rest of that project's application state. Raw source-material retention is
 a separate policy.
 
+`committed_at` is the application-assigned timestamp for the successful
+acceptance transaction. It is selected and stored inside that transaction. A
+rolled-back transaction leaves no durable timestamp or operation record.
+
 ## Project-local evidence ordering
 
 New evidence receives a contiguous project-local sequence inside the
@@ -262,8 +324,8 @@ batch. The persistence model must enforce uniqueness on
 `(projectId, sequence)`. Replayed evidence reuses its existing sequence, and a
 rolled-back transaction advances no sequence.
 
-The application-owned `EvidenceItemId` remains evidence identity. Sequence is
-an ordered project coordinate used for maintenance frontiers; it is not a
+The SQLite-assigned `EvidenceItemId` remains evidence identity. Sequence is an
+ordered project coordinate used for maintenance frontiers; it is not a
 replacement identity and is never derived from an evidence ID.
 
 ## Maintenance eligibility and coalescing
@@ -346,9 +408,11 @@ through the transaction's latest sequence, and promotes an existing pending
 request. It does not run curation synchronously or keep the capture, CLI, or MCP
 request open until curation finishes.
 
-A pending request can grow because no worker has frozen it. A running request
-never changes. Evidence accepted after a running frontier remains available
-for one non-overlapping pending successor.
+A pending request can grow because no worker has frozen it. Once a request is
+running, its evidence frontier and policy revision never change. A failed or
+expired attempt does not return that request to pending. Evidence accepted
+after its frozen frontier remains available for one non-overlapping pending
+successor.
 
 ## Maintenance execution boundary
 
@@ -373,15 +437,16 @@ successful current attempt
 
 failed or expired attempt
   -> retain failed attempt history
-  -> return request to pending
+  -> keep request running with its frontier frozen
+  -> leave request eligible for a replacement attempt
   -> do not advance cursor
 ```
 
-Recovery must atomically replace an expired attempt. Completion must match the
-current attempt identity, lease owner, and valid lease so that a stale worker
-cannot publish or advance the cursor after replacement. The concrete worker,
-claim, retry, and publication owners remain outside this service and are not
-yet shaped.
+Recovery must atomically replace the current failed or expired attempt without
+reopening the request frontier. Completion must match the current attempt
+identity, lease owner, and valid lease so that a stale worker cannot publish or
+advance the cursor after replacement. The concrete worker, claim, retry, and
+publication owners remain outside this service and are not yet shaped.
 
 The post-commit notification is only an acceleration. Failure to deliver that
 notification cannot remove the durable maintenance request or make another
@@ -389,8 +454,23 @@ hook event necessary for recovery.
 
 ## Remaining persistence boundary
 
-The acceptance-operation record above is established. This artifact does not
-yet establish the remaining Evidence Log tables, their concrete SQLite column
-types and indexes, repository classes, transaction API, or the packaged SQLite
-access library. Those decisions belong to the SQLite persistence design that
-follows.
+The acceptance-operation record above is represented by the
+[`EvidenceAcceptanceOperation` model](../storage/sqlite/models/evidence-acceptance-operation.model.ts.md).
+[`EvidenceAcceptanceOperationRepository`](../storage/sqlite/repositories/evidence-acceptance-operation.repository.ts.md)
+owns operation lookup and immutable insertion through the transaction supplied
+by this service.
+`SqliteDatabase` owns
+the process-scoped Sequelize connection and `IMMEDIATE` write-transaction
+boundary. [`EvidenceLogRepository`](../storage/sqlite/repositories/evidence-log.repository.ts.md)
+maps each validated `EvidenceCandidateDto` plus acceptance-owned metadata to
+the append-only
+[`EvidenceItem` model](../storage/sqlite/models/evidence-item.model.ts.md).
+Stable query fields are relational columns, while complete nested provenance
+and context remain available as lossless JSON. Insertion returns the
+SQLite-generated identity used to construct `EvidenceItemDto`. The same mapper
+and transaction produce and commit both stored forms.
+
+This artifact does not establish other Evidence Log read methods, the schema
+migration owner, or the future explicit-forgetting owner. Those details remain
+`OPEN`; replay lookup, append, the model, and the hybrid persistence decision do
+not.

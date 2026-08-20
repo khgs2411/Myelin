@@ -99,9 +99,9 @@ application installation
 project bootstrap
   -> accept one explicit directory path
   -> validate and canonicalize that exact oversight root
-  -> create or return one immutable application-owned ProjectIdentity
-  -> record bounded repository facts when Git is present
-  -> persist the overseen-project registration
+  -> record the canonical Git repository root when present
+  -> create or return one Project row
+  -> use its immutable SQLite-assigned ProjectIdentity
 ```
 
 Bootstrap remains provider-neutral. It neither installs hooks nor records a
@@ -119,7 +119,10 @@ installer later makes both available.
 
 ```text
 process starts
-  -> Application.create(runtime configuration)
+  -> await Application.create(runtime configuration)
+      -> initialize the packaged SQLite runtime
+      -> open one process-scoped SqliteDatabase through Sequelize v7 alpha
+      -> construct SQLite repositories with that shared database instance
       -> read the immutable provider and channel from CaptureInvocationContext
       -> construct the selected capture-provider capability
       -> construct WorkspaceContextService
@@ -127,6 +130,7 @@ process starts
       -> construct the configured agent-execution provider independently
       -> inject capability dependencies into application services
       -> construct and return Application façade
+  -> after the operation, Application.close releases the database connection
 ```
 
 `Application.create` is the process-scoped factory and composition boundary.
@@ -146,8 +150,14 @@ type ProviderIdentity = Readonly<{
 type RuntimeApplicationConfiguration = {
   captureProvider: CaptureProviderConfiguration
   agentExecution: AgentExecutionProviderConfiguration
-  // storage and machine configuration remain independently resolved
+  sqlite: SqliteApplicationConfiguration
+  // remaining machine configuration remains independently resolved
 }
+
+type SqliteApplicationConfiguration = Readonly<{
+  databasePath: absolute application-state file path
+  runtime: validated packaged-runtime selection consumed by SqliteRuntime
+}>
 
 type CaptureProviderConfiguration = {
   invocationContext: CaptureInvocationContext
@@ -181,18 +191,20 @@ one capture adapter.
 
 ```ts
 class Application {
-  static create(configuration: RuntimeApplicationConfiguration): Application
+  static create(configuration: RuntimeApplicationConfiguration): Promise<Application>
   bootstrapProject(input: ProjectBootstrapInput): Promise<ProjectBootstrapResult>
   capture(input: CaptureInput): Promise<CaptureResult>
   query(input: QueryInput): Promise<QueryResult>
-  insertEvidence(input: EvidenceInsertionInput): Promise<EvidenceInsertionResult>
+  insertEvidence(input: EvidenceInsertionInput): Promise<EvidenceAcceptanceReceipt>
+  close(): Promise<void>
 }
 ```
 
 The `Application` instance is the stable provider-neutral API exposed to the
 CLI. Its operation methods delegate to private application services without
 revealing the service graph or owning provider-specific behavior. Its static
-`create` method alone owns infrastructure construction and dependency wiring.
+`create` method alone owns asynchronous infrastructure construction and
+dependency wiring. `close` releases its process-scoped infrastructure.
 
 ## Provider capabilities
 
@@ -301,10 +313,12 @@ provider hook invokes the absolute installed command with an explicit route
               -> combine capture route + normalized observation
                  + WorkspaceContext
               -> construct one EvidenceCandidateDto
-              -> EvidenceIngestionService
+              -> EvidenceAcceptanceService
                   -> apply reliable source replay identity when supplied
-                  -> create EvidenceItemId and receivedAt for new evidence
-                  -> persist its EvidenceItem representation idempotently
+                  -> assign receivedAt and project-local sequence
+                  -> persist its EvidenceItem row idempotently
+                  -> receive its SQLite-assigned EvidenceItemId
+                  -> construct the accepted EvidenceItemDto
                   -> record the count/time maintenance obligation in the same
                      recoverable durable acceptance
       -> return
@@ -334,13 +348,13 @@ process directory does not select the project. Unmanaged input may be parsed
 and validated in memory, but it is not durable evidence and its raw payload is
 never persisted.
 
-## Shared evidence ingestion boundary
+## Shared evidence acceptance boundary
 
 Capture and manual insertion remain separate source workflows. Each constructs
 the same provider-neutral
 [`EvidenceCandidateDto`](./src/evidence/evidence-item.dto.ts.md) contract after
 its own validation, attribution, and authority rules. They converge only at
-ingestion, which creates accepted `EvidenceItemDto` values.
+acceptance, which creates accepted `EvidenceItemDto` values.
 
 ```ts
 type EvidenceAcceptanceItem = Readonly<{
@@ -359,21 +373,32 @@ type EvidenceAcceptanceCommand = Readonly<{
   maintenanceIntent: "policy" | "immediate"
 }>
 
-EvidenceIngestionService.accept(command) -> EvidenceAcceptanceReceipt
+EvidenceAcceptanceService.accept(command) -> EvidenceAcceptanceReceipt
 ```
 
 This deterministic boundary owns idempotent evidence acceptance and durable
 recording of the associated maintenance obligation. One command contains
 evidence for exactly one project. Different projects may run in parallel, but
 no acceptance operation, maintenance request, or maintenance attempt combines
-their state. Ingestion does not interpret provider payloads or corrections,
+their state. Acceptance does not interpret provider payloads or corrections,
 decide caller authority, curate memory, or publish documentation.
+
+Evidence acceptance and memory ingestion are separate workflows. Acceptance
+commits provider-neutral evidence to the Evidence Log. A later Session Memory
+ingestion workflow reads accepted evidence and creates memory. Its source owner
+and file remain unshaped.
 
 `operationId` makes retries of one application acceptance command idempotent.
 Optional `sourceReplay` metadata suppresses repeat delivery across different
 commands only when the source exposes reliable coordinates. The Evidence Log
 enforces uniqueness on `(domain, scheme, key)`. Reusing that identity for
 different canonical evidence is a conflict, not a correction.
+
+Canonical replay equality uses a versioned fingerprint of the complete
+`EvidenceCandidateDto`, including origin, content, workspace context, optional
+source time, and source material. It excludes the replay lookup identity and
+acceptance-owned evidence identity, acceptance time, project sequence, and
+maintenance behavior.
 
 Replay metadata is not part of `EvidenceOrigin`. Origin records provenance;
 replay metadata controls admission. Content hashes are not replay identities
@@ -388,16 +413,17 @@ does not provide identity, replay suppression, authentication, or truth.
 `EvidenceCaptureService` constructs capture-originated `EvidenceCandidateDto`
 values after provider normalization and workspace resolution.
 `EvidenceInsertionService` constructs manually supplied `EvidenceCandidateDto`
-values after its separate principal, origin, and attribution checks. Manual
-insertion does not pass through `EvidenceCaptureService`, and ingestion does
+values after exact project-root resolution and insertion-channel validation. Manual
+insertion does not pass through `EvidenceCaptureService`, and acceptance does
 not normalize either source.
 
 Capture origins preserve native event kind plus optional provider session and
-interaction coordinates. Insertion origins preserve the insertion source and
-an optional client reference. Codex maps `turn_id` to the shared interaction
-coordinate. Claude Code can map `prompt_id` when present. CLI and MCP callers
-may provide client references, but an insertion without one cannot claim safe
-cross-request replay suppression.
+interaction coordinates. Insertion origins preserve the insertion source,
+ordered batch position, and optional client reference. Codex maps `turn_id` to
+the shared interaction coordinate. Claude Code can map `prompt_id` when
+present. Direct CLI insertion may omit a client reference and then cannot claim
+safe cross-request replay suppression. The future agent-only MCP contract
+requires one.
 
 The evidence append, project-local sequence allocation, operation receipt,
 source-replay admission, and maintenance obligation form one atomic SQLite
@@ -405,38 +431,91 @@ acceptance contract. A retry of the same operation and command returns the
 stored receipt. Reusing the operation identity for another command or reusing a
 source replay identity for different evidence rejects the complete command.
 The acceptance-operation record is immutable and exists only after successful
-commit. Its opaque operation identity is the primary lookup key, while a
-separate project foreign key records ownership. It stores the fingerprint
-scheme and version, non-unique command fingerprint, receipt schema version,
-complete receipt JSON, and commit time. These records remain for the owning
-project's lifetime. The remaining Evidence Log row and SQLite table projections
-remain to be designed.
+commit. It has a SQLite-assigned internal row identity. Its unique opaque
+operation identity is the application lookup key, while a separate project
+foreign key records ownership. It stores the fingerprint scheme and version,
+non-unique command fingerprint, receipt schema version, complete receipt JSON,
+and application-assigned commit timestamp. These records remain for the owning
+project’s lifetime.
+
+`EvidenceLogRepository` owns allocation of one contiguous project-local
+sequence range through the acceptance service's `IMMEDIATE` transaction. The
+service supplies the number of new items and assigns the returned values in
+command order. The repository advances the owning Project's monotonic
+`last_allocated_evidence_sequence` in the same transaction. Rollback restores
+the counter with the evidence inserts, while later forgetting can create gaps
+but cannot reuse an earlier sequence. Normal Sequelize `updated_at` behavior
+applies to this project-row mutation.
+
+`EvidenceAcceptanceOperationRepository` owns transactional lookup and immutable
+insertion for those records. `EvidenceAcceptanceService` retains operation
+conflict classification, receipt validation, and transaction ownership.
+
+The Evidence Log row projection is hybrid and append-only. Stable identity,
+ordering, filtering, and time fields become relational columns, including
+project identity, project-local sequence, and nullable Git branch. Complete
+nested origin, workspace context, and source-material detail remains available
+as lossless JSON. One mapper derives both forms from the same immutable
+candidate plus acceptance-owned metadata. SQLite assigns the row identity, and
+acceptance constructs the resulting `EvidenceItemDto`. The acceptance
+transaction commits all forms together. `EvidenceLogRepository.append` owns
+the mapping and returns only the SQLite-generated identity through the
+caller-supplied transaction. The `EvidenceItem` Sequelize model defines the
+concrete row, column, constraint, and index shape, including the nullable
+all-or-none replay identity and candidate-fingerprint projections.
+`EvidenceLogRepository.findByReplayIdentity` supplies the only shaped read
+needed for replay classification. Other reads, migration, and future
+explicit-forgetting remain `OPEN`.
 
 The full transactional shape is defined in
-[`src/evidence/evidence-ingestion.service.ts`](./src/evidence/evidence-ingestion.service.ts.md).
+[`src/evidence/evidence-acceptance.service.ts`](./src/evidence/evidence-acceptance.service.ts.md).
 
 Manual insertion uses the same durable Evidence Log but a different trigger
 contract:
 
+```ts
+type EvidenceInsertionRequest = Readonly<{
+  projectRoot: string
+  items: ReadonlyArray<Readonly<{ content: string }>>
+  clientReference?: string
+}>
+```
+
 ```text
 EvidenceInsertionService
-  -> trusted invocation context establishes principal and origin
-  -> construct insertion-originated EvidenceCandidateDto with optional client reference
+  -> entry boundary supplies insertion source as CLI or MCP
+  -> validate the complete ordered request
+  -> require clientReference for MCP; keep it optional for direct CLI use
+  -> resolve the supplied path as the exact root of a bootstrapped project
+  -> reject invalid or unregistered roots; never ignore explicit insertion
+  -> for each ordered content item
+      -> preserve the exact string as text/plain source material
+      -> leave occurredAt absent
+      -> construct one insertion-originated EvidenceCandidateDto
   -> IF a client reference exists
-      -> trusted invocation context selects its application-owned replay domain
-      -> construct versioned source replay identity beside the DTO
-  -> create one application operation identity for this acceptance command
-  -> EvidenceIngestionService
-      -> atomically append evidence and assign its project-local sequence
+      -> derive one opaque application operation identity from:
+          insertion-source domain
+          resolved project identity
+          insertion batch scheme
+          client reference
+  -> OTHERWISE create a new application operation identity
+  -> EvidenceAcceptanceService
+      -> atomically accept the complete batch or reject it
       -> use maintenanceIntent "immediate"
       -> create or promote the pending request through all unscheduled evidence
       -> persist the acceptance receipt
-  -> return after durable acceptance and durable maintenance eligibility
+  -> return the EvidenceAcceptanceReceipt directly
 ```
 
-Caller-provided attribution is evidence metadata, not authorization. An agent
-cannot obtain human correction authority by claiming a human identity in its
-payload.
+The insertion request does not select Session, Project, Personal, or Practice
+Memory. Manual content is already a curated evidence statement, but it is not
+accepted memory. The later memory workflow decides which memory candidates it
+supports. `EvidenceInsertionService` remains deterministic and never invokes an
+agent.
+
+Inbox is a logical view over accepted insertion-originated evidence after the
+covered maintenance frontier. It is not another table, queue, or item status.
+Maintenance requests, attempts, and cursors remain the processing owners.
 
 ## Eventually consistent maintenance boundary
 
@@ -494,9 +573,10 @@ non-overlapping successor.
 
 Every maintenance run operates against that frozen frontier. Evidence accepted
 after it remains pending for later maintenance and does not by itself invalidate
-the in-flight run. A failed or expired attempt leaves its request eligible and
-does not advance the cursor. Lease-guarded completion prevents a replaced stale
-worker from publishing or advancing the cursor.
+the in-flight run. A failed or expired attempt leaves its request running,
+frozen, and eligible for a replacement attempt. It does not return the request
+to pending or advance the cursor. Lease-guarded completion prevents a replaced
+stale worker from publishing or advancing the cursor.
 
 Publication prevents regression rather than demanding real-time freshness:
 
@@ -633,9 +713,16 @@ correct memory through evidence insertion rather than direct Markdown edits.
 
 ```text
 PACKAGED SQLITE RUNTIME
-  application-owned SQLite library with FTS5 enabled
+  application-owned SQLite driver with FTS5 enabled
   exact pinned sqlite-vec package and compatible extension binary
   platform and architecture selected from the application package
+
+DATABASE ACCESS
+  exact pinned Sequelize v7 alpha packages
+  @sequelize/core + @sequelize/sqlite3
+  one process-scoped SqliteDatabase opened by Application.create
+  managed IMMEDIATE write transactions for evidence acceptance
+  parameterized raw SQL remains available for SQLite-specific capabilities
 
 LEXICAL INDEX
   SQLite FTS5 over Session Memory and canonical-Markdown semantic chunks
@@ -652,6 +739,10 @@ APPLICATION POLICY
 FTS5 is an SQLite capability included in the packaged runtime, not a separate
 host-installed service. `sqlite-vec` remains the selected vector extension and
 is pinned to an exact compatible version because its public contract is pre-v1.
+Sequelize v7 alpha is the selected ORM and is pinned with its compatible SQLite
+dialect. It may use parameterized raw SQL for FTS5, sqlite-vec, PRAGMAs, and
+other SQLite-specific behavior instead of hiding those capabilities behind
+model APIs.
 
 Ordinary installation does not depend on Apple SQLite, Homebrew, or another
 host SQLite installation. Every platform and architecture that the application
@@ -659,6 +750,11 @@ claims to support must package a compatible SQLite library and `sqlite-vec`
 binary, preserve their source and license provenance, and prove that both FTS5
 and vector loading work. An explicit development override may select another
 runtime, but host discovery is not the product contract.
+
+`SqliteDatabase` is process-scoped through application composition. It is not a
+global singleton and does not inherit from a dialect-neutral database base
+class. Separate CLI and provider-hook processes coordinate through SQLite
+transactions and constraints, not shared TypeScript state.
 
 An embedding provider is tightly coupled to the index generation it creates.
 Stored vectors record provider, model, model revision, dimensions,
@@ -777,13 +873,17 @@ one MCP business operation does not compose multiple mutating CLI requests
 provider adapters implement capabilities rather than individual workflows
 query and maintenance share AgentAdapter for bounded agent execution
 manual evidence insertion is deterministic even when its caller is an agent
-capture and insert share ingestion only after evidence is provider-neutral
-EvidenceIngestionService records maintenance intent but never curates memory
-one ingestion command, maintenance request, and maintenance attempt belongs to one project
+capture and insert share acceptance only after evidence is provider-neutral
+EvidenceAcceptanceService records maintenance intent but never curates memory
+one acceptance command, maintenance request, and maintenance attempt belongs to one project
 Evidence Log acceptance and maintenance eligibility commit atomically
 pending maintenance may coalesce while running maintenance keeps a frozen frontier
+failed or expired maintenance attempts leave their requests running and frozen
 failed or expired maintenance attempts never advance the covered cursor
 Application.create owns process-scoped composition of concrete infrastructure
+SqliteRuntime initializes packaged SQLite before SqliteDatabase opens Sequelize
+SqliteDatabase is process-scoped and is never a global TypeScript singleton
+Sequelize v7 alpha is pinned with its compatible SQLite dialect
 capture composes one selected adapter and does not require an adapter registry
 capture provider identity selects a contract but does not authenticate origin
 invalid provider payloads never fall back to another capture adapter

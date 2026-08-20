@@ -122,7 +122,7 @@ the exact `rawSource` so additive Codex payload changes do not silently destroy
 evidence or require the CLI to understand Codex JSON.
 
 Codex does not provide an event timestamp in these hook contracts. The adapter
-therefore does not invent `providerOccurredAt`; `EvidenceIngestionService`
+therefore does not invent `providerOccurredAt`; `EvidenceAcceptanceService`
 assigns `receivedAt` only when it accepts new evidence.
 
 The `codex-hook/v1` replay scheme fixes the canonical tuple and digest behavior
