@@ -32,7 +32,8 @@ type AgentExecutionProviderConfiguration = {
 }
 
 type SqliteRuntimeConfiguration =
-  validated packaged-runtime selection consumed only by SqliteRuntime
+  validated Bun 1.4 and packaged sqlite3-runtime selection
+  consumed only by SqliteRuntime
 
 type SqliteApplicationConfiguration = Readonly<{
   databasePath: absolute application-state file path
@@ -175,12 +176,13 @@ type ProjectBootstrapResult = Readonly<{
 ## Ownership boundary
 
 `Application.create` owns asynchronous dependency construction and returns one
-application instance per process. It initializes the packaged SQLite runtime,
-opens one process-scoped `SqliteDatabase`, and injects that same instance into
-the process's SQLite repositories. It composes one `SessionMaintenance` façade
-from independently injectable lifecycle and schedule capabilities. The schedule
-capability receives the validated effective Session policy and its internal
-policy service during composition.
+application instance per Bun 1.4 process. It initializes the packaged SQLite
+runtime, opens one process-scoped Sequelize-backed `SqliteDatabase`, and injects
+that same instance into the process's SQLite repositories. It does not resolve
+the database through a static singleton or service locator. It composes one
+`SessionMaintenance` façade from independently injectable lifecycle and
+schedule capabilities. The schedule capability receives the validated
+effective Session policy and its internal policy service during composition.
 
 `Application.close` releases the database connection during CLI cleanup.
 

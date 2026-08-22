@@ -1,0 +1,19 @@
+{
+  "name": "llm-wiki",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.4.0",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sequelize/core": "7.0.0-alpha.48",
+    "@sequelize/sqlite3": "7.0.0-alpha.48",
+    "sqlite-vec": "0.1.9",
+    "sqlite3": "5.1.7"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.0",
+    "typescript": "7.0.2"
+  }
+}

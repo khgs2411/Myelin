@@ -121,10 +121,13 @@ installer later makes both available.
 ## Application composition
 
 ```text
-process starts
+process starts under Bun 1.4
   -> await Application.create(runtime configuration)
       -> initialize the packaged SQLite runtime
-      -> open one process-scoped SqliteDatabase through Sequelize v7 alpha
+      -> open one process-scoped SqliteDatabase through:
+          -> @sequelize/core 7.0.0-alpha.48
+          -> @sequelize/sqlite3 7.0.0-alpha.48
+          -> packaged sqlite3 Node-API driver
       -> construct SQLite repositories with that shared database instance
       -> construct the internal Session policy service
       -> inject validated effective Session policy and that service into schedule
@@ -802,14 +805,18 @@ correct memory through evidence insertion rather than direct Markdown edits.
 ## SQLite retrieval stack
 
 ```text
+BUN APPLICATION RUNTIME
+  Bun 1.4 owns TypeScript execution, packages, tests, and native file APIs
+  Sequelize persistence does not use Bun.SQL or bun:sqlite
+
 PACKAGED SQLITE RUNTIME
-  application-owned SQLite driver with FTS5 enabled
-  exact pinned sqlite-vec package and compatible extension binary
+  packaged sqlite3-compatible Node-API driver with FTS5 enabled
+  sqlite-vec 0.1.9 and compatible extension binary
   platform and architecture selected from the application package
 
 DATABASE ACCESS
-  exact pinned Sequelize v7 alpha packages
-  @sequelize/core + @sequelize/sqlite3
+  @sequelize/core 7.0.0-alpha.48
+  @sequelize/sqlite3 7.0.0-alpha.48
   one process-scoped SqliteDatabase opened by Application.create
   managed IMMEDIATE write transactions for evidence acceptance
   parameterized raw SQL remains available for SQLite-specific capabilities
@@ -830,10 +837,12 @@ PRODUCT QUERY POLICY
 FTS5 is an SQLite capability included in the packaged runtime, not a separate
 host-installed service. `sqlite-vec` remains the selected vector extension and
 is pinned to an exact compatible version because its public contract is pre-v1.
-Sequelize v7 alpha is the selected ORM and is pinned with its compatible SQLite
-dialect. It may use parameterized raw SQL for FTS5, sqlite-vec, PRAGMAs, and
-other SQLite-specific behavior instead of hiding those capabilities behind
-model APIs.
+Sequelize is the selected ORM and is pinned with its compatible SQLite dialect.
+The dialect uses the `sqlite3` Node-API module under Bun rather than a Bun-native
+database API. It may use parameterized raw SQL for FTS5, sqlite-vec, PRAGMAs,
+and other SQLite-specific behavior instead of hiding those capabilities behind
+model APIs. The project does not own a custom Sequelize dialect that adapts
+`Bun.SQL` or `bun:sqlite`.
 
 Ordinary installation does not depend on Apple SQLite, Homebrew, or another
 host SQLite installation. Every platform and architecture that the application
@@ -999,9 +1008,12 @@ pending maintenance may coalesce while running maintenance keeps a frozen fronti
 failed or expired Session maintenance attempts leave their requests running and frozen
 failed or expired Session maintenance attempts never advance the covered cursor
 Application.create owns process-scoped composition of concrete infrastructure
+the application runtime and package manager are Bun 1.4
+Bun.file and Bun.write own native file reads and writes where their contracts apply
 SqliteRuntime initializes packaged SQLite before SqliteDatabase opens Sequelize
 SqliteDatabase is process-scoped and is never a global TypeScript singleton
-Sequelize v7 alpha is pinned with its compatible SQLite dialect
+Sequelize and @sequelize/sqlite3 are pinned to 7.0.0-alpha.48
+Sequelize SQLite uses its sqlite3 Node-API driver rather than Bun.SQL or bun:sqlite
 capture composes one selected adapter and does not require an adapter registry
 capture provider identity selects a contract but does not authenticate origin
 invalid provider payloads never fall back to another capture adapter

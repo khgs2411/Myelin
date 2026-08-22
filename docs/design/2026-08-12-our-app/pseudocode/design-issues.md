@@ -629,9 +629,11 @@ and before that workflow invokes the shared agent adapter.
   extension.
 - Runtime selection occurs before the first database connection.
 - Host discovery can be a development override. It is not the product contract.
+- Bun 1.4 executes Sequelize and the packaged `sqlite3` Node-API driver.
+- `@sequelize/sqlite3` does not use `Bun.SQL` or `bun:sqlite`.
 - Sequelize does not select or prove the packaged SQLite build. `SqliteRuntime`
-  must supply a compatible driver and sqlite-vec binary before
-  `SqliteDatabase` opens the ORM connection.
+  must supply a compatible driver, sqlite-vec binary, and per-connection
+  initialization before `SqliteDatabase` opens the ORM connection.
 
 **Unresolved:** What platform and architecture matrix, binary build, update,
 provenance, license, integrity check, development override, and unsupported-host
@@ -640,25 +642,28 @@ behavior does our app support?
 **Time to address:** Before the database boundary or distribution package is
 implemented.
 
-### Runtime and package manager
+### Runtime, package manager, and SQLite access
 
 **Exposed by:** [the TypeScript stack](architecture.pseudocode.md).
 
 **Established:**
 
 - TypeScript, strict mode, and ESM are selected.
-- Sequelize v7 alpha is the selected ORM and uses pinned compatible
-  `@sequelize/core` and `@sequelize/sqlite3` packages.
+- Bun 1.4 is the runtime, package manager, test runner, and native file API.
+- `bun.lock` is the committed dependency-resolution source.
+- Sequelize is the selected ORM and pins `@sequelize/core` and
+  `@sequelize/sqlite3` to `7.0.0-alpha.48`.
+- The Sequelize dialect uses its packaged `sqlite3` Node-API driver under Bun.
+  It does not use `Bun.SQL` or `bun:sqlite`.
+- `sqlite-vec` is pinned to `0.1.9`.
 - One `SqliteDatabase` instance is process-scoped through `Application.create`;
   it is not a global singleton.
-- The runtime and package manager remain separate decisions.
+- The project does not introduce a generic `Database` base class, static
+  connection registry, or custom Sequelize dialect for a Bun database API.
 
-**Unresolved:** Which runtime and package manager best support Sequelize's
-native SQLite driver, the packaged SQLite and sqlite-vec requirement, process
-execution, distribution, and development workflow?
-
-**Time to address:** Before dependencies, scripts, and distribution packaging
-are fixed.
+The runtime, package manager, and ORM direction are resolved. Distribution
+packaging and the supported native platform matrix remain under
+[Packaged SQLite runtime and platform support](#packaged-sqlite-runtime-and-platform-support).
 
 ### Runtime application configuration
 

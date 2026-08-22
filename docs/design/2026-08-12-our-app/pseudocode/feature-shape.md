@@ -111,13 +111,18 @@ established an exact source path:
 
 ### `package.json` — package and command publication metadata
 
-Defines the TypeScript package and maps the intentionally unresolved installed
-command name to the built CLI entry. It pins `sqlite-vec` to an exact compatible
-version, pins compatible Sequelize v7 alpha `@sequelize/core` and
-`@sequelize/sqlite3` packages, and includes the application-owned SQLite runtime
-assets in supported packages. It participates in distribution but does not
-collapse command publication, machine-state initialization, provider-hook
-installation, and MCP registration into one lifecycle owner.
+Defines the strict ESM TypeScript package for Bun 1.4 and maps the intentionally
+unresolved installed command name to the built CLI entry. Bun owns runtime
+execution, dependency installation, the committed `bun.lock`, the test runner,
+and native file access through `Bun.file` and `Bun.write`. The package pins
+`sqlite-vec` to `0.1.9` and pins `@sequelize/core` and `@sequelize/sqlite3` to
+`7.0.0-alpha.48`. The Sequelize dialect uses its packaged `sqlite3` Node-API
+driver under Bun; it does not use `Bun.SQL` or `bun:sqlite`.
+
+Supported packages include the application-owned SQLite runtime assets. The
+package participates in distribution but does not collapse command
+publication, machine-state initialization, provider-hook installation, and MCP
+registration into one lifecycle owner.
 
 ### `config.yaml` — human-facing application defaults
 
@@ -426,11 +431,13 @@ SQLite indexing, product-local retrieval ranking, or memory admission.
 
 ### `src/storage/sqlite/sqlite-runtime.ts` — packaged SQLite runtime
 
-Selects and initializes the application-owned SQLite runtime before any
-connection is opened. Supported application packages include a compatible
-SQLite driver with FTS5 enabled and the pinned `sqlite-vec` extension, so
-ordinary use does not depend on Apple SQLite, Homebrew, or another host SQLite
-installation. It supplies the compatible driver and per-connection extension
+Validates the Bun 1.4 runtime and initializes the application-owned SQLite
+runtime before any connection is opened. Supported application packages
+include the `sqlite3`-compatible Node-API driver used by `@sequelize/sqlite3`,
+with FTS5 enabled, and the pinned `sqlite-vec` extension. Ordinary use does not
+depend on Apple SQLite, Homebrew, or another host SQLite installation.
+
+It supplies the compatible driver and per-connection PRAGMA and extension
 initialization to `SqliteDatabase`; Sequelize does not replace this owner.
 Platform packaging, binary provenance, and the unsupported-host failure
 contract still require deeper design.
@@ -441,9 +448,9 @@ Owns one process-scoped Sequelize connection lifecycle. `Application.create`
 opens it after `SqliteRuntime` initializes, injects the same instance into
 SQLite repositories, and closes it during process cleanup. It provides the
 managed `IMMEDIATE` write-transaction boundary required by evidence acceptance.
-It is neither a global singleton nor a generic database base class. Additional
-repository and migration files remain absent until their concrete operations
-are shaped.
+It is neither a global singleton nor a generic database base class. It does not
+expose static connection or raw-query helpers. Additional repository and
+migration files remain absent until their concrete operations are shaped.
 
 ### [`src/storage/sqlite/models/project.model.ts`](./src/storage/sqlite/models/project.model.ts.md) — `Project`
 
@@ -689,15 +696,18 @@ canonical Markdown publication | derived indexing | query-result reference const
       -> standard Markdown links
       -> AST-derived semantic sections
 
-Application.create
-  -> initialize packaged SQLite runtime before opening SQLite
-      -> application-owned SQLite driver with FTS5
-      -> pinned packaged sqlite-vec extension
-  -> SqliteDatabase.open
-      -> pinned Sequelize v7 alpha + @sequelize/sqlite3
-      -> authenticate and verify FTS5 and sqlite-vec capability
-      -> one process-scoped database instance
-      -> inject the same instance into SQLite repositories
+Bun 1.4 process
+  -> Application.create
+      -> initialize packaged SQLite runtime before opening SQLite
+          -> packaged sqlite3-compatible Node-API driver with FTS5
+          -> pinned packaged sqlite-vec extension
+      -> SqliteDatabase.open
+          -> @sequelize/core 7.0.0-alpha.48
+          -> @sequelize/sqlite3 7.0.0-alpha.48
+          -> not Bun.SQL or bun:sqlite
+          -> authenticate and verify FTS5 and sqlite-vec capability
+          -> one process-scoped database instance
+          -> inject the same instance into SQLite repositories
   -> Application.close
       -> close the process-scoped Sequelize connection
 

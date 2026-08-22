@@ -13,10 +13,12 @@ does not inherit from a generic database base class.
 // intentionally illustrative pseudocode
 
 type InitializedSqliteRuntime = Readonly<{
-  compatibleSqlite3Module: module compatible with @sequelize/sqlite3
+  bunRuntime: validated Bun 1.4 runtime identity
+  sequelizeSqlite3Module: packaged sqlite3-compatible Node-API module
   sqliteVecExtensionPath: absolute packaged binary path
-  initializeConnection: async operation that applies required PRAGMAs
-    and loads sqliteVecExtensionPath on each opened connection
+  initializeConnection: async operation over one sqlite3 connection that:
+    applies required PRAGMAs
+    loads sqliteVecExtensionPath
 }>
 
 type SqliteDatabaseConfiguration = Readonly<{
@@ -35,13 +37,14 @@ class SqliteDatabase {
     configuration: SqliteDatabaseConfiguration
   ): Promise<SqliteDatabase> {
     require configuration.runtime was initialized before this call
+    require the current process uses the validated Bun 1.4 runtime
 
-    sequelize = construct pinned Sequelize v7 alpha with:
-      dialect: SqliteDialect from pinned @sequelize/sqlite3
+    sequelize = construct @sequelize/core 7.0.0-alpha.48 with:
+      dialect: SqliteDialect from @sequelize/sqlite3 7.0.0-alpha.48
       storage: configuration.databasePath
-      sqlite3Module: configuration.runtime.compatibleSqlite3Module
+      sqlite3Module: configuration.runtime.sequelizeSqlite3Module
       infrastructure models established by later persistence design
-      connection initialization supplied by configuration.runtime
+      afterConnect initialization supplied by configuration.runtime
 
     TRY
       await sequelize.authenticate()
@@ -90,11 +93,15 @@ clean failure recovery without a global instance registry.
 
 ## Sequelize boundary
 
-Sequelize v7 alpha is the selected ORM and must be pinned with its compatible
-`@sequelize/sqlite3` dialect. Sequelize owns model mapping, ordinary relational
-operations, and managed transaction lifecycle. It does not own the packaged
-SQLite build, extension compatibility, domain transaction meaning, or schema
-migration policy.
+`@sequelize/core` and `@sequelize/sqlite3` are selected at the exact verified
+`7.0.0-alpha.48` version. Sequelize owns model mapping, ordinary relational
+operations, and managed transaction lifecycle. The SQLite dialect uses its
+`sqlite3` Node-API driver under Bun. It does not use `Bun.SQL` or `bun:sqlite`.
+The project does not maintain a custom Sequelize dialect that adapts either Bun
+database API.
+
+Sequelize does not own the packaged SQLite build, extension compatibility,
+domain transaction meaning, or schema migration policy.
 
 SQLite-specific SQL remains allowed where the ORM is not the correct
 abstraction. FTS5 virtual tables, sqlite-vec operations, capability checks,
@@ -116,11 +123,15 @@ directly.
 
 ## Runtime dependency
 
-`SqliteRuntime` initializes and verifies the application-packaged SQLite driver
-and matching sqlite-vec binary before `SqliteDatabase.open` constructs
-Sequelize. The ORM does not satisfy the zero-host-dependency contract by itself.
-Every supported platform package must prove that its selected driver can load
-the packaged extension on every connection.
+`SqliteRuntime` validates Bun 1.4, resolves the application-packaged
+`sqlite3`-compatible driver and matching sqlite-vec binary, and supplies the
+per-connection initializer before `SqliteDatabase.open` constructs Sequelize.
+The initializer applies the required PRAGMAs and loads sqlite-vec through every
+SQLite connection created by Sequelize. The ORM does not satisfy the
+zero-host-dependency contract by itself. Every supported platform package must
+prove that its selected driver can load the packaged extension on every
+connection.
 
-The runtime, package manager, platform matrix, migration owner, model registry,
-and remaining repository filenames remain unresolved by this artifact.
+Bun 1.4 is the runtime and package manager. The platform matrix, migration
+owner, model registry, and remaining repository filenames remain unresolved by
+this artifact.
