@@ -8,7 +8,9 @@ Intended destination: `src/storage/sqlite/repositories/evidence-log.repository.t
 mapping and persistence, and replay-key lookup for accepted Evidence Log items.
 `EvidenceAcceptanceService` owns the transaction and replay classification. It
 constructs the resulting `EvidenceItemDto` after this repository returns the
-SQLite-generated identity.
+SQLite-generated identity. The repository also implements the narrow
+`SessionMaintenanceEvidenceReader` port without taking ownership of Session
+maintenance eligibility.
 
 ```ts
 // intentionally illustrative pseudocode
@@ -36,7 +38,7 @@ type ProjectEvidenceSequenceRange = Readonly<{
   size: positive integer
 }>
 
-class EvidenceLogRepository {
+class EvidenceLogRepository implements SessionMaintenanceEvidenceReader {
   async reserveProjectSequenceRange(
     projectId: ProjectIdentity,
     size: positive integer,
@@ -84,6 +86,22 @@ class EvidenceLogRepository {
         digest: row.replay_candidate_fingerprint
       }
     }
+  }
+
+  async requireFirstReceivedAtAfter(
+    projectId: ProjectIdentity,
+    sequenceExclusive: nonnegative integer,
+    transaction: SqliteTransaction
+  ): Promise<normalized timestamp> {
+    row = find the first EvidenceItem through the supplied transaction where:
+      project_id == projectId
+      project_sequence > sequenceExclusive
+      ordered by project_sequence ascending
+
+    IF row does not exist
+      fail the caller's transaction with an invariant violation
+
+    return row.received_at as a normalized timestamp
   }
 
   async append(
@@ -167,8 +185,14 @@ stores it as nullable immutable projections on the accepted evidence row; it
 does not place it in `EvidenceOrigin` or decide whether an incoming item is new,
 replayed, or conflicting. `EvidenceAcceptanceService` owns that classification.
 
-`findByReplayIdentity` is the only shaped read method because replay
-classification requires it. Other read methods enter this repository only when
-concrete consumers establish their query contracts. The repository exposes no
-general update or delete operation. A future explicit-forgetting workflow uses
-a separate narrow persistence path.
+`findByReplayIdentity` is shaped because replay classification requires it.
+`requireFirstReceivedAtAfter` is shaped because Session elapsed-time
+eligibility requires the raw time of the first uncovered evidence. The schedule
+capability supplies the project and covered frontier after it proves that the
+uncovered range is non-empty. This repository does not decide which frontier
+applies or whether elapsed time makes maintenance eligible.
+
+Other read methods enter this repository only when concrete consumers establish
+their query contracts. The repository exposes no general update or delete
+operation. A future explicit-forgetting workflow uses a separate narrow
+persistence path.

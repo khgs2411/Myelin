@@ -195,5 +195,6 @@ DOES NOT OWN
   four-product query federation
 ```
 
-Publication, indexing, and query hydration must use this owner so they cannot
-silently disagree about the meaning or boundaries of a canonical document.
+Publication, indexing, and query-result reference construction must use this
+owner so they cannot silently disagree about the meaning or boundaries of a
+canonical document.

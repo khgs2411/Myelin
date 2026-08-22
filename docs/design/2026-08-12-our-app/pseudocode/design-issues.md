@@ -134,8 +134,8 @@ claims autonomous maintenance liveness.
 - A crashed worker cannot strand work.
 - Reclaimed work cannot duplicate canonical publication.
 - A failed pre-publication run leaves canonical memory unchanged.
-- Evidence append and its maintenance obligation form one recoverable durable
-  acceptance contract.
+- Evidence append and its Session maintenance obligation form one recoverable
+  durable acceptance contract.
 - One evidence acceptance command carries an application operation identity.
 - Reliable cross-delivery suppression uses optional source replay identity
   `(domain, scheme, key)` outside `EvidenceOrigin`.
@@ -150,17 +150,55 @@ claims autonomous maintenance liveness.
   `EvidenceLogRepository` owns transactional replay lookup and persistence.
 - One acceptance operation belongs to one project and commits new evidence,
   project-local sequence allocation, replay admission, its stored receipt, and
-  maintenance eligibility atomically.
+  Session maintenance eligibility atomically.
 - A successful acceptance operation creates one immutable SQLite operation
   record. Its opaque operation identity retrieves the complete versioned
   receipt, and a separate project foreign key records ownership.
 - Acceptance-operation records contain no pending or failed state and remain
   for the owning project's lifetime so a late retry cannot lose idempotency.
-- Covered and scheduled frontiers prevent overlapping maintenance requests.
+- `SessionMaintenance` is a composed instance façade with lifecycle and
+  schedule capabilities. It is not a static namespace, base class, or
+  persistence container.
+- Consumers receive only the Session maintenance capability they need. The
+  façade owns no universal transaction rule.
+- `SessionMaintenanceLifecycleService` joins project bootstrap and initializes
+  new-project state or requires existing-project state without repair.
+- `SessionMaintenancePolicyService` is internal to scheduling. It synchronizes
+  already validated effective Session policy values through the caller's
+  acceptance transaction and returns the exact revision used by that operation.
+  It does not parse YAML or select a project.
+- `SessionMaintenanceScheduleService` joins evidence acceptance and owns
+  policy application, eligibility, active-chain validation, frontier
+  calculation, and coalescing.
+- A stored operation replay returns its receipt before policy synchronization.
+  A replay-only new operation creates no policy revision.
+- A project's first newly accepted evidence can create policy revision one in
+  the same transaction as evidence, scheduling, and receipt persistence.
+  Policy absence after that first project sequence is incompatible durable
+  state.
+- `SessionMaintenanceEvidenceReader` supplies the first uncovered Evidence Log
+  `received_at` fact. `EvidenceLogRepository` implements this narrow port but
+  does not classify Session eligibility.
+- No Session `execution` capability exists until claim, attempt replacement,
+  publication, and fenced completion are shaped.
+- Session maintenance uses separate state, policy, request, and attempt tables.
+- `SessionMaintenancePolicyRevision` is a positive integer value on immutable
+  policy rows, not a separate table. The highest project revision is active.
+- A Session maintenance request records the policy revision that caused its
+  eligibility.
+- The request table uses a composite project-and-policy-revision foreign key,
+  closed state and priority checks, and valid non-empty sequence-range checks.
+- Partial unique indexes enforce at most one pending and at most one running
+  request per project. They do not enforce range relationships.
+- `SessionMaintenanceRequestRepository` returns raw active facts and applies
+  exact schedule-service-selected writes. It does not upsert or decide
+  coalescing.
+- Covered and scheduled frontiers prevent overlapping Session maintenance
+  requests.
 - A pending request may extend; a running request keeps its frozen frontier.
-- Each execution is a separate leased `MaintenanceAttempt`. Failure or lease
-  expiry leaves its request running and frozen, eligible for a replacement
-  attempt, and does not advance the covered cursor.
+- Each execution is a separate leased `SessionMaintenanceAttempt`. Failure or
+  lease expiry leaves its request running and frozen, eligible for a
+  replacement attempt, and does not advance the covered cursor.
 - Completion by a replaced stale worker cannot advance the cursor.
 
 **Unresolved:** What durable claim and fencing mechanism implements attempt
@@ -354,16 +392,39 @@ supersede, retain, or retract existing Project Memory nodes?
 
 **Established:**
 
-- Query returns an evidence-backed answer with memory references and freshness.
-- Retrieval federates the four products without flattening their authority.
+- The core query returns qualified typed memory results and freshness without
+  agentic curation.
+- Query invokes each applicable memory product with the same question and
+  preserves their results without flattening their authority.
+- Each product owns its retrieval method, product-local scoring, qualification
+  threshold, lifecycle and applicability filters, and output representation.
+- Session Memory returns qualified database records or parsed text. Project,
+  Personal, and Practice Memory return qualified canonical Markdown references.
+- Retrieval scores and thresholds are not comparable across products.
 - Canonical memory and derived indexes can advance at different times.
 - Maintenance intentionally trails recent evidence.
+- Managed project queries admit all four memory products. Unmanaged directory
+  queries admit Personal and Practice while Session and Project are
+  `not-applicable`; unmanaged context is not degradation.
+- An optional later aggregator may curate one response from the complete core
+  result through `AgentAdapter`. It is separate from `QueryService.query` and
+  retains the unchanged core result beside any curated response.
+- A human or agent may consume and curate the core result directly without the
+  optional aggregator.
+- Query remains read-only. An unmanaged result may let a caller offer the
+  separate explicit project-bootstrap operation, but it cannot select or
+  register an oversight root.
 
-**Unresolved:** How does a query result represent stale maintenance, a stale
-index, an unavailable memory product, and an unresolved contradiction?
+**Unresolved:** What query capability, retrieval method, score threshold,
+freshness policy, and exact qualified result shape does each memory product
+own? Which product failures permit a partial core result, and which fail the
+query? Does Session Memory return records, parsed text, or another typed
+projection? The optional result aggregator's owner and curated-response
+vocabulary remain open and do not block the core query.
 
-**Time to address:** When the Query result and workflow-specific response
-schema are shaped.
+**Time to address:** Product-specific retrieval decisions are addressed when
+each memory product's query capability is shaped. The optional aggregator is
+addressed only when a curated query-response workflow is selected.
 
 ## Storage and retrieval
 
@@ -395,9 +456,10 @@ open canonical paths.
 
 **Established:**
 
-- SQLite FTS5 owns lexical retrieval.
-- A pinned `sqlite-vec` build owns vector storage and retrieval.
-- TypeScript performs product-local reciprocal-rank fusion.
+- SQLite FTS5 provides lexical retrieval infrastructure.
+- A pinned `sqlite-vec` build provides vector storage and retrieval.
+- Each memory product owns which retrieval signals it uses and any
+  product-local fusion, score, qualification threshold, and filters.
 - Markdown becomes typed, heading-delimited semantic sections.
 - Oversized sections split only at complete block boundaries.
 - One index generation is coupled to its embedding provider, model revision,
@@ -405,8 +467,9 @@ open canonical paths.
 - Vectors from different embedding contracts are never mixed.
 - A model change builds a complete generation before activation.
 
-**Unresolved:** Which local embedding contracts are supported, and how does our
-app build, validate, activate, degrade, migrate, and remove index generations?
+**Unresolved:** Which memory products use which lexical and vector signals?
+Which local embedding contracts are supported, and how does our app build,
+validate, activate, degrade, migrate, and remove index generations?
 
 **Time to address:** When the retrieval-index owner is shaped and before query
 depends on vector results.
@@ -499,8 +562,9 @@ client in [the architecture](architecture.pseudocode.md).
   oversight root are durably registered.
 - Capture success means durable evidence acceptance, not completed maintenance.
 - Insert success means durable evidence acceptance and durable immediate
-  maintenance eligibility, not completed maintenance.
-- Query success returns an answer, supporting references, and freshness.
+  Session maintenance eligibility, not completed maintenance.
+- Query success returns the typed core Session results, grouped documentation
+  references, product-local relevance, freshness, and product outcomes.
 - Machine responses are stable protocol envelopes, not console text.
 - One MCP business operation maps to one application operation and one process
   request.
@@ -532,18 +596,21 @@ filesystem access.
 
 ### Workflow-specific response schemas and validation failures
 
-**Exposed by:** [shared agent execution](architecture.pseudocode.md) and
-[query and maintenance behavior](BRAIN.pseudocode.md).
+**Exposed by:** [shared agent execution](architecture.pseudocode.md), memory
+maintenance, and the optional query-result aggregation boundary in
+[product behavior](BRAIN.pseudocode.md).
 
 **Established:**
 
 - A provider adapter owns process interaction and structural parsing.
-- Query and maintenance workflows own their prompts, response schemas,
-  validation, and semantic decisions.
+- Memory-maintenance workflows and an optional query-result aggregator own
+  their prompts, response schemas, validation, and semantic decisions.
+- Core query is deterministic and does not invoke the shared agent adapter.
 - Runtime schema validation proves structure. It does not prove truth.
 
 **Unresolved:** What response schema, repair policy, structural failure, and
-semantic rejection contract applies to each query and maintenance workflow?
+semantic rejection contract applies to each agentic memory-maintenance or
+optional query-result aggregation workflow?
 
 **Time to address:** After each deterministic workflow task packet is shaped
 and before that workflow invokes the shared agent adapter.
@@ -611,6 +678,11 @@ are fixed.
 - Agent execution is independent from capture and is shared by query and
   maintenance.
 - Manual insertion does not require a provider.
+- Maintenance configuration has a product-specific `maintenance.session`
+  section. Its effective threshold, interval, and canonical digest are validated
+  before application composition injects them into Session scheduling.
+- Session scheduling passes those values to its internal policy service after
+  evidence acceptance resolves the project and supplies its transaction.
 - No generic provider configures the whole application.
 
 **Unresolved:** Which provider availability, executable discovery, environment

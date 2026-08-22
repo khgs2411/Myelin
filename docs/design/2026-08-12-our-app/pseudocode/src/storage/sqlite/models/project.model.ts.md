@@ -5,8 +5,9 @@
 Intended destination: `src/storage/sqlite/models/project.model.ts`
 
 This artifact defines the Sequelize model for one project overseen by our app.
-The base model owns columns. The exported model owns relations as related
-models enter the design.
+The base model owns columns. The exported model owns only relations that require
+navigation from Project. Product-owned maintenance state may reference Project
+without adding a reverse association here.
 
 ```ts
 // intentionally illustrative pseudocode
@@ -59,7 +60,7 @@ CHECK (last_allocated_evidence_sequence >= 0)
 ```
 
 `id` is an SQLite-assigned, immutable project identity. `root_path` is the
-canonical directory whose exact scope our app oversees. The registration owner
+canonical directory whose exact scope our app oversees. The bootstrap owner
 canonicalizes it before persistence. Database uniqueness is the final
 concurrency constraint against registering the same root twice.
 
@@ -79,10 +80,15 @@ Sequence allocation is a normal mutation of the project row. Sequelize updates
 timestamp enters the model only if a concrete consumer later needs to
 distinguish registration changes from other project-state changes.
 
-The project-registration workflow populates this model during bootstrap. It
+The project-bootstrap workflow populates this model. It
 returns an existing row when the canonical `root_path` is already registered,
 or inserts a new row and returns its SQLite-generated `id`. The model does not
 canonicalize paths, inspect Git, or own bootstrap behavior.
 
 The project root is replaceable without changing `id`. The relocation workflow
 that updates `root_path` and `repository_root_path` remains `OPEN`.
+
+Session Memory's maintenance cursor is not project identity or Evidence Log
+allocation state. It lives in `SessionMaintenanceState`, which references this
+model without adding Session-specific columns or a reverse Session association
+to `Project`.

@@ -142,7 +142,8 @@ The installed Codex integration initially registers only `UserPromptSubmit`
 and `Stop`.
 
 `SessionStart` is not registered or normalized. Count- and elapsed-time
-maintenance eligibility is evaluated when real evidence is durably accepted.
+Session maintenance eligibility is evaluated when real evidence is durably
+accepted.
 The first evidence after an elapsed-time condition becomes true performs the
 check, so a provider lifecycle signal is not required.
 

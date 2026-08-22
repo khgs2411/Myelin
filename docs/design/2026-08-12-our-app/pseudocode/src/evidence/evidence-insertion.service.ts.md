@@ -8,7 +8,8 @@ Intended destination: `src/evidence/evidence-insertion.service.ts`
 evidence supplied through the CLI or future MCP integration. It accepts an
 ordered batch of already-curated statements for one exact bootstrapped project,
 constructs one `EvidenceCandidateDto` per statement, and delegates atomic
-acceptance with immediate maintenance intent. It does not invoke an agent,
+acceptance with immediate Session maintenance intent. It does not invoke an
+agent,
 select a memory product, create memory candidates, or wait for memory curation.
 
 ```ts
@@ -105,7 +106,7 @@ class EvidenceInsertionService {
       contractVersion: current EvidenceAcceptanceContractVersion,
       operationId,
       items: acceptanceItems,
-      maintenanceIntent: "immediate"
+      sessionMaintenanceIntent: "immediate"
     })
   }
 }

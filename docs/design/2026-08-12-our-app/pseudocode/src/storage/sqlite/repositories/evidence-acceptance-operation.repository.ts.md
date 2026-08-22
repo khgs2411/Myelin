@@ -90,7 +90,7 @@ class EvidenceAcceptanceOperationRepository {
 Both methods require the transaction supplied by `EvidenceAcceptanceService`.
 The repository does not create, commit, roll back, or nest transactions.
 Operation lookup therefore participates in the same serialized write boundary
-as evidence append, maintenance eligibility, and receipt insertion.
+as evidence append, Session maintenance eligibility, and receipt insertion.
 
 `findByOperationId` returns an immutable persistence projection instead of a
 Sequelize model. The repository preserves the receipt schema version and raw

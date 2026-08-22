@@ -8,7 +8,12 @@ This artifact records only the implementation surface justified by the
 responsibilities do not earn a file or boundary until concrete pseudocode
 demonstrates an independently useful owner.
 
-## New files or owners now required
+## Current design-unit catalog
+
+This catalog is the current implementation surface justified by the design. It
+is not a forecast, implementation plan, or list of work still required.
+
+### Current source and semantic shape
 
 ```text
 package.json
@@ -17,6 +22,13 @@ config.yaml
 src/
   cli.ts
   application.ts
+
+  session-maintenance/
+    session-maintenance.ts
+    session-maintenance-lifecycle.service.ts
+    session-maintenance-policy.service.ts
+    session-maintenance-schedule.service.ts
+    session-maintenance-evidence.reader.ts
 
   capture/
     evidence-capture.service.ts
@@ -34,6 +46,11 @@ src/
     evidence-acceptance.service.ts
 
   memory/
+    [Memory product interoperability contract — representation OPEN]
+    [Session Memory product — representation OPEN]
+    [Project Memory product — representation OPEN]
+    [Personal Memory product — representation OPEN]
+    [Practice Memory product — representation OPEN]
     markdown/
       markdown-memory-document.ts
 
@@ -45,9 +62,16 @@ src/
         project.model.ts
         evidence-item.model.ts
         evidence-acceptance-operation.model.ts
+        session-maintenance-state.model.ts
+        session-maintenance-policy.model.ts
+        session-maintenance-request.model.ts
+        session-maintenance-attempt.model.ts
       repositories/
         evidence-log.repository.ts
         evidence-acceptance-operation.repository.ts
+        session-maintenance-state.repository.ts
+        session-maintenance-policy.repository.ts
+        session-maintenance-request.repository.ts
 
   agent/
     agent-adapter.ts
@@ -58,21 +82,32 @@ src/
       codex-agent.adapter.ts
 ```
 
-This catalog distinguishes design depth without creating workflow status:
+Every exact source path and bracketed semantic owner above has one matching
+detail entry below. Bracketed entries are established design units, not
+predicted paths. The detail entries distinguish design depth without creating
+workflow status:
 
-- A linked source path has an independently useful pseudocode artifact.
-- An unlinked source path is justified by current design, but its deeper
+- A linked detail entry has an independently useful pseudocode artifact.
+- An unlinked detail entry is justified by current design, but its deeper
   pseudocode has not yet earned a standalone artifact.
 - `representation OPEN` or `filename OPEN` means that the semantic owner and
   its established job are selectable design units, while the named source-file
   detail is unresolved. It does not reopen the established responsibility.
 
-The current semantic owners without exact source paths are:
+### Semantic owners with representation open
+
+These owners are justified by current behavior, but the design has not yet
+established an exact source path:
 
 | Design unit | Established responsibility | Unshaped edge |
 | --- | --- | --- |
 | Application installation owner | Publish the command, initialize machine state, and install provider capture mechanics | Script, package entry, or source-file representation |
-| Project registration application owner | Register one exact canonical directory through the Project model as an overseen project with immutable application identity | Concrete application service and relocation workflow |
+| Project bootstrap application owner | Register one exact canonical directory through the Project model and atomically initialize its Session maintenance state | Concrete application service and relocation workflow |
+| Memory product interoperability contract | Preserve tagged product identity, canonical reference, provenance, freshness, lifecycle visibility, and relationships across the Memory boundary without imposing shared behavior | Exact source representation and product-specific canonical reference shapes |
+| Session Memory product | Own recent project and current-workspace continuity as independently reconcilable canonical SQLite records, including its product-specific query behavior | Canonical record, query-result representation, score threshold, other product operations, and curation lifecycle |
+| Project Memory product | Own project documentation and its product-specific query behavior; authority follows repository behavior, explicit project decisions, and preserved evidence | Applicability, retrieval method and threshold, admission, publication, and maintenance owners |
+| Personal Memory product | Own global user defaults and preferences plus their product-specific query behavior, applicability limits, and project exceptions | Retrieval method and threshold, admission, publication, and maintenance owners |
+| Practice Memory product | Own reusable guidance for concrete technologies and techniques plus its product-specific query behavior and version applicability | Retrieval method and threshold, admission, publication, and maintenance owners |
 
 ### `package.json` — package and command publication metadata
 
@@ -86,12 +121,60 @@ installation, and MCP registration into one lifecycle owner.
 
 ### `config.yaml` — human-facing application defaults
 
-Defines validated operator-editable defaults, including the evidence-count and
-elapsed-time maintenance policy. Each application invocation compares the
-validated configuration digest with SQLite and creates a new immutable active
-`MaintenancePolicy` revision when the effective values change. Per-project
-effective policy remains SQLite state so evidence acceptance can evaluate one
-stable revision atomically.
+Defines validated operator-editable defaults in product-specific maintenance
+sections. The current shape includes `maintenance.session` with its
+evidence-count threshold and elapsed interval. Application composition injects
+the validated canonical effective values and digest into
+`SessionMaintenanceScheduleService`. For each operation with newly accepted
+evidence, scheduling uses its internal `SessionMaintenancePolicyService` to
+create a new immutable `SessionMaintenancePolicy` revision only when those
+values differ. Policy synchronization and eligibility share the acceptance
+transaction. Future memory products add their own configuration sections and
+policy contracts rather than entering one shared maintenance policy.
+
+### [`src/session-maintenance/session-maintenance.ts`](./src/session-maintenance/session-maintenance.ts.md) — `SessionMaintenance`
+
+Defines the composed Session maintenance domain façade. It exposes instance
+capabilities named `lifecycle` and `schedule`. Application composition can hold
+the façade, but each workflow receives only the capability it needs. The façade
+owns no common transaction and does not expose models or repositories. Policy
+synchronization is an internal schedule collaborator, not a public capability.
+No `execution` capability exists until its claim, replacement, publication, and
+completion contract is shaped.
+
+### [`src/session-maintenance/session-maintenance-lifecycle.service.ts`](./src/session-maintenance/session-maintenance-lifecycle.service.ts.md) — `SessionMaintenanceLifecycleService`
+
+Owns the Session state part of project bootstrap. It initializes state for a
+new Project or requires state for an existing Project through the caller's
+bootstrap transaction. It exposes no ensure or repair path.
+
+### [`src/session-maintenance/session-maintenance-policy.service.ts`](./src/session-maintenance/session-maintenance-policy.service.ts.md) — `SessionMaintenancePolicyService`
+
+Owns synchronization of one project's validated effective
+`maintenance.session` configuration into immutable SQLite policy revisions.
+Through the acceptance transaction supplied by scheduling, it loads the latest
+revision, compares canonical effective values, and inserts
+`latest revision + 1` only when they differ. The first revision is one. It
+returns the exact policy snapshot used by scheduling. YAML parsing and project
+selection stay outside this service, and it is not a public façade capability.
+Only the project's first accepted Evidence Log sequence permits an absent
+policy; later absence is incompatible durable state.
+
+### [`src/session-maintenance/session-maintenance-schedule.service.ts`](./src/session-maintenance/session-maintenance-schedule.service.ts.md) — `SessionMaintenanceScheduleService`
+
+Owns Session request eligibility, active-chain validation, frontier
+calculation, and pending-request coalescing. It joins the evidence-acceptance
+transaction, synchronizes its injected effective policy through the internal
+policy service, reads raw state, request, and Evidence Log facts, and sends
+exact request writes. It does not accept evidence, notify workers, execute
+attempts, or advance successful progress.
+
+### [`src/session-maintenance/session-maintenance-evidence.reader.ts`](./src/session-maintenance/session-maintenance-evidence.reader.ts.md) — `SessionMaintenanceEvidenceReader`
+
+Defines the narrow Evidence Log read port required by elapsed-time scheduling.
+It returns the first uncovered evidence `received_at` value after a supplied
+project sequence. `EvidenceLogRepository` implements the port without taking
+ownership of Session eligibility.
 
 ### Application installation owner — representation `OPEN`
 
@@ -119,14 +202,18 @@ process-scoped dependency composition, including one `SqliteDatabase`, from
 capability-specific runtime configuration. `close` releases that process-scoped
 infrastructure.
 
-### Project registration application owner — representation `OPEN`
+### Project bootstrap application owner — representation `OPEN`
 
 Owns provider-neutral durable registration of one exact canonical directory as
 an overseen project root. It canonicalizes the path, observes an optional Git
-repository root, creates or returns the project row, and returns its immutable
-SQLite-assigned identity. Its necessity is established by bootstrap and
-workspace resolution, but its source filename, concrete service boundary, and
-relocation workflow have not yet been shaped.
+repository root, and uses one application transaction to create or return the
+project row and require its product-owned `SessionMaintenanceState`. A newly
+created project receives its initial Session state through
+`SessionMaintenanceLifecycleService.initializeNewProject` in that transaction.
+An existing project uses `requireInitializedProject`; a missing required row is
+incompatible durable state. The bootstrap owner returns the immutable
+SQLite-assigned project identity. Its source filename, concrete service
+boundary, and relocation workflow remain unshaped.
 
 ### [`src/capture/evidence-capture.service.ts`](./src/capture/evidence-capture.service.ts.md) — `EvidenceCaptureService`
 
@@ -163,14 +250,20 @@ registered `UserPromptSubmit` and `Stop` hooks, preserves the raw input, and
 normalizes user and assistant messages. It does not register or normalize
 `SessionStart`; count/time maintenance checks occur when evidence is accepted.
 
-### `src/query/query.service.ts` — `QueryService`
+### [`src/query/query.service.ts`](./src/query/query.service.ts.md) — `QueryService`
 
 Owns the provider-neutral query workflow: resolving applicable memory,
-running lexical and semantic retrieval per memory product, fusing each
-product's ranks in TypeScript, federating the typed result sets, constructing a
-query agent task, validating the untrusted agent result, and returning an
-evidence-backed answer. The lower-level SQLite retrieval owner remains
-unshaped.
+passing the same question and product-applicable context to each independent
+memory product, and returning the qualified typed core results without agentic
+curation. Each product owns its retrieval method, product-local score,
+qualification threshold, freshness and applicability filters, and result
+representation. Session returns qualified records or parsed text. Project,
+Personal, and Practice return grouped Markdown references. Managed projects
+query all four products. Unmanaged directories query Personal and Practice
+without becoming a failure or causing implicit project bootstrap. An optional
+later aggregator may curate the complete core result through `AgentAdapter`,
+but it is not part of `QueryService.query` and its representation remains
+`OPEN`.
 
 ### [`src/evidence/evidence-item.dto.ts`](./src/evidence/evidence-item.dto.ts.md) — evidence DTO contracts
 
@@ -191,8 +284,8 @@ statements for one exact bootstrapped project root. It validates channel-specifi
 client-reference rules, resolves the exact root through
 `WorkspaceContextService`, preserves each statement as exact `text/plain`
 source material, constructs one provider-neutral `EvidenceCandidateDto` per
-item, and delegates the atomic batch with immediate maintenance intent to
-`EvidenceAcceptanceService`. It returns the acceptance receipt directly. It
+item, and delegates the atomic batch with immediate Session maintenance intent
+to `EvidenceAcceptanceService`. It returns the acceptance receipt directly. It
 does not invoke an agent, select a memory product, directly mutate memory, or
 wait for curation. Inbox is a logical view over uncovered insertion-originated
 Evidence Log items, not another store or queue.
@@ -203,8 +296,8 @@ Owns the common deterministic acceptance boundary after evidence becomes
 provider-neutral. One project-bound atomic operation validates DTOs, resolves
 operation and source replay, assigns acceptance times and contiguous
 project-local sequences, appends new evidence, receives SQLite-assigned evidence
-identities, evaluates the active revisioned maintenance policy, creates or
-coalesces a finite pending request, and stores the acceptance receipt. Its
+identities, evaluates the active revisioned Session maintenance policy, creates
+or coalesces a finite pending request, and stores the acceptance receipt. Its
 accepted operation contract
 requires one immutable, project-owned SQLite operation record containing the
 versioned command fingerprint and complete versioned receipt for the owning
@@ -267,14 +360,69 @@ returns no internal row identity. The repository does not own transactions,
 fingerprint comparison, conflict classification, receipt validation, updates,
 or general deletion.
 
+### Memory product interoperability contract — representation `OPEN`
+
+Defines the common exchange boundary across Session, Project, Personal, and
+Practice Memory. Every reference remains tagged by product and exposes stable
+canonical identity, an exact canonical version or reference, provenance,
+freshness, lifecycle visibility, and relationships. It does not define one
+memory payload or require shared save, update, search, hydrate, maintain,
+scope, lifecycle-transition, or maintenance behavior. Each product owns its
+query behavior and produces its own qualified result shape. References cross
+the boundary as query outputs rather than inputs to a root hydration service.
+The exact source representation and the product-specific canonical reference
+shapes remain unshaped.
+
+### Session Memory product — representation `OPEN`
+
+Owns curated continuity about recent work within one project, with
+current-workspace and project-wide applicability. Its canonical content is
+SQLite, and one canonical record is one independently reconcilable memory
+node. It does not become authoritative project truth merely because it is the
+freshest memory product. It owns its query retrieval, scoring, qualification
+threshold, freshness and applicability filters, and Session-specific result.
+The exact record-versus-parsed-text result, canonical record and reference
+schema, other product operations, and curation lifecycle remain unshaped.
+
+### Project Memory product — representation `OPEN`
+
+Owns human-readable documentation about how one project works and why. Its
+authority follows repository behavior, explicit project decisions, and
+preserved evidence. Its canonical content is durable Markdown using the shared
+canonical Markdown document shape. It owns its retrieval, product-local
+scoring and threshold, applicability filters, and qualified Markdown-reference
+results. Its exact retrieval method, admission, publication, and maintenance
+owners remain unshaped.
+
+### Personal Memory product — representation `OPEN`
+
+Owns the user's cross-cutting defaults, preferences, writing styles,
+architectural choices, and collaboration preferences. It is global by default
+but supports applicability limits and project exceptions. Its canonical
+content is durable Markdown using the shared canonical Markdown document
+shape. It owns its retrieval, product-local scoring and threshold,
+applicability filters, and qualified Markdown-reference results. Its exact
+retrieval method, admission, publication, and maintenance owners remain
+unshaped.
+
+### Practice Memory product — representation `OPEN`
+
+Owns reusable guidance about how the user employs a concrete technology or
+technique, including versions, modes, examples, constraints, failures, and
+gotchas. Its canonical content is durable Markdown using the shared canonical
+Markdown document shape. It owns its retrieval, product-local scoring and
+threshold, subject and version filters, and qualified Markdown-reference
+results. Its exact retrieval method, admission, publication, and maintenance
+owners remain unshaped.
+
 ### [`src/memory/markdown/markdown-memory-document.ts`](./src/memory/markdown/markdown-memory-document.ts.md) — canonical Markdown document shape
 
 Defines and validates the portable Markdown representation shared by Project,
 Personal, and Practice Memory. It owns the flat YAML property profile,
 immutable memory-node identity, standard Markdown relationship links, AST
 parsing, and semantic-section extraction used by publication, indexing, and
-query hydration. It does not own filesystem publication, SQLite indexing,
-retrieval ranking, or memory admission.
+query-result reference construction. It does not own filesystem publication,
+SQLite indexing, product-local retrieval ranking, or memory admission.
 
 ### `src/storage/sqlite/sqlite-runtime.ts` — packaged SQLite runtime
 
@@ -302,9 +450,77 @@ are shaped.
 Defines the `projects` Sequelize model populated by project bootstrap. Its base
 class owns the auto-increment integer identity, unique canonical oversight
 root, nullable Git repository root, monotonic Evidence Log allocation frontier,
-and timestamps. The exported `Project` class owns relations as their target
-models enter the design. Version one has no separate repository identity,
+and timestamps. Session maintenance state references Project from its own
+product boundary; Project owns no Session-specific columns or reverse Session
+association. Version one has no separate repository identity,
 sequence-counter model, or table.
+
+### [`src/storage/sqlite/models/session-maintenance-state.model.ts`](./src/storage/sqlite/models/session-maintenance-state.model.ts.md) — `SessionMaintenanceState`
+
+Defines Session Memory's one project-scoped maintenance cursor. Its project
+foreign key is also its primary key. The row stores the last Evidence Log
+sequence covered by successful Session maintenance and the corresponding
+successful-maintenance time. Bootstrap uses the Session lifecycle capability to
+create the initial zero-and-null state through the Session repository in the
+same application transaction as a new Project. The model owns same-row cursor
+checks but does not copy the Project's allocation frontier or introduce a
+generic memory-product discriminator.
+
+### [`src/storage/sqlite/models/session-maintenance-policy.model.ts`](./src/storage/sqlite/models/session-maintenance-policy.model.ts.md) — `SessionMaintenancePolicy`
+
+Defines immutable, project-effective Session maintenance policy revisions in
+`session_maintenance_policies`. The composite project-and-revision identity
+stores the evidence-count threshold, elapsed interval, and configuration
+digest. The highest revision is active; there is no mutable active pointer or
+separate revision table. A digest is not unique because returning to older
+effective values still creates a new revision.
+
+### [`src/storage/sqlite/models/session-maintenance-request.model.ts`](./src/storage/sqlite/models/session-maintenance-request.model.ts.md) — `SessionMaintenanceRequest`
+
+Defines each finite Session maintenance obligation in
+`session_maintenance_requests`. A request owns one project-local Evidence Log
+range, pending/running/satisfied lifecycle, normal/immediate priority, and the
+composite reference to the `SessionMaintenancePolicy` revision that caused its
+eligibility. One pending request and one frozen running request may coexist for
+a project. Same-row checks close its state, priority, and sequence vocabulary.
+Two partial unique indexes enforce at most one pending and at most one running
+request per project; the application transaction owns range relationships.
+
+### `src/storage/sqlite/models/session-maintenance-attempt.model.ts` — `SessionMaintenanceAttempt`
+
+Defines execution history for Session maintenance requests in
+`session_maintenance_attempts`. Each attempt belongs to one request and owns
+its execution state, lease, and failure evidence. Failed or expired attempts
+do not reopen the request frontier. The exact claim, replacement, and
+completion-fence schema remains unresolved with the execution boundary.
+
+### [`src/storage/sqlite/repositories/session-maintenance-state.repository.ts`](./src/storage/sqlite/repositories/session-maintenance-state.repository.ts.md) — `SessionMaintenanceStateRepository`
+
+Owns transaction-scoped initialization, required snapshot loading, and guarded
+covered-frontier advancement for `SessionMaintenanceState`. Its advance method
+accepts the exact frozen request frontier and successful time, checks that the
+frontier moves forward without exceeding the owning Project's allocated
+Evidence Log sequence, updates both cursor fields atomically, and requires
+exactly one affected state row. It does not own eligibility, attempt success,
+completion fencing, transactions, or another memory product's progress.
+
+### [`src/storage/sqlite/repositories/session-maintenance-policy.repository.ts`](./src/storage/sqlite/repositories/session-maintenance-policy.repository.ts.md) — `SessionMaintenancePolicyRepository`
+
+Owns transaction-scoped latest-revision lookup and immutable insertion for
+`SessionMaintenancePolicy`. `SessionMaintenancePolicyService` compares
+canonical effective values and supplies exact insert values inside the
+acceptance transaction passed through `SessionMaintenanceScheduleService`. The
+repository does not decide whether configuration changed, compute eligibility,
+own transactions, or serve another memory product.
+
+### [`src/storage/sqlite/repositories/session-maintenance-request.repository.ts`](./src/storage/sqlite/repositories/session-maintenance-request.repository.ts.md) — `SessionMaintenanceRequestRepository`
+
+Returns raw pending and running request snapshots and applies exact guarded
+writes selected by `SessionMaintenanceScheduleService`: insert pending, extend
+its frontier, or promote its priority. It has no upsert or coalescing method.
+The repository enforces row, project, state, and allocated-frontier guards,
+while the schedule service owns eligibility and active-range relationships.
+Execution-owned state transitions remain outside this design unit.
 
 ### [`src/storage/sqlite/models/evidence-item.model.ts`](./src/storage/sqlite/models/evidence-item.model.ts.md) — `EvidenceItem`
 
@@ -331,14 +547,16 @@ disabled, and successful operation rows expose no normal mutation path.
 ### `src/agent/agent-adapter.ts` — `AgentAdapter`
 
 Defines the provider-neutral capability for executing a bounded agent task.
-Query and maintenance workflows depend on this capability rather than on
-provider- and workflow-specific adapters.
+Memory-maintenance workflows and an optional future query-result aggregator
+may depend on this capability rather than on provider- and workflow-specific
+adapters. The core query workflow does not depend on it.
 
 ### `src/providers/codex/codex-agent.adapter.ts` — `CodexAgentAdapter`
 
 Implements `AgentAdapter` through the Codex CLI. Codex command construction,
-process interaction, and provider-result parsing stop at this owner; query and
-curation semantics remain in their application workflows.
+process interaction, and provider-result parsing stop at this owner; curation
+and optional query-result aggregation semantics remain in their application
+workflows.
 
 ## Current relationship
 
@@ -364,18 +582,27 @@ human shell | provider hooks
                   codex capture configuration -> CodexCaptureAdapter
               -> inject CaptureInvocationContext and CodexCaptureAdapter
                  directly into EvidenceCaptureService
-              -> construct configured agent-execution capability
-                  codex agent configuration -> CodexAgentAdapter
+              -> retain independent agent-execution configuration
+              -> construct and inject AgentAdapter only when a shaped memory
+                 curation or optional query-result aggregation owner requires it
               -> construct application services
               -> return Application instance
 
           -> route bootstrap command
               -> Application.bootstrapProject(exact directory path)
-                  -> project registration application owner (representation OPEN)
+                  -> project bootstrap application owner (representation OPEN)
+                      -> one application write transaction
                       -> immutable ProjectIdentity
                       -> replaceable canonical oversight root
                       -> optional canonical Git repository root
                       -> Project model
+                          -> new Project
+                              -> sessionMaintenance.lifecycle.initializeNewProject
+                                  -> SessionMaintenanceStateRepository.initialize
+                                  -> product-owned initial SessionMaintenanceState
+                          -> existing Project
+                              -> sessionMaintenance.lifecycle.requireInitializedProject
+                                  -> required existing SessionMaintenanceState
 
           -> route capture command
               -> Application.capture(exact native activity)
@@ -394,17 +621,36 @@ human shell | provider hooks
                                           -> append hybrid EvidenceItem row through supplied transaction
                                           -> return SQLite-generated identity
                                       -> construct accepted EvidenceItemDto
-                                      -> policy-based maintenance eligibility
+                                      -> sessionMaintenance.schedule.afterEvidenceAccepted
+                                          -> SessionMaintenancePolicyService.synchronize
+                                              -> injected effective values
+                                              -> exact revision in the acceptance transaction
+                                          -> state, request, and first-uncovered evidence facts
+                                          -> policy-based Session maintenance eligibility
+                                          -> exact request insert, extension, or priority promotion
                                       -> stored acceptance receipt
 
           -> route query command
-              -> Application.query(question, context)
+              -> Application.query({ question, workingDirectory })
                   -> QueryService
-                      -> SQLite FTS5 lexical retrieval per memory product
-                      -> pinned sqlite-vec retrieval per embedding contract
-                      -> TypeScript rank fusion and four-product federation
+                      -> WorkspaceContextService.resolve(workingDirectory)
+                      -> managed scope: Session, Project, Personal, Practice
+                      -> unmanaged scope: Personal, Practice
+                      -> invoke each applicable product query capability
+                          -> product-owned retrieval method and index access
+                          -> product-local score and qualification threshold
+                          -> product-owned freshness and applicability filters
+                          -> product-specific qualified result shape
+                      -> typed core QueryResult without agentic curation
+                          -> Session records or parsed text
+                          -> grouped Project, Personal, Practice Markdown references
+                          -> product-local relevance, freshness, product outcomes
+
+              core QueryResult
+                  -> optional result aggregator — representation OPEN
                       -> configured AgentAdapter
                           -> CodexAgentAdapter
+                      -> curated response plus unchanged core QueryResult
 
           -> route insert command
               -> Application.insertEvidence(invocation context, insertion request)
@@ -423,14 +669,20 @@ human shell | provider hooks
                                   -> append hybrid EvidenceItem rows through supplied transaction
                                   -> return SQLite-generated identities
                               -> construct accepted EvidenceItemDto values
-                              -> immediate maintenance eligibility
+                              -> sessionMaintenance.schedule.afterEvidenceAccepted
+                                  -> SessionMaintenancePolicyService.synchronize
+                                      -> injected effective values
+                                      -> exact revision in the acceptance transaction
+                                  -> state, request, and first-uncovered evidence facts
+                                  -> immediate Session maintenance eligibility
+                                  -> exact request insert, extension, or priority promotion
                               -> stored acceptance receipt
 
 Inbox
   -> logical view over uncovered insertion-originated EvidenceItems
-  -> maintenance request, attempt, and cursor remain the processing owners
+  -> Session maintenance request, attempt, and cursor remain the processing owners
 
-canonical Markdown publication | derived indexing | query hydration
+canonical Markdown publication | derived indexing | query-result reference construction
   -> canonical Markdown document shape
       -> flat Obsidian-compatible YAML properties
       -> immutable memory-node identity

@@ -93,14 +93,24 @@ ON invocation
     "query"
       require a question
       application = await Application.create(runtime configuration)
-      collect the caller's current context
+      collect the caller's current working directory
 
       result = await application.query({
         question,
-        current context
+        workingDirectory: caller's current working directory
       })
 
-      return the answer, supporting memory references, and freshness
+      return the core typed QueryResult:
+        qualified Session Memory records or parsed text
+        grouped Project, Personal, and Practice Markdown references
+        product-local relevance, freshness, and product outcomes
+
+      do not invoke an agent or curate one answer inside the query command
+
+      IF the result scope is unmanaged-directory
+        explain that Personal and Practice Memory were queried
+        explain that project bootstrap is available as a separate explicit
+          operation requiring the intended exact oversight root
 
     "insert"
       require the exact root of one bootstrapped overseen project
@@ -127,7 +137,8 @@ ON invocation
       })
 
       return a safe evidence acceptance receipt
-      receipt success means evidence and its immediate maintenance eligibility
+      receipt success means evidence and its immediate Session maintenance
+      eligibility
       are durable; it does not mean maintenance completed
 
     otherwise
@@ -174,7 +185,7 @@ It does not:
 - interpret any provider's native activity;
 - construct a concrete capture adapter;
 - access the application's internal service graph;
-- retrieve, rank, or synthesize memory answers;
+- retrieve, rank, or curate query results itself;
 - write evidence or canonical memory directly;
 - persist project registration directly;
 - install, repair, or remove provider hooks;
@@ -183,7 +194,7 @@ It does not:
 - classify inserted evidence into a memory product.
 
 The insertion command returns after atomic evidence acceptance and durable
-maintenance eligibility. Scheduling, coalescing, frontier selection, and
+Session maintenance eligibility. Scheduling, coalescing, frontier selection, and
 maintenance execution belong to the evidence acceptance and maintenance owners.
 
 The future MCP server may expose methods that do not mirror command names, but

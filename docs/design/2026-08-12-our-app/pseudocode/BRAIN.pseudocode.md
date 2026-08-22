@@ -48,20 +48,29 @@ RECORD OverseenProject
 
 FUNCTION bootstrapProject(directory_path)
   validate and canonicalize the exact supplied directory
-  IF that canonical root is already registered
-    return the existing project
+  within one application write transaction:
+    IF that canonical root is already registered
+      ask sessionMaintenance.lifecycle to require its Session maintenance state
+      return the existing project
 
-  prepare a new Project row
-  inspect bounded repository facts without changing the governed directory
-  persist the exact oversight root and optional repository root
-  receive the immutable project identity assigned by SQLite
-  return the registered project
+    prepare a new Project row
+    inspect bounded repository facts without changing the governed directory
+    persist the exact oversight root and optional repository root
+    receive the immutable project identity assigned by SQLite
+    ask sessionMaintenance.lifecycle to initialize state for that project
+    return the registered project
 ```
 
 Bootstrap defines which filesystem scope our app governs. It does not install,
 select, or configure a provider capture mechanism. The supplied directory is a
 replaceable project locator, not the durable project identity. Moving a project
 can therefore replace its root path without replacing its memories.
+
+The bootstrap transaction coordinates required product initialization without
+putting Session Memory columns or a reverse Session relation on the Project
+model. The bootstrap owner receives only the Session lifecycle capability.
+Session Memory owns its maintenance state and references project identity only
+because its Evidence Log frontier is project-scoped.
 
 Machine-wide capture integrations may invoke our app for activity outside an
 overseen root. Such activity is ignored and never enters the Evidence Log or
@@ -75,7 +84,8 @@ CAPABILITY Capture
   normalize it into provider-neutral evidence
 
 CAPABILITY AgentExecution
-  run a configured AI provider for bounded curation or query work
+  run a configured AI provider for bounded memory curation or optional
+    query-result aggregation
   return an untrusted result for application validation
 
 CAPABILITY BrainAccess
@@ -202,9 +212,34 @@ MEMORY PracticeMemory
   CANONICAL_CONTENT durable Markdown
 ```
 
-The four products do not share one generic memory payload. They share only the
-metadata needed to preserve scope, provenance, freshness, lifecycle, and
-relationships.
+The root Memory domain is a federation of these four products. They share an
+interoperability contract, not one behavioral interface or generic memory
+payload.
+
+```pseudocode
+MEMORY INTEROPERABILITY CONTRACT
+  every product exposes its product identity
+  every durable node exposes a stable canonical identity and exact reference
+  every product makes provenance, freshness, lifecycle visibility,
+    and relationships available across the Memory boundary
+  the contract remains tagged by product
+
+PRODUCT-OWNED BEHAVIOR
+  content and authority
+  scope and applicability
+  canonical representation
+  query retrieval, scoring, qualification threshold, and result shape
+  admission and reconciliation
+  lifecycle transitions
+  maintenance policy and operations
+```
+
+The interoperability contract gives consumers a safe common exchange shape.
+It does not require every product to implement shared `save`, `update`,
+`search`, or `maintain` behavior. Each product accepts a question through its
+own query capability and owns its retrieval method, product-local score,
+qualification threshold, filters, and output representation. Qualified
+references are product outputs rather than inputs to a root hydration service.
 
 One Session Memory record and one Project, Personal, or Practice Markdown file
 each represent one durable memory node. Headings, semantic sections, and search
@@ -247,13 +282,13 @@ the preferred version or mode within that subject.
 Evidence accumulates for a project
   -> every acceptance operation belongs to exactly one project
   -> new evidence receives a project-local sequence in the Evidence Log
-  -> evidence acceptance and maintenance eligibility commit atomically
+  -> evidence acceptance and Session maintenance eligibility commit atomically
   -> the first accepted evidence after an elapsed-time condition performs the
      next eligibility evaluation
   -> evidence-count, elapsed-time, or immediate insertion creates or promotes
-     one pending maintenance request
-  -> pending requests may coalesce; a running request keeps a frozen frontier
-  -> one leased attempt executes the request asynchronously
+     one pending Session maintenance request
+  -> pending Session requests may coalesce; a running request keeps a frozen frontier
+  -> one leased Session maintenance attempt executes the request asynchronously
   -> a failed or expired attempt is replaced without returning the frozen
      request to pending
   -> only successful current attempts advance the covered frontier
@@ -266,6 +301,19 @@ Evidence accumulates for a project
   -> canonical memory is published without user confirmation
   -> evidence beyond the frozen frontier remains for the next maintenance run
 ```
+
+This loop is Session Memory's maintenance contract. Its effective
+`maintenance.session` configuration becomes immutable
+`SessionMaintenancePolicy` revisions. `SessionMaintenanceState`,
+`SessionMaintenanceRequest`, and `SessionMaintenanceAttempt` own successful
+progress, finite work, and execution history respectively. Higher memory
+products define separate maintenance policy and state contracts.
+
+The composed `SessionMaintenance` domain façade exposes the current lifecycle
+and schedule capabilities. Policy synchronization is internal to scheduling and
+shares the evidence-acceptance transaction. Each workflow receives only the
+public capability it needs. Execution does not enter the façade until attempt
+claim, replacement, publication, and fenced completion have a complete design.
 
 Session Memory publishes first because it is the most recent and alive
 representation of work. It maintains immediate continuity and discovers leads
@@ -321,17 +369,30 @@ The Query Layer is the ordinary read interface across all four memories.
 ```pseudocode
 FUNCTION query(question, current_context)
   resolve the project, workspace context, user, and involved technologies
-  semantically retrieve candidates from SQLite
-  hydrate canonical Session records and Markdown artifacts
-  exclude inactive or inapplicable memory
-  preserve freshness, provenance, and competing scopes
 
-  IF applicable memories conflict
-    return an answer that exposes the competing contexts
+  IF the working directory is invalid, missing, or inaccessible
+    fail the query safely
+
+  IF the working directory belongs to an overseen project
+    make Session, Project, Personal, and Practice Memory applicable
   ELSE
-    return an answer synthesized from compatible memory
+    make Personal and Practice Memory applicable
+    mark Session and Project Memory not applicable
 
-  include supporting memory references and freshness in the result
+  ask each applicable memory product to query the same question independently
+
+  EACH product owns:
+    its lexical, semantic, vector, or other retrieval method
+    its index and canonical source access
+    its product-local scoring and qualification threshold
+    its lifecycle, freshness, and applicability filters
+    its product-specific result representation
+
+  return every qualified product result without agentic curation:
+    Session Memory records or parsed text
+    separately grouped Project, Personal, and Practice Markdown references
+    product-local relevance and freshness
+    per-product outcomes
 ```
 
 Query may combine current-work Session Memory, recent project-wide activity,
@@ -341,6 +402,18 @@ asks a question rather than selecting a physical store.
 SQLite supports semantic traversal over the durable Markdown artifacts. It is
 derived retrieval state for Project, Personal, and Practice Memory and never
 replaces their canonical content.
+
+The core query operation is deterministic and non-agentic. An optional later
+aggregator may use `AgentExecution` to curate one response from the complete
+`QueryResult`. That response retains the core Session results and documentation
+references beside it. A human or another agent may instead consume the core
+results directly. The aggregator is not required by `query` and its exact
+owner remains `OPEN`.
+
+An unmanaged directory remains a valid Personal and Practice query scope. It
+does not cause implicit project registration. The caller may offer the separate
+project-bootstrap operation, which still requires an explicit exact oversight
+root.
 
 ## Manual evidence insertion and correction
 
@@ -359,7 +432,7 @@ FUNCTION insertEvidence(invocation_context, request)
     derive replay identity from client reference and item position when present
 
   accept the complete batch into the Evidence Log without treating it as memory
-  set maintenance intent to immediate
+  set Session maintenance intent to immediate
   create or promote one pending request through all unscheduled evidence
   return an acceptance receipt after evidence and eligibility commit atomically
 

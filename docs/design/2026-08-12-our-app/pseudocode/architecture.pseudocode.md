@@ -100,8 +100,11 @@ project bootstrap
   -> accept one explicit directory path
   -> validate and canonicalize that exact oversight root
   -> record the canonical Git repository root when present
-  -> create or return one Project row
-  -> use its immutable SQLite-assigned ProjectIdentity
+  -> within one application write transaction
+      -> create or return one Project row
+      -> sessionMaintenance.lifecycle initializes state for a new project
+      -> sessionMaintenance.lifecycle requires state for an existing project
+  -> use the immutable SQLite-assigned ProjectIdentity
 ```
 
 Bootstrap remains provider-neutral. It neither installs hooks nor records a
@@ -110,7 +113,7 @@ working directory; workspace resolution admits only activity within an
 overseen project root.
 
 The exact application installer, provider-integration installer, and project
-registration source owners remain `OPEN`. One user-facing installation command
+bootstrap source owners remain `OPEN`. One user-facing installation command
 may orchestrate them, but their state and lifecycles must remain separate. MCP
 installation remains separate from provider capture even if the same top-level
 installer later makes both available.
@@ -123,6 +126,10 @@ process starts
       -> initialize the packaged SQLite runtime
       -> open one process-scoped SqliteDatabase through Sequelize v7 alpha
       -> construct SQLite repositories with that shared database instance
+      -> construct the internal Session policy service
+      -> inject validated effective Session policy and that service into schedule
+      -> compose SessionMaintenance from lifecycle and schedule capabilities
+      -> inject only the required Session capability into each workflow owner
       -> read the immutable provider and channel from CaptureInvocationContext
       -> construct the selected capture-provider capability
       -> construct WorkspaceContextService
@@ -151,6 +158,9 @@ type RuntimeApplicationConfiguration = {
   captureProvider: CaptureProviderConfiguration
   agentExecution: AgentExecutionProviderConfiguration
   sqlite: SqliteApplicationConfiguration
+  maintenance: {
+    session: ValidatedEffectiveSessionMaintenancePolicy
+  }
   // remaining machine configuration remains independently resolved
 }
 
@@ -180,12 +190,21 @@ For capture, the command's explicit provider and channel route creates one
 its provider identity to construct one adapter. It injects the immutable
 invocation context and adapter into `EvidenceCaptureService`. The route supplies
 provider and channel provenance; the adapter supplies normalization only.
-`agentExecution` independently selects the provider used for query and
-maintenance work. Manual evidence insertion invokes neither capability.
+`agentExecution` independently selects the provider used for memory curation
+and optional query-result aggregation. Core query and manual evidence insertion
+invoke neither capability.
 
 No generic application-wide `provider` exists. Capture and agent execution may
 use different providers even though the current capture invocation composes only
 one capture adapter.
+
+`SessionMaintenance` is a composed instance façade, not a static namespace or
+service base class. Application composition can see the complete façade. The
+project-bootstrap owner receives only `lifecycle`, and
+`EvidenceAcceptanceService` receives only `schedule`. Policy synchronization
+is an internal schedule collaborator because no current application operation
+administers policy independently. No empty `execution` capability exists before
+the execution lifecycle is shaped.
 
 ## Application façade
 
@@ -242,11 +261,13 @@ Codex initially implements capture using Codex hooks and agent execution using
 the Codex CLI. Later providers may implement either capability through their
 native mechanisms without changing the memory products.
 
-Query and maintenance workflows both construct provider-neutral `AgentTask`
-values and execute them through the same `AgentAdapter`. Provider adapters are
-organized by capability, not by the Cartesian product of provider and workflow.
-A `CodexQueryAdapter` or `CodexProjectCuratorAdapter` would put product workflow
-semantics into provider infrastructure and is not part of this architecture.
+Memory-maintenance workflows and an optional query-result aggregator construct
+provider-neutral `AgentTask` values and execute them through the same
+`AgentAdapter`. Core query does not construct an agent task. Provider adapters
+are organized by capability, not by the Cartesian product of provider and
+workflow. A `CodexQueryAggregatorAdapter` or `CodexProjectCuratorAdapter` would
+put application-workflow semantics into provider infrastructure and is not part
+of this architecture.
 
 ## Provider process boundary
 
@@ -319,7 +340,7 @@ provider hook invokes the absolute installed command with an explicit route
                   -> persist its EvidenceItem row idempotently
                   -> receive its SQLite-assigned EvidenceItemId
                   -> construct the accepted EvidenceItemDto
-                  -> record the count/time maintenance obligation in the same
+                  -> record the count/time Session maintenance obligation in the same
                      recoverable durable acceptance
       -> return
 ```
@@ -332,13 +353,13 @@ The capture route is deterministic application routing and provenance metadata.
 It is not cryptographic proof that the provider invoked the process. A selected
 adapter must validate the native activity against that provider's contract.
 Validation failure never falls back to another adapter, appends partial
-evidence, or records maintenance eligibility. The route is the only source of
+evidence, or records Session maintenance eligibility. The route is the only source of
 provider and capture-channel identity; provider-native input cannot override
 it.
 
 The first Codex integration registers only `UserPromptSubmit` and `Stop` as
 evidence-producing hooks. It does not register `SessionStart`. Every accepted
-evidence append evaluates the durable count/time maintenance obligation. The
+evidence append evaluates the durable count/time Session maintenance obligation. The
 first accepted evidence after the elapsed-time condition becomes true performs
 that check, so maintenance does not depend on a provider lifecycle event.
 
@@ -370,17 +391,17 @@ type EvidenceAcceptanceCommand = Readonly<{
   contractVersion: EvidenceAcceptanceContractVersion,
   operationId: ApplicationOperationId,
   items: ReadonlyArray<EvidenceAcceptanceItem>,
-  maintenanceIntent: "policy" | "immediate"
+  sessionMaintenanceIntent: "policy" | "immediate"
 }>
 
 EvidenceAcceptanceService.accept(command) -> EvidenceAcceptanceReceipt
 ```
 
 This deterministic boundary owns idempotent evidence acceptance and durable
-recording of the associated maintenance obligation. One command contains
+recording of the associated Session maintenance obligation. One command contains
 evidence for exactly one project. Different projects may run in parallel, but
-no acceptance operation, maintenance request, or maintenance attempt combines
-their state. Acceptance does not interpret provider payloads or corrections,
+no acceptance operation, Session maintenance request, or Session maintenance
+attempt combines their state. Acceptance does not interpret provider payloads or corrections,
 decide caller authority, curate memory, or publish documentation.
 
 Evidence acceptance and memory ingestion are separate workflows. Acceptance
@@ -426,7 +447,7 @@ safe cross-request replay suppression. The future agent-only MCP contract
 requires one.
 
 The evidence append, project-local sequence allocation, operation receipt,
-source-replay admission, and maintenance obligation form one atomic SQLite
+source-replay admission, and Session maintenance obligation form one atomic SQLite
 acceptance contract. A retry of the same operation and command returns the
 stored receipt. Reusing the operation identity for another command or reusing a
 source replay identity for different evidence rejects the complete command.
@@ -501,7 +522,7 @@ EvidenceInsertionService
   -> OTHERWISE create a new application operation identity
   -> EvidenceAcceptanceService
       -> atomically accept the complete batch or reject it
-      -> use maintenanceIntent "immediate"
+      -> use sessionMaintenanceIntent "immediate"
       -> create or promote the pending request through all unscheduled evidence
       -> persist the acceptance receipt
   -> return the EvidenceAcceptanceReceipt directly
@@ -520,38 +541,40 @@ Maintenance requests, attempts, and cursors remain the processing owners.
 ## Eventually consistent maintenance boundary
 
 ```ts
-type MaintenancePolicy = {
+type SessionMaintenancePolicyRevision = positive integer
+
+type SessionMaintenancePolicy = {
   project: ProjectIdentity
-  revision: MaintenancePolicyRevision
+  revision: SessionMaintenancePolicyRevision
   evidenceCountThreshold: positive integer
   elapsedInterval: positive duration
   configurationDigest: string
 }
 
-type MaintenanceCursor = {
+type SessionMaintenanceState = {
   project: ProjectIdentity
-  lastCoveredSequence: EvidenceSequence
+  lastCoveredEvidenceSequence: EvidenceSequence
   lastSuccessfulMaintenanceAt?: Timestamp
 }
 
-type MaintenanceRequest = {
+type SessionMaintenanceRequest = {
   project: ProjectIdentity
   fromSequenceExclusive: EvidenceSequence
   throughSequenceInclusive: EvidenceSequence
   state: Pending | Running | Satisfied
   priority: Normal | Immediate
-  maintenancePolicyRevision: MaintenancePolicyRevision
+  sessionMaintenancePolicyRevision: SessionMaintenancePolicyRevision
 }
 
-type MaintenanceAttempt = {
-  request: MaintenanceRequestIdentity
+type SessionMaintenanceAttempt = {
+  request: SessionMaintenanceRequestIdentity
   state: Running | Succeeded | Failed
   leaseOwner: MaintenanceLeaseOwner
   leaseExpiresAt: Timestamp
   failure?: MaintenanceFailure
 }
 
-type MaintenanceFrontier = {
+type SessionMaintenanceFrontier = {
   project: ProjectIdentity
   evidenceThrough: EvidenceSequence
   sourceStateReferences: SourceStateReference[]
@@ -559,10 +582,64 @@ type MaintenanceFrontier = {
 }
 ```
 
-Validated YAML configuration creates immutable, revisioned `MaintenancePolicy`
-state in SQLite. Evidence acceptance reads the active policy revision inside
-its transaction. Count, elapsed-time, and immediate insertion are three triggers
-for the same pending request path.
+Validated `maintenance.session` YAML configuration creates immutable,
+revisioned `SessionMaintenancePolicy` state in SQLite. The highest project
+revision is active; `SessionMaintenancePolicyRevision` is a value, not another
+table. `SessionMaintenancePolicyService` compares already validated canonical
+effective values through the `IMMEDIATE` acceptance transaction supplied by
+`SessionMaintenanceScheduleService`. It appends a revision only when those
+values differ and returns the exact revision used for a new eligibility
+decision. An existing pending request keeps the revision that caused it when
+coalescing extends its frontier or promotes its priority. Count, elapsed-time,
+and immediate insertion are three triggers for the same Session request path.
+A project can have no policy until its first newly accepted evidence creates
+revision one in that transaction; later absence is incompatible durable state.
+
+Session maintenance persistence has four product-specific tables:
+
+```text
+session_maintenance_states    successful covered frontier per project
+session_maintenance_policies  immutable effective policy revisions per project
+session_maintenance_requests  finite maintenance obligations and frozen ranges
+session_maintenance_attempts  leased execution and replacement history
+```
+
+Other memory products define separate policy and maintenance contracts when
+their eligibility inputs and frontiers are designed.
+
+The composed `SessionMaintenance` façade exposes two current capabilities:
+
+```text
+lifecycle  joins project bootstrap and initializes or requires Session state
+schedule   joins evidence acceptance, applies effective policy, and schedules work
+```
+
+`SessionMaintenancePolicyService` is internal to `schedule`. It synchronizes
+policy in the same acceptance transaction before eligibility is evaluated.
+The façade exposes no repository or model. Consumers receive only the
+capability required by their workflow.
+
+`SessionMaintenanceRequestRepository` returns raw pending and running request
+facts and applies exact writes supplied by
+`SessionMaintenanceScheduleService`. Two partial unique indexes enforce at most
+one request in each active state per project. The schedule capability uses the
+caller's serialized acceptance transaction to enforce active-range contiguity,
+non-overlap, and monotonic pending extension; the indexes do not.
+
+Elapsed-time scheduling uses the raw `received_at` of the first Evidence Log
+item after the covered frontier when Session maintenance has never succeeded.
+`SessionMaintenanceEvidenceReader` defines this narrow read port, and
+`EvidenceLogRepository` implements it. The repository does not classify
+eligibility or select the frontier.
+
+Session Memory owns `SessionMaintenanceState` in a separate project-referenced
+table. `Project` owns the Evidence Log allocation coordinate but has no
+Session-specific cursor columns or reverse Session association. Application
+bootstrap creates both required rows atomically and calls the Session lifecycle
+capability for the Session-owned row. A guarded Session-state advance verifies
+through the caller's `IMMEDIATE` transaction that the supplied frozen request
+frontier moves forward without exceeding
+`Project.last_allocated_evidence_sequence`.
 
 The covered frontier records successful curation. The scheduled frontier is the
 highest sequence already assigned to a pending or running request. Eligibility
@@ -632,30 +709,43 @@ hash, required replay guarantees, and any evidence still needed by active or
 historical memory. Superseding one memory does not by itself authorize deletion
 because one evidence item may support several memories.
 
-## Shared memory infrastructure
+## Memory product interoperability boundary
 
-```ts
-type SharedMemoryEnvelope = {
-  identity: MemoryRecordIdentity
-  product: "session" | "project" | "personal" | "practice"
-  schemaVersion: SchemaVersion
-  scopeReferences: ScopeReference[]
-  provenance: Provenance
-  freshness: Freshness
-  lifecycle: Active | Stale | Superseded | Retracted
-  relations: MemoryRelations
-}
+```text
+MEMORY DOMAIN
+  -> tagged product-specific canonical reference
+      product identity
+      stable canonical node identity
+      exact canonical version or reference
+      provenance
+      freshness
+      lifecycle visibility
+      relationships
+
+  -> Session Memory owns its behavior
+  -> Project Memory owns its behavior
+  -> Personal Memory owns its behavior
+  -> Practice Memory owns its behavior
+
+  DOES NOT DEFINE
+    one generic memory payload
+    shared save, update, search, or maintain methods
+    one scope model, lifecycle transition system, or maintenance policy
 ```
 
-The shared envelope is infrastructure, not a universal memory ontology. Each
-memory product owns its content schema, admission policy, reconciliation
-granularity, and canonical repository.
+This is an interoperability contract, not a uniform behavioral interface.
+Consumers can exchange and inspect typed canonical references without erasing
+which product owns the memory. Each product owns its content schema, authority,
+scope and applicability, admission policy, reconciliation granularity,
+lifecycle transitions, canonical representation, and maintenance operations.
+The exact source representation of this root contract remains `OPEN`.
 
-The envelope identity names the independently reconcilable memory node. For
-Session Memory, one canonical SQLite record is one node. For Project, Personal,
-and Practice Memory, one canonical Markdown document is one node. Derived
-sections and chunks support retrieval only; they do not introduce a claim
-ontology or a finer canonical lifecycle.
+The canonical node identity exposed through the contract names the
+independently reconcilable memory node. For Session Memory, one canonical
+SQLite record is one node. For Project, Personal, and Practice Memory, one
+canonical Markdown document is one node. Derived sections and chunks support
+retrieval only; they do not introduce a claim ontology or a finer canonical
+lifecycle.
 
 ## Publication boundary
 
@@ -725,15 +815,16 @@ DATABASE ACCESS
   parameterized raw SQL remains available for SQLite-specific capabilities
 
 LEXICAL INDEX
-  SQLite FTS5 over Session Memory and canonical-Markdown semantic chunks
+  SQLite FTS5 available over Session Memory and canonical-Markdown semantic chunks
 
 VECTOR INDEX
-  sqlite-vec over the same retrievable units
+  sqlite-vec available over the same retrievable units
   one complete index generation per embedding contract
 
-APPLICATION POLICY
-  TypeScript performs reciprocal-rank fusion inside each memory product
-  TypeScript federates the four typed product result sets
+PRODUCT QUERY POLICY
+  each memory product selects its applicable retrieval signals
+  each memory product owns any rank fusion, score, threshold, and filters
+  QueryService collects the four typed qualified result sets
 ```
 
 FTS5 is an SQLite capability included in the packaged runtime, not a separate
@@ -764,30 +855,38 @@ switches only after that generation is complete; it never mixes query and
 document vectors from different contracts.
 
 SQLite executes lexical and vector retrieval. It does not own the meaning of a
-combined score. TypeScript runs the two searches, retains their independent
-signals, and applies inspectable rank-fusion policy separately for each memory
-product.
+combined score. Each memory product decides which available retrieval signals
+it uses and owns any inspectable TypeScript rank-fusion policy, score, and
+qualification threshold.
 
 ## Query architecture
 
 ```text
 question + caller context
   -> QueryService
-      -> resolve project, workspace context, user, and technologies
+      -> resolve working directory, project, workspace context, user, and technologies
+      -> managed project: Session, Project, Personal, and Practice are applicable
+      -> unmanaged directory: Personal and Practice are applicable
+          -> Session and Project are not applicable
+          -> no implicit project bootstrap
       -> for each applicable memory product
-          -> filter by product, project, applicability, lifecycle, and freshness
-          -> run FTS5 lexical retrieval
-          -> run sqlite-vec retrieval with that product's embedding contract
-          -> fuse lexical and vector ranks in TypeScript
-          -> hydrate canonical Session records or Markdown artifacts
-          -> verify the canonical revision or content hash
-      -> federate bounded typed result sets across all four products
-      -> preserve product, scope, freshness, provenance, and contradictions
-      -> construct provider-neutral query AgentTask
+          -> pass the same question and product-applicable scope
+          -> product owns retrieval method and index access
+          -> product owns scoring and qualification threshold
+          -> product owns lifecycle, freshness, and applicability filters
+          -> product returns only its qualified result shape
+      -> preserve bounded typed results without a cross-product score
+      -> return the core QueryResult without agentic curation
+          -> qualified Session Memory records or parsed text
+          -> grouped Project, Personal, and Practice Markdown references
+          -> product-local relevance, freshness, and product outcomes
+
+core QueryResult
+  -> optional Query result aggregator — representation OPEN
       -> AgentAdapter
           -> CodexAgentAdapter
       -> validate the untrusted agent result
-      -> return answer, supporting memory references, and freshness
+      -> curated response plus the unchanged core QueryResult
 ```
 
 Query is exposed through the installed command. Once introduced, an MCP tool
@@ -795,15 +894,21 @@ calls a transport-neutral app client whose initial implementation invokes the
 installed command through its versioned machine protocol. Neither the MCP tool
 nor the client implements retrieval, ranking, or answer logic.
 
-Semantic similarity selects candidates; it does not decide truth,
-applicability, or conflict resolution.
+Semantic similarity contributes to product-local retrieval. Each memory
+product decides how it combines retrieval signals, applies its score threshold,
+and filters lifecycle, freshness, and applicability. QueryService does not
+replace those product policies with one global retrieval policy.
 
-Federation does not flatten all products into one global score. Query embeds the
-question once per distinct active embedding contract, retrieves and ranks each
-product independently, removes duplicate references, preserves contradictory
-candidates, and allocates answer context across the typed result sets. The
-query agent receives a federated packet that still identifies Session,
-Project, Personal, and Practice sources separately.
+Retrieval scores and qualification thresholds remain local to one product and
+one query. They are not answer confidence and are not comparable across memory
+products. The core QueryResult does not assign answer confidence.
+
+Federation does not flatten all products into one global score. Query invokes
+each applicable product independently and preserves every qualified typed
+result. Session returns product-owned records or parsed text. Project,
+Personal, and Practice return canonical Markdown references. An optional
+aggregator may curate these results later, but the core query neither depends
+on an agent nor removes results to fit a synthesized answer.
 
 ## Logical runtime surfaces
 
@@ -817,7 +922,8 @@ Maintenance Runtime
   autonomous execution of eligible memory work
 
 Agent Runtime
-  provider subprocesses launched for bounded curation and query tasks
+  provider subprocesses launched for bounded memory curation and optional
+  query-result aggregation
 
 MCP Runtime
   future agent-facing tool server
@@ -839,7 +945,14 @@ payload, or cancellation costs justify another integration path.
 
 ```text
 provider-specific data stops at provider adapters
+memory products share an interoperability contract, not behavior or payload
 project bootstrap defines oversight scope without provider knowledge
+project bootstrap atomically initializes product-owned Session maintenance state
+Project owns the Evidence Log coordinate but not Session Memory progress
+SessionMaintenance exposes lifecycle and schedule as composed capabilities
+Session policy synchronization is internal to scheduling
+each workflow receives only the Session maintenance capability it requires
+Session lifecycle joins bootstrap; Session scheduling and policy join acceptance
 machine-wide provider capture installation is independent of project registration
 activity outside every overseen project root is never persisted as evidence
 capture remains non-agentic and bounded
@@ -860,10 +973,13 @@ Obsidian compatibility never makes Obsidian an application dependency
 canonical Markdown uses immutable node identity independent of path and title
 Markdown semantic sections derive from a validated AST rather than text windows
 SQLite FTS5 owns lexical recall and pinned sqlite-vec owns vector recall
-TypeScript owns per-product rank fusion and four-product federation
+each memory product owns its retrieval, product-local rank fusion, score
+threshold, filters, and result representation
+QueryService owns four-product invocation and typed result collection
 embedding contracts never mix query and document vectors from different models
 supported application packages include their required SQLite runtime and extensions
-query preserves scope, freshness, provenance, and contradiction
+query preserves product identity, scope, freshness, provenance, and every
+qualified typed result without resolving contradictions
 raw evidence deletion requires retention policy and cannot follow one memory lifecycle alone
 caller-supplied attribution never grants memory authority
 cross-store publication is journaled and recoverable, not assumed atomic
@@ -871,15 +987,17 @@ the CLI machine protocol is versioned independently of human presentation
 MCP depends on an app client contract, not argv construction or console output
 one MCP business operation does not compose multiple mutating CLI requests
 provider adapters implement capabilities rather than individual workflows
-query and maintenance share AgentAdapter for bounded agent execution
+core query never depends on AgentAdapter
+optional query-result aggregation and memory maintenance may use AgentAdapter
+query is read-only and never performs implicit project bootstrap
 manual evidence insertion is deterministic even when its caller is an agent
 capture and insert share acceptance only after evidence is provider-neutral
-EvidenceAcceptanceService records maintenance intent but never curates memory
-one acceptance command, maintenance request, and maintenance attempt belongs to one project
-Evidence Log acceptance and maintenance eligibility commit atomically
+EvidenceAcceptanceService records Session maintenance intent but never curates memory
+one acceptance command, Session maintenance request, and Session maintenance attempt belongs to one project
+Evidence Log acceptance and Session maintenance eligibility commit atomically
 pending maintenance may coalesce while running maintenance keeps a frozen frontier
-failed or expired maintenance attempts leave their requests running and frozen
-failed or expired maintenance attempts never advance the covered cursor
+failed or expired Session maintenance attempts leave their requests running and frozen
+failed or expired Session maintenance attempts never advance the covered cursor
 Application.create owns process-scoped composition of concrete infrastructure
 SqliteRuntime initializes packaged SQLite before SqliteDatabase opens Sequelize
 SqliteDatabase is process-scoped and is never a global TypeScript singleton

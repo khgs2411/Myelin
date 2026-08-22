@@ -23,13 +23,11 @@ type EvidenceAcceptanceItem = Readonly<{
   }>
 }>
 
-type MaintenanceIntent = "policy" | "immediate"
-
 type EvidenceAcceptanceCommand = Readonly<{
   contractVersion: EvidenceAcceptanceContractVersion
   operationId: ApplicationOperationId
   items: ReadonlyArray<EvidenceAcceptanceItem>
-  maintenanceIntent: MaintenanceIntent
+  sessionMaintenanceIntent: SessionMaintenanceIntent
 }>
 
 type EvidenceAcceptanceReceipt = Readonly<{
@@ -40,16 +38,7 @@ type EvidenceAcceptanceReceipt = Readonly<{
     disposition: "accepted" | "replayed"
     sequence: ProjectEvidenceSequence
   }>
-  maintenance:
-    | Readonly<{
-        disposition: "not-requested"
-      }>
-    | Readonly<{
-        disposition: "created" | "coalesced"
-        requestId: MaintenanceRequestId
-        throughSequence: ProjectEvidenceSequence
-        priority: "normal" | "immediate"
-      }>
+  sessionMaintenance: SessionMaintenanceScheduleResult
   committedAt: normalized timestamp
 }>
 
@@ -62,7 +51,7 @@ class EvidenceAcceptanceService {
     projectId = require exactly one shared project identity across command.items
     commandFingerprint = versioned deterministic fingerprint of:
       command.contractVersion
-      command.maintenanceIntent
+      command.sessionMaintenanceIntent
       command.items in their supplied order
         each complete candidate
         each sourceReplay value or explicit absence
@@ -143,16 +132,25 @@ class EvidenceAcceptanceService {
           id: evidenceId
           receivedAt: transaction acceptance time
 
-      maintenance = evaluateMaintenance({
-        projectId,
-        latestProjectSequence,
-        maintenanceIntent: command.maintenanceIntent
-      })
+      IF newItems is not empty
+        sessionMaintenance =
+          await sessionMaintenanceSchedule.afterEvidenceAccepted(
+            {
+              projectId,
+              firstAcceptedSequence: sequenceRange.first,
+              latestProjectSequence: sequenceRange.last,
+              intent: command.sessionMaintenanceIntent,
+              evaluatedAt: transaction acceptance time
+            },
+            transaction
+          )
+      ELSE
+        sessionMaintenance = { disposition: "not-requested" }
 
       receipt = construct EvidenceAcceptanceReceipt from:
         accepted new items and their assigned sequences
         replayed items and their existing identities and sequences
-        maintenance disposition
+        Session maintenance disposition
         application-assigned acceptance transaction timestamp
 
       await acceptanceOperations.appendSuccessfulOperation(
@@ -171,7 +169,7 @@ class EvidenceAcceptanceService {
 
       return receipt
 
-    after commit, notify the maintenance runtime that durable work may exist
+    after commit, notify the Session maintenance runtime that durable work may exist
     return receipt
   }
 }
@@ -180,8 +178,8 @@ class EvidenceAcceptanceService {
 ## Atomic admission contract
 
 One acceptance command belongs to one project. Our app may process different
-projects in parallel, but no acceptance operation, maintenance request, or
-maintenance attempt combines projects.
+projects in parallel, but no acceptance operation, Session maintenance request,
+or Session maintenance attempt combines projects.
 
 The command is all-or-nothing. Invalid evidence, mixed project identity,
 operation-identity conflict, source-replay conflict, or transaction failure
@@ -198,7 +196,7 @@ Optional source replay identity protects repeat delivery across different
 application commands. Matching replay identity and evidence is a successful
 `replayed` disposition. Matching replay identity with different evidence is a
 conflict, never a correction. Only newly appended evidence receives a sequence
-and changes maintenance eligibility.
+and changes Session maintenance eligibility.
 
 Source-replay equality uses a versioned deterministic fingerprint of the
 complete `EvidenceCandidateDto`:
@@ -216,7 +214,7 @@ EXCLUDED
   EvidenceItemId
   receivedAt
   project-local sequence
-  maintenance intent and disposition
+  Session maintenance intent and disposition
 ```
 
 Matching `(domain, scheme, key)` and candidate fingerprint returns the existing
@@ -234,7 +232,7 @@ not the durable results produced by acceptance.
 ```text
 INCLUDED
   acceptance contract and fingerprint version
-  maintenanceIntent
+  sessionMaintenanceIntent
   ordered EvidenceCandidateDto values
   each source replay identity or its explicit absence
 
@@ -244,7 +242,7 @@ EXCLUDED
   receivedAt
   project-local sequence
   acceptance receipt
-  maintenance disposition
+  Session maintenance disposition
 ```
 
 Canonicalization preserves item order and duplicate candidates, uses one
@@ -256,9 +254,9 @@ must verify the source-material digest before fingerprinting.
 The fingerprint scheme and version are stored with its digest. The digest is
 not unique: separate operation identities can intentionally carry equal
 commands. Operation fingerprinting remains distinct from source replay
-comparison because operation equality also includes batch order and maintenance
-intent. The exact canonical encoding library and compatibility policy for older
-fingerprint versions remain `OPEN`.
+comparison because operation equality also includes batch order and Session
+maintenance intent. The exact canonical encoding library and compatibility
+policy for older fingerprint versions remain `OPEN`.
 
 ## Acceptance-operation persistence
 
@@ -293,13 +291,14 @@ cross-operation replay mechanism.
 `receipt_json` stores the complete `EvidenceAcceptanceReceipt` in the same
 database record. It is not a durable Markdown or filesystem artifact. The
 receipt schema version selects the decoder. A retry returns the stored receipt
-values without recomputing evidence or maintenance outcomes. If the runtime
+values without recomputing evidence or Session maintenance outcomes. If the runtime
 cannot decode that stored version, it reports incompatible durable state rather
 than manufacturing a new receipt.
 
 The table contains no pending or failed acceptance operations. A successful
-transaction commits the immutable record with its evidence and maintenance
-obligation. A rejected or rolled-back transaction leaves no operation record.
+transaction commits the immutable record with its evidence and Session
+maintenance obligation. A rejected or rolled-back transaction leaves no
+operation record.
 
 The SQLite write transaction begins before the operation lookup. Concurrent
 first submissions of the same `operation_id` therefore serialize: the first
@@ -330,11 +329,15 @@ replacement identity and is never derived from an evidence ID.
 
 ## Maintenance eligibility and coalescing
 
-The active `MaintenancePolicy` is an immutable, revisioned SQLite policy
-created from validated YAML configuration. `accept()` reads that active policy
-inside its transaction. A maintenance request records the policy revision that
-caused its eligibility. Exact threshold and elapsed-time values remain
-configuration, not constants in this service.
+`EvidenceAcceptanceService` delegates Session request decisions to its injected
+[`SessionMaintenanceScheduleService`](../session-maintenance/session-maintenance-schedule.service.ts.md).
+When the command appends new evidence, it supplies the accepted sequence range,
+intent, acceptance time, and current transaction. A replay-only command does
+not create, extend, or promote a maintenance request. The schedule capability
+synchronizes its injected validated effective policy inside the current
+transaction and evaluates against the exact returned immutable revision. A
+created request records that revision. Exact threshold and elapsed-time values
+remain configuration, not constants in this service.
 
 Two frontiers prevent overlapping work:
 
@@ -350,57 +353,23 @@ Evidence already inside a running request is not yet covered, but it is already
 scheduled. Count eligibility therefore uses evidence after the scheduled
 frontier rather than counting the running frontier again.
 
-```text
-evaluateMaintenance(input)
-  cursor = load the project's maintenance cursor
-  running = load the project's optional running request
-  pending = load the project's optional pending request
+The schedule capability owns active-chain validation, covered and scheduled
+frontier calculation, count, elapsed-time and immediate eligibility, and the
+choice of exact request write. Its
+[`SessionMaintenanceEvidenceReader`](../session-maintenance/session-maintenance-evidence.reader.ts.md)
+port supplies the first uncovered Evidence Log `received_at` when no Session
+maintenance has succeeded. `EvidenceLogRepository` implements that narrow port
+without deciding eligibility.
 
-  coveredFrontier = cursor.lastCoveredSequence
-  scheduledFrontier = maximum of:
-    coveredFrontier
-    running.throughSequence when running exists
-    pending.throughSequence when pending exists
-
-  IF pending exists
-    extend pending.throughSequence through the latest newly accepted evidence
-
-    IF input.maintenanceIntent == "immediate"
-      promote pending.priority to "immediate"
-
-    return the coalesced pending request
-
-  unscheduledRange = scheduledFrontier exclusive through latestProjectSequence
-
-  IF unscheduledRange is empty
-    return "not-requested"
-
-  countEligible = unscheduledRange.count >= policy.evidenceCountThreshold
-
-  timeAnchor =
-    cursor.lastSuccessfulMaintenanceAt
-    OR first uncovered evidence time when maintenance has never succeeded
-
-  timeEligible = now - timeAnchor >= policy.elapsedInterval
-  immediateEligible = input.maintenanceIntent == "immediate"
-
-  IF NOT countEligible AND NOT timeEligible AND NOT immediateEligible
-    return "not-requested"
-
-  create one pending MaintenanceRequest:
-    project = input.projectId
-    fromSequenceExclusive = scheduledFrontier
-    throughSequenceInclusive = latestProjectSequence
-    state = "pending"
-    priority = "immediate" when immediateEligible, otherwise "normal"
-    maintenancePolicyRevision = policy.revision
-
-  return the created request
-```
+The schedule capability joins the `IMMEDIATE` transaction already owned by
+`accept()`. It does not open or nest a transaction. The repositories return raw
+domain snapshots and apply only the exact insert, extension, or priority
+promotion selected by the schedule capability.
 
 The first accepted evidence starts the elapsed-time clock when maintenance has
 never succeeded. Time passing alone does not invoke maintenance. The next
-accepted evidence performs the eligibility evaluation.
+accepted evidence asks the schedule capability to perform the eligibility
+evaluation.
 
 `immediate` is another trigger for the same maintenance path. It bypasses count
 and elapsed-time eligibility, includes all currently unscheduled evidence
@@ -422,24 +391,24 @@ execution attempt or advance the covered cursor.
 Later maintenance execution preserves these established relationships:
 
 ```text
-MaintenanceRequest
+SessionMaintenanceRequest
   state: pending | running | satisfied
   owns the finite evidence frontier that must be processed
 
-MaintenanceAttempt
+SessionMaintenanceAttempt
   state: running | succeeded | failed
   owns one execution and its failure evidence
   holds a renewable lease owner and lease expiry
 
 successful current attempt
   -> satisfy request
-  -> advance cursor through the frozen request frontier
+  -> advance SessionMaintenanceState through the frozen request frontier
 
 failed or expired attempt
   -> retain failed attempt history
   -> keep request running with its frontier frozen
   -> leave request eligible for a replacement attempt
-  -> do not advance cursor
+  -> do not advance SessionMaintenanceState
 ```
 
 Recovery must atomically replace the current failed or expired attempt without
@@ -449,8 +418,8 @@ advance the cursor after replacement. The concrete worker, claim, retry, and
 publication owners remain outside this service and are not yet shaped.
 
 The post-commit notification is only an acceleration. Failure to deliver that
-notification cannot remove the durable maintenance request or make another
-hook event necessary for recovery.
+notification cannot remove the durable Session maintenance request or make
+another hook event necessary for recovery.
 
 ## Remaining persistence boundary
 
@@ -459,6 +428,28 @@ The acceptance-operation record above is represented by the
 [`EvidenceAcceptanceOperationRepository`](../storage/sqlite/repositories/evidence-acceptance-operation.repository.ts.md)
 owns operation lookup and immutable insertion through the transaction supplied
 by this service.
+[`SessionMaintenancePolicy`](../storage/sqlite/models/session-maintenance-policy.model.ts.md)
+owns immutable project-effective Session policy revisions.
+[`SessionMaintenancePolicyRepository`](../storage/sqlite/repositories/session-maintenance-policy.repository.ts.md)
+supplies the latest revision to
+[`SessionMaintenancePolicyService`](../session-maintenance/session-maintenance-policy.service.ts.md)
+through this service's acceptance transaction. The policy service appends
+changed effective values through the same repository in that transaction and
+returns the exact revision used by scheduling.
+[`SessionMaintenanceRequest`](../storage/sqlite/models/session-maintenance-request.model.ts.md)
+owns finite Session maintenance obligations and their active-state
+multiplicity constraints.
+[`SessionMaintenanceRequestRepository`](../storage/sqlite/repositories/session-maintenance-request.repository.ts.md)
+returns raw active snapshots and applies the exact insert, extension, or
+priority-promotion selected by the schedule capability.
+[`SessionMaintenanceState`](../storage/sqlite/models/session-maintenance-state.model.ts.md)
+owns Session Memory's project-scoped covered frontier outside the `Project`
+model. Its
+[`SessionMaintenanceStateRepository`](../storage/sqlite/repositories/session-maintenance-state.repository.ts.md)
+supplies the transactional snapshot used by the schedule capability. The
+[`SessionMaintenanceLifecycleService`](../session-maintenance/session-maintenance-lifecycle.service.ts.md)
+owns its use during project bootstrap. Its guarded advance operation belongs to
+later successful maintenance completion, not acceptance.
 `SqliteDatabase` owns
 the process-scoped Sequelize connection and `IMMEDIATE` write-transaction
 boundary. [`EvidenceLogRepository`](../storage/sqlite/repositories/evidence-log.repository.ts.md)

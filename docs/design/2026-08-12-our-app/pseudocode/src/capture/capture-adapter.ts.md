@@ -122,5 +122,5 @@ outcome.
 
 It does not own the provider or channel route that selected it. That route is
 an immutable application-composition fact. The adapter also does not inspect
-machine state, select maintenance policy, resolve project or workstream
+machine state, select Session maintenance policy, resolve project or workstream
 identity, append evidence, or curate any memory product.

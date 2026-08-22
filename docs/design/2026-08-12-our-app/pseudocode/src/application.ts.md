@@ -39,10 +39,15 @@ type SqliteApplicationConfiguration = Readonly<{
   runtime: SqliteRuntimeConfiguration
 }>
 
+type MaintenanceConfiguration = Readonly<{
+  session: ValidatedEffectiveSessionMaintenancePolicy
+}>
+
 type RuntimeApplicationConfiguration = {
   captureProvider: CaptureProviderConfiguration
   agentExecution: AgentExecutionProviderConfiguration
   sqlite: SqliteApplicationConfiguration
+  maintenance: MaintenanceConfiguration
   // OPEN: remaining machine configuration joins this shape when designed
 }
 
@@ -52,7 +57,7 @@ class Application {
     queryService
     evidenceInsertionService
     sqliteDatabase
-    // OPEN: application-service owner for project registration
+    // OPEN: application-service owner for project bootstrap
   }
 
   STATIC async create(
@@ -67,10 +72,30 @@ class Application {
     captureAdapter = construct the capture-provider capability selected by:
       configuration.captureProvider.invocationContext.route.provider
     construct SQLite repositories with the same sqliteDatabase instance
+    sessionMaintenanceStateRepository = construct with sqliteDatabase
+    sessionMaintenancePolicyRepository = construct with sqliteDatabase
+    sessionMaintenanceRequestRepository = construct with sqliteDatabase
+    sessionMaintenanceLifecycle = construct with:
+      sessionMaintenanceStateRepository
+    sessionMaintenancePolicy = construct with:
+      sessionMaintenancePolicyRepository
+    sessionMaintenanceSchedule = construct with:
+      configuration.maintenance.session
+      sessionMaintenancePolicy
+      sessionMaintenanceStateRepository
+      sessionMaintenanceRequestRepository
+      evidenceLogRepository through SessionMaintenanceEvidenceReader
+    sessionMaintenance = construct with:
+      lifecycle: sessionMaintenanceLifecycle
+      schedule: sessionMaintenanceSchedule
     workspaceContextService = construct with its persistence dependencies
-    evidenceAcceptanceService = construct with its persistence dependencies
+    evidenceAcceptanceService = construct with:
+      its evidence-acceptance persistence dependencies
+      sessionMaintenance.schedule
 
-    agentAdapter = construct the configured agent-execution capability
+    // OPEN: construct AgentAdapter when the first shaped memory-maintenance
+    // workflow or optional query-result aggregator requires it. Core query
+    // does not require agent execution.
 
     evidenceCaptureService = construct with:
       configuration.captureProvider.invocationContext
@@ -80,23 +105,32 @@ class Application {
     evidenceInsertionService = construct with:
       workspaceContextService
       evidenceAcceptanceService
-    queryService = construct with its dependencies
-    // OPEN: construct the project-registration owner once its source boundary
-    // is shaped
+    queryService = construct with:
+      workspaceContextService
+      Session Memory query capability once shaped
+      Project Memory query capability once shaped
+      Personal Memory query capability once shaped
+      Practice Memory query capability once shaped
+    // AgentAdapter is not a QueryService dependency. An optional later query
+    // result aggregator may receive it through its own application boundary.
+    // OPEN: construct the project-bootstrap owner once its source boundary
+    // is shaped; inject only sessionMaintenance.lifecycle
 
     return new Application({
       evidenceCaptureService,
       queryService,
       evidenceInsertionService,
       sqliteDatabase,
-      project registration owner
+      project bootstrap owner
     })
   }
 
   bootstrapProject(
     input: ProjectBootstrapInput
   ): Promise<ProjectBootstrapResult> {
-    delegate to the OPEN project-registration owner
+    delegate to the OPEN project-bootstrap owner, which uses one write
+    transaction to coordinate Project registration and product-owned
+    Session maintenance lifecycle initialization
   }
 
   capture(input: CaptureInput): Promise<CaptureResult> {
@@ -143,8 +177,12 @@ type ProjectBootstrapResult = Readonly<{
 `Application.create` owns asynchronous dependency construction and returns one
 application instance per process. It initializes the packaged SQLite runtime,
 opens one process-scoped `SqliteDatabase`, and injects that same instance into
-the process's SQLite repositories. `Application.close` releases the database
-connection during CLI cleanup.
+the process's SQLite repositories. It composes one `SessionMaintenance` façade
+from independently injectable lifecycle and schedule capabilities. The schedule
+capability receives the validated effective Session policy and its internal
+policy service during composition.
+
+`Application.close` releases the database connection during CLI cleanup.
 
 For a capture invocation, the CLI resolves the explicitly declared provider and
 channel into one immutable `CaptureInvocationContext` before composition.
@@ -157,12 +195,23 @@ application-wide provider.
 The instance owns the stable operation names and delegates each operation to
 the service that owns its workflow.
 
-`bootstrapProject` is provider-neutral. It registers one exact directory in
-the `Project` model as an oversight root and returns its immutable
-SQLite-assigned identity. Git-backed projects also return their bundled
-repository root. The source file and concrete application-service owner for
-this registration workflow remain `OPEN`; `Application` does not absorb that
-workflow merely because it exposes the operation.
+`bootstrapProject` is provider-neutral. Its delegated application owner uses
+one SQLite write transaction to register one exact directory in the `Project`
+model and calls `sessionMaintenance.lifecycle.initializeNewProject` for a new
+project. For an already-registered project, it calls
+`sessionMaintenance.lifecycle.requireInitializedProject`. The operation
+returns the immutable SQLite-assigned project identity and, for Git-backed
+projects, the repository root. The source file and concrete application-service
+owner for this bootstrap workflow remain `OPEN`; `Application` does not absorb
+that workflow merely because it exposes the operation.
+
+Composition may hold the complete `SessionMaintenance` façade, but workflow
+consumers receive only the capability they need. `EvidenceAcceptanceService`
+receives `schedule`, and the project-bootstrap owner receives `lifecycle`.
+`SessionMaintenancePolicyService` remains internal to scheduling. When
+acceptance supplies the resolved project and its `IMMEDIATE` transaction,
+scheduling synchronizes the injected effective policy before it evaluates
+eligibility.
 
 It does not expose its services, normalize native activity, curate memory, or
 persist evidence or project registration directly. `EvidenceCaptureService` receives

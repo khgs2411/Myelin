@@ -117,7 +117,7 @@ class EvidenceCaptureService {
       contractVersion: current EvidenceAcceptanceContractVersion,
       operationId,
       items: [acceptanceItem],
-      maintenanceIntent: "policy"
+      sessionMaintenanceIntent: "policy"
     })
 
     return {
@@ -173,7 +173,7 @@ safe diagnostic.
 ## Evidence-acceptance handoff
 
 The handoff contains one provider-neutral evidence candidate as a one-item
-collection. `EvidenceCaptureService` selects the capture maintenance-intent
+collection. `EvidenceCaptureService` selects the Session maintenance-intent
 category; it does not choose count or elapsed-time thresholds.
 
 Origin and replay metadata remain separate. The capture origin records the
@@ -192,8 +192,8 @@ operation; only reliable source replay metadata can suppress it across
 deliveries.
 
 Durable acceptance appends evidence and records the corresponding count- and
-time-based maintenance obligation as one recoverable operation. The first
-accepted evidence after an elapsed-time condition becomes true performs the
+time-based Session maintenance obligation as one recoverable operation. The
+first accepted evidence after an elapsed-time condition becomes true performs the
 next eligibility evaluation. No provider lifecycle signal is required.
 
 Adapter-ignored and unmanaged input do not reach evidence acceptance. Rejected
