@@ -1,6 +1,11 @@
 # `src/workspace/workspace-context.service.ts`
 
 > Pseudocode artifact. Non-executable reference shape.
+>
+> Supersession notice: Targeted insertion and development fixtures select a
+> registered project with its public `ProjectKey`. Provider capture continues
+> to resolve observed working directories. See
+> [Project Identity](../../../../2026-09-02-ingestion-boundaries/pseudocode/project-identity.md).
 
 Intended destination: `src/workspace/workspace-context.service.ts`
 

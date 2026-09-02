@@ -1,12 +1,19 @@
 # `src/cli.ts`
 
 > Pseudocode artifact. Non-executable reference shape.
+>
+> Supersession notice: The
+> [Ingestion Boundaries design unit](../../../2026-09-02-ingestion-boundaries/feature-shape.md)
+> controls the public project key and targeted-memory insertion contracts. The
+> [Local Ingestion Prototype Foundation](../../../2026-09-02-ingestion-implementation-foundation/pseudocode/src/cli.ts.md)
+> controls the repository-local manual command syntax. The development capture
+> fixture uses a separate internal development command family.
 
 Intended destination: `src/cli.ts`
 
 `src/cli.ts` is the shared process entry surface for the application's four
 public behaviors: project bootstrap, automatic capture, brain query, and
-manual evidence insertion. It routes these behaviors but does not implement
+targeted durable-memory proposals. It routes these behaviors but does not implement
 their product logic.
 
 It is published as one named command installed on the user's machine. The
@@ -112,9 +119,10 @@ ON invocation
         explain that project bootstrap is available as a separate explicit
           operation requiring the intended exact oversight root
 
-    "insert"
-      require the exact root of one bootstrapped overseen project
-      require one or more ordered evidence-content items
+    "memory propose <project | personal | practice>"
+      require one explicit durable memory target from the command route
+      require one public key for a bootstrapped project context
+      require one or more ordered content items
       application = await Application.create(runtime configuration)
 
       insertionSource = establish from the command route:
@@ -125,28 +133,29 @@ ON invocation
         optional for direct CLI use
         required for the future MCP client
 
-      result = await application.insertEvidence({
+      result = await application.proposeMemory({
         invocationContext: {
           source: { key: insertionSource }
         },
         request: {
-          projectRoot: supplied exact project root,
+          projectKey: supplied public project key,
+          target: selected durable memory target,
           items: supplied content items in their original order,
           clientReference: supplied reference when present
         }
       })
 
-      return a safe evidence acceptance receipt
-      receipt success means evidence and its immediate Session maintenance
-      eligibility
-      are durable; it does not mean maintenance completed
+      return a safe Inbox-acceptance result
+      accepted or replayed means the selected product Inbox and receipt are durable
+      state explicitly that product curation has not run
+      never report that canonical memory changed
 
     otherwise
       return invalid invocation
 
 ON failure
   return an unsuccessful process outcome with a safe diagnostic
-  never echo captured or manually inserted evidence
+  never echo captured evidence or proposed content
 
 ON process cleanup after application construction
   await application.close()
@@ -174,11 +183,11 @@ project-registration use case. It does not infer a broader project root, write
 markers into the project, or install machine-wide hooks. Application
 installation owns provider capture mechanics separately.
 
-The insertion command requires an exact bootstrapped project root rather than
-inferring a project from the CLI process directory. It keeps the client
-reference optional for ordinary CLI use. The future agent-only MCP client must
-supply one for replay-safe resubmission. An agent may still use the CLI without
-one, but then safe retry behavior is caller responsibility.
+The proposal command requires one public key for a bootstrapped project context
+rather than inferring a project from the CLI process directory. It keeps the
+client reference optional for ordinary CLI use. The future agent-only MCP
+client must supply one for replay-safe resubmission. An agent may still use the
+CLI without one, but then safe retry behavior is caller responsibility.
 
 It does not:
 
@@ -189,13 +198,14 @@ It does not:
 - write evidence or canonical memory directly;
 - persist project registration directly;
 - install, repair, or remove provider hooks;
-- decide how inserted evidence changes memory or documentation;
+- decide whether proposed content changes memory or documentation;
 - curate memory or documentation itself;
-- classify inserted evidence into a memory product.
+- select a memory product beyond the caller's explicit command route.
 
-The insertion command returns after atomic evidence acceptance and durable
-Session maintenance eligibility. Scheduling, coalescing, frontier selection, and
-maintenance execution belong to the evidence acceptance and maintenance owners.
+The proposal command returns after atomic acceptance by one selected product
+Inbox. Product-local lifecycle, curation, rejection, and canonical publication
+belong to Project, Personal, or Practice Memory. Session Memory and Session
+maintenance do not participate in this operation.
 
 The future MCP server may expose methods that do not mirror command names, but
 its CLI-backed client maps each business operation to one machine-protocol

@@ -1,6 +1,10 @@
 # `src/evidence/evidence-insertion.service.ts`
 
 > Pseudocode artifact. Non-executable reference shape.
+>
+> Superseded: Manual insertion now explicitly targets Project, Personal, or
+> Practice Memory and does not enter Session Memory. The current boundary is
+> [Targeted Memory Insertion](../../../../2026-09-02-ingestion-boundaries/pseudocode/targeted-memory-insertion.md).
 
 Intended destination: `src/evidence/evidence-insertion.service.ts`
 

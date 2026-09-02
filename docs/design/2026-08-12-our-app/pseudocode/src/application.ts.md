@@ -1,6 +1,12 @@
 # `src/application.ts`
 
 > Pseudocode artifact. Non-executable reference shape.
+>
+> Supersession notice: The
+> [Ingestion Boundaries design unit](../../../2026-09-02-ingestion-boundaries/feature-shape.md)
+> controls the public project key, targeted-memory insertion, and development
+> fixture application boundaries. Conflicting operations below are historical
+> baseline only.
 
 Intended destination: `src/application.ts`
 
@@ -56,7 +62,8 @@ class Application {
   PRIVATE CONSTRUCTOR dependencies {
     evidenceCaptureService
     queryService
-    evidenceInsertionService
+    targetedMemoryInsertionService
+    developmentCaptureFixture
     sqliteDatabase
     // OPEN: application-service owner for project bootstrap
   }
@@ -103,9 +110,10 @@ class Application {
       captureAdapter
       workspaceContextService
       evidenceAcceptanceService
-    evidenceInsertionService = construct with:
-      workspaceContextService
-      evidenceAcceptanceService
+    targetedMemoryInsertionService = construct according to the accepted
+      Targeted Memory Insertion and product Inbox boundaries
+    developmentCaptureFixture = construct according to the accepted
+      Development Capture Fixture and Captured Evidence Ingestion boundaries
     queryService = construct with:
       workspaceContextService
       Session Memory query capability once shaped
@@ -120,7 +128,8 @@ class Application {
     return new Application({
       evidenceCaptureService,
       queryService,
-      evidenceInsertionService,
+      targetedMemoryInsertionService,
+      developmentCaptureFixture,
       sqliteDatabase,
       project bootstrap owner
     })
@@ -142,10 +151,16 @@ class Application {
     return queryService.query(input)
   }
 
-  insertEvidence(
-    input: EvidenceInsertionInput
+  proposeMemory(
+    input: TargetedMemoryInsertionInput
+  ): Promise<TargetedInsertionResult> {
+    return targetedMemoryInsertionService.insert(input)
+  }
+
+  captureFixture(
+    input: DevelopmentCaptureFixtureRequest
   ): Promise<EvidenceAcceptanceReceipt> {
-    return evidenceInsertionService.insert(input)
+    return developmentCaptureFixture.capture(input)
   }
 
   close(): Promise<void> {

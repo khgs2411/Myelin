@@ -1,6 +1,12 @@
 # `src/capture/evidence-capture.service.ts`
 
 > Pseudocode artifact. Non-executable reference shape.
+>
+> Supersession notice: Source-material and `EvidenceCandidateDto` construction
+> now belong to
+> [`CapturedEvidenceIngestionService`](../../../../2026-09-02-ingestion-boundaries/pseudocode/src/capture/captured-evidence-ingestion.service.ts.md).
+> This service retains provider normalization, observed-directory resolution,
+> and delegation to that shared owner.
 
 Intended destination: `src/capture/evidence-capture.service.ts`
 

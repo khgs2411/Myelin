@@ -1,11 +1,15 @@
 # `src/evidence/evidence-item.dto.ts`
 
 > Pseudocode artifact. Non-executable reference shape.
+>
+> Supersession notice: `EvidenceCandidateDto` now belongs to captured evidence.
+> Targeted durable-memory insertion uses product-owned Inbox candidates. See
+> [Targeted Memory Insertion](../../../../2026-09-02-ingestion-boundaries/pseudocode/targeted-memory-insertion.md).
 
 Intended destination: `src/evidence/evidence-item.dto.ts`
 
 This artifact defines two related immutable provider-neutral contracts.
-`EvidenceCaptureService` and `EvidenceInsertionService` construct
+Provider capture and the development capture fixture construct
 `EvidenceCandidateDto` values before durable admission.
 `EvidenceAcceptanceService` creates `EvidenceItemDto` values only after it admits
 new evidence. Source workflows therefore do not own durable evidence identity
@@ -31,24 +35,15 @@ type EvidenceSourceMaterial = Readonly<{
   }>
 }>
 
-type EvidenceOrigin =
-  | Readonly<{
-      kind: "capture"
-      source: EvidenceSourceIdentity
-      event: Readonly<{
-        nativeKind: string
-        sessionReference?: string
-        interactionReference?: string
-      }>
-    }>
-  | Readonly<{
-      kind: "insertion"
-      source: EvidenceSourceIdentity
-      request: Readonly<{
-        clientReference?: string
-        batchItemIndex: non-negative integer
-      }>
-    }>
+type EvidenceOrigin = Readonly<{
+  kind: "capture"
+  source: EvidenceSourceIdentity
+  event: Readonly<{
+    nativeKind: string
+    sessionReference?: string
+    interactionReference?: string
+  }>
+}>
 
 type EvidenceCandidateDto = Readonly<{
   origin: EvidenceOrigin
@@ -74,12 +69,12 @@ SQLite auto-increment primary key inside the acceptance transaction.
 `EvidenceAcceptanceService` then constructs `EvidenceItemDto` from the
 validated candidate, generated identity, and acceptance time. A replayed
 candidate reuses the existing accepted evidence identity and does not allocate
-another ID. Evidence identity is not a provider event reference, insertion
-idempotency key, or deduplication identity.
+another ID. Evidence identity is not a provider event reference or replay
+identity.
 
 `origin.kind` identifies which application workflow constructed the DTO.
 `origin.source` is a stable application-owned source identity, such as
-`codex.hook`, `claude-code.hook`, `our-app.cli`, or `our-app.mcp`.
+`codex.hook`, `claude-code.hook`, or `development.fixture`.
 
 A capture origin preserves the provider's native lifecycle event plus the
 normalized session and interaction coordinates that the provider supplies.
@@ -87,25 +82,16 @@ For Codex, `turn_id` becomes `interactionReference`. For Claude Code,
 `prompt_id` becomes `interactionReference` when present. Neither provider field
 name enters the shared contract.
 
-An insertion origin preserves the insertion channel, ordered batch position,
-and optional caller reference. The CLI or future MCP entry boundary establishes
-the insertion channel; request content cannot override it. Human or agent
-identity, caller authority, and correction authorization never enter
-`EvidenceOrigin` without a separately proven contract.
-
 ## Content and source material
 
-`content` is one normalized string. A conversation message, manually supplied
-statement, URL, documentation reference, file path, or explanation remains
-content without receiving a semantic content kind during capture or insertion.
-Later curation interprets its meaning.
+`content` is one normalized captured-evidence string. A conversation message,
+URL, documentation reference, file path, or explanation remains content without
+receiving a semantic content kind during capture. Later curation interprets its
+meaning.
 
 `sourceMaterial` preserves the exact content-bearing input before
 normalization. Capture stores the exact provider payload with its media type.
-CLI and MCP insertion store the exact submitted evidence string as
-`text/plain`; they do not store the complete command or tool request envelope.
-Manual insertion uses the same exact string for normalized `content` and source
-material because its input is already a curated evidence statement.
+The development fixture stores the exact transcript as `text/plain`.
 
 The SHA-256 digest is computed over the UTF-8 bytes of the preserved `content`.
 It proves the integrity of that stored material. It is not evidence identity,
@@ -141,11 +127,6 @@ time, and source material. The comparison excludes the replay lookup identity
 and all acceptance-owned results, including evidence identity, acceptance time,
 project sequence, and maintenance behavior.
 
-Manual insertion uses its optional request-level client reference to derive a
-stable acceptance `operationId` for the complete ordered batch. It does not
-create one source-replay identity per item. The stored operation fingerprint
-detects any change to batch content, count, or order on retry.
-
 Codex can derive a replay key from its session, turn, and native event kind
 under a versioned scheme. Claude Code can use its session, prompt, and native
 event kind when `prompt_id` is present. Hashing content is not a safe fallback
@@ -163,9 +144,8 @@ time. `receivedAt` is assigned only by `EvidenceAcceptanceService` when the new
 evidence commits to the Evidence Log. It is an acceptance result and does not
 participate in operation-command equality.
 
-Manual insertion leaves `occurredAt` absent. Its submission time is
-`receivedAt`, and the application does not claim that the stated fact occurred
-when it was submitted.
+The development fixture leaves `occurredAt` absent because the fixture does not
+claim when the represented work occurred.
 
 ## Runtime and persistence boundary
 
@@ -175,7 +155,7 @@ The Evidence Log persistence projection adds ordered and indexed columns
 without changing either DTO.
 
 ```text
-EvidenceCaptureService | EvidenceInsertionService
+EvidenceCaptureService | Development Capture Fixture
   -> EvidenceCandidateDto
       -> EvidenceAcceptanceService
           -> acceptance time + project-local sequence

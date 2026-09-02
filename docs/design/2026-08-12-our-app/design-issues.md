@@ -5,9 +5,9 @@ It does not track required artifacts or behavior that has not yet been designed.
 
 Resolved design belongs in the artifact that owns it:
 
-- [product behavior](BRAIN.pseudocode.md)
-- [architecture and stack](architecture.pseudocode.md)
-- [predicted implementation surface](feature-shape.md)
+- [product behavior](pseudocode/BRAIN.pseudocode.md)
+- [architecture and stack](pseudocode/architecture.pseudocode.md)
+- [canonical application shape](../feature-shape.md)
 
 When an issue is resolved, its design moves into the owning artifact and the
 issue is removed from this file.
@@ -16,8 +16,8 @@ issue is removed from this file.
 
 ### Durable workstream identity
 
-**Exposed by:** [workspace context resolution](src/workspace/workspace-context.service.ts.md)
-and [Session Memory scope](BRAIN.pseudocode.md).
+**Exposed by:** [workspace context resolution](pseudocode/src/workspace/workspace-context.service.ts.md)
+and [Session Memory scope](pseudocode/BRAIN.pseudocode.md).
 
 **Established:**
 
@@ -36,9 +36,9 @@ are shaped.
 
 ### Session Memory branch and project scope
 
-**Exposed by:** [workspace context resolution](src/workspace/workspace-context.service.ts.md),
-[the Evidence Log acceptance boundary](src/evidence/evidence-acceptance.service.ts.md),
-and [Session Memory behavior](BRAIN.pseudocode.md).
+**Exposed by:** [workspace context resolution](pseudocode/src/workspace/workspace-context.service.ts.md),
+[the Evidence Log acceptance boundary](pseudocode/src/evidence/evidence-acceptance.service.ts.md),
+and [Session Memory behavior](pseudocode/BRAIN.pseudocode.md).
 
 **Established:**
 
@@ -70,8 +70,8 @@ Session Memory query scope and fallback contract are finalized.
 
 ### Exact project source state
 
-**Exposed by:** [workspace context observations](src/workspace/workspace-context.service.ts.md)
-and [Project Memory publication](BRAIN.pseudocode.md).
+**Exposed by:** [workspace context observations](pseudocode/src/workspace/workspace-context.service.ts.md)
+and [Project Memory publication](pseudocode/BRAIN.pseudocode.md).
 
 **Established:**
 
@@ -89,7 +89,7 @@ precondition are finalized.
 
 ### Higher-layer trigger and catch-up policy
 
-**Exposed by:** [the four-product maintenance lifecycle](BRAIN.pseudocode.md).
+**Exposed by:** [the four-product maintenance lifecycle](pseudocode/BRAIN.pseudocode.md).
 
 **Established:**
 
@@ -109,8 +109,8 @@ before the first higher-layer curator is shaped.
 
 ### Worker wake and liveness model
 
-**Exposed by:** [the asynchronous execution architecture](architecture.pseudocode.md)
-and [autonomous maintenance behavior](BRAIN.pseudocode.md).
+**Exposed by:** [the asynchronous execution architecture](pseudocode/architecture.pseudocode.md)
+and [autonomous maintenance behavior](pseudocode/BRAIN.pseudocode.md).
 
 **Established:**
 
@@ -126,8 +126,8 @@ claims autonomous maintenance liveness.
 
 ### Crash recovery and idempotency
 
-**Exposed by:** [the maintenance lifecycle](BRAIN.pseudocode.md) and
-[the SQLite and Markdown architecture](architecture.pseudocode.md).
+**Exposed by:** [the maintenance lifecycle](pseudocode/BRAIN.pseudocode.md) and
+[the SQLite and Markdown architecture](pseudocode/architecture.pseudocode.md).
 
 **Established:**
 
@@ -210,7 +210,7 @@ canonical publication owner.
 
 ### Retry, quarantine, and terminal failure
 
-**Exposed by:** [agent execution and maintenance](architecture.pseudocode.md).
+**Exposed by:** [agent execution and maintenance](pseudocode/architecture.pseudocode.md).
 
 **Established:** Later evidence must continue even when one maintenance item
 repeatedly fails, and failed work must remain observable.
@@ -225,8 +225,8 @@ and before maintenance receipts are finalized.
 
 ### Memory-influence lineage
 
-**Exposed by:** [autonomous evidence-based authority](BRAIN.pseudocode.md) and
-[query-guided agent behavior](architecture.pseudocode.md).
+**Exposed by:** [autonomous evidence-based authority](pseudocode/BRAIN.pseudocode.md) and
+[query-guided agent behavior](pseudocode/architecture.pseudocode.md).
 
 **Established:**
 
@@ -243,7 +243,7 @@ Personal or Practice admission is finalized.
 
 ### Personal Memory admission policy
 
-**Exposed by:** [Personal Memory authority](BRAIN.pseudocode.md).
+**Exposed by:** [Personal Memory authority](pseudocode/BRAIN.pseudocode.md).
 
 **Established:**
 
@@ -259,7 +259,7 @@ confidence rules publish or revise a Personal Memory node?
 
 ### Practice Memory admission policy
 
-**Exposed by:** [Practice Memory authority](BRAIN.pseudocode.md).
+**Exposed by:** [Practice Memory authority](pseudocode/BRAIN.pseudocode.md).
 
 **Established:**
 
@@ -275,11 +275,11 @@ revises, or demotes a Practice Memory node?
 
 **Time to address:** When the Practice Memory curator is shaped.
 
-### MCP insertion submission context and authority
+### MCP targeted-memory submission context and authority
 
-**Exposed by:** [manual evidence insertion](src/evidence/evidence-insertion.service.ts.md),
-[the CLI process boundary](src/cli.ts.md), and
-[product-specific correction behavior](BRAIN.pseudocode.md).
+**Exposed by:** [targeted memory insertion](../2026-09-02-ingestion-boundaries/pseudocode/targeted-memory-insertion.md),
+[the CLI process boundary](pseudocode/src/cli.ts.md), and
+[product-specific correction behavior](pseudocode/BRAIN.pseudocode.md).
 
 **Established:**
 
@@ -297,49 +297,25 @@ revises, or demotes a Practice Memory node?
   responsibility when omitted.
 - The future agent-only MCP contract requires a client reference and the full
   context required by that transport.
-- Evidence insertion never directly mutates or fences memory.
-- Immediate intent schedules the same autonomous curation path used by other
-  accepted evidence.
+- Targeted insertion explicitly selects Project, Personal, or Practice Memory.
+- The selected product's Inbox and curator own admission; insertion never
+  directly mutates or fences canonical memory.
+- Targeted insertion does not enter Session Memory.
 
 **Unresolved:** Which agent and invocation facts the future MCP integration can
 establish independently of tool payload claims, and how product curators weigh
 that provenance without treating it as automatic human authority.
 
-**Time to address:** When the MCP integration or a memory curator first consumes
-agent-specific insertion provenance. This does not block the direct CLI
-insertion contract.
-
-### Captured and inserted evidence curation path
-
-**Exposed by:** [automatic evidence capture](src/capture/evidence-capture.service.ts.md),
-[manual evidence insertion](src/evidence/evidence-insertion.service.ts.md), and
-[the brain evidence boundary](BRAIN.pseudocode.md).
-
-**Established:**
-
-- Raw provider activity is accepted into the Evidence Log before agentic memory
-  interpretation. Capture must remain durable and non-agentic.
-- Manual insertion supplies already-curated evidence statements and does not
-  invoke an agent before evidence acceptance.
-- Curated insertion content is still evidence rather than accepted memory.
-- Evidence acceptance is deterministic and does not create memory candidates.
-- The later memory workflow decides which Session, Project, Personal, or
-  Practice Memory candidates accepted evidence supports.
-
-**Unresolved:** How the Session Memory ingestion workflow presents raw captured
-evidence and curated inserted evidence to curation, and whether inserted
-statements use a distinct extraction path while still participating in the same
-memory-admission rules.
-
-**Time to address:** When the Session Memory ingestion and curation owner is
-shaped. This does not block evidence insertion, acceptance, or persistence.
+**Time to address:** When the MCP integration or a durable-memory curator first
+consumes agent-specific insertion provenance. This does not block the direct
+CLI insertion contract.
 
 ## Project Memory
 
 ### Branch divergence
 
-**Exposed by:** [Project Memory behavior](BRAIN.pseudocode.md) and
-[workspace context](src/workspace/workspace-context.service.ts.md).
+**Exposed by:** [Project Memory behavior](pseudocode/BRAIN.pseudocode.md) and
+[workspace context](pseudocode/src/workspace/workspace-context.service.ts.md).
 
 **Established:**
 
@@ -356,8 +332,8 @@ finalized.
 
 ### Project-grounded curation workspace
 
-**Exposed by:** [Project Memory curation](BRAIN.pseudocode.md) and
-[provider filesystem policy](architecture.pseudocode.md).
+**Exposed by:** [Project Memory curation](pseudocode/BRAIN.pseudocode.md) and
+[provider filesystem policy](pseudocode/architecture.pseudocode.md).
 
 **Established:** Curation must preserve source-state attribution and the
 provider's read-only project boundary.
@@ -369,7 +345,7 @@ immutable snapshot, or an application-managed checkout?
 
 ### Overhaul and broad invalidation
 
-**Exposed by:** [Project Memory revision behavior](BRAIN.pseudocode.md).
+**Exposed by:** [Project Memory revision behavior](pseudocode/BRAIN.pseudocode.md).
 
 **Established:**
 
@@ -387,8 +363,8 @@ supersede, retain, or retract existing Project Memory nodes?
 
 ### Query freshness and degraded results
 
-**Exposed by:** [federated query behavior](BRAIN.pseudocode.md) and
-[the query architecture](architecture.pseudocode.md).
+**Exposed by:** [federated query behavior](pseudocode/BRAIN.pseudocode.md) and
+[the query architecture](pseudocode/architecture.pseudocode.md).
 
 **Established:**
 
@@ -430,9 +406,9 @@ addressed only when a curated query-response workflow is selected.
 
 ### Durable location and layout
 
-**Exposed by:** [the storage architecture](architecture.pseudocode.md),
-[the predicted file surface](feature-shape.md), and
-[canonical Markdown nodes](src/memory/markdown/markdown-memory-document.ts.md).
+**Exposed by:** [the storage architecture](pseudocode/architecture.pseudocode.md),
+[the canonical application shape](../feature-shape.md), and
+[canonical Markdown nodes](pseudocode/src/memory/markdown/markdown-memory-document.ts.md).
 
 **Established:**
 
@@ -451,8 +427,8 @@ open canonical paths.
 
 ### Embedding contract and index-generation lifecycle
 
-**Exposed by:** [hybrid retrieval architecture](architecture.pseudocode.md) and
-[semantic Markdown sections](src/memory/markdown/markdown-memory-document.ts.md).
+**Exposed by:** [hybrid retrieval architecture](pseudocode/architecture.pseudocode.md) and
+[semantic Markdown sections](pseudocode/src/memory/markdown/markdown-memory-document.ts.md).
 
 **Established:**
 
@@ -476,8 +452,8 @@ depends on vector results.
 
 ### Markdown publication revision and journal
 
-**Exposed by:** [canonical Markdown structure](src/memory/markdown/markdown-memory-document.ts.md)
-and [the SQLite and Markdown ownership split](architecture.pseudocode.md).
+**Exposed by:** [canonical Markdown structure](pseudocode/src/memory/markdown/markdown-memory-document.ts.md)
+and [the SQLite and Markdown ownership split](pseudocode/architecture.pseudocode.md).
 
 **Established:**
 
@@ -496,8 +472,8 @@ finalized.
 
 ### Evidence retention, privacy, and forgetting
 
-**Exposed by:** [append-only evidence and memory lifecycle](BRAIN.pseudocode.md)
-and [local storage architecture](architecture.pseudocode.md).
+**Exposed by:** [append-only evidence and memory lifecycle](pseudocode/BRAIN.pseudocode.md)
+and [local storage architecture](pseudocode/architecture.pseudocode.md).
 
 **Established:**
 
@@ -525,8 +501,8 @@ storage and privacy evidence.
 
 ### Application installation and machine integrations
 
-**Exposed by:** [the CLI boundary](src/cli.ts.md) and
-[the application distribution architecture](architecture.pseudocode.md).
+**Exposed by:** [the CLI boundary](pseudocode/src/cli.ts.md) and
+[the application distribution architecture](pseudocode/architecture.pseudocode.md).
 
 **Established:**
 
@@ -550,19 +526,24 @@ installation are shaped.
 
 ### CLI process contracts
 
-**Exposed by:** [the CLI entry point](src/cli.ts.md),
-[application composition](src/application.ts.md), and the future CLI-backed MCP
-client in [the architecture](architecture.pseudocode.md).
+**Exposed by:** [the CLI entry point](pseudocode/src/cli.ts.md),
+[application composition](pseudocode/src/application.ts.md), and the future CLI-backed MCP
+client in [the architecture](pseudocode/architecture.pseudocode.md).
 
 **Established:**
 
 - Native provider activity stays opaque to the CLI.
-- Failure diagnostics cannot echo captured or inserted evidence.
+- Failure diagnostics cannot echo captured evidence or proposed content.
+- The repository-local manual interface exposes
+  `memory propose <project | personal | practice>` and the internal
+  `dev capture-fixture` command family.
+- Direct CLI proposals accept exact ordered text, file, or explicit standard
+  input and keep the caller's replay reference optional.
 - Bootstrap success means an immutable project identity and its exact canonical
   oversight root are durably registered.
 - Capture success means durable evidence acceptance, not completed maintenance.
-- Insert success means durable evidence acceptance and durable immediate
-  Session maintenance eligibility, not completed maintenance.
+- Memory-proposal success means durable acceptance by exactly one selected
+  product Inbox, not completed curation or changed canonical memory.
 - Query success returns the typed core Session results, grouped documentation
   references, product-local relevance, freshness, and product outcomes.
 - Machine responses are stable protocol envelopes, not console text.
@@ -570,15 +551,16 @@ client in [the architecture](architecture.pseudocode.md).
   request.
 
 **Unresolved:** What framing, encoding, protocol version, environment fields,
-diagnostics, exit codes, receipts, cancellation, and compatibility rules does
-each command expose?
+detailed exit-code classes, structured diagnostics, receipt representation,
+cancellation, and compatibility rules does the future installed machine
+protocol expose?
 
 **Time to address:** As each command's application operation is shaped and
 before the CLI-backed MCP client is designed.
 
 ### Agent filesystem enforcement
 
-**Exposed by:** [the agent execution architecture](architecture.pseudocode.md).
+**Exposed by:** [the agent execution architecture](pseudocode/architecture.pseudocode.md).
 
 **Established:**
 
@@ -596,9 +578,9 @@ filesystem access.
 
 ### Workflow-specific response schemas and validation failures
 
-**Exposed by:** [shared agent execution](architecture.pseudocode.md), memory
+**Exposed by:** [shared agent execution](pseudocode/architecture.pseudocode.md), memory
 maintenance, and the optional query-result aggregation boundary in
-[product behavior](BRAIN.pseudocode.md).
+[product behavior](pseudocode/BRAIN.pseudocode.md).
 
 **Established:**
 
@@ -619,7 +601,7 @@ and before that workflow invokes the shared agent adapter.
 
 ### Packaged SQLite runtime and platform support
 
-**Exposed by:** [the self-contained SQLite architecture](architecture.pseudocode.md).
+**Exposed by:** [the self-contained SQLite architecture](pseudocode/architecture.pseudocode.md).
 
 **Established:**
 
@@ -644,7 +626,7 @@ implemented.
 
 ### Runtime, package manager, and SQLite access
 
-**Exposed by:** [the TypeScript stack](architecture.pseudocode.md).
+**Exposed by:** [the TypeScript stack](pseudocode/architecture.pseudocode.md).
 
 **Established:**
 
@@ -667,8 +649,8 @@ packaging and the supported native platform matrix remain under
 
 ### Runtime application configuration
 
-**Exposed by:** [application composition](src/application.ts.md) and
-[the provider-neutral architecture](architecture.pseudocode.md).
+**Exposed by:** [application composition](pseudocode/src/application.ts.md) and
+[the provider-neutral architecture](pseudocode/architecture.pseudocode.md).
 
 **Established:**
 
@@ -699,8 +681,8 @@ agent-execution dependencies.
 
 ### Validation and Markdown libraries
 
-**Exposed by:** [runtime boundary validation](architecture.pseudocode.md) and
-[the Markdown node contract](src/memory/markdown/markdown-memory-document.ts.md).
+**Exposed by:** [runtime boundary validation](pseudocode/architecture.pseudocode.md) and
+[the Markdown node contract](pseudocode/src/memory/markdown/markdown-memory-document.ts.md).
 
 **Established:**
 

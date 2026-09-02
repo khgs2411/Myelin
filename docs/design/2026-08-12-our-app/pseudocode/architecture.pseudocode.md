@@ -1,11 +1,18 @@
 # Our App — Architecture and Stack
 
 > Pseudocode artifact. Non-executable reference shape.
+>
+> Ingestion supersession: The
+> [Ingestion Boundaries design unit](../../2026-09-02-ingestion-boundaries/feature-shape.md)
+> controls public project keys, targeted durable-memory insertion, and the
+> development capture fixture. Conflicting identity and manual-insertion text
+> below remains only as the initial architecture baseline.
 
 This artifact defines the application's established technical boundaries and
-stack direction. Product semantics live in `BRAIN.pseudocode.md`; predicted
-files and services live in `feature-shape.md`; active design work lives in
-`design-issues.md`.
+stack direction. Product semantics live in `BRAIN.pseudocode.md`; integrated
+macro owners live in the
+[canonical application shape](../../feature-shape.md); active design work lives
+in [Open Design Issues](../design-issues.md).
 
 ## Stack direction
 
@@ -53,7 +60,7 @@ Installed Named Command <---------------- CLI-backed AppClient
                   |                                 |
                   v                            future MCP tools
 Public Application Use Cases
-  bootstrap project | capture | insert evidence | query
+  bootstrap project | capture | propose durable memory | query
                          |
                          v
 Product Contracts
@@ -216,8 +223,9 @@ class Application {
   static create(configuration: RuntimeApplicationConfiguration): Promise<Application>
   bootstrapProject(input: ProjectBootstrapInput): Promise<ProjectBootstrapResult>
   capture(input: CaptureInput): Promise<CaptureResult>
+  captureFixture(input: DevelopmentCaptureFixtureRequest): Promise<EvidenceAcceptanceReceipt>
   query(input: QueryInput): Promise<QueryResult>
-  insertEvidence(input: EvidenceInsertionInput): Promise<EvidenceAcceptanceReceipt>
+  proposeMemory(input: TargetedMemoryInsertionInput): Promise<TargetedInsertionResult>
   close(): Promise<void>
 }
 ```
@@ -374,11 +382,10 @@ never persisted.
 
 ## Shared evidence acceptance boundary
 
-Capture and manual insertion remain separate source workflows. Each constructs
-the same provider-neutral
-[`EvidenceCandidateDto`](./src/evidence/evidence-item.dto.ts.md) contract after
-its own validation, attribution, and authority rules. They converge only at
-acceptance, which creates accepted `EvidenceItemDto` values.
+Provider capture and the development capture fixture converge on the same
+provider-neutral [`EvidenceCandidateDto`](./src/evidence/evidence-item.dto.ts.md)
+contract after source-specific validation and attribution. Targeted durable
+memory proposals do not enter this boundary.
 
 ```ts
 type EvidenceAcceptanceItem = Readonly<{
@@ -434,12 +441,10 @@ preserves the exact provider payload. Insertion preserves the supplied evidence
 string, not the complete CLI or MCP envelope. The digest protects integrity; it
 does not provide identity, replay suppression, authentication, or truth.
 
-`EvidenceCaptureService` constructs capture-originated `EvidenceCandidateDto`
-values after provider normalization and workspace resolution.
-`EvidenceInsertionService` constructs manually supplied `EvidenceCandidateDto`
-values after exact project-root resolution and insertion-channel validation. Manual
-insertion does not pass through `EvidenceCaptureService`, and acceptance does
-not normalize either source.
+`EvidenceCaptureService` and `Development Capture Fixture` construct
+capture-originated `EvidenceCandidateDto` values after their source-specific
+normalization and workspace resolution. Evidence acceptance does not normalize
+either source.
 
 Capture origins preserve native event kind plus optional provider session and
 interaction coordinates. Insertion origins preserve the insertion source,
@@ -494,52 +499,44 @@ explicit-forgetting remain `OPEN`.
 The full transactional shape is defined in
 [`src/evidence/evidence-acceptance.service.ts`](./src/evidence/evidence-acceptance.service.ts.md).
 
-Manual insertion uses the same durable Evidence Log but a different trigger
-contract:
+Targeted durable-memory proposals use one selected product Inbox rather than
+the captured Evidence Log:
 
 ```ts
-type EvidenceInsertionRequest = Readonly<{
-  projectRoot: string
+type TargetedMemoryInsertionRequest = Readonly<{
+  projectKey: ProjectKey
+  target: "project" | "personal" | "practice"
   items: ReadonlyArray<Readonly<{ content: string }>>
   clientReference?: string
 }>
 ```
 
 ```text
-EvidenceInsertionService
+TargetedMemoryInsertionService
   -> entry boundary supplies insertion source as CLI or MCP
   -> validate the complete ordered request
+  -> require exactly one Project, Personal, or Practice target
   -> require clientReference for MCP; keep it optional for direct CLI use
-  -> resolve the supplied path as the exact root of a bootstrapped project
-  -> reject invalid or unregistered roots; never ignore explicit insertion
+  -> resolve the supplied public project key
+  -> reject an unknown key; never ignore an explicit proposal
   -> for each ordered content item
       -> preserve the exact string as text/plain source material
-      -> leave occurredAt absent
-      -> construct one insertion-originated EvidenceCandidateDto
+      -> construct one target-specific Inbox candidate
   -> IF a client reference exists
       -> derive one opaque application operation identity from:
           insertion-source domain
           resolved project identity
-          insertion batch scheme
           client reference
   -> OTHERWISE create a new application operation identity
-  -> EvidenceAcceptanceService
-      -> atomically accept the complete batch or reject it
-      -> use sessionMaintenanceIntent "immediate"
-      -> create or promote the pending request through all unscheduled evidence
-      -> persist the acceptance receipt
-  -> return the EvidenceAcceptanceReceipt directly
+  -> atomically commit the replay record, selected-product Inbox batch,
+     and immutable receipt
+  -> return accepted or replayed without waiting for product curation
 ```
 
-The insertion request does not select Session, Project, Personal, or Practice
-Memory. Manual content is already a curated evidence statement, but it is not
-accepted memory. The later memory workflow decides which memory candidates it
-supports. `EvidenceInsertionService` remains deterministic and never invokes an
-agent.
-
-Inbox is a logical view over accepted insertion-originated evidence after the
-covered maintenance frontier. It is not another table, queue, or item status.
-Maintenance requests, attempts, and cursors remain the processing owners.
+The selected Project, Personal, or Practice Memory product owns its durable
+Inbox candidate lifecycle and later curation. Inbox acceptance does not claim
+that canonical memory changed. Session Memory and Session maintenance do not
+participate in targeted proposals.
 
 ## Eventually consistent maintenance boundary
 

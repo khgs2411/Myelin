@@ -1,6 +1,10 @@
 # `src/storage/sqlite/models/project.model.ts`
 
 > Pseudocode artifact. Non-executable reference shape.
+>
+> Supersession notice: SQLite `id` remains private relational identity. The
+> registered project also has an immutable public `ProjectKey`. See
+> [Project Identity](../../../../../../2026-09-02-ingestion-boundaries/pseudocode/project-identity.md).
 
 Intended destination: `src/storage/sqlite/models/project.model.ts`
 

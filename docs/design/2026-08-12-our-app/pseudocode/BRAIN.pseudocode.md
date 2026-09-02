@@ -1,11 +1,18 @@
 # Our App — Product Pseudocode
 
 > Pseudocode artifact. Non-executable reference shape.
+>
+> Ingestion supersession: The
+> [Ingestion Boundaries design unit](../../2026-09-02-ingestion-boundaries/feature-shape.md)
+> controls public project keys, targeted durable-memory insertion, and the
+> development capture fixture. Conflicting identity and manual-insertion text
+> below remains only as the initial design baseline.
 
 This artifact defines what the product is, what each memory means, and what the
 brain observably does. Technical boundaries live in
-`architecture.pseudocode.md`; predicted implementation owners live in
-`feature-shape.md`; active design work lives in `design-issues.md`.
+`architecture.pseudocode.md`; integrated macro owners live in the
+[canonical application shape](../../feature-shape.md); active design work lives
+in [Open Design Issues](../design-issues.md).
 
 ## Product thesis
 
@@ -140,21 +147,20 @@ travels beside the DTO as acceptance metadata; evidence remains admissible when
 a source cannot supply one.
 
 Evidence acceptance does not create memory. A later Session Memory ingestion
-workflow reads accepted EvidenceItems from the Evidence Log.
+workflow reads captured EvidenceItems from the Evidence Log.
 
 Capture preserves raw provider activity as evidence before any agentic memory
-interpretation. Manual insertion accepts already-curated evidence statements,
-but those statements are still evidence rather than memory. The later memory
-workflow decides which Session, Project, Personal, or Practice Memory candidates
-each accepted item supports.
+interpretation. Deliberate durable-memory proposals use a separate target
+product Inbox. They do not become captured EvidenceItems or pass through
+Session Memory.
 
 Source material preserves the exact content-bearing input before normalization.
 Its digest proves stored-content integrity only. It does not identify evidence,
 authenticate the source, or prove that the content is true.
 
-Inbox is the logical view of insertion-originated EvidenceItems that successful
-maintenance has not yet covered. It does not introduce another durable store or
-an evidence-item processing status.
+Each Project, Personal, or Practice Memory Inbox is durable product-owned
+candidate state. Its product owns later validation, reconciliation, admission,
+rejection, and canonical publication.
 
 ```pseudocode
 TYPE WorkspaceContext
@@ -415,44 +421,36 @@ does not cause implicit project registration. The caller may offer the separate
 project-bootstrap operation, which still requires an explicit exact oversight
 root.
 
-## Manual evidence insertion and correction
+## Targeted memory proposals and correction
 
 ```pseudocode
-FUNCTION insertEvidence(invocation_context, request)
-  establish CLI or MCP insertion source from invocation context
-  validate one ordered batch of curated evidence-content strings
+FUNCTION proposeMemory(invocation_context, request)
+  establish CLI, MCP, or function source from invocation context
+  require request.target to be Project, Personal, or Practice Memory
+  validate one ordered batch of exact proposal-content strings
   require client reference for MCP and keep it optional for direct CLI use
-  resolve request.project_root as one exact bootstrapped project root
-  reject an invalid or unregistered root; never silently ignore explicit insertion
+  resolve request.project_key to one registered project context
+  reject an unknown key; never silently ignore an explicit proposal
 
   FOR EACH content item in supplied order
     preserve the exact string as text/plain source material
-    construct one insertion-originated EvidenceCandidateDto
-    leave occurred_at absent
-    derive replay identity from client reference and item position when present
+    construct one target-specific Inbox candidate
 
-  accept the complete batch into the Evidence Log without treating it as memory
-  set Session maintenance intent to immediate
-  create or promote one pending request through all unscheduled evidence
-  return an acceptance receipt after evidence and eligibility commit atomically
+  atomically commit the replay record, complete candidate batch, and receipt
+  return accepted or replayed after durable Inbox acceptance
+  do not wait for product curation
 
-BACKGROUND
-  publish Session Memory first
-  emit destination-specific candidate leads with original evidence references
-  evolve applicable memory and project documentation from independently
-    verified evidence
-  IF the evidence corrects an existing memory or answer
+PRODUCT CURATION
+  evaluate the proposal against product-specific evidence and authority rules
+  IF the proposal corrects an existing memory or answer
     revise, narrow, supersede, or retract the affected memory
   refresh semantic retrieval state
 ```
 
-Manual insertion captures work that an automatic provider source may not have
-observed or that a human or agent wants to make explicit. Correction is one
-intent carried by inserted evidence; it does not directly mutate canonical
-memory, fence an existing memory, or require the user to participate in the
-maintenance workflow. The curator evaluates whether the evidence revises,
-narrows, supersedes, or retracts an existing memory.
+A targeted proposal lets a human or agent state content that one explicit
+durable memory product should consider. Acceptance does not directly mutate or
+fence canonical memory. The selected product curator decides whether the
+proposal publishes, revises, narrows, supersedes, retracts, or rejects memory.
 
-The insertion request never selects a memory product. Its content is already a
-curated evidence statement, while the later memory workflow decides which
-memory candidates that statement supports.
+Session Memory is not a valid proposal target or intermediate destination.
+Captured evidence remains its only input path.

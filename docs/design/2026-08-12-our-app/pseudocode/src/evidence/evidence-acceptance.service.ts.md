@@ -1,6 +1,11 @@
 # `src/evidence/evidence-acceptance.service.ts`
 
 > Pseudocode artifact. Non-executable reference shape.
+>
+> Supersession notice: The service remains the captured-evidence acceptance
+> owner. Targeted durable-memory insertion no longer uses its Session
+> scheduling contract. See the
+> [Ingestion Boundaries design unit](../../../../2026-09-02-ingestion-boundaries/feature-shape.md).
 
 Intended destination: `src/evidence/evidence-acceptance.service.ts`
 

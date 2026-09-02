@@ -31,7 +31,7 @@ class BaseEvidenceItem extends Model {
 
   @AllowNull(false)
   @Column(DataType.TEXT)
-  declare origin_kind: "capture" | "insertion"
+  declare origin_kind: "capture"
 
   @AllowNull(false)
   @Column(DataType.TEXT)
@@ -105,21 +105,20 @@ PRIMARY KEY (id)
 FOREIGN KEY (project_id) -> projects.id
 UNIQUE (project_id, project_sequence)
 UNIQUE (replay_domain, replay_scheme, replay_key)
-CHECK (origin_kind IN ("capture", "insertion"))
+CHECK (origin_kind = "capture")
 CHECK (
   every replay column is NULL
   OR every replay column is present
 )
 
 INDEX (project_id, branch, project_sequence)
-INDEX (project_id, origin_kind, project_sequence)
 ```
 
 The unique project sequence supports project-wide ordered retrieval. The branch
-index supports branch-specific Session Memory retrieval. The origin-kind index
-supports the logical Inbox view over insertion-originated evidence.
-`origin_source_key` remains relational but unindexed because no established
-query requires that index.
+index supports branch-specific Session Memory retrieval. `origin_source_key`
+remains relational but unindexed because no established query requires that
+index. Targeted durable-memory proposals use product-owned Inbox storage rather
+than `evidence_items`.
 
 `branch`, `origin_kind`, and `origin_source_key` are immutable query projections
 from the lossless JSON values. The persistence mapper derives every projection
