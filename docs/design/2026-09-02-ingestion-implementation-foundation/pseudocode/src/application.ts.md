@@ -8,6 +8,8 @@ This artifact narrows `Application` to the fixed-project local prototype. It
 owns one process-scoped composition and SQLite lifecycle. It makes the
 development capture fixture callable without composing project discovery,
 provider hooks, query, installation, or durable-memory product Inboxes.
+The Project Registration Store supports many projects; only this prototype
+composition selects one hard-coded project.
 
 ```ts
 // intentionally illustrative pseudocode
@@ -60,8 +62,9 @@ class Application {
       sessionLifecycle = construct SessionMaintenanceLifecycleService
 
       localProject = await sqliteDatabase.writeTransaction(transaction => {
-        registration = ask Project Registration Store to ensure exactly:
-          configuration.localProject
+        registration = ask Project Registration Store to create or reuse:
+          the hard-coded configuration.localProject
+          among its durable multi-project registrations
           using transaction
 
         IF registration disposition is "created"
@@ -128,6 +131,11 @@ Project row and its Session lifecycle state. If the Project row is new, the
 same transaction initializes Session lifecycle state. If the row already
 exists, startup requires compatible Session state and does not silently repair
 missing durable state.
+
+The fixed local selection is an Application-composition constraint, not a
+Project Registration Store constraint. The store persists the final
+multi-project Project shape. General registration, resolution, relocation, and
+public project selection remain outside this local prototype operation.
 
 The fixed Project transaction completes before evidence intake becomes
 callable. Session policy synchronization remains inside later evidence

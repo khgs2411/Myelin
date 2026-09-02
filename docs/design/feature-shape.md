@@ -21,12 +21,11 @@ unit controls that boundary. The
 [Local Ingestion Prototype Foundation](2026-09-02-ingestion-implementation-foundation/)
 maps the concrete owners behind the fixed-project manual ingestion interface
 before project discovery and installation are introduced. It does not
-supersede the longer-term ingestion product boundaries.
+supersede the longer-term ingestion product boundaries. The
+[Project Persistence design unit](2026-09-02-project-persistence/) narrows the
+accepted multi-project persistence boundary used by that prototype.
 
-Open design frontier:
-[application-wide issues](2026-08-12-our-app/design-issues.md). The
-[ingestion-boundary issue record](2026-09-02-ingestion-boundaries/design-issues.md)
-currently contains no open issues.
+Open design frontier: [Open Design Issues](design-issues.md).
 
 ## Feature Map
 
