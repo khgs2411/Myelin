@@ -1,5 +1,8 @@
 # Fixed Local Project Context — Feature Shape
 
+> Superseded by the
+> [unified Fixed Local Project Context unit](../2026-09-03-fixed-local-project-context/feature-shape.md).
+
 For each repository-local prototype CLI invocation, establish one known LLM
 Wiki workspace context backed by durable Project and Session lifecycle state.
 This unit excludes general project registration, caller-selected project

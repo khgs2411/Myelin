@@ -2,8 +2,11 @@
 
 > Pseudocode artifact. Non-executable reference shape.
 >
-> Superseded for this roadmap item by the
-> [unified Application artifact](../../../2026-09-03-fixed-local-project-context/pseudocode/src/application.ts.md).
+> Inherited baseline copied from the earlier Fixed Local Project Context unit.
+> Its create-or-load Project flow, `llm-wiki-local` key, Session initialization,
+> fixed branch, and no-inspection boundary conflict with the unified accepted
+> design. Use it as review evidence only until the Application issue is
+> resolved and this artifact is revised.
 
 This artifact narrows `Application` to the fixed local project-context outcome.
 It describes one complete CLI invocation. It does not describe a server

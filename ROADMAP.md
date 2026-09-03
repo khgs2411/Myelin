@@ -77,10 +77,10 @@ without first building general project discovery or installation behavior.
   - Progress: The local database now contains the durable `llm-wiki` Project
     registration, and repeated seeding preserves that identity.
 
-- [ ] `next` [Establish the fixed local project context](docs/design/2026-09-02-fixed-local-project-context/feature-shape.md)
+- [ ] `next` [Establish the fixed local project context](docs/design/2026-09-03-fixed-local-project-context/feature-shape.md)
   - Description: Resolve each local CLI invocation from its working directory
-    to the existing LLM Wiki Project registration and construct its repository,
-    branch, database, and Session context.
+    to the existing LLM Wiki Project registration and construct its immutable
+    project, repository, and branch context.
   - Why: Registered-project resolution gives later evidence one deterministic
     scope without introducing automatic project bootstrap.
   - Shape: An unregistered directory fails without creating a Project.
