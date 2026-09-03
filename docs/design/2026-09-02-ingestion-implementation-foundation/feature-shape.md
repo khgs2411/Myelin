@@ -10,23 +10,22 @@ Its catalog is a navigation map of accepted owners, not a design or
 implementation sequence.
 
 Established product behavior comes from the
-[canonical application shape](../feature-shape.md) and the
+[Our App product behavior](../2026-08-12-our-app/pseudocode/BRAIN.pseudocode.md)
+and the
 [Ingestion Boundaries design unit](../2026-09-02-ingestion-boundaries/feature-shape.md).
-
-Open design frontier: [application-wide Open Design Issues](../design-issues.md).
 
 ## Feature Map
 
 ```text
 (fixed local database | project root | repository root | master branch)
-  -> [src/cli.ts]
+  -> [cli.ts]
       -> [Application]
           -> one hard-coded local project
               -> [Project Registration Store] : persist through a multi-project model
               -> [SessionMaintenance] : initialize new or require existing state
 
 (development transcript file)
-  -> [src/cli.ts] : dev capture-fixture
+  -> [cli.ts] : dev capture-fixture
       -> [Application]
           -> [Development Capture Fixture]
               -> [CapturedEvidenceIngestionService]
@@ -35,7 +34,7 @@ Open design frontier: [application-wide Open Design Issues](../design-issues.md)
                       -> [SessionMaintenance] : schedule obligation
 
 (human | agent supplied text, files, or explicit standard input)
-  -> [src/cli.ts] : memory propose <project | personal | practice>
+  -> [cli.ts] : memory propose <project | personal | practice>
       -> [Application]
           -> [Targeted Memory Insertion]
               -> [Targeted Insertion Operation Ledger]
@@ -57,8 +56,8 @@ Open design frontier: [application-wide Open Design Issues](../design-issues.md)
       -> [Personal Memory] : Inbox persistence
       -> [Practice Memory] : Inbox persistence
 
-[src/cli.ts] -X-> (bootstrap | path inference | branch inference)
-[src/cli.ts] -X-> (package bin | host installation | stable machine protocol)
+[cli.ts] -X-> (bootstrap | path inference | branch inference)
+[cli.ts] -X-> (package bin | host installation | stable machine protocol)
 [Development Capture Fixture] -X-> (production distribution)
 ```
 
@@ -66,7 +65,7 @@ Open design frontier: [application-wide Open Design Issues](../design-issues.md)
 
 | Design item | Representation |
 | --- | --- |
-| [src/cli.ts](#srcclits) | exact: `src/cli.ts` |
+| [cli.ts](#clits) | exact: `cli.ts` |
 | [Application](#application) | exact: `src/application.ts` |
 | [Project Registration Store](#project-registration-store) | semantic: `Project Registration Store` |
 | [Development Capture Fixture](#development-capture-fixture) | semantic: `Development Capture Fixture` |
@@ -84,9 +83,9 @@ Open design frontier: [application-wide Open Design Issues](../design-issues.md)
 
 ## New Or Revised Files Or Owners
 
-### src/cli.ts
+### cli.ts
 
-**Representation:** exact: `src/cli.ts`
+**Representation:** exact: `cli.ts`
 
 **Evidence:** accepted design and user requirement
 
@@ -97,7 +96,7 @@ each operation through `Application`, presents safe results, and closes the
 application. It does not bootstrap or discover a project.
 
 Detailed design:
-[`src/cli.ts`](pseudocode/src/cli.ts.md).
+[`cli.ts`](pseudocode/cli.ts.md).
 
 ### Application
 

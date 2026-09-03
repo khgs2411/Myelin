@@ -62,21 +62,28 @@ can carry the complete memory journey.
 Goal: Feed controlled evidence from this repository into the Session pipeline
 without first building general project discovery or installation behavior.
 
-- [ ] `next` Establish the fixed local project context
-  - Description: Give the prototype one known LLM Wiki project, repository,
-    branch, and database context while retaining one private SQLite Project row
-    for evidence and Session relationships.
-  - Why: Fixed local facts remove project-discovery work from the first memory
-    proof without creating a temporary unscoped evidence model.
+- [x] `done` Establish the repository-local CLI shell
+  - Description: Give this repository one minimal Bun-run entrypoint that owns
+    help, command dispatch, safe diagnostics, and the Application lifecycle
+    boundary used by later operations.
+  - Progress: The shell is available without operational commands. Each later
+    roadmap outcome adds only the command required by its Application operation.
 
-- [ ] `open` Deliver the repository-local prototype CLI
-  - Description: Give this repository a minimal Bun-run command tree for manual
-    ingestion, with the development capture-fixture route delivered first.
-  - Why: The project can dog-food changing prototype behavior without repeatedly
-    publishing or installing an unstable host command.
-  - Shape: The local interface is not a package `bin`, stable machine protocol,
-    or production distribution surface. Its durable-memory proposal family is
-    activated later, after the selected product Inboxes exist.
+- [x] `done` [Establish local Project seed state](docs/design/2026-09-03-local-project-seed/feature-shape.md)
+  - Description: Establish this repository in the permanent multi-project
+    SQLite model through one reproducible development-only seed operation.
+  - Shape: General registration, bootstrap, discovery, and relocation remain
+    outside the local seed boundary.
+  - Progress: The local database now contains the durable `llm-wiki` Project
+    registration, and repeated seeding preserves that identity.
+
+- [ ] `next` [Establish the fixed local project context](docs/design/2026-09-02-fixed-local-project-context/feature-shape.md)
+  - Description: Resolve each local CLI invocation from its working directory
+    to the existing LLM Wiki Project registration and construct its repository,
+    branch, database, and Session context.
+  - Why: Registered-project resolution gives later evidence one deterministic
+    scope without introducing automatic project bootstrap.
+  - Shape: An unregistered directory fails without creating a Project.
 
 - [ ] `open` Deliver durable evidence acceptance
   - Description: Accept normalized evidence with provenance, idempotency, and a

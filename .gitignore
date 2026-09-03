@@ -2,6 +2,7 @@
 .claude
 .DS_Store
 node_modules/
+.llm-wiki-dev/
 
 old_deprecated_version/docs/
 old_deprecated_version/mcp/
@@ -24,4 +25,3 @@ old_deprecated_version/state/
 .agents/
 .symphony/
 .env
-

@@ -1,8 +1,8 @@
-# `src/cli.ts`
+# `cli.ts`
 
 > Pseudocode artifact. Non-executable reference shape.
 
-Intended destination: `src/cli.ts`
+Intended destination: `cli.ts`
 
 This file is the repository-local Bun command interface for manual ingestion.
 It separates deliberate proposals to durable memory from controlled Session
@@ -63,24 +63,24 @@ HELP
   help states what durable acceptance proves and what remains asynchronous
 
 INVOCATION
-  bun run src/cli.ts memory propose project \
+  bun run cli.ts memory propose project \
     --text "The application uses Sequelize for SQLite."
 
-  bun run src/cli.ts memory propose personal \
+  bun run cli.ts memory propose personal \
     --file ./notes/preference.md \
     --request-ref preference-2026-09-02
 
-  bun run src/cli.ts memory propose practice \
+  bun run cli.ts memory propose practice \
     --text "First item" \
     --file ./notes/second-item.md \
     --stdin
 
-  bun run src/cli.ts dev capture-fixture \
+  bun run cli.ts dev capture-fixture \
     --session <provider-session-reference> \
     --fixture <fixture-reference> \
     --file <transcript-file-path>
 
-ENTRYPOINT src/cli.ts
+ENTRYPOINT cli.ts
   require execution through Bun from this repository checkout
   treat process arguments, named files, and standard input as untrusted input
   do not accept a project selector; use LOCAL_PROTOTYPE.project
@@ -201,7 +201,7 @@ reference from a file path or content digest.
 
 ## Ownership boundary
 
-`src/cli.ts` owns the fixed prototype facts, local argument parsing, ordered
+`cli.ts` owns the fixed prototype facts, local argument parsing, ordered
 content acquisition, command routing, human presentation, process status, and
 application cleanup. It establishes the direct CLI insertion source from the
 command route. Caller content cannot select or impersonate its source.

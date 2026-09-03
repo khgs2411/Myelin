@@ -7,6 +7,7 @@ import {
 import { SqliteDialect, type SqliteConnection } from "@sequelize/sqlite3";
 
 import type { InitializedSqliteRuntime } from "./sqlite-runtime.ts";
+import { SqliteSchema } from "./sqlite-schema.ts";
 
 export type SqliteDatabaseConfiguration = Readonly<{
   databasePath: string;
@@ -33,8 +34,10 @@ export class SqliteDatabase {
     });
 
     try {
+      SqliteSchema.initializeModels(sequelize);
       await sequelize.authenticate();
       await verifyCapabilities(sequelize);
+      await SqliteSchema.ensureCurrent(sequelize);
       return new SqliteDatabase(sequelize);
     } catch (cause) {
       await sequelize.close().catch(() => undefined);

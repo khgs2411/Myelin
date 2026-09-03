@@ -7,7 +7,6 @@ Resolved design belongs in the artifact that owns it:
 
 - [product behavior](pseudocode/BRAIN.pseudocode.md)
 - [architecture and stack](pseudocode/architecture.pseudocode.md)
-- [canonical application shape](../feature-shape.md)
 
 When an issue is resolved, its design moves into the owning artifact and the
 issue is removed from this file.
@@ -406,9 +405,8 @@ addressed only when a curated query-response workflow is selected.
 
 ### Durable location and layout
 
-**Exposed by:** [the storage architecture](pseudocode/architecture.pseudocode.md),
-[the canonical application shape](../feature-shape.md), and
-[canonical Markdown nodes](pseudocode/src/memory/markdown/markdown-memory-document.ts.md).
+**Exposed by:** [the storage architecture](pseudocode/architecture.pseudocode.md)
+and [canonical Markdown nodes](pseudocode/src/memory/markdown/markdown-memory-document.ts.md).
 
 **Established:**
 
