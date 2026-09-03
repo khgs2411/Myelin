@@ -21,10 +21,12 @@ traceable continuity across work sessions without manual memory maintenance.
 - Memory maintenance must operate without requiring routine user decisions.
 - Session Memory behavior must be proven with controlled development capture
   fixtures before automated provider capture enters the product.
-- Before that proof, development uses one fixed context for the LLM Wiki
-  repository and a repository-local Bun CLI. Project bootstrap, path and Git
-  inference, package `bin` publication, and host installation begin only after
-  the fixture-driven Session Memory journey succeeds.
+- Before that proof, development uses the existing LLM Wiki Project
+  registration and a repository-local Bun CLI. It can match invocation paths
+  within that registered root and observe its active branch. General project
+  registration, bootstrap, unregistered-project discovery, linked-worktree
+  correlation, package `bin` publication, and host installation begin only
+  after the fixture-driven Session Memory journey succeeds.
 - Deliberate memory insertion must explicitly select Project, Personal, or
   Practice Memory. It must not bypass product-owned curation or enter Session
   Memory.
@@ -77,15 +79,18 @@ without first building general project discovery or installation behavior.
   - Progress: The local database now contains the durable `llm-wiki` Project
     registration, and repeated seeding preserves that identity.
 
-- [ ] `next` [Establish the fixed local project context](docs/design/2026-09-03-fixed-local-project-context/feature-shape.md)
-  - Description: Resolve each local CLI invocation from its working directory
-    to the existing LLM Wiki Project registration and construct its immutable
-    project, repository, and branch context.
+- [x] `done` [Establish the fixed local project context](docs/design/2026-09-03-fixed-local-project-context/feature-shape.md)
+  - Description: Resolve each Application-backed local CLI operation from its
+    working directory to the existing LLM Wiki Project registration and
+    construct its immutable project, repository, and branch context.
   - Why: Registered-project resolution gives later evidence one deterministic
     scope without introducing automatic project bootstrap.
   - Shape: An unregistered directory fails without creating a Project.
+  - Progress: Application composition now resolves descendant directories to
+    immutable Project context, observes the active registered-repository
+    branch, rejects unmanaged directories, and closes its database lifecycle.
 
-- [ ] `open` Deliver durable evidence acceptance
+- [ ] `next` Deliver durable evidence acceptance
   - Description: Accept normalized evidence with provenance, idempotency, and a
     durable receipt while coordinating all required state changes atomically.
   - Shape: Evidence acceptance owns the outer write transaction and preserves

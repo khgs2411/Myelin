@@ -5,6 +5,9 @@
   "packageManager": "bun@1.4.0",
   "scripts": {
     "cli": "bun run cli.ts",
+    "test": "bun test tests/unit tests/sanity",
+    "test:unit": "bun test tests/unit",
+    "test:sanity": "bun test tests/sanity",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

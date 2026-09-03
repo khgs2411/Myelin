@@ -2,9 +2,13 @@
 
 > Pseudocode artifact. Non-executable reference shape.
 
-`WorkspaceContext` is a semantic application value. Accepted design does not
-require a standalone source-file destination. The value carries resolved scope
-to project-aware operations without exposing persistence or resolution logic.
+Implemented destinations:
+
+- `ProjectRegistration`: `src/project/project-registration.ts`
+- `WorkspaceContext`: `src/workspace/workspace-context.ts`
+
+These immutable application values carry resolved scope to project-aware
+operations without exposing persistence or resolution logic.
 
 ```ts
 // intentionally illustrative pseudocode
@@ -13,39 +17,39 @@ type ProjectIdentity = private positive integer assigned by SQLite
 type ProjectKey = validated user-assigned immutable public key
 type CanonicalDirectoryPath = absolute, filesystem-normalized real path
 
+type ProjectRegistration = Readonly<{
+  identity: ProjectIdentity
+  key: ProjectKey
+  rootPath: CanonicalDirectoryPath
+  repositoryRootPath?: CanonicalDirectoryPath
+}>
+
+type GitBranchContext =
+  | Readonly<{
+      kind: "active"
+      name: string
+    }>
+  | Readonly<{
+      kind: "unavailable"
+      safeDiagnostic: string
+    }>
+
 type WorkspaceContext = Readonly<{
-  project: Readonly<{
-    identity: ProjectIdentity
-    key: ProjectKey
-    rootPath: CanonicalDirectoryPath
-  }>
-
+  project: ProjectRegistration
   workingDirectory: CanonicalDirectoryPath
-
-  repository?: Readonly<{
-    rootPath: CanonicalDirectoryPath
-    branch:
-      | Readonly<{
-          kind: "active"
-          name: string
-        }>
-      | Readonly<{
-          kind: "unavailable"
-          safeDiagnostic: string
-        }>
-  }>
+  repositoryBranch?: GitBranchContext
 }>
 ```
 
 ## Construction invariants
 
-- Project identity, key, root, and optional repository root originate from one
-  existing durable Project registration.
+- `project` is one immutable registration returned by
+  `ProjectRegistrationRepository`.
 - `workingDirectory` is canonical and belongs to the resolved Project scope.
-- `repository` is absent when the Project has no registered repository root.
-- When `repository` exists, branch observation records either an active branch
-  or a safe unavailable result. An unavailable branch does not invalidate the
-  resolved Project context.
+- `repositoryBranch` is absent when `project.repositoryRootPath` is absent.
+- When `project.repositoryRootPath` exists, `repositoryBranch` records either
+  an active branch or a safe unavailable result. An unavailable branch does not
+  invalidate the resolved Project context.
 - The value contains copied application facts. It does not retain a mutable
   Sequelize model instance.
 

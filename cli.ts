@@ -30,6 +30,7 @@ async function withApplication<T>(
     sqlite: {
       databasePath: LOCAL_DATABASE_PATH,
     },
+    workingDirectory: process.cwd(),
   });
 
   try {

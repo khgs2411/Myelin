@@ -17,5 +17,5 @@
     "types": ["bun"],
     "verbatimModuleSyntax": true
   },
-  "include": ["cli.ts", "scripts/**/*.ts", "src/**/*.ts"]
+  "include": ["cli.ts", "scripts/**/*.ts", "src/**/*.ts", "tests/**/*.ts"]
 }

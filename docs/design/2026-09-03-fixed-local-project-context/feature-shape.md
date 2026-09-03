@@ -1,12 +1,10 @@
 # Fixed Local Project Context — Feature Shape
 
-Resolve each repository-local CLI invocation from its working directory to one
-existing Project registration and construct an immutable `WorkspaceContext`.
-This unit excludes project registration, bootstrap, relocation, installation,
-Session state, evidence intake, provider capture, and linked-worktree
-correlation.
-
-Open design frontier: [Open Design Issues](design-issues.md).
+Resolve each Application-backed repository-local CLI operation from its working
+directory to one existing Project registration and construct an immutable
+`WorkspaceContext`. This unit excludes project registration, bootstrap,
+relocation, installation, Session state, evidence intake, provider capture,
+and linked-worktree correlation.
 
 ## Feature Map
 
@@ -15,7 +13,7 @@ Open design frontier: [Open Design Issues](design-issues.md).
   -> [Application]
       -> [SqliteDatabase] : open and close invocation database
       -> [WorkspaceContextService] : resolve working directory
-          -> [ProjectRegistrationStore] : read registered Project facts
+          -> [ProjectRegistrationRepository] : read Project registrations
               -> [Project]
           -> (canonical path and active Git branch observation)
           -> [WorkspaceContext]
@@ -31,9 +29,9 @@ Open design frontier: [Open Design Issues](design-issues.md).
 | Design item | Representation |
 | --- | --- |
 | [Application](#application) | exact: `src/application.ts` |
-| [ProjectRegistrationStore](#projectregistrationstore) | semantic: `ProjectRegistrationStore` |
+| [ProjectRegistrationRepository](#projectregistrationrepository) | exact: `src/storage/sqlite/repositories/project-registration.repository.ts` |
 | [WorkspaceContextService](#workspacecontextservice) | exact: `src/workspace/workspace-context.service.ts` |
-| [WorkspaceContext](#workspacecontext) | semantic: `WorkspaceContext` |
+| [WorkspaceContext](#workspacecontext) | exact: `src/workspace/workspace-context.ts` |
 | [Project](#project) | exact: `src/storage/sqlite/models/project.model.ts` |
 | [SqliteDatabase](#sqlitedatabase) | exact: `src/storage/sqlite/sqlite-database.ts` |
 
@@ -48,26 +46,34 @@ Open design frontier: [Open Design Issues](design-issues.md).
 Owns one complete CLI invocation composition. It opens the process-scoped
 database, supplies the invocation working directory to
 `WorkspaceContextService`, makes the resolved `WorkspaceContext` available to
-the project-scoped operation, and closes the database. Normal composition does
-not create, update, or repair a Project registration.
+the project-scoped operation, and closes the database. It retains the context
+privately rather than exposing a generic context getter. Normal composition
+does not create, update, or repair a Project registration.
 
-### ProjectRegistrationStore
+Detailed design:
+[`Application`](pseudocode/src/application.ts.md).
 
-**Representation:** semantic: `ProjectRegistrationStore`
+### ProjectRegistrationRepository
 
-**Evidence:** accepted design and user requirement
+**Representation:** exact:
+`src/storage/sqlite/repositories/project-registration.repository.ts`
+
+**Evidence:** verified implementation, accepted design, and user requirement
 
 Owns read access to durable Project registrations for context resolution. It
-returns immutable application facts and does not expose mutable Sequelize
-models. It does not register, relocate, update, or repair Projects during a
-normal invocation. Workspace membership and branch observation remain with
-`WorkspaceContextService`.
+lists immutable `ProjectRegistration` values and does not expose mutable
+Sequelize models. It does not register, relocate, update, or repair Projects
+during a normal invocation. Workspace membership and branch observation remain
+with `WorkspaceContextService`.
+
+Detailed design:
+[`ProjectRegistrationRepository`](pseudocode/src/storage/sqlite/repositories/project-registration.repository.ts.md).
 
 ### WorkspaceContextService
 
 **Representation:** exact: `src/workspace/workspace-context.service.ts`
 
-**Evidence:** accepted design and user requirement
+**Evidence:** verified implementation, accepted design, and user requirement
 
 Owns deterministic working-directory resolution. It canonicalizes the supplied
 directory, matches it to the most specific registered Project root by directory
@@ -79,20 +85,19 @@ or inaccessible input is a resolution failure. Branch observation failure
 produces an unavailable branch result without invalidating the resolved
 Project.
 
-Established baseline:
+Detailed design:
 [`WorkspaceContextService`](pseudocode/src/workspace/workspace-context.service.ts.md).
 
 ### WorkspaceContext
 
-**Representation:** semantic: `WorkspaceContext`
+**Representation:** exact: `src/workspace/workspace-context.ts`
 
-**Evidence:** accepted design and user requirement
+**Evidence:** verified implementation, accepted design, and user requirement
 
 Owns one immutable application value for a resolved invocation. It separates
-the Project identity, public key, and canonical root from the canonical working
-directory and optional repository context. Repository context contains the
-registered repository root and either the observed active branch or a safe
-unavailable result.
+one immutable `ProjectRegistration` from the canonical working directory and
+optional observed repository branch. The registration retains the durable
+repository root; `WorkspaceContext` does not duplicate it.
 
 It does not expose database access, mutable ORM state, Session state, or
 evidence state.

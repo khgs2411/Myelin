@@ -1,32 +1,19 @@
 # `src/application.ts`
 
 > Pseudocode artifact. Non-executable reference shape.
->
-> Inherited baseline copied from the earlier Fixed Local Project Context unit.
-> Its create-or-load Project flow, `llm-wiki-local` key, Session initialization,
-> fixed branch, and no-inspection boundary conflict with the unified accepted
-> design. Use it as review evidence only until the Application issue is
-> resolved and this artifact is revised.
 
-This artifact narrows `Application` to the fixed local project-context outcome.
-It describes one complete CLI invocation. It does not describe a server
-startup, general project registration, evidence intake, or later application
-operations.
+This artifact shapes `Application` as the composition and lifetime owner for
+one CLI invocation. It resolves the caller-supplied working directory to one
+existing Project before it constructs a usable Application.
 
 ```ts
 // intentionally illustrative pseudocode
 
-type FixedLocalProjectConfiguration = Readonly<{
-  key: "llm-wiki-local"
-  rootPath: "/Users/liadgoren/Repositories/llm-wiki"
-  repositoryRootPath: "/Users/liadgoren/Repositories/llm-wiki"
-  branch: "master"
-}>
-
-type LocalApplicationConfiguration = Readonly<{
-  databasePath:
-    "/Users/liadgoren/Repositories/llm-wiki/.llm-wiki-dev/state.sqlite"
-  project: FixedLocalProjectConfiguration
+type RuntimeApplicationConfiguration = Readonly<{
+  sqlite: Readonly<{
+    databasePath: string
+  }>
+  workingDirectory: string
 }>
 
 class Application {
@@ -36,63 +23,40 @@ class Application {
   ) {}
 
   STATIC async create(
-    configuration: LocalApplicationConfiguration
+    configuration: RuntimeApplicationConfiguration
   ): Promise<Application> {
     sqliteRuntime = await SqliteRuntime.initialize()
     sqliteDatabase = await SqliteDatabase.open({
-      databasePath: configuration.databasePath,
+      databasePath: configuration.sqlite.databasePath,
       runtime: sqliteRuntime
     })
 
     TRY
-      establish the compatible application schema
-      // OPEN: SQLite schema lifecycle issue
+      projectRegistrationRepository =
+        new ProjectRegistrationRepository()
 
-      construct Project Registration Store with sqliteDatabase
-      // OPEN: exact store representation and operation contract
+      workspaceContextService = new WorkspaceContextService(
+        projectRegistrationRepository
+      )
 
-      construct SessionMaintenanceStateRepository with sqliteDatabase
-      construct SessionMaintenanceLifecycleService with state repository
-
-      workspaceContext = await sqliteDatabase.writeTransaction(transaction => {
-        registrationResult = ask Project Registration Store to create or load:
-          configuration.project.key
-          configuration.project.rootPath
-          configuration.project.repositoryRootPath
-          using transaction
-
-        // OPEN: exact compatibility rules for an existing registration
-
-        IF registrationResult disposition is "created"
-          await SessionMaintenanceLifecycleService.initializeNewProject(
-            registrationResult.project.identity,
-            transaction
-          )
-        ELSE
-          await SessionMaintenanceLifecycleService.requireInitializedProject(
-            registrationResult.project.identity,
-            transaction
-          )
-
-        return WorkspaceContext {
-          projectReference: registrationResult.project.identity,
-          projectRoot: registrationResult.project.rootPath,
-          workingDirectory: registrationResult.project.rootPath,
-          repository: {
-            location: registrationResult.project.repositoryRootPath,
-            branch: {
-              kind: "active",
-              name: configuration.project.branch
-            }
-          }
-        }
+      resolution = await workspaceContextService.resolve({
+        workingDirectory: configuration.workingDirectory
       })
 
-      return new Application(sqliteDatabase, workspaceContext)
+      IF resolution.kind is "unmanaged"
+        fail Application composition with resolution.reason.safeDiagnostic
+
+      IF resolution.kind is "failed"
+        fail Application composition with resolution.failure.safeDiagnostic
+
+      return new Application(
+        sqliteDatabase,
+        resolution.context
+      )
 
     CATCH failure
       close sqliteDatabase while preserving the original failure
-      fail the invocation with a safe diagnostic
+      rethrow the original failure
   }
 
   close(): Promise<void> {
@@ -101,24 +65,45 @@ class Application {
 }
 ```
 
-## Invocation boundary
+## Invocation input boundary
 
-Every valid local CLI command creates one `Application`, executes one
-operation, and closes it. Each invocation repeats context initialization.
-Compatible durable state returns the same Project identity and equivalent
-fixed `WorkspaceContext` without duplicate Project or Session state.
+The CLI reads `process.cwd()` once and supplies that value as
+`configuration.workingDirectory`. `Application` does not read or change the
+process-global working directory.
 
-A new Project and its initial Session maintenance state commit in one
-`IMMEDIATE` transaction. An existing Project must already have compatible
-Session maintenance state. The invocation does not repair missing or
-incompatible state.
+The database path remains explicit configuration. Project key, Project root,
+repository root, and branch are not Application configuration. They come from
+the resolved durable registration and current branch observation.
 
-The fixed branch is an invocation fact. It enters `WorkspaceContext` but not
-the durable Project row. No filesystem or Git inspection occurs in this unit.
+## Composition boundary
 
-## Ownership boundary
+`SqliteDatabase.open()` completes before Application constructs
+`ProjectRegistrationRepository`. This guarantees that Sequelize has registered
+the `Project` model before the repository reads it.
 
-`Application` owns invocation composition, transaction coordination,
-construction of the fixed `WorkspaceContext`, partial-composition cleanup, and
-final database cleanup. It does not absorb Project persistence or Session
-lifecycle behavior.
+An unmanaged or failed workspace resolution prevents Application construction.
+If any operation fails after the database opens, Application closes the
+database and preserves the original failure. `SqliteDatabase.open()` remains
+responsible for its own partial-open cleanup.
+
+Normal composition does not use a write transaction. It does not create,
+update, repair, relocate, or seed a Project. It does not initialize Session or
+evidence state.
+
+## Context access boundary
+
+`workspaceContext` remains private Application state. The CLI does not receive
+a generic context getter. Future project-scoped Application operations use the
+context internally or inject it into the service that owns the operation.
+
+## Lifecycle boundary
+
+One CLI operation creates one Application and closes it in the CLI's existing
+`finally` boundary. Application is not a server and does not own a persistent
+runtime between invocations.
+
+## Established design sources
+
+- [`WorkspaceContextService`](workspace/workspace-context.service.ts.md)
+- [`WorkspaceContext`](../workspace-context.md)
+- [`ProjectRegistrationRepository`](storage/sqlite/repositories/project-registration.repository.ts.md)
