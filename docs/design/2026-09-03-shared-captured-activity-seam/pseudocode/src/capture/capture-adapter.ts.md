@@ -4,64 +4,41 @@
 
 Intended destination: `src/capture/capture-adapter.ts`
 
-`CaptureAdapter` converts exactly one provider-contract activity into one
-provider-neutral outcome. Both automatic input and controlled fixture input use
-this contract.
+`CaptureAdapter` is the common normalization contract for all capture sources.
 
 ```ts
-type ProviderNativeActivity = Readonly<{
+type NativeCaptureInput = Readonly<{
   mediaType: string
   content: string
-    // exact serialized input supplied to the adapter
+    // exact serialized input in the format owned by this adapter
 }>
 
-type SourceReplayDraft = Readonly<{
-  scheme: string
-  key: string
+type CaptureResult = Readonly<{
+  nativeEventKind: string
+  nativeSessionReference?: string
+  nativeInteractionReference?: string
+  nativeOccurredAt?: NormalizedTimestamp
+  normalizedContent: string | null
+  workingDirectory: string
+  replay: Readonly<{
+    scheme: string
+    key: string
+  }>
+  sourceMaterial: Readonly<{
+    mediaType: string
+    content: string
+    sha256: string
+  }>
 }>
-
-type CaptureNormalizationResult =
-  | Readonly<{
-      kind: "evidence"
-      observation: CapturedActivityObservation
-    }>
-  | Readonly<{
-      kind: "ignored"
-      reason: CaptureIgnoreReason
-    }>
-  | Readonly<{
-      kind: "rejected"
-      failure: CaptureNormalizationFailure
-    }>
 
 interface CaptureAdapter {
-  normalize(activity: ProviderNativeActivity): CaptureNormalizationResult
+  normalize(input: NativeCaptureInput): CaptureResult
 }
-
-CONTRACT normalize one activity
-  validate the selected provider contract
-
-  IF the serialized input violates that contract
-    return rejected with a safe diagnostic
-
-  IF the input is valid but contains no admitted evidence
-    return ignored with a safe reason
-
-  OTHERWISE
-    assign the closed provider-neutral activity kind
-    preserve exact content, working directory, native coordinates, replay input,
-      optional provider time, and raw source
-    return one evidence observation
-
-  never establish capture-route identity
-  never resolve WorkspaceContext
-  never construct EvidenceCandidateDto
-  never persist evidence
 ```
 
-The trusted entry route selects the adapter and source identity. The payload
-cannot claim or override that identity. A controlled Codex-shaped fixture is
-valid adapter input, but its route identity remains `development.fixture`.
+One valid native input produces one result. The adapter preserves all valid
+input. It does not decide whether the content deserves memory.
 
-Detailed observation:
-[Captured Activity Observation](../../captured-activity-observation.md).
+The result does not claim trusted route identity, Project identity, durable
+evidence identity, or memory meaning. Provider-specific and fixture-specific
+types remain inside their adapter implementations.

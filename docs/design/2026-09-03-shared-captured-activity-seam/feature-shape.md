@@ -1,148 +1,162 @@
-# Shared Captured-Activity Seam — Feature Shape
+# Provider Evidence Capture — Feature Shape
 
-This unit establishes the provider-neutral boundary between source-specific
-capture and shared captured-evidence ingestion. It does not define the later
-evidence DTOs, durable acceptance, fixture command, or automatic hook runtime.
-Where an earlier design unit differs, this unit controls the current boundary.
-Earlier units remain unchanged historical records.
+This unit establishes one adapter-driven capture path from native input to
+durable SQLite evidence. It includes the Codex adapter and the local
+development fixture adapter. It excludes installed hook transport, evidence
+reading, Session Memory, and targeted durable-memory insertion.
+
+Where an earlier design unit differs, this active unit controls the capture
+boundary. Earlier units remain unchanged historical records.
 
 Open design frontier: [Open Design Issues](design-issues.md).
 
 ## Feature Map
 
 ```text
-installed Codex hook invocation
-  -> exact Codex UserPromptSubmit or Stop JSON + "codex.hook"
-      -> [Provider Evidence Capture]
+future automatic Codex transport
+  -> trusted codex.hook entry + exact Codex input array
+      -> [CaptureAdapterFactory]
+          -> [CodexCaptureAdapter]
+              -> CaptureResult array
 
-controlled completed-turn fixture
-  -> [Development Capture Fixture]
-      -> ordered exact controlled Codex payloads + "development.fixture"
-          -> [Provider Evidence Capture]
+local development fixture command
+  -> trusted development.fixture entry + fixture input array
+      -> [CaptureAdapterFactory]
+          -> [DevelopmentCaptureAdapter]
+              -> CaptureResult array
 
-[Provider Evidence Capture]
-  -> [Codex Capture Adapter]
-      -> one [Captured Activity Observation] per payload
-          -> resolve payload cwd to WorkspaceContext
+trusted capture source + CaptureResult array
+  -> [EvidenceCaptureService]
+      -> resolve WorkspaceContext for every result
+      -> EvidenceItemDto array
+          -> [EvidenceItemService]
+              -> [EvidenceItem] : atomic, idempotent rows in SQLite evidence_items
 
-[Captured Activity Observation] + trusted route identity + resolved WorkspaceContext
-  -> [Captured Evidence Ingestion]
-      -> later EvidenceCandidateDto construction and durable acceptance
+targeted manual memory insertion -X-> capture path
+capture path -X-> (evidence reading | memory curation | Session Memory)
 ```
 
-The automatic and fixture routes meet at Provider Evidence Capture and use the
-same Codex adapter. They do not create separate parsing or downstream evidence
-contracts.
+Every native source owns its adapter and input format. Adapters converge on
+`CaptureResult`. Everything after that seam is source-neutral. A future Claude
+entry adds `ClaudeCaptureAdapter` and one factory registration. It does not
+change the shared services or persistence contract.
 
 ## Design Item Catalog
 
 | Design item | Representation |
 | --- | --- |
-| [Provider Evidence Capture](#provider-evidence-capture) | exact: `src/capture/evidence-capture.service.ts` |
-| [Codex Capture Adapter](#codex-capture-adapter) | exact: `src/providers/codex/codex-capture.adapter.ts` |
-| [Development Capture Fixture](#development-capture-fixture) | semantic: `Development Capture Fixture` |
-| [Captured Activity Observation](#captured-activity-observation) | exact: `CapturedActivityObservation` |
-| [Captured Evidence Ingestion](#captured-evidence-ingestion) | exact: `src/capture/captured-evidence-ingestion.service.ts` |
+| [CaptureAdapterFactory](#captureadapterfactory) | exact: `src/capture/capture-adapter.factory.ts` |
+| [CodexCaptureAdapter](#codexcaptureadapter) | exact: `src/providers/codex/codex-capture.adapter.ts` |
+| [DevelopmentCaptureAdapter](#developmentcaptureadapter) | exact: `src/development/development-capture.adapter.ts` |
+| [EvidenceCaptureService](#evidencecaptureservice) | exact: `src/capture/evidence-capture.service.ts` |
+| [EvidenceItemService](#evidenceitemservice) | exact: `src/evidence/evidence-item.service.ts` |
+| [EvidenceItem](#evidenceitem) | exact: `src/storage/sqlite/models/evidence-item.model.ts` |
 
 ## New Or Revised Files Or Owners
 
-### Captured Activity Observation
+### CaptureAdapterFactory
 
-**Representation:** exact: `CapturedActivityObservation`
+**Representation:** exact: `src/capture/capture-adapter.factory.ts`
 
-**Evidence:** accepted design
+**Evidence:** accepted provider-abstraction boundary
 
-Represents exactly one normalized, content-bearing source event before
-candidate construction. One top-level completed Codex turn therefore produces
-one user-message observation and one assistant-message observation. The two
-observations preserve their shared native session and turn coordinates, but do
-not become one synthetic turn object.
-
-Each observation carries one closed product-semantic kind:
-
-```text
-conversation.user-message
-conversation.assistant-message
-```
-
-The Codex adapter preserves the separate source-native event kind and maps
-`UserPromptSubmit` and `Stop` to the product kinds for both routes. Shared
-ingestion and later Session curation do not interpret Codex event names to
-recover product meaning.
+Selects one `CaptureAdapter` from the trusted capture entry. It is the only
+owner of adapter selection. It does not normalize input, infer workspace
+context, persist evidence, or know memory behavior.
 
 Detailed boundary:
-[Captured Activity Observation](pseudocode/captured-activity-observation.md).
+[`CaptureAdapterFactory`](pseudocode/src/capture/capture-adapter.factory.ts.md).
 
-## Existing Files Or Owners Relied On
-
-### Provider Evidence Capture
-
-**Representation:** exact: `src/capture/evidence-capture.service.ts`
-
-**Evidence:** accepted design
-
-Coordinates one capture invocation. Application composition binds its trusted
-route identity and Codex adapter. It normalizes the exact payload, resolves the
-observation's working directory to `WorkspaceContext`, and delegates the
-observation, identity, and context to captured-evidence ingestion.
-
-Detailed boundary:
-[`EvidenceCaptureService`](pseudocode/src/capture/evidence-capture.service.ts.md).
-
-### Codex Capture Adapter
+### CodexCaptureAdapter
 
 **Representation:** exact: `src/providers/codex/codex-capture.adapter.ts`
 
 **Evidence:** verified Codex input contract and accepted design
 
-Will validate and interpret one exact Codex-shaped JSON input from either
-route, preserve that exact input as raw source, and produce either one captured
-activity observation or a non-evidence outcome. The trusted route identity
-remains outside the payload and observation. Automatic hook installation,
-delivery recovery, and transcript reconciliation remain in Roadmap Step 7.
+Validates one supported Codex-native payload, extracts source facts, preserves
+the exact JSON input, and returns one `CaptureResult`.
+
+It does not infer conversation structure, establish trusted route identity,
+resolve a Project, construct an `EvidenceItemDto`, persist evidence, or assign
+memory meaning.
 
 Detailed boundary:
 [`CodexCaptureAdapter`](pseudocode/src/providers/codex/codex-capture.adapter.ts.md).
 
-### Development Capture Fixture
+### DevelopmentCaptureAdapter
 
-**Representation:** semantic: `Development Capture Fixture`
+**Representation:** exact: `src/development/development-capture.adapter.ts`
 
-**Evidence:** accepted user requirement and design
+**Evidence:** explicit user requirement and accepted design
 
-Will supply one controlled `UserPromptSubmit` payload and one controlled `Stop`
-payload in that order through provider evidence capture configured with the
-same Codex adapter and the trusted `development.fixture` route identity. It
-does not construct observations, accept evidence directly, or write Session
-Memory.
+Validates one fixture-native record, preserves that exact record, and returns
+one `CaptureResult`. The local command uses it to create controlled captured
+evidence without installation or automatic hooks.
+
+The fixture does not generate Codex JSON. It verifies the shared capture and
+memory path, not the Codex parsing contract.
+
+Detailed boundaries:
+[Development Capture Fixture](pseudocode/development-capture-fixture.md) and
+[`DevelopmentCaptureAdapter`](pseudocode/src/development/development-capture.adapter.ts.md).
+
+### EvidenceCaptureService
+
+**Representation:** exact: `src/capture/evidence-capture.service.ts`
+
+**Evidence:** explicit user requirement and accepted design
+
+Receives one trusted capture source and one ordered `CaptureResult` array. It
+resolves every result through `WorkspaceContextService`, constructs the
+complete `EvidenceItemDto` array, and delegates that array to
+`EvidenceItemService`.
+
+It does not select adapters, parse native input, write SQLite directly, read
+evidence, or invoke memory processing.
 
 Detailed boundary:
-[Development Capture Fixture](pseudocode/development-capture-fixture.md).
+[`EvidenceCaptureService`](pseudocode/src/capture/evidence-capture.service.ts.md).
 
-### Captured Evidence Ingestion
+### EvidenceItemService
 
-**Representation:** exact: `src/capture/captured-evidence-ingestion.service.ts`
+**Representation:** exact: `src/evidence/evidence-item.service.ts`
 
-**Evidence:** accepted design
+**Evidence:** accepted persistence ownership
 
-Receives one captured activity observation with trusted capture-source
-identity and an already resolved `WorkspaceContext`. It owns later candidate
-construction and delegation to durable acceptance. It does not parse native
-provider input or resolve a Project.
+Owns one atomic and idempotent evidence write. It validates replay against
+existing rows, allocates project-local evidence sequences, and persists the
+complete ordered DTO array as immutable `EvidenceItem` rows.
+
+It does not parse source input, infer workspace context, read evidence for a
+consumer, or invoke memory processing.
 
 Detailed boundary:
-[`CapturedEvidenceIngestionService`](pseudocode/src/capture/captured-evidence-ingestion.service.ts.md).
+[`EvidenceItemService`](pseudocode/src/evidence/evidence-item.service.ts.md).
 
-## Exclusions
+### EvidenceItem
 
-- `EvidenceCandidateDto` and `EvidenceItemDto` field contracts;
-- SQLite evidence schema and acceptance behavior;
-- the development fixture file and CLI request contract;
-- Codex hook installation, delivery reliability, and recovery; and
-- Session Memory curation or storage.
+**Representation:** exact: `src/storage/sqlite/models/evidence-item.model.ts`
+
+**Evidence:** accepted design and existing SQLite/Sequelize runtime
+
+Owns one immutable captured-evidence row in `evidence_items`. The row preserves
+its Project, project-local sequence, trusted capture source, normalized source
+facts, exact native source, integrity digest, replay identity, and receipt
+time.
+
+Detailed boundary:
+[`EvidenceItem`](pseudocode/src/storage/sqlite/models/evidence-item.model.ts.md).
+
+## Existing Files Or Owners Relied On
+
+`EvidenceCaptureService` uses the existing `WorkspaceContextService`.
+`EvidenceItemService` uses the existing `SqliteDatabase` transaction boundary.
+The existing `Project.lastAllocatedEvidenceSequence` supplies project-local
+row ordering. This unit does not change their ownership.
 
 ## Admission Rule
 
-This shape admits only the accepted one-event observation cardinality, the
-shared Codex parsing path, the provider-neutral activity kinds, and the
-established ownership boundaries.
+This shape admits only the six classes that own adapter selection, source
+normalization, capture coordination, evidence persistence, and the durable
+row. Interfaces and DTOs remain derived contracts. Targeted insertion and all
+evidence consumers remain separate boundaries.

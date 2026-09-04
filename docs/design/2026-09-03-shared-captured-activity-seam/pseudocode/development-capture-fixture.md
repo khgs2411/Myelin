@@ -1,53 +1,36 @@
-# Development Capture Fixture Boundary
+# Development Capture Fixture Flow
 
 > Pseudocode artifact. Non-executable reference shape.
 
-The development fixture replaces Codex hook installation and automatic
-invocation. It does not replace Codex payload parsing or the downstream capture
-path.
+The local command manually supplies captured input. It replaces installation
+and automatic provider delivery only.
 
 ```ts
-type ControlledCompletedCodexTurn = Readonly<{
-  userPromptSubmit: ProviderNativeActivity
-    // exact controlled Codex UserPromptSubmit JSON
-  stop: ProviderNativeActivity
-    // exact controlled Codex Stop JSON for the same session_id and turn_id
-}>
+COMMAND dev capture-fixture <fixture-file>
+  exactFixtureInputs = read one ordered non-empty input array
 
-class DevelopmentCaptureFixture {
-  constructor(
-    private readonly developmentEvidenceCapture: EvidenceCaptureService
-      // configured with sourceIdentity "development.fixture"
-      // configured with CodexCaptureAdapter
-  ) {}
+  sourceKey = "development.fixture"
+    // trusted command composition, not fixture data
 
-  async capture(
-    turn: ControlledCompletedCodexTurn
-  ): Promise<ControlledTurnCaptureResult> {
-    require turn contract contains one ordered top-level completed Codex turn
+  adapter = captureAdapterFactory.create(sourceKey)
+  captureResults = exactFixtureInputs map in order:
+    adapter.normalize(exact fixture record as NativeCaptureInput)
 
-    userResult = await developmentEvidenceCapture.capture({
-      nativeActivity: turn.userPromptSubmit
-    })
-    require userResult is accepted
+  receipt = await evidenceCaptureService.captureBatch({
+    sourceKey,
+    results: captureResults
+  })
 
-    assistantResult = await developmentEvidenceCapture.capture({
-      nativeActivity: turn.stop
-    })
-    require assistantResult is accepted
-
-    return {
-      userMessage: userResult.acceptance,
-      assistantMessage: assistantResult.acceptance
-    }
-  }
-}
+  print each durable evidence id, project sequence, and disposition
 ```
 
-Each activity keeps its own replay identity from `(session_id, turn_id,
-hook_event_name)`. The route domain is `development.fixture`. The fixture never
-constructs `CapturedActivityObservation`, calls durable acceptance directly, or
-writes Session Memory.
+The command submits the complete ordered array as one operation. Adapter
+normalization and workspace resolution finish before `EvidenceItemService`
+starts its transaction. A failure writes no rows.
 
-The later fixture-command unit owns the file format, CLI request, controlled
-field generation, pair validation, and human output.
+The command does not generate Codex payloads, write SQLite, read evidence,
+register a Project, retry capture, or invoke Session Memory. It uses the
+existing seeded LLM Wiki Project through normal workspace resolution.
+
+The command verifies the shared path from `CaptureResult` to SQLite. Separate
+Codex adapter verification covers the Codex-native input contract.

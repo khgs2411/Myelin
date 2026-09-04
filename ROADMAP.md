@@ -21,10 +21,11 @@ traceable continuity across work sessions without manual memory maintenance.
 - Memory maintenance must operate without requiring routine user decisions.
 - Session Memory behavior must be proven with controlled development capture
   fixtures before automated provider capture enters the product.
-- A development capture fixture supplies controlled `UserPromptSubmit` and
-  `Stop` payloads through the same Codex adapter and shared captured-evidence
-  path as later automatic capture. It does not write Session Memory directly.
-  Session maintenance derives Session Memory from accepted evidence.
+- A development capture fixture sends an ordered manual input array through its
+  own `CaptureAdapter`. Provider adapters and the fixture adapter converge on
+  the same `CaptureResult` contract. The shared capture and persistence path
+  writes the input to SQLite. It does not read evidence or create Session
+  Memory.
 - Before that proof, development uses the existing LLM Wiki Project
   registration and a repository-local Bun CLI. It can match invocation paths
   within that registered root and observe its active branch. General project
@@ -65,9 +66,9 @@ can carry the complete memory journey.
 
 ## Roadmap Step 2: Establish Local Captured-Evidence Intake
 
-Goal: Make one controlled local completed turn become two inspectable, accepted
-Evidence Log items through the provider-neutral path that later automatic
-capture will reuse.
+Goal: Make one controlled ordered local input array become inspectable,
+durable `EvidenceItem` rows through the provider-neutral path that later
+automatic transport will reuse.
 
 - [x] `done` Establish the repository-local CLI shell
   - Description: Give this repository one minimal Bun-run entrypoint that owns
@@ -100,68 +101,85 @@ capture will reuse.
     that can supply useful Session evidence, including event granularity,
     source material, workspace location, source time, and reliable replay
     coordinates.
-  - Why: The development fixture must simulate the real future capture input
-    without first installing hooks or inventing incompatible source facts.
-  - Shape: This unit establishes provider evidence for the later shared seam.
-    It does not install hooks or implement a Codex adapter.
+  - Why: The Codex adapter must use verified provider-native source facts when
+    automatic transport is added.
+  - Shape: This unit establishes the Codex-native input contract only. It does
+    not constrain the development fixture input shape, install hooks, or
+    implement a Codex adapter.
   - Progress: The local Codex contract establishes one root
-    `UserPromptSubmit` input and one root `Stop` input as the two native shapes
-    the development fixture must model for one controlled turn.
+    `UserPromptSubmit` input and one root `Stop` input as the first two native
+    shapes the Codex adapter can normalize.
 
-- [ ] `next` [Establish the shared captured-activity seam](docs/design/2026-09-03-shared-captured-activity-seam/feature-shape.md)
-  - Description: Define the provider-neutral normalized capture observation
-    produced by the Codex adapter for both automatic and controlled hook input.
-  - Why: The fixture must replace installation and automatic invocation without
-    bypassing Codex parsing or creating a second downstream evidence contract.
-  - Shape: Automatic capture and the development fixture supply the same Codex
-    hook payload shapes to one adapter. The adapter emits the shared captured-
-    activity observation.
-  - Progress: The shared observation now preserves product meaning, native
-    coordinates, replay input, exact source, and working directory. Both entry
-    routes use the same Codex adapter while retaining truthful route identity.
+- [x] `done` [Establish the provider evidence capture boundary](docs/design/2026-09-03-shared-captured-activity-seam/feature-shape.md)
+  - Description: Define the complete adapter-driven path from native capture
+    input to durable `EvidenceItem` rows.
+  - Shape: A factory selects a source-specific adapter. Every adapter returns
+    `CaptureResult`. `EvidenceCaptureService` adds trusted workspace context and
+    creates `EvidenceItemDto`. `EvidenceItemService` owns the atomic SQLite
+    write. Targeted manual memory insertion remains a separate product-Inbox
+    path.
+  - Progress: The fixture and provider adapters now share the result contract,
+    not a fabricated provider payload. Capture stops after durable SQLite
+    evidence and contains no evidence-reading or memory-curation behavior.
 
-- [ ] `open` Establish the provider-neutral evidence value contracts
-  - Description: Define the immutable candidate supplied to acceptance and the
-    accepted evidence item produced after persistence, including provenance,
-    project context, exact source material, source time, acceptance time, and
-    durable identity boundaries.
-  - Shape: `EvidenceCandidateDto` contains no SQLite identity or acceptance
-    result. `EvidenceItemDto` represents accepted evidence without becoming an
-    ORM model.
+- [ ] `next` Deliver the shared capture contract and adapter factory
+  - Description: Add `CaptureAdapter`, `CaptureResult`, and
+    `CaptureAdapterFactory` so each trusted capture entry can select one adapter
+    and normalize its native input without provider branches in shared
+    services.
+  - Shape: Codex, future Claude, and the development fixture own separate native
+    input formats. They converge only on `CaptureResult`.
 
-- [ ] `open` [Deliver durable Evidence Log acceptance](docs/design/2026-09-03-durable-evidence-acceptance/feature-shape.md)
-  - Description: Validate one project-bound acceptance command and commit new
-    evidence to an immutable, project-ordered SQLite Evidence Log with replay
-    protection and a recoverable receipt.
-  - Shape: Acceptance owns the outer write transaction, ordering, replay
-    classification, and durable receipt. It does not construct capture
-    candidates or create Session Memory.
+- [ ] `open` Deliver durable EvidenceItem persistence
+  - Description: Add `EvidenceItemDto`, `EvidenceItemService`, the immutable
+    Sequelize `EvidenceItem` model, and the `evidence_items` SQLite schema.
+  - Shape: `EvidenceItemService` owns atomic batches, project-local sequence
+    allocation, exact replay, and conflicting-replay rejection. It does not
+    read evidence or invoke memory processing.
 
-- [ ] `open` Deliver shared captured-evidence ingestion
-  - Description: Convert one trusted normalized capture observation and its
-    resolved local `WorkspaceContext` into the provider-neutral candidate sent
-    through durable Evidence Log acceptance.
-  - Why: The development fixture and later provider adapters must use one
-    candidate-construction and acceptance path.
-  - Shape: Shared ingestion owns capture provenance, exact source material,
-    candidate construction, and the acceptance call. It does not parse native
-    provider payloads or resolve Projects.
+- [ ] `open` Deliver the provider-neutral EvidenceCaptureService
+  - Description: Accept one trusted capture source and ordered `CaptureResult`
+    array, resolve existing `WorkspaceContext`, construct `EvidenceItemDto`
+    values, and delegate the complete batch to `EvidenceItemService`.
+  - Shape: The service does not select adapters, parse native input, write
+    SQLite directly, read evidence, or invoke memory processing.
 
-- [ ] `open` Deliver the local development capture fixture command
+- [ ] `open` Deliver the Codex capture adapter
+  - Description: Normalize verified Codex `UserPromptSubmit` and `Stop` inputs
+    into the shared `CaptureResult` contract while preserving exact native
+    source material and stable replay coordinates.
+  - Shape: Codex parsing remains isolated behind `CaptureAdapter`.
+
+- [ ] `open` Deliver the development fixture adapter and command
   - Description: Add one repository-local `dev capture-fixture` command that
-    reads one controlled completed-turn fixture, sends its ordered
-    `UserPromptSubmit` and `Stop` payloads through the Codex adapter and shared
-    ingestion, and reports both durable evidence identities and project
+    reads an ordered manual input array, normalizes it through
+    `DevelopmentCaptureAdapter`, submits the results through the shared capture
+    and persistence path, and reports durable evidence identities and project
     sequences for SQLite inspection.
   - Why: This command lets LLM Wiki exercise captured-evidence intake without
     global installation or automatic provider hooks.
-  - Shape: The command uses the existing seeded Project and resolved local
-    workspace context. Its trusted route identity is `development.fixture`. It
-    does not write the Evidence Log directly or create Session Memory.
+  - Shape: The command uses the existing seeded Project. Its trusted route
+    identity is `development.fixture`. It preserves exact fixture-native source
+    material and does not generate fake Codex input. It verifies the shared
+    pipeline, not Codex parsing.
+
+- [x] `retired` Deliver separate durable Evidence Log acceptance
+  - Description: Introduce a separate acceptance service, operation receipt,
+    and Session-maintenance obligation between capture and SQLite.
+  - Why: The accepted capture boundary assigns atomic, idempotent evidence
+    persistence to `EvidenceItemService`. Session consumption and maintenance
+    will be designed after captured evidence exists.
+
+- [x] `retired` Deliver separate captured-evidence ingestion
+  - Description: Introduce an intermediate observation-to-candidate service
+    between provider normalization and evidence persistence.
+  - Why: Capture adapters return `CaptureResult` directly. A second
+    observation-to-candidate orchestration service has no separate
+    responsibility in the capture path.
 
 ## Roadmap Step 3: Create Session Memory From Accepted Evidence
 
-Goal: Consume accepted project evidence through Session-owned services and
+Goal: Consume captured project evidence through Session-owned services and
 produce visible, traceable SQLite Session Memory entries.
 
 - [ ] `open` Establish the Session Memory entry contract
@@ -262,7 +280,7 @@ about its own development before installation or automatic capture exists.
     evolve Session Memory without losing prior lineage or later pending work.
 
 - [ ] `open` Prove inspectable evidence-to-memory lineage
-  - Description: Make one captured transcript, its accepted Evidence Log item,
+  - Description: Make one captured transcript, its durable `EvidenceItem` row,
     the resulting Session Memory entry, and the entry's evidence references
     traceable through the local SQLite state.
 
@@ -294,20 +312,21 @@ the proven prototype into the first stable host-installed command.
   - Shape: The installed command reuses the proven `Application` operations and
     persistence contracts. Distribution does not duplicate product workflows.
 
-## Roadmap Step 7: Capture Real Agent Work Automatically
+## Roadmap Step 7: Install Automatic Codex Capture
 
-Goal: Add automatic provider capture as a thin ingress layer over the proven
-evidence-acceptance and Session Memory behavior.
+Goal: Install a reliable Codex hook transport that submits native input to the
+proven provider evidence capture path.
 
-- [ ] `open` Deliver automatic evidence capture from one provider
-  - Description: Observe one real provider workflow, translate useful activity
-    through the provider boundary, and submit it to the existing evidence
-    intake path without interrupting normal agent work.
+- [ ] `open` Deliver automatic Codex hook transport
+  - Description: Observe real Codex hook activity and submit each native payload
+    through `CaptureAdapterFactory`, `CodexCaptureAdapter`, and the existing
+    shared capture path without interrupting normal agent work.
   - Why: Session Memory is proven first with controlled capture fixtures so raw
     provider conversations do not obscure memory-behavior defects.
-  - Shape: Automated capture does not create a second acceptance or maintenance
-    path. Additional providers remain outside this outcome until the first
-    integration is proven.
+  - Shape: The installed transport adds no parsing, persistence, or memory
+    logic. The Codex adapter produces `CaptureResult`; the established capture
+    and EvidenceItem services perform the remaining work. Additional providers
+    remain outside this outcome.
   - Installation relation: This outcome installs and configures the Codex
     capture integration after the reusable host command exists.
   - Reliability hint: Codex lifecycle hooks and `notify` are best-effort

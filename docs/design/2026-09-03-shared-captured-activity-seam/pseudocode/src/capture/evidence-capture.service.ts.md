@@ -4,76 +4,53 @@
 
 Intended destination: `src/capture/evidence-capture.service.ts`
 
-`EvidenceCaptureService` coordinates one provider-contract activity from
-adapter normalization through workspace resolution and shared ingestion.
+`EvidenceCaptureService` converts normalized capture results into contextual
+evidence DTOs. It does not parse native input or write SQLite.
 
 ```ts
-type CaptureInvocationContext = Readonly<{
-  sourceIdentity: EvidenceSourceIdentity
-    // trusted route identity bound by Application composition
+type CaptureBatchInput = Readonly<{
+  sourceKey: CaptureSourceKey
+    // trusted route identity from Application composition
+  results: ReadonlyNonEmptyArray<CaptureResult>
 }>
-
-type CaptureInput = Readonly<{
-  nativeActivity: ProviderNativeActivity
-}>
-
-type CaptureResult =
-  | Readonly<{
-      kind: "accepted"
-      acceptance: EvidenceAcceptanceReceipt
-    }>
-  | Readonly<{
-      kind: "ignored"
-      reason: CaptureIgnoreReason | WorkspaceContextIgnoreReason
-    }>
 
 class EvidenceCaptureService {
   constructor(
-    private readonly invocationContext: CaptureInvocationContext,
-    private readonly adapter: CaptureAdapter,
     private readonly workspaceContextService: WorkspaceContextService,
-    private readonly capturedEvidenceIngestion: CapturedEvidenceIngestionService
+    private readonly evidenceItemService: EvidenceItemService
   ) {}
 
-  async capture(input: CaptureInput): Promise<CaptureResult> {
-    normalization = adapter.normalize(input.nativeActivity)
+  async captureBatch(
+    input: CaptureBatchInput
+  ): Promise<ReadonlyArray<CapturedEvidenceReference>> {
+    require a trusted sourceKey
+    require a non-empty ordered result array
 
-    IF normalization.kind is "rejected"
-      fail with normalization.failure
+    items = input.results map in order:
+      workspaceContext = await workspaceContextService.resolve(
+        result.workingDirectory
+      )
+      require workspaceContext identifies a registered Project
 
-    IF normalization.kind is "ignored"
-      return ignored(normalization.reason)
+      EvidenceItemDto {
+        captureSourceKey: input.sourceKey,
+        workspaceContext,
+        nativeEventKind: result.nativeEventKind,
+        nativeSessionReference: result.nativeSessionReference,
+        nativeInteractionReference: result.nativeInteractionReference,
+        nativeOccurredAt: result.nativeOccurredAt,
+        normalizedContent: result.normalizedContent,
+        replay: result.replay,
+        sourceMaterial: result.sourceMaterial
+      }
 
-    observation = normalization.observation
+    require all items belong to one Project
 
-    resolution = await workspaceContextService.resolve({
-      workingDirectory: observation.workingDirectory
-    })
-
-    IF resolution.kind is "failed"
-      fail with resolution.failure
-
-    IF resolution.kind is "unmanaged"
-      return ignored(resolution.reason)
-
-    acceptance = await capturedEvidenceIngestion.ingest({
-      sourceIdentity: invocationContext.sourceIdentity,
-      observation,
-      workspaceContext: resolution.context
-    })
-
-    return accepted(acceptance)
+    return evidenceItemService.insertBatch(items)
   }
 }
 ```
 
-Application composition creates two truthful route configurations:
-
-```text
-automatic Codex invocation -> sourceIdentity "codex.hook"
-controlled fixture         -> sourceIdentity "development.fixture"
-```
-
-Both configurations use `CodexCaptureAdapter`. The payload cannot override the
-route identity. This service does not parse Codex fields, construct candidates,
-persist evidence directly, or execute Session curation.
+All context resolution finishes before persistence begins. A failure produces
+no rows. The service does not select an adapter, parse source input, read
+captured evidence, retry capture, or invoke memory processing.

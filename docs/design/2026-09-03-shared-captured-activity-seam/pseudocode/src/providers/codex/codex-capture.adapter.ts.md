@@ -4,9 +4,8 @@
 
 Intended destination: `src/providers/codex/codex-capture.adapter.ts`
 
-`CodexCaptureAdapter` validates and normalizes the accepted
-`UserPromptSubmit` and `Stop` payload shapes. The automatic and fixture routes
-use this same adapter instance or equivalent composition.
+`CodexCaptureAdapter` converts one supported Codex hook payload into one
+provider-neutral `CaptureResult`.
 
 ```ts
 type CodexUserPromptSubmitInput = Readonly<{
@@ -14,12 +13,8 @@ type CodexUserPromptSubmitInput = Readonly<{
   session_id: string
   turn_id: string
   cwd: string
-  model: string
-  permission_mode: CodexPermissionMode
-  transcript_path: string | null
   prompt: string
-  agent_id?: string
-  agent_type?: string
+  // other verified Codex fields remain provider-local
 }>
 
 type CodexStopInput = Readonly<{
@@ -27,74 +22,55 @@ type CodexStopInput = Readonly<{
   session_id: string
   turn_id: string
   cwd: string
-  model: string
-  permission_mode: CodexPermissionMode
-  transcript_path: string | null
   last_assistant_message: string | null
-  stop_hook_active: boolean
+  // other verified Codex fields remain provider-local
 }>
 
 class CodexCaptureAdapter implements CaptureAdapter {
-  normalize(activity: ProviderNativeActivity): CaptureNormalizationResult {
-    require activity.mediaType is "application/json"
-    parse activity.content as one JSON object
+  normalize(input: NativeCaptureInput): CaptureResult {
+    require input.mediaType is "application/json"
+    parse input.content as one JSON object
 
     MATCH payload.hook_event_name
       "UserPromptSubmit"
         validate CodexUserPromptSubmitInput
-
-        IF payload identifies provider-internal agent activity
-          return ignored("codex.provider-internal-prompt")
-
-        IF payload.prompt has no non-whitespace content
-          return ignored("codex.empty-user-message")
-
-        return evidence({
-          kind: "conversation.user-message",
-          nativeEventKind: "UserPromptSubmit",
-          providerSessionReference: payload.session_id,
-          providerInteractionReference: payload.turn_id,
-          sourceReplay: codexHookReplay(payload),
-          providerOccurredAt: absent,
-          content: payload.prompt,
-          workingDirectory: payload.cwd,
-          rawSource: activity
-        })
+        normalizedContent = payload.prompt
 
       "Stop"
         validate CodexStopInput
-
-        IF payload.last_assistant_message is null or has no non-whitespace content
-          return ignored("codex.empty-assistant-message")
-
-        return evidence({
-          kind: "conversation.assistant-message",
-          nativeEventKind: "Stop",
-          providerSessionReference: payload.session_id,
-          providerInteractionReference: payload.turn_id,
-          sourceReplay: codexHookReplay(payload),
-          providerOccurredAt: absent,
-          content: payload.last_assistant_message,
-          workingDirectory: payload.cwd,
-          rawSource: activity
-        })
+        normalizedContent = payload.last_assistant_message
 
       OTHERWISE
-        return ignored("codex.unsupported-hook-event")
-  }
-}
+        fail as unsupported Codex capture input
 
-FUNCTION codexHookReplay(payload)
-  return {
-    scheme: "codex-hook/v1",
-    key: stable digest of canonical tuple {
-      session: payload.session_id,
-      turn: payload.turn_id,
-      event: payload.hook_event_name
+    return CaptureResult {
+      nativeEventKind: payload.hook_event_name,
+      nativeSessionReference: payload.session_id,
+      nativeInteractionReference: payload.turn_id,
+      nativeOccurredAt: absent,
+      normalizedContent,
+      workingDirectory: payload.cwd,
+      replay: {
+        scheme: "codex-hook/v1",
+        key: stable digest of {
+          session_id: payload.session_id,
+          turn_id: payload.turn_id,
+          hook_event_name: payload.hook_event_name
+        }
+      },
+      sourceMaterial: {
+        mediaType: input.mediaType,
+        content: input.content,
+        sha256: SHA-256 of exact input.content bytes
+      }
     }
   }
+}
 ```
 
-Unknown additive fields remain in `rawSource`. The adapter does not read
-`transcript_path`, invent occurrence time, resolve a Project, or establish
-`codex.hook` or `development.fixture` identity.
+The native event name locates content. It does not assign conversation roles,
+pair events, or assign memory meaning. The adapter preserves each valid
+supported input, including absent or empty normalized text.
+
+The adapter does not know the entry route, select an adapter, resolve Projects,
+construct an `EvidenceItemDto`, or persist rows.
