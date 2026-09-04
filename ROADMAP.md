@@ -21,6 +21,10 @@ traceable continuity across work sessions without manual memory maintenance.
 - Memory maintenance must operate without requiring routine user decisions.
 - Session Memory behavior must be proven with controlled development capture
   fixtures before automated provider capture enters the product.
+- A development capture fixture supplies controlled `UserPromptSubmit` and
+  `Stop` payloads through the same Codex adapter and shared captured-evidence
+  path as later automatic capture. It does not write Session Memory directly.
+  Session maintenance derives Session Memory from accepted evidence.
 - Before that proof, development uses the existing LLM Wiki Project
   registration and a repository-local Bun CLI. It can match invocation paths
   within that registered root and observe its active branch. General project
@@ -61,8 +65,9 @@ can carry the complete memory journey.
 
 ## Roadmap Step 2: Establish Local Captured-Evidence Intake
 
-Goal: Feed controlled evidence from this repository into the Session pipeline
-without first building general project discovery or installation behavior.
+Goal: Make one controlled local completed turn become two inspectable, accepted
+Evidence Log items through the provider-neutral path that later automatic
+capture will reuse.
 
 - [x] `done` Establish the repository-local CLI shell
   - Description: Give this repository one minimal Bun-run entrypoint that owns
@@ -90,60 +95,183 @@ without first building general project discovery or installation behavior.
     immutable Project context, observes the active registered-repository
     branch, rejects unmanaged directories, and closes its database lifecycle.
 
-- [ ] `next` Deliver durable evidence acceptance
-  - Description: Accept normalized evidence with provenance, idempotency, and a
-    durable receipt while coordinating all required state changes atomically.
-  - Shape: Evidence acceptance owns the outer write transaction and preserves
-    source facts without turning provider payloads into application authority.
+- [x] `done` [Verify the Codex automatic-capture input contract](docs/design/2026-09-03-codex-automatic-capture-input-contract/feature-shape.md)
+  - Description: Research the current Codex hook activities and payload fields
+    that can supply useful Session evidence, including event granularity,
+    source material, workspace location, source time, and reliable replay
+    coordinates.
+  - Why: The development fixture must simulate the real future capture input
+    without first installing hooks or inventing incompatible source facts.
+  - Shape: This unit establishes provider evidence for the later shared seam.
+    It does not install hooks or implement a Codex adapter.
+  - Progress: The local Codex contract establishes one root
+    `UserPromptSubmit` input and one root `Stop` input as the two native shapes
+    the development fixture must model for one controlled turn.
 
-- [ ] `open` Deliver the development capture fixture
-  - Description: Give development work one canonical internal tool for feeding
-    an exact transcript file into the captured-evidence and Session Memory path.
-  - Why: Controlled fixtures make Session behavior diagnosable before raw hook
-    payloads and provider lifecycle volume enter the product.
-  - Shape: The tool uses development provenance and the shared captured-evidence
-    path. It is not distributed as a production command and does not claim to
-    prove provider-hook compatibility.
+- [ ] `next` [Establish the shared captured-activity seam](docs/design/2026-09-03-shared-captured-activity-seam/feature-shape.md)
+  - Description: Define the provider-neutral normalized capture observation
+    produced by the Codex adapter for both automatic and controlled hook input.
+  - Why: The fixture must replace installation and automatic invocation without
+    bypassing Codex parsing or creating a second downstream evidence contract.
+  - Shape: Automatic capture and the development fixture supply the same Codex
+    hook payload shapes to one adapter. The adapter emits the shared captured-
+    activity observation.
+  - Progress: The shared observation now preserves product meaning, native
+    coordinates, replay input, exact source, and working directory. Both entry
+    routes use the same Codex adapter while retaining truthful route identity.
 
-## Roadmap Step 3: Deliver Maintained Session Memory
+- [ ] `open` Establish the provider-neutral evidence value contracts
+  - Description: Define the immutable candidate supplied to acceptance and the
+    accepted evidence item produced after persistence, including provenance,
+    project context, exact source material, source time, acceptance time, and
+    durable identity boundaries.
+  - Shape: `EvidenceCandidateDto` contains no SQLite identity or acceptance
+    result. `EvidenceItemDto` represents accepted evidence without becoming an
+    ORM model.
 
-Goal: Turn captured project evidence into reliable recent-work continuity that
-the system maintains autonomously.
+- [ ] `open` [Deliver durable Evidence Log acceptance](docs/design/2026-09-03-durable-evidence-acceptance/feature-shape.md)
+  - Description: Validate one project-bound acceptance command and commit new
+    evidence to an immutable, project-ordered SQLite Evidence Log with replay
+    protection and a recoverable receipt.
+  - Shape: Acceptance owns the outer write transaction, ordering, replay
+    classification, and durable receipt. It does not construct capture
+    candidates or create Session Memory.
 
-- [ ] `open` Establish the Session Memory lifecycle
-  - Description: Give the fixed local project a coherent Session Memory state
-    that tracks its accepted-evidence frontier and maintenance lifecycle.
+- [ ] `open` Deliver shared captured-evidence ingestion
+  - Description: Convert one trusted normalized capture observation and its
+    resolved local `WorkspaceContext` into the provider-neutral candidate sent
+    through durable Evidence Log acceptance.
+  - Why: The development fixture and later provider adapters must use one
+    candidate-construction and acceptance path.
+  - Shape: Shared ingestion owns capture provenance, exact source material,
+    candidate construction, and the acceptance call. It does not parse native
+    provider payloads or resolve Projects.
 
-- [ ] `open` Deliver autonomous Session Memory evolution
-  - Description: Detect when Session Memory requires maintenance, process the
-    relevant accepted evidence, and advance its canonical state without routine
-    user intervention.
-  - Shape: Session Memory remains a database-backed recent-work product. Its
-    behavior does not establish a shared implementation for durable memories.
+- [ ] `open` Deliver the local development capture fixture command
+  - Description: Add one repository-local `dev capture-fixture` command that
+    reads one controlled completed-turn fixture, sends its ordered
+    `UserPromptSubmit` and `Stop` payloads through the Codex adapter and shared
+    ingestion, and reports both durable evidence identities and project
+    sequences for SQLite inspection.
+  - Why: This command lets LLM Wiki exercise captured-evidence intake without
+    global installation or automatic provider hooks.
+  - Shape: The command uses the existing seeded Project and resolved local
+    workspace context. Its trusted route identity is `development.fixture`. It
+    does not write the Evidence Log directly or create Session Memory.
 
-## Roadmap Step 4: Retrieve Session Continuity
+## Roadmap Step 3: Create Session Memory From Accepted Evidence
+
+Goal: Consume accepted project evidence through Session-owned services and
+produce visible, traceable SQLite Session Memory entries.
+
+- [ ] `open` Establish the Session Memory entry contract
+  - Description: Define the independently reconcilable Session Memory entry,
+    including its recent-work meaning, project and workspace applicability,
+    lifecycle, evidence lineage, uncertainty, and durable identity.
+  - Shape: The entry is canonical Session Memory in SQLite. It is not captured
+    evidence, a transcript summary, or a durable-memory Markdown document.
+
+- [ ] `open` Deliver durable Session Memory entry storage
+  - Description: Persist the established Session Memory entry contract through
+    a Session-owned SQLite model and access boundary without exposing mutable
+    ORM state to curation or query services.
+
+- [ ] `open` Establish Session evidence consumption and progress
+  - Description: Define how Session maintenance reads accepted evidence in
+    project order, selects one finite evaluation frontier, records pending
+    work, and advances successful progress without losing later evidence.
+  - Shape: Evidence remains authoritative and immutable. Session-owned progress
+    does not move into the Project or Evidence Log models.
+
+- [ ] `open` Establish the Session curator contract
+  - Description: Define the evidence and existing-memory input supplied for one
+    Session curation pass and the structured, untrusted proposal returned by an
+    agent for application validation.
+  - Shape: The curator interprets recent work but cannot write SQLite or assign
+    durable memory identity.
+
+- [ ] `open` Deliver local agent execution for Session curation
+  - Description: Run the Session curator through the provider-neutral agent
+    execution boundary in the local development environment and return its
+    untrusted structured result for application validation.
+  - Shape: Agent execution is independent from evidence capture. It does not
+    require Codex hook installation.
+
+- [ ] `open` Deliver Session Memory reconciliation and publication
+  - Description: Validate one curator proposal against its evidence frontier
+    and current Session Memory, then atomically create, revise, supersede, or
+    retain Session entries and advance successful Session progress.
+
+- [ ] `open` Connect the development fixture to Session curation
+  - Description: Extend the local fixture workflow so accepted evidence enters
+    the real Session consumption and curation path and the command reports the
+    resulting SQLite Session Memory entry without writing it directly.
+  - Why: This completes the first local fixture-to-memory journey before
+    autonomous scheduling exists.
+
+- [ ] `open` Deliver autonomous Session Memory activation
+  - Description: Detect durable pending Session work and invoke the same
+    consumption, curation, and publication path without requiring the
+    development fixture command or routine user action.
+
+## Roadmap Step 4: Retrieve Local Session Continuity
 
 Goal: Let a later agent ask a real question and receive qualified Session
 Memory context for the fixed local project.
 
-- [ ] `open` Deliver Session Memory query
-  - Description: Search and rank recent-work memory using Session-specific
-    freshness and relevance rules while preserving provenance, uncertainty,
-    contradictions, and degraded outcomes.
+- [ ] `open` Establish the Session Memory query contract
+  - Description: Define the local question and project-context input, qualified
+    Session result shape, bounded result behavior, and explicit no-result,
+    unavailable, and degraded outcomes.
 
-## Roadmap Step 5: Prove Session Memory Through Capture Fixtures
+- [ ] `open` Establish the retrievable Session Memory projection
+  - Description: Define which entry content, scope, lifecycle, evidence lineage,
+    and freshness facts become searchable or returnable without replacing the
+    canonical SQLite Session entry.
 
-Goal: Prove the complete Session Memory behavior with controlled development
-capture fixtures before provider automation introduces raw activity and volume.
+- [ ] `open` Establish Session retrieval and qualification policy
+  - Description: Select the Session-owned retrieval signals, applicability and
+    lifecycle filters, freshness treatment, ranking behavior, and qualification
+    threshold used to answer one question.
+  - Shape: Scores and thresholds belong to Session Memory and do not become a
+    cross-product confidence scale.
 
-- [ ] `open` Complete the fixture-driven Session Memory journey
-  - Description: Submit a controlled LLM Wiki conversation fixture, maintain
-    Session Memory, and retrieve useful context during a later application
-    invocation.
-  - Why: Controlled capture input keeps Session Memory behavior deterministic
-    while its maintenance and retrieval boundaries are completed.
-  - Shape: The captured evidence remains authoritative input. Session Memory
-    owns how that evidence becomes recent-work continuity.
+- [ ] `open` Deliver the Session Memory query capability
+  - Description: Search the fixed local project's Session Memory, apply the
+    established qualification policy, and return traceable qualified results
+    with provenance, uncertainty, contradictions, and freshness.
+
+- [ ] `open` Deliver the local Session query command
+  - Description: Add one repository-local command that accepts a question,
+    delegates to the Session query capability, and presents its typed results
+    and product outcome without exposing persistence or ranking internals.
+
+## Roadmap Step 5: Prove the Local Dogfood Journey
+
+Goal: Prove that LLM Wiki can preserve and later retrieve useful continuity
+about its own development before installation or automatic capture exists.
+
+- [ ] `open` Establish the controlled LLM Wiki dogfood scenario
+  - Description: Define a repeatable set of LLM Wiki development transcripts
+    and later questions that exercise recent decisions, progress, blockers,
+    next actions, and evidence attribution without provider-hook variability.
+
+- [ ] `open` Prove fixture replay and incremental Session evolution
+  - Description: Use repeated and later controlled capture fixtures to show
+    that exact replay does not duplicate accepted work and that new evidence can
+    evolve Session Memory without losing prior lineage or later pending work.
+
+- [ ] `open` Prove inspectable evidence-to-memory lineage
+  - Description: Make one captured transcript, its accepted Evidence Log item,
+    the resulting Session Memory entry, and the entry's evidence references
+    traceable through the local SQLite state.
+
+- [ ] `open` Complete the local cross-invocation continuity journey
+  - Description: Capture and curate LLM Wiki development work in one local
+    invocation, then retrieve useful Session context in a later invocation and
+    use it to continue the work correctly.
+  - Why: This proves the local Session prototype before project generalization,
+    installation, and automatic provider capture add operational complexity.
 
 ## Roadmap Step 6: Generalize and Install the Proven Session Prototype
 
@@ -180,6 +308,12 @@ evidence-acceptance and Session Memory behavior.
   - Shape: Automated capture does not create a second acceptance or maintenance
     path. Additional providers remain outside this outcome until the first
     integration is proven.
+  - Installation relation: This outcome installs and configures the Codex
+    capture integration after the reusable host command exists.
+  - Reliability hint: Codex lifecycle hooks and `notify` are best-effort
+    signals. This unit must design missed-delivery recovery, idempotent replay,
+    and visible failure handling. It must not treat callback invocation or
+    process spawn as proof that evidence reached SQLite.
 
 ## Roadmap Step 8: Complete the First Agent Continuity Journey
 
