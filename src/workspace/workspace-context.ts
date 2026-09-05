@@ -3,10 +3,15 @@ import type {
   ProjectRegistration,
 } from "../project/project-registration.ts";
 
-export type GitBranchContext =
+export type GitContext =
   | Readonly<{
-      kind: "active";
-      name: string;
+      kind: "observed";
+      branchName: string | null;
+      headCommitId: string | null;
+      upstream: Readonly<{
+        reference: string;
+        commitId: string | null;
+      }> | null;
     }>
   | Readonly<{
       kind: "unavailable";
@@ -16,5 +21,5 @@ export type GitBranchContext =
 export type WorkspaceContext = Readonly<{
   project: ProjectRegistration;
   workingDirectory: CanonicalDirectoryPath;
-  repositoryBranch?: GitBranchContext;
+  git?: GitContext;
 }>;

@@ -8,27 +8,27 @@ Intended destination: `src/storage/sqlite/models/evidence-item.model.ts`
 
 ```ts
 class EvidenceItem extends Model {
-  id: SQLite-generated positive integer
-  projectId: ProjectIdentity
-  projectSequence: positive integer
+  public id: SQLite-generated positive integer
+  public projectId: ProjectIdentity
+  public projectSequence: positive integer
 
-  captureSourceKey: string
-  nativeEventKind: string
-  nativeSessionReference: string | null
-  nativeInteractionReference: string | null
-  nativeOccurredAt: normalized timestamp | null
+  public captureSourceKey: string
+  public nativeEventKind: string
+  public nativeSessionReference: string | null
+  public nativeInteractionReference: string | null
+  public nativeOccurredAt: normalized timestamp | null
 
-  normalizedContent: string | null
-  workingDirectory: string
-  workspaceContextJson: exact serialized WorkspaceContext
+  public normalizedContent: string | null
+  public workingDirectory: string
+  public workspaceContextJson: exact serialized WorkspaceContext
 
-  rawSourceMediaType: string
-  rawSourceContent: string
-  rawSourceSha256: string
+  public rawSourceFormat: string
+  public rawSourceContent: bytes stored as SQLite BLOB
+  public rawSourceDigest: SHA-256 integrity digest computed by EvidenceItemRepository
 
-  replayScheme: string
-  replayKey: string
-  receivedAt: normalized timestamp
+  public replayScheme: string
+  public replayKey: string
+  public receivedAt: normalized timestamp
 }
 
 TABLE evidence_items
@@ -41,9 +41,20 @@ TABLE evidence_items
 ```
 
 `SqliteSchema` adds the table through the next ordered migration and registers
-the model during initialization. `EvidenceItemService` supplies all row values
+the model during initialization. `EvidenceItemRepository` supplies all row values
 except the SQLite identity.
 
 The normalized projections support later ordered reads. The exact source and
 workspace snapshot remain available for later curation. The model does not own
 that reading or curation.
+
+Captured Git context describes the state observed during capture, not the
+state at the native event time. A delayed event from branch A can therefore
+have a capture-time observation of branch B. Any branch supplied by the source
+remains separate source data; it does not replace the observed workspace
+context. Exact replay returns the existing evidence and preserves its original
+workspace snapshot.
+
+Replay uniqueness includes Project identity. The same source coordinates can
+exist independently in different Projects. Capture does not move existing rows
+when registration mapping changes.

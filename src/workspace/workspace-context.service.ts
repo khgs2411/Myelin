@@ -7,7 +7,7 @@ import type {
 } from "../project/project-registration.ts";
 import type { ProjectRegistrationRepository } from "../storage/sqlite/repositories/project-registration.repository.ts";
 import type {
-  GitBranchContext,
+  GitContext,
   WorkspaceContext,
 } from "./workspace-context.ts";
 
@@ -53,11 +53,11 @@ type CanonicalWorkingDirectoryResult =
     }>;
 
 export class WorkspaceContextService {
-  constructor(
+  public constructor(
     private readonly projectRegistrationRepository: ProjectRegistrationRepository,
   ) {}
 
-  async resolve(
+  public async resolve(
     input: WorkspaceContextInput,
   ): Promise<WorkspaceContextResolution> {
     const workingDirectoryResult = await canonicalizeWorkingDirectory(
@@ -85,17 +85,17 @@ export class WorkspaceContextService {
       };
     }
 
-    const repositoryBranch = project.repositoryRootPath
-      ? await observeRepositoryBranch(project.repositoryRootPath)
+    const git = project.repositoryRootPath
+      ? await observeGitContext(project.repositoryRootPath)
       : undefined;
 
     return {
       kind: "managed",
-      context: repositoryBranch
+      context: git
         ? {
             project,
             workingDirectory: workingDirectoryResult.path,
-            repositoryBranch,
+            git,
           }
         : {
             project,
@@ -196,29 +196,125 @@ function containsDirectory(
   );
 }
 
-async function observeRepositoryBranch(
+async function observeGitContext(
   repositoryRootPath: CanonicalDirectoryPath,
-): Promise<GitBranchContext> {
+): Promise<GitContext> {
   try {
-    const process = Bun.spawn(
-      ["git", "-C", repositoryRootPath, "branch", "--show-current"],
-      {
-        stdout: "pipe",
-        stderr: "ignore",
-      },
+    await readGit(repositoryRootPath, ["rev-parse", "--git-dir"]);
+    const branch = await readGit(
+      repositoryRootPath,
+      ["symbolic-ref", "--quiet", "HEAD"],
+      [0, 1],
     );
-    const branchName = (await new Response(process.stdout).text()).trim();
-    const exitCode = await process.exited;
-
-    if (exitCode === 0 && branchName) {
-      return { kind: "active", name: branchName };
+    const branchReference = branch.exitCode === 0 ? branch.output : null;
+    const branchName = branchReference?.replace(/^refs\/heads\//, "") ?? null;
+    const headCommitId = await readCommit(
+      repositoryRootPath,
+      branchReference ?? "HEAD",
+    );
+    // A missing symbolic branch is unborn. A missing detached HEAD is a failure.
+    if (branchReference === null && headCommitId === null) {
+      throw new Error("The detached HEAD commit is unavailable.");
     }
+    const upstreamReference =
+      branchName === null
+        ? null
+        : await readUpstreamReference(repositoryRootPath, branchName);
+    const upstream =
+      upstreamReference === null
+        ? null
+        : {
+            reference: upstreamReference.replace(/^refs\/(heads|remotes|tags)\//, ""),
+            commitId: await readCommit(repositoryRootPath, upstreamReference),
+          };
+    return { kind: "observed", branchName, headCommitId, upstream };
   } catch {
-    // Branch observation degrades to an unavailable result.
+    return {
+      kind: "unavailable",
+      safeDiagnostic: "The Git context is unavailable.",
+    };
   }
+}
 
-  return {
-    kind: "unavailable",
-    safeDiagnostic: "The active Git branch is unavailable.",
-  };
+async function readCommit(
+  repositoryRootPath: CanonicalDirectoryPath,
+  reference: string,
+): Promise<string | null> {
+  const exists = await readGit(
+    repositoryRootPath,
+    ["show-ref", "--exists", reference],
+    [0, 2],
+  );
+  if (exists.exitCode === 2) return null;
+  // An existing ref with an unreadable commit is not an absent commit.
+  const commit = await readGit(repositoryRootPath, [
+    "rev-parse", "--verify", "--end-of-options", `${reference}^{commit}`,
+  ]);
+  return commit.output;
+}
+
+async function readUpstreamReference(
+  repositoryRootPath: CanonicalDirectoryPath,
+  branchName: string,
+): Promise<string | null> {
+  const remote = await readGit(
+    repositoryRootPath,
+    ["config", "--get", `branch.${branchName}.remote`],
+    [0, 1],
+  );
+  const merge = await readGit(
+    repositoryRootPath,
+    ["config", "--get-all", `branch.${branchName}.merge`],
+    [0, 1],
+  );
+  if (remote.exitCode === 1 || merge.exitCode === 1) return null;
+  const mergeReference = merge.output.split("\n")[0]!;
+  if (remote.output === ".") return mergeReference;
+
+  // Read configuration even for an unborn branch or a missing tracking ref.
+  const fetch = await readGit(repositoryRootPath, [
+    "config", "--get-all", `remote.${remote.output}.fetch`,
+  ]);
+  for (const refspec of fetch.output.split("\n")) {
+    if (refspec.startsWith("^")) continue;
+    const [source, destination] = refspec.replace(/^\+/, "").split(":");
+    if (!source || !destination) continue;
+    const wildcard = source.indexOf("*");
+    if (wildcard === -1) {
+      if (source === mergeReference) return destination;
+      continue;
+    }
+    const prefix = source.slice(0, wildcard);
+    const suffix = source.slice(wildcard + 1);
+    if (
+      mergeReference.startsWith(prefix) &&
+      mergeReference.endsWith(suffix) &&
+      mergeReference.length >= prefix.length + suffix.length
+    ) {
+      return destination.replace(
+        "*",
+        mergeReference.slice(prefix.length, mergeReference.length - suffix.length),
+      );
+    }
+  }
+  throw new Error("The configured upstream reference is unavailable.");
+}
+
+async function readGit(
+  repositoryRootPath: CanonicalDirectoryPath,
+  arguments_: readonly string[],
+  acceptedExitCodes: readonly number[] = [0],
+): Promise<Readonly<{ output: string; exitCode: number }>> {
+  const process = Bun.spawn(["git", "-C", repositoryRootPath, ...arguments_], {
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "ignore",
+  });
+  const [output, exitCode] = await Promise.all([
+    new Response(process.stdout).text(), process.exited,
+  ]);
+  if (!acceptedExitCodes.includes(exitCode)) {
+    throw new Error("Git observation failed.");
+  }
+  return { output: output.trim(), exitCode };
 }

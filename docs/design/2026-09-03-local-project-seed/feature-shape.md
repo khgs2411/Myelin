@@ -1,5 +1,9 @@
 # Local Project Seed — Feature Shape
 
+> Historical source record. This unit is retired from active design.
+> Continue in the [current consolidated unit](../2026-09-03-shared-captured-activity-seam/README.md).
+> Its issue list controls unresolved work; this body preserves prior context.
+
 Establish one durable Project registration for this repository in the local
 development database. The registration uses the final multi-project Project
 model. This unit excludes reusable project registration, bootstrap, discovery,

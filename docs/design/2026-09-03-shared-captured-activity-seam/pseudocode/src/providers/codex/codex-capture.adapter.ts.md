@@ -26,10 +26,9 @@ type CodexStopInput = Readonly<{
   // other verified Codex fields remain provider-local
 }>
 
-class CodexCaptureAdapter implements CaptureAdapter {
-  normalize(input: NativeCaptureInput): CaptureResult {
-    require input.mediaType is "application/json"
-    parse input.content as one JSON object
+class CodexCaptureAdapter implements ICaptureAdapter {
+  public normalize(input: unknown): CaptureResult {
+    payload = validate input as CodexUserPromptSubmitInput | CodexStopInput
 
     MATCH payload.hook_event_name
       "UserPromptSubmit"
@@ -52,16 +51,18 @@ class CodexCaptureAdapter implements CaptureAdapter {
       workingDirectory: payload.cwd,
       replay: {
         scheme: "codex-hook/v1",
-        key: stable digest of {
-          session_id: payload.session_id,
-          turn_id: payload.turn_id,
-          hook_event_name: payload.hook_event_name
-        }
+        key: SHA256_HEX(UTF8(JSON([
+          payload.session_id,
+          payload.turn_id,
+          payload.hook_event_name
+        ])))
       },
       sourceMaterial: {
-        mediaType: input.mediaType,
-        content: input.content,
-        sha256: SHA-256 of exact input.content bytes
+        // Serialize the complete supplied native value, including unused fields.
+        format: "json.v1",
+        content: UTF-8 JSON with recursively sorted object keys and no extra whitespace
+        // Recursively sort object keys; preserve values and array order.
+        // Reject unsupported values; never silently discard or convert them.
       }
     }
   }
@@ -74,3 +75,9 @@ supported input, including absent or empty normalized text.
 
 The adapter does not know the entry route, select an adapter, resolve Projects,
 construct an `EvidenceItemDto`, or persist rows.
+
+Replay-key construction uses compact JSON for the fixed coordinate array in
+exactly the order shown, encodes it as UTF-8, and computes SHA-256 with lowercase
+hexadecimal output. Content is not a coordinate. Changed source content under
+the same coordinates must still produce a replay conflict. This adapter-owned
+key is separate from the repository-owned source-integrity digest.

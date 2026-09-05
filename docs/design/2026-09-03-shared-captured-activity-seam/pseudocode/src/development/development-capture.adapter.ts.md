@@ -16,10 +16,9 @@ type DevelopmentCaptureInput = Readonly<{
   occurredAt?: NormalizedTimestamp
 }>
 
-class DevelopmentCaptureAdapter implements CaptureAdapter {
-  normalize(input: NativeCaptureInput): CaptureResult {
-    require input.mediaType is the development fixture media type
-    fixture = parse and validate input.content as DevelopmentCaptureInput
+class DevelopmentCaptureAdapter implements ICaptureAdapter {
+  public normalize(input: unknown): CaptureResult {
+    fixture = validate input as DevelopmentCaptureInput
 
     return CaptureResult {
       nativeEventKind: "fixture.input",
@@ -30,15 +29,17 @@ class DevelopmentCaptureAdapter implements CaptureAdapter {
       workingDirectory: fixture.workingDirectory,
       replay: {
         scheme: "development-fixture/v1",
-        key: stable digest of {
-          fixtureReference: fixture.fixtureReference,
-          itemIndex: fixture.itemIndex
-        }
+        key: SHA256_HEX(UTF8(JSON([
+          fixture.fixtureReference,
+          fixture.itemIndex
+        ])))
       },
       sourceMaterial: {
-        mediaType: input.mediaType,
-        content: input.content,
-        sha256: SHA-256 of exact input.content bytes
+        // Serialize the complete supplied native value, including unused fields.
+        format: "json.v1",
+        content: UTF-8 JSON with recursively sorted object keys and no extra whitespace
+        // Recursively sort object keys; preserve values and array order.
+        // Reject unsupported values; never silently discard or convert them.
       }
     }
   }
@@ -51,3 +52,9 @@ replay and conflicting-replay detection.
 
 The adapter does not establish trusted route identity, resolve Projects,
 construct an `EvidenceItemDto`, persist evidence, or create memory.
+
+Replay-key construction uses compact JSON for the fixed coordinate array in
+exactly the order shown, encodes it as UTF-8, and computes SHA-256 with lowercase
+hexadecimal output. Content is not a coordinate. Changed source content under
+the same coordinates must still produce a replay conflict. This adapter-owned
+key is separate from the repository-owned source-integrity digest.

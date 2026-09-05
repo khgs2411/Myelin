@@ -84,9 +84,10 @@ describe("local LLM Wiki application", () => {
     expect(workspaceResolution.context.workingDirectory).toBe(
       await realpath(join(REPOSITORY_ROOT, "src", "storage")),
     );
-    expect(workspaceResolution.context.repositoryBranch).toEqual({
-      kind: "active",
-      name: branch,
+    expect(workspaceResolution.context.git).toMatchObject({
+      kind: "observed",
+      branchName: branch,
+      headCommitId: expect.any(String),
     });
   });
 
@@ -105,7 +106,7 @@ describe("local LLM Wiki application", () => {
     });
   });
 
-  test("rejects an unmanaged directory during Application composition", async () => {
+  test("opens the runtime without resolving a capture directory", async () => {
     const unmanagedDirectory = await mkdtemp(
       join(tmpdir(), "llm-wiki-unmanaged-"),
     );
@@ -118,11 +119,11 @@ describe("local LLM Wiki application", () => {
         unmanagedDirectory,
       ]);
 
-      expect(result.exitCode).toBe(1);
-      expect(result.stdout).toBe("");
-      expect(result.stderr).toBe(
-        "The working directory is not registered with LLM Wiki.\n",
-      );
+      expect(result).toEqual({
+        exitCode: 0,
+        stdout: "opened-and-closed\n",
+        stderr: "",
+      });
     } finally {
       await rm(unmanagedDirectory, { recursive: true, force: true });
     }
@@ -134,7 +135,7 @@ describe("local LLM Wiki application", () => {
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
     expect(result.stdout).toContain("LLM Wiki local prototype");
-    expect(result.stdout).toContain("No operational commands are available yet.");
+    expect(result.stdout).toContain("dev capture-fixture <fixture-file>");
   });
 
   test("prints an unknown CLI command on stderr with usage status", async () => {

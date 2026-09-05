@@ -1,0 +1,8 @@
+[
+  {
+    "fixtureReference": "capture-design-review",
+    "itemIndex": 0,
+    "workingDirectory": "/Users/liadgoren/Repositories/llm-wiki",
+    "content": "Git context is optional and describes state observed during capture."
+  }
+]

@@ -1,5 +1,9 @@
 # Durable Evidence Acceptance — Feature Shape
 
+> Historical source record. This unit is retired from active design.
+> Continue in the [current consolidated unit](../2026-09-03-shared-captured-activity-seam/README.md).
+> Its issue list controls unresolved work; this body preserves prior context.
+
 Accept one project-bound command of normalized captured evidence, append new
 evidence to an immutable project-ordered ledger, record its Session-maintenance
 obligation, and persist an exact retry-safe receipt in one SQLite transaction.

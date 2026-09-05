@@ -6,6 +6,7 @@ import {
 } from "@sequelize/core";
 import type { SqliteDialect } from "@sequelize/sqlite3";
 
+import { initializeEvidenceItemModel } from "./models/evidence-item.model.ts";
 import { initializeProjectModel } from "./models/project.model.ts";
 
 type AppliedMigration = Readonly<{
@@ -51,11 +52,63 @@ const ORDERED_MIGRATIONS: readonly SqliteMigration[] = [
       );
     },
   },
+  {
+    version: 2,
+    name: "create-evidence-items",
+    async apply(sequelize, transaction) {
+      await sequelize.query(
+        `CREATE TABLE evidence_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          project_id INTEGER NOT NULL REFERENCES projects(id),
+          project_sequence INTEGER NOT NULL CHECK (project_sequence > 0),
+          capture_source_key TEXT NOT NULL,
+          native_event_kind TEXT NOT NULL,
+          native_session_reference TEXT NULL,
+          native_interaction_reference TEXT NULL,
+          native_occurred_at TEXT NULL,
+          normalized_content TEXT NULL,
+          working_directory TEXT NOT NULL,
+          workspace_context_json TEXT NOT NULL,
+          raw_source_format TEXT NOT NULL,
+          raw_source_content BLOB NOT NULL,
+          raw_source_digest TEXT NOT NULL,
+          replay_scheme TEXT NOT NULL,
+          replay_key TEXT NOT NULL,
+          received_at TEXT NOT NULL
+        )`,
+        { transaction },
+      );
+
+      await sequelize.query(
+        `CREATE UNIQUE INDEX evidence_items_project_sequence
+        ON evidence_items (project_id, project_sequence)`,
+        { transaction },
+      );
+      await sequelize.query(
+        `CREATE UNIQUE INDEX evidence_items_replay_identity
+        ON evidence_items (capture_source_key, project_id, replay_scheme, replay_key)`,
+        { transaction },
+      );
+
+      for (const operation of ["UPDATE", "DELETE"] as const) {
+        await sequelize.query(
+          `CREATE TRIGGER evidence_items_reject_${operation.toLowerCase()}
+          BEFORE ${operation} ON evidence_items
+          FOR EACH ROW
+          BEGIN
+            SELECT RAISE(ABORT, 'Captured evidence is immutable.');
+          END`,
+          { transaction },
+        );
+      }
+    },
+  },
 ];
 
 export class SqliteSchema {
   static initializeModels(sequelize: Sequelize<SqliteDialect>): void {
     initializeProjectModel(sequelize);
+    initializeEvidenceItemModel(sequelize);
   }
 
   static async ensureCurrent(

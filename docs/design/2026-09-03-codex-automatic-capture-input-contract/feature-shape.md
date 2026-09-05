@@ -1,5 +1,9 @@
 # Codex Automatic-Capture Input Contract — Feature Shape
 
+> Historical source record. This unit is retired from active design.
+> Continue in the [current consolidated unit](../2026-09-03-shared-captured-activity-seam/README.md).
+> Its issue list controls unresolved work; this body preserves prior context.
+
 This unit records the verified native inputs available to a future Codex
 capture adapter and the accepted event granularity for captured evidence. It
 does not define the shared captured-activity seam, install hooks, or implement

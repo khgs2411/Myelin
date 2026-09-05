@@ -20,13 +20,9 @@ type EvidenceItemDto = Readonly<{
     scheme: string
     key: string
   }>
-  sourceMaterial: Readonly<{
-    mediaType: string
-    content: string
-    sha256: string
-  }>
+  sourceMaterial: NativeSourceMaterial
 }>
 ```
 
 The DTO contains no SQLite identity, project-local sequence, or receipt time.
-`EvidenceItemService` assigns those persistence facts.
+`EvidenceItemRepository` assigns those persistence facts.

@@ -31,22 +31,25 @@ AUTOMATIC PROVIDER CAPTURE
 
 Codex hooks
   -> trusted codex.hook entry + exact Codex-native input
-      -> [CaptureAdapterFactory]
-          -> [CodexCaptureAdapter] implements CaptureAdapter
+      -> [Application] capture operation
+        -> [CaptureAdapterFactory]
+          -> [CodexCaptureAdapter] implements ICaptureAdapter
               -> CaptureResult[]
 
 future Claude hooks
   -> trusted claude.hook entry + exact Claude-native input
-      -> [CaptureAdapterFactory]
-          -> [ClaudeCaptureAdapter] implements CaptureAdapter
+      -> [Application] capture operation
+        -> [CaptureAdapterFactory]
+          -> [ClaudeCaptureAdapter] implements ICaptureAdapter
               -> same CaptureResult[] contract
 
 LOCAL DEVELOPMENT CAPTURE
 
 ordered developer input
   -> trusted development.fixture entry
-      -> [CaptureAdapterFactory]
-          -> [DevelopmentCaptureAdapter] implements CaptureAdapter
+      -> [Application] capture operation
+        -> [CaptureAdapterFactory]
+          -> [DevelopmentCaptureAdapter] implements ICaptureAdapter
               -> same CaptureResult[] contract
 
 SHARED CAPTURE
@@ -55,7 +58,7 @@ trusted capture source + CaptureResult[]
   -> [EvidenceCaptureService]
       -> resolve WorkspaceContext
       -> EvidenceItemDto[]
-          -> [EvidenceItemService]
+          -> [EvidenceItemRepository]
               -> [EvidenceItem]
                   -> SQLite evidence_items
 
@@ -119,17 +122,20 @@ these operations for their callers.
 
 ```ts
 class Application {
-  static create(configuration): Promise<Application>
+  public static Create(configuration): Promise<Application>
 
-  bootstrapProject(input): Promise<ProjectBootstrapResult>
-  capture(input): Promise<CapturedEvidenceBatchResult>
-  captureFixture(input): Promise<CapturedEvidenceBatchResult>
-  proposeMemory(input): Promise<TargetedInsertionResult>
-  query(input): Promise<QueryResult>
+  public bootstrapProject(input): Promise<ProjectBootstrapResult>
+  public capture(input): Promise<ReadonlyArray<CapturedEvidenceReference>>
+  public proposeMemory(input): Promise<TargetedInsertionResult>
+  public query(input): Promise<QueryResult>
 
-  close(): Promise<void>
+  public close(): Promise<void>
 }
 ```
+
+`Application.Create` opens shared process resources only. Each operation
+constructs only its required object graph. A capture operation asks
+`CaptureAdapterFactory` to construct only the selected adapter.
 
 ### Project bootstrap
 
@@ -152,8 +158,11 @@ memory.
 
 `WorkspaceContextService` resolves an invocation working directory against the
 most specific registered Project root. It returns an immutable
-`WorkspaceContext` with Project identity, canonical paths, and the active Git
-branch when one is available.
+`WorkspaceContext` containing the registered Project, canonical working directory,
+and optional Git context. Git context records the observed branch, HEAD commit,
+and configured upstream reference with its locally available commit, or an
+unavailable result. Git is not required. Resolution reads local Git state
+without fetching. These values describe capture-time observation.
 
 An unmanaged directory does not create a Project. Capture rejects unmanaged
 work without persistence. Query can still use Personal and Practice Memory
@@ -171,16 +180,35 @@ shared capture service.
 1. Receive a trusted capture source and an ordered `CaptureResult` array.
 2. Resolve each working directory to a registered Project.
 3. Construct an `EvidenceItemDto` for each result.
-4. Submit the complete DTO array to `EvidenceItemService`.
+4. Submit the complete DTO array to `EvidenceItemRepository`.
 5. Return durable evidence identities and project-local sequence numbers.
 
 Each valid supplied input produces one evidence row. Capture does not decide
 whether the input deserves memory. A later curator makes that decision.
 
-`EvidenceItemService` owns the SQLite write. It persists the complete batch in
+`EvidenceItemRepository` computes the SHA-256 integrity digest over each serialized source
+content before opening the SQLite write transaction. It stores the digest with
+the evidence. It persists the complete batch in
 one transaction, allocates project-local evidence sequences, and enforces
 idempotency. A failure writes no rows. Exact replay returns the existing rows.
-Reuse of one replay identity with different source bytes fails the operation.
+Replay means repeated capture of the same native event and is scoped to its
+resolved Project identity. A different Project gets independent evidence;
+capture does not move or deduplicate evidence across Projects.
+Within one replay identity, both the versioned source format and content bytes
+must match. A difference in either fails the operation. Adapters serialize
+deterministically: they sort object keys recursively and preserve array order,
+all values, and exact string and byte content.
+The formats are `json.v1` for deterministic UTF-8 JSON objects, `string.v1`
+for UTF-8 JSON string literals, and `bytes.v1` for exact bytes. Adapters reject
+unsupported values without silently discarding or converting them.
+
+Capture failures use `ApplicationError`. A shared registry defines typed,
+domain-qualified codes and safe messages. The local command prints only the
+code and registry-generated message. Causes remain internal. Success returns
+the durable receipt; capture failure produces no receipt. Command errors use
+the `cli` domain. Output or cleanup failure after capture succeeds can make the
+command exit unsuccessfully while evidence remains committed and its receipt
+remains valid.
 
 The capture route supplies trusted entry identity such as `codex.hook` or
 `development.fixture`. A provider payload cannot claim or replace that
@@ -190,35 +218,52 @@ Capture is bounded and non-agentic. It never waits for memory curation.
 
 ### Capture adapters
 
-`CaptureAdapterFactory` is the only capture-adapter selection owner.
+`CaptureAdapterFactory` is the only capture-adapter selection and concrete
+construction owner.
 `EvidenceCaptureService` contains no provider or fixture branches.
 
-`CaptureAdapter` is the source-neutral parsing contract:
+`ICaptureAdapter` is the source-neutral parsing contract:
 
 ```ts
-interface CaptureAdapter {
-  normalize(activity: NativeCaptureInput): CaptureResult
+interface ICaptureAdapter {
+  normalize(input: unknown): CaptureResult
 }
 ```
 
 Each capture source owns one adapter. The adapter validates native input, extracts
-source facts, preserves the exact source, and returns a `CaptureResult`. It
+source facts, serializes the complete native value, and returns a `CaptureResult`. It
 does not establish trusted route identity, resolve Projects, construct an
 `EvidenceItemDto`, persist evidence, or assign memory meaning.
+
+Source material carries the complete native value as adapter-serialized bytes
+plus a format identifier. Shared persistence stores the bytes as a SQLite BLOB.
 
 `CodexCaptureAdapter` is the first implementation. It supports Codex
 `UserPromptSubmit` and `Stop` hook inputs. It uses their native event fields to
 extract content and replay coordinates. It does not interpret those fields as
 conversation roles or pair them into a synthetic conversation entity.
 
-A later provider supplies its own adapter and factory registration without
-changing `EvidenceCaptureService`, `EvidenceItemService`, or any memory
+A later provider supplies its own adapter and factory construction branch without
+changing `EvidenceCaptureService`, `EvidenceItemRepository`, or any memory
 product.
 
 ### Development capture fixture
 
 The repository-local development command lets the project develop and verify
 memory behavior before global installation and automatic hook delivery exist.
+
+With the local Project already seeded, run:
+
+```sh
+bun run cli.ts dev capture-fixture fixtures/development-capture.json
+```
+
+The command writes an ordered JSON receipt to stdout. Each entry contains
+`evidenceId`, `projectSequence`, and `disposition` (`inserted` or `existing`).
+Errors use stderr and a nonzero exit status. Repeating the unchanged fixture
+returns the existing evidence. For a new event, change `fixtureReference` or
+`itemIndex`; changing content under existing coordinates causes a replay conflict.
+The example working directory targets the seeded local LLM Wiki Project.
 
 The fixture:
 
@@ -227,7 +272,7 @@ The fixture:
    `DevelopmentCaptureAdapter`.
 3. Produces the same `CaptureResult` contract as a provider adapter.
 4. Submits the results through the real `EvidenceCaptureService` and
-   `EvidenceItemService`.
+   `EvidenceItemRepository`.
 5. Returns the same durable capture receipt as automatic input.
 
 The fixture does not generate fake Codex JSON. It preserves truthful
@@ -359,20 +404,20 @@ human-formatted console output.
 | --- | --- | --- |
 | `Application` | class | Composes one process-scoped application and exposes its operations |
 | `WorkspaceContextService` | class | Resolves a working directory to registered Project context |
-| `CaptureAdapterFactory` | class | Selects the adapter for one trusted capture entry |
-| `CaptureAdapter` | interface | Defines provider-native normalization |
+| `CaptureAdapterFactory` | class | Constructs the adapter for one trusted capture entry |
+| `ICaptureAdapter` | interface | Defines provider-native normalization |
 | `CodexCaptureAdapter` | class | Converts Codex-native input into `CaptureResult` |
 | `DevelopmentCaptureAdapter` | class | Converts fixture-native input into `CaptureResult` |
 | `EvidenceCaptureService` | class | Adds trusted Project context and constructs `EvidenceItemDto` batches |
-| `EvidenceItemService` | class | Atomically and idempotently persists captured evidence batches |
+| `EvidenceItemRepository` | class | Atomically and idempotently persists captured evidence batches |
 | `EvidenceIngestionService` | class | Reads captured evidence and coordinates Session-first processing |
 | Session Memory curator | product owner | Proposes Session changes and durable-memory candidate leads |
 | `EvidenceInsertionService` | class | Submits qualified proposals to one durable-memory Inbox |
-| `DurableMemoryInbox` | interface | Accepts candidates for one selected durable memory product |
+| `IDurableMemoryInbox` | interface | Accepts candidates for one selected durable memory product |
 | Project Memory | product owner | Curates project-scoped knowledge and documentation |
 | Personal Memory | product owner | Curates user preferences and cross-project guidance |
 | Practice Memory | product owner | Curates reusable technology and technique guidance |
-| `AgentAdapter` | interface | Executes bounded curation work through a configured AI provider |
+| `IAgentAdapter` | interface | Executes bounded curation work through a configured AI provider |
 | `QueryService` | class | Federates read-only queries across applicable memory products |
 | `SqliteRuntime` | class | Initializes the packaged SQLite driver and extensions |
 | `SqliteDatabase` | class | Owns the process-scoped connection and write transactions |
@@ -383,8 +428,8 @@ human-formatted console output.
 | Entity | Durable form | Role |
 | --- | --- | --- |
 | `Project` | SQLite row | Owns registered identity, roots, and evidence sequence |
-| `WorkspaceContext` | immutable value | Describes one resolved Project invocation and branch |
-| `NativeCaptureInput` | input value | Carries exact input in the format owned by one capture adapter |
+| `WorkspaceContext` | immutable value | Describes one resolved Project invocation and optional Git snapshot |
+| Native capture input | unknown input value | Remains provider-specific until the selected adapter validates it |
 | `CaptureResult` | immutable value | Carries normalized source facts from any capture adapter |
 | `EvidenceItemDto` | immutable value | Adds trusted source and resolved workspace context before persistence |
 | `EvidenceItem` | `evidence_items` row | Preserves immutable captured evidence and provenance |
@@ -479,14 +524,16 @@ SQLite transactions and constraints rather than shared TypeScript state.
 
 ## Design Authority
 
-The focused design units contain detailed evidence for this overview:
+Continue detailed design in the
+[current consolidated unit](docs/design/2026-09-03-shared-captured-activity-seam/README.md):
 
-- [Provider Evidence Capture](docs/design/2026-09-03-shared-captured-activity-seam/feature-shape.md)
-- [Codex Capture Input Contract](docs/design/2026-09-03-codex-automatic-capture-input-contract/feature-shape.md)
-- [Fixed Local Project Context](docs/design/2026-09-03-fixed-local-project-context/feature-shape.md)
-- [Local Project Seed](docs/design/2026-09-03-local-project-seed/feature-shape.md)
-- [Targeted Memory Insertion](docs/design/2026-09-02-ingestion-boundaries/feature-shape.md)
+- [Feature Shape](docs/design/2026-09-03-shared-captured-activity-seam/feature-shape.md)
+- [Open Design Issues](docs/design/2026-09-03-shared-captured-activity-seam/design-issues.md)
+- [Current pseudocode](docs/design/2026-09-03-shared-captured-activity-seam/pseudocode/README.md)
 
-When an older design unit conflicts with this README or a newer focused unit,
-the newer accepted boundary controls. Resolved units remain unchanged as
-historical design records.
+This README remains the product overview. ROADMAP.md retains delivery order
+and status. Existing code establishes implemented behavior; pseudocode does
+not prove implementation. The current unit owns ongoing detailed design and
+the single unresolved frontier. Other dated units are historical sources.
+Their issue dispositions and surviving boundaries are recorded in the current
+unit, rather than inferred from older overlapping pseudocode.

@@ -1,5 +1,9 @@
 # Local Ingestion Prototype Foundation — Feature Shape
 
+> Historical source record. This unit is retired from active design.
+> Continue in the [current consolidated unit](../2026-09-03-shared-captured-activity-seam/README.md).
+> Its issue list controls unresolved work; this body preserves prior context.
+
 This shape maps the established owners behind the repository-local manual
 ingestion interface. It uses fixed local project, repository, branch, and
 database facts. It includes controlled Session capture fixtures and explicit

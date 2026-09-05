@@ -1,5 +1,9 @@
 # Fixed Local Project Context — Feature Shape
 
+> Historical source record. This unit is retired from active design.
+> Continue in the [current consolidated unit](../2026-09-03-shared-captured-activity-seam/README.md).
+> Its issue list controls unresolved work; this body preserves prior context.
+
 Resolve each Application-backed repository-local CLI operation from its working
 directory to one existing Project registration and construct an immutable
 `WorkspaceContext`. This unit excludes project registration, bootstrap,

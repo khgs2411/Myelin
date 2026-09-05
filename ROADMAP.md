@@ -22,14 +22,14 @@ traceable continuity across work sessions without manual memory maintenance.
 - Session Memory behavior must be proven with controlled development capture
   fixtures before automated provider capture enters the product.
 - A development capture fixture sends an ordered manual input array through its
-  own `CaptureAdapter`. Provider adapters and the fixture adapter converge on
+  own `ICaptureAdapter`. Provider adapters and the fixture adapter converge on
   the same `CaptureResult` contract. The shared capture and persistence path
   writes the input to SQLite. It does not read evidence or create Session
   Memory.
 - Before that proof, development uses the existing LLM Wiki Project
-  registration and a repository-local Bun CLI. It can match invocation paths
-  within that registered root and observe its active branch. General project
-  registration, bootstrap, unregistered-project discovery, linked-worktree
+  registration and a repository-local Bun CLI. Capture resolves input working
+  directories within that registered root and observes optional Git context.
+  General project registration, bootstrap, unregistered-project discovery, linked-worktree
   correlation, package `bin` publication, and host installation begin only
   after the fixture-driven Session Memory journey succeeds.
 - Deliberate memory insertion must explicitly select Project, Personal, or
@@ -70,12 +70,20 @@ Goal: Make one controlled ordered local input array become inspectable,
 durable `EvidenceItem` rows through the provider-neutral path that later
 automatic transport will reuse.
 
+Status: Step 2 implementation is complete. The development fixture reaches
+SQLite through the shared pipeline, including the expanded optional Git snapshot.
+The Codex adapter moves to Step 7 with hook installation. Isolated Git and SQLite
+checks covered capture, replay, rollback, restart, and Git observation states.
+Type-checking passed. Existing Git, startup, and CLI integration assertions now
+match the implemented contracts. Test suites have not run.
+
 - [x] `done` Establish the repository-local CLI shell
   - Description: Give this repository one minimal Bun-run entrypoint that owns
     help, command dispatch, safe diagnostics, and the Application lifecycle
     boundary used by later operations.
-  - Progress: The shell is available without operational commands. Each later
-    roadmap outcome adds only the command required by its Application operation.
+  - Progress: The shell dispatches `dev capture-fixture`, reports safe error
+    codes and messages, and manages Application startup and cleanup. Output or
+    cleanup failure does not change an already committed capture outcome.
 
 - [x] `done` [Establish local Project seed state](docs/design/2026-09-03-local-project-seed/feature-shape.md)
   - Description: Establish this repository in the permanent multi-project
@@ -86,15 +94,16 @@ automatic transport will reuse.
     registration, and repeated seeding preserves that identity.
 
 - [x] `done` [Establish the fixed local project context](docs/design/2026-09-03-fixed-local-project-context/feature-shape.md)
-  - Description: Resolve each Application-backed local CLI operation from its
-    working directory to the existing LLM Wiki Project registration and
-    construct its immutable project, repository, and branch context.
+  - Description: Resolve each capture input's working directory to the
+    existing LLM Wiki Project registration and construct its immutable project,
+    repository, and branch context.
   - Why: Registered-project resolution gives later evidence one deterministic
     scope without introducing automatic project bootstrap.
   - Shape: An unregistered directory fails without creating a Project.
-  - Progress: Application composition now resolves descendant directories to
-    immutable Project context, observes the active registered-repository
-    branch, rejects unmanaged directories, and closes its database lifecycle.
+  - Progress: `WorkspaceContextService` resolves descendant directories to
+    immutable Project context and observes the active registered-repository
+    branch. Capture rejects unmanaged directories before persistence.
+    Application startup owns the runtime; capture resolves its input directories.
 
 - [x] `done` [Verify the Codex automatic-capture input contract](docs/design/2026-09-03-codex-automatic-capture-input-contract/feature-shape.md)
   - Description: Research the current Codex hook activities and payload fields
@@ -115,42 +124,60 @@ automatic transport will reuse.
     input to durable `EvidenceItem` rows.
   - Shape: A factory selects a source-specific adapter. Every adapter returns
     `CaptureResult`. `EvidenceCaptureService` adds trusted workspace context and
-    creates `EvidenceItemDto`. `EvidenceItemService` owns the atomic SQLite
+    creates `EvidenceItemDto`. `EvidenceItemRepository` owns the atomic SQLite
     write. Targeted manual memory insertion remains a separate product-Inbox
     path.
   - Progress: The fixture and provider adapters now share the result contract,
     not a fabricated provider payload. Capture stops after durable SQLite
     evidence and contains no evidence-reading or memory-curation behavior.
 
-- [ ] `next` Deliver the shared capture contract and adapter factory
-  - Description: Add `CaptureAdapter`, `CaptureResult`, and
-    `CaptureAdapterFactory` so each trusted capture entry can select one adapter
+- [x] `done` Deliver the shared capture contract and adapter factory
+  - Description: Add `ICaptureAdapter`, `CaptureResult`, and
+    `CaptureAdapterFactory` so each trusted capture entry can construct one adapter
     and normalize its native input without provider branches in shared
     services.
   - Shape: Codex, future Claude, and the development fixture own separate native
     input formats. They converge only on `CaptureResult`.
+  - Progress: The shared contracts and factory are implemented.
+    `Application.capture` selects the fixture adapter and normalizes the whole
+    batch before workspace resolution. The Codex factory route will be added
+    with its adapter.
 
-- [ ] `open` Deliver durable EvidenceItem persistence
-  - Description: Add `EvidenceItemDto`, `EvidenceItemService`, the immutable
+- [x] `done` Deliver durable EvidenceItem persistence
+  - Description: Add `EvidenceItemDto`, `EvidenceItemRepository`, the immutable
     Sequelize `EvidenceItem` model, and the `evidence_items` SQLite schema.
-  - Shape: `EvidenceItemService` owns atomic batches, project-local sequence
+  - Shape: `EvidenceItemRepository` owns atomic batches, project-local sequence
     allocation, exact replay, and conflicting-replay rejection. It does not
     read evidence or invoke memory processing.
+  - Progress: Migration 2, the model, and the repository are implemented.
+    SQLite stores native bytes, integrity digests, and workspace snapshots.
+    Isolated database checks confirmed migration, durable replay, complete
+    rollback on conflict, sequence allocation, and row immutability.
 
-- [ ] `open` Deliver the provider-neutral EvidenceCaptureService
+- [x] `done` Deliver the provider-neutral EvidenceCaptureService
   - Description: Accept one trusted capture source and ordered `CaptureResult`
     array, resolve existing `WorkspaceContext`, construct `EvidenceItemDto`
-    values, and delegate the complete batch to `EvidenceItemService`.
+    values, and delegate the complete batch to `EvidenceItemRepository`.
   - Shape: The service does not select adapters, parse native input, write
     SQLite directly, read evidence, or invoke memory processing.
+  - Progress: The service resolves every input in order and requires one
+    managed Project for the batch. It completes all resolution before the
+    repository starts its transaction. The fixture uses this shared path.
 
-- [ ] `open` Deliver the Codex capture adapter
-  - Description: Normalize verified Codex `UserPromptSubmit` and `Stop` inputs
-    into the shared `CaptureResult` contract while preserving exact native
-    source material and stable replay coordinates.
-  - Shape: Codex parsing remains isolated behind `CaptureAdapter`.
+- [x] `done` Deliver the expanded optional Git context snapshot
+  - Description: Replace the branch-only workspace context with the approved
+    branch name, HEAD commit, and configured upstream reference and locally
+    available commit.
+  - Shape: Git remains optional. Capture records local observations and explicit
+    unavailable states without fetching remote data or collecting file changes.
+    The snapshot describes capture-time state, not native event-time state.
+    Linked-worktree correlation remains deferred to Step 6.
+  - Progress: `WorkspaceContextService` now emits the approved `git` snapshot.
+    Real Git and SQLite checks covered detached HEAD, an unborn branch, missing
+    upstream commits, configured remote mappings, no Git, and unavailable Git.
+    The CLI persisted the snapshot; replay preserved the original observation.
 
-- [ ] `open` Deliver the development fixture adapter and command
+- [x] `done` Deliver the development fixture adapter and command
   - Description: Add one repository-local `dev capture-fixture` command that
     reads an ordered manual input array, normalizes it through
     `DevelopmentCaptureAdapter`, submits the results through the shared capture
@@ -162,12 +189,18 @@ automatic transport will reuse.
     identity is `development.fixture`. It preserves exact fixture-native source
     material and does not generate fake Codex input. It verifies the shared
     pipeline, not Codex parsing.
+  - Progress: The fixture reader, adapter, sample JSON, and command are
+    implemented. The command reaches `Application.capture` and SQLite through
+    the shared pipeline, then prints ordered durable receipts. Integration
+    checks confirmed insertion, replay, safe failure diagnostics, and retained
+    evidence after an output failure. Type-checking passed; unit suites did
+    not run.
 
 - [x] `retired` Deliver separate durable Evidence Log acceptance
   - Description: Introduce a separate acceptance service, operation receipt,
     and Session-maintenance obligation between capture and SQLite.
   - Why: The accepted capture boundary assigns atomic, idempotent evidence
-    persistence to `EvidenceItemService`. Session consumption and maintenance
+    persistence to `EvidenceItemRepository`. Session consumption and maintenance
     will be designed after captured evidence exists.
 
 - [x] `retired` Deliver separate captured-evidence ingestion
@@ -182,7 +215,7 @@ automatic transport will reuse.
 Goal: Consume captured project evidence through Session-owned services and
 produce visible, traceable SQLite Session Memory entries.
 
-- [ ] `open` Establish the Session Memory entry contract
+- [ ] `next` Establish the Session Memory entry contract
   - Description: Define the independently reconcilable Session Memory entry,
     including its recent-work meaning, project and workspace applicability,
     lifecycle, evidence lineage, uncertainty, and durable identity.
@@ -317,6 +350,12 @@ the proven prototype into the first stable host-installed command.
 Goal: Install a reliable Codex hook transport that submits native input to the
 proven provider evidence capture path.
 
+- [ ] `open` Deliver the Codex capture adapter
+  - Description: Normalize verified Codex `UserPromptSubmit` and `Stop` inputs
+    into the shared `CaptureResult` contract while preserving exact native
+    source material and stable replay coordinates.
+  - Shape: Codex parsing remains isolated behind `ICaptureAdapter`.
+
 - [ ] `open` Deliver automatic Codex hook transport
   - Description: Observe real Codex hook activity and submit each native payload
     through `CaptureAdapterFactory`, `CodexCaptureAdapter`, and the existing
@@ -324,9 +363,9 @@ proven provider evidence capture path.
   - Why: Session Memory is proven first with controlled capture fixtures so raw
     provider conversations do not obscure memory-behavior defects.
   - Shape: The installed transport adds no parsing, persistence, or memory
-    logic. The Codex adapter produces `CaptureResult`; the established capture
-    and EvidenceItem services perform the remaining work. Additional providers
-    remain outside this outcome.
+    logic. The Codex adapter produces `CaptureResult`; `EvidenceCaptureService`
+    and `EvidenceItemRepository` perform the remaining work. Additional
+    providers remain outside this outcome.
   - Installation relation: This outcome installs and configures the Codex
     capture integration after the reusable host command exists.
   - Reliability hint: Codex lifecycle hooks and `notify` are best-effort

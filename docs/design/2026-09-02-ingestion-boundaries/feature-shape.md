@@ -1,5 +1,9 @@
 # Ingestion Boundaries — Feature Shape
 
+> Historical source record. This unit is retired from active design.
+> Continue in the [current consolidated unit](../2026-09-03-shared-captured-activity-seam/README.md).
+> Its issue list controls unresolved work; this body preserves prior context.
+
 This focused shape separates captured work evidence from deliberate proposals
 for durable memory. It also establishes the development-only fixture used to
 prove captured-evidence and Session Memory behavior before provider hooks are
