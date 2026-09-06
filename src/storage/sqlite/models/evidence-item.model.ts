@@ -4,9 +4,13 @@ import {
   type CreationOptional,
   type InferAttributes,
   type InferCreationAttributes,
+  type NonAttribute,
   type Sequelize,
 } from "@sequelize/core";
 import type { SqliteDialect } from "@sequelize/sqlite3";
+
+import type { Project } from "./project.model.ts";
+import type { SessionMemoryEntry } from "./session-memory-entry.model.ts";
 
 export class EvidenceItem extends Model<
   InferAttributes<EvidenceItem>,
@@ -29,6 +33,8 @@ export class EvidenceItem extends Model<
   public declare replayScheme: string;
   public declare replayKey: string;
   public declare receivedAt: string;
+  public declare project?: NonAttribute<Project>;
+  public declare sessionEntries?: NonAttribute<SessionMemoryEntry[]>;
 }
 
 export function initializeEvidenceItemModel(

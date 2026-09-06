@@ -5,10 +5,11 @@
   "packageManager": "bun@1.4.0",
   "scripts": {
     "cli": "bun run cli.ts",
-    "test": "bun test tests/unit tests/sanity",
-    "test:unit": "bun test tests/unit",
-    "test:sanity": "bun test tests/sanity",
-    "typecheck": "tsc --noEmit"
+    "test": "bun test ./tests/unit ./tests/integration",
+    "test:unit": "bun test ./tests/unit",
+    "test:sanity": "bun test ./tests/sanity",
+    "typecheck": "tsc --noEmit",
+    "test:integration": "bun test ./tests/integration"
   },
   "dependencies": {
     "@sequelize/core": "7.0.0-alpha.48",

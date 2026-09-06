@@ -1,0 +1,329 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "LLM Wiki \u00b7 Current Application",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1378,
+      740
+    ],
+    "repository": {
+      "url": "https://github.com/khgs2411/Myelin",
+      "revision": "f0b2631a85589b45d849517719b8cd5910a58e22"
+    }
+  },
+  "components": [
+    {
+      "id": "fixture_cli",
+      "type": "frontend",
+      "label": "Local CLI",
+      "sublabel": "dev capture-fixture",
+      "pos": [
+        34,
+        248
+      ],
+      "size": [
+        202,
+        94
+      ],
+      "sources": [
+        {
+          "path": "cli.ts"
+        },
+        {
+          "path": "src/development/capture-fixture.ts"
+        }
+      ],
+      "tag": "JSON file \u2192 unknown[]"
+    },
+    {
+      "id": "capture_app",
+      "type": "backend",
+      "label": "Application",
+      "sublabel": "capture \u00b7 compose \u00b7 return receipt",
+      "pos": [
+        361,
+        248
+      ],
+      "size": [
+        227,
+        94
+      ],
+      "sources": [
+        {
+          "path": "src/application.ts"
+        }
+      ]
+    },
+    {
+      "id": "fixture_normalization",
+      "type": "backend",
+      "label": "CaptureAdapterFactory",
+      "sublabel": "DevelopmentCaptureAdapter",
+      "pos": [
+        357,
+        56
+      ],
+      "size": [
+        235,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/capture/capture-adapter.factory.ts"
+        },
+        {
+          "path": "src/development/development-capture.adapter.ts"
+        },
+        {
+          "path": "src/capture/native-source-material.ts"
+        }
+      ],
+      "tag": "ICaptureAdapter \u2192 CaptureResult"
+    },
+    {
+      "id": "capture_coordinator",
+      "type": "backend",
+      "label": "EvidenceCaptureService",
+      "sublabel": "Resolve all inputs before any write",
+      "pos": [
+        710,
+        248
+      ],
+      "size": [
+        235,
+        94
+      ],
+      "sources": [
+        {
+          "path": "src/capture/evidence-capture.service.ts"
+        }
+      ],
+      "tag": "One managed Project per batch"
+    },
+    {
+      "id": "evidence_repository",
+      "type": "backend",
+      "label": "EvidenceItemRepository",
+      "sublabel": "Atomic batch \u00b7 replay \u00b7 sequence",
+      "pos": [
+        1075,
+        248
+      ],
+      "size": [
+        252,
+        94
+      ],
+      "sources": [
+        {
+          "path": "src/evidence/evidence-item.repository.ts"
+        }
+      ],
+      "tag": "IEvidenceItemRepository"
+    },
+    {
+      "id": "workspace_resolution",
+      "type": "backend",
+      "label": "WorkspaceContextService",
+      "sublabel": "Project + directory + optional Git",
+      "pos": [
+        710,
+        452
+      ],
+      "size": [
+        235,
+        94
+      ],
+      "sources": [
+        {
+          "path": "src/workspace/workspace-context.service.ts"
+        },
+        {
+          "path": "src/workspace/workspace-context.ts"
+        }
+      ]
+    },
+    {
+      "id": "project_lookup",
+      "type": "backend",
+      "label": "ProjectRegistrationRepository",
+      "sublabel": "Read registered Project roots",
+      "pos": [
+        487,
+        636
+      ],
+      "size": [
+        252,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/storage/sqlite/repositories/project-registration.repository.ts"
+        },
+        {
+          "path": "src/project/project-registration.ts"
+        }
+      ]
+    },
+    {
+      "id": "git_observation",
+      "type": "external",
+      "label": "Local Git",
+      "sublabel": "Branch \u00b7 HEAD \u00b7 configured upstream",
+      "pos": [
+        865,
+        636
+      ],
+      "size": [
+        260,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/workspace/workspace-context.service.ts"
+        }
+      ],
+      "tag": "Read local state; no fetch"
+    },
+    {
+      "id": "sqlite_lifecycle",
+      "type": "backend",
+      "label": "SQLite lifecycle",
+      "sublabel": "SqliteRuntime \u00b7 SqliteDatabase",
+      "pos": [
+        344,
+        452
+      ],
+      "size": [
+        260,
+        94
+      ],
+      "sources": [
+        {
+          "path": "src/storage/sqlite/sqlite-runtime.ts"
+        },
+        {
+          "path": "src/storage/sqlite/sqlite-database.ts"
+        },
+        {
+          "path": "src/storage/sqlite/sqlite-schema.ts"
+        }
+      ],
+      "tag": "Bun \u00b7 Sequelize \u00b7 migrations"
+    },
+    {
+      "id": "evidence_database",
+      "type": "database",
+      "label": "SQLite",
+      "sublabel": "projects \u00b7 evidence_items",
+      "pos": [
+        1075,
+        452
+      ],
+      "size": [
+        252,
+        94
+      ],
+      "sources": [
+        {
+          "path": "src/storage/sqlite/models/project.model.ts"
+        },
+        {
+          "path": "src/storage/sqlite/models/evidence-item.model.ts"
+        },
+        {
+          "path": "src/storage/sqlite/sqlite-schema.ts"
+        }
+      ],
+      "tag": "Immutable evidence rows"
+    }
+  ],
+  "connections": [
+    {
+      "from": "fixture_cli",
+      "to": "capture_app",
+      "label": "trusted input",
+      "variant": "emphasis"
+    },
+    {
+      "from": "capture_app",
+      "to": "capture_coordinator",
+      "label": "CaptureResult[]",
+      "variant": "emphasis"
+    },
+    {
+      "from": "capture_coordinator",
+      "to": "evidence_repository",
+      "label": "EvidenceItemDto[]",
+      "variant": "emphasis"
+    },
+    {
+      "from": "capture_app",
+      "to": "fixture_normalization",
+      "label": "select + normalize"
+    },
+    {
+      "from": "capture_app",
+      "to": "sqlite_lifecycle",
+      "label": "open / close",
+      "labelDy": 90,
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "capture_coordinator",
+      "to": "workspace_resolution",
+      "label": "resolve directory",
+      "labelDy": 90
+    },
+    {
+      "from": "workspace_resolution",
+      "to": "project_lookup",
+      "label": "lookup",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "workspace_resolution",
+      "to": "git_observation",
+      "label": "observe",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "evidence_repository",
+      "to": "evidence_database",
+      "label": "transaction",
+      "variant": "emphasis",
+      "labelDy": 90
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Native input \u2192 evidence",
+      "items": [
+        "The fixture preserves native values as deterministic JSON bytes.",
+        "Capture stores raw facts. Session Memory starts in Step 3."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Persistence guarantees",
+      "items": [
+        "Replay compares source format and bytes within one Project.",
+        "A conflict rolls back the batch. Exact replay keeps the original snapshot."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Runtime and command boundary",
+      "items": [
+        "Application owns one database lifecycle; repositories use Sequelize models.",
+        "Ordered receipts return to the CLI. ApplicationError supplies safe diagnostics."
+      ]
+    }
+  ]
+}

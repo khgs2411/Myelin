@@ -6,8 +6,26 @@ import {
 } from "@sequelize/core";
 import type { SqliteDialect } from "@sequelize/sqlite3";
 
-import { initializeEvidenceItemModel } from "./models/evidence-item.model.ts";
-import { initializeProjectModel } from "./models/project.model.ts";
+import {
+  EvidenceItem,
+  initializeEvidenceItemModel,
+} from "./models/evidence-item.model.ts";
+import {
+  Project,
+  initializeProjectModel,
+} from "./models/project.model.ts";
+import {
+  SessionMemoryEntry,
+  initializeSessionMemoryEntryModel,
+} from "./models/session-memory-entry.model.ts";
+import {
+  SessionMemoryEvidence,
+  initializeSessionMemoryEvidenceModel,
+} from "./models/session-memory-evidence.model.ts";
+import {
+  SessionMemoryLifecycle,
+  initializeSessionMemoryLifecycleModel,
+} from "./models/session-memory-lifecycle.model.ts";
 
 type AppliedMigration = Readonly<{
   version: number;
@@ -103,15 +121,186 @@ const ORDERED_MIGRATIONS: readonly SqliteMigration[] = [
       }
     },
   },
+  {
+    version: 3,
+    name: "create-session-memory-relationships",
+    async apply(sequelize, transaction) {
+      // The deferred reverse FK requires a lifecycle row by commit. A writer
+      // inserts entry, evidence links, then lifecycle in one transaction.
+      const statements = [
+        `CREATE TABLE session_memory_entries (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          project_id INTEGER NOT NULL REFERENCES projects(id),
+          content TEXT NOT NULL CHECK (length(trim(content)) > 0),
+          observed_at TEXT NULL,
+          FOREIGN KEY (id) REFERENCES session_memory_lifecycles(entry_id)
+            DEFERRABLE INITIALLY DEFERRED
+        )`,
+        `CREATE INDEX session_memory_entries_project
+          ON session_memory_entries(project_id)`,
+        `CREATE TABLE session_memory_evidence (
+          entry_id INTEGER NOT NULL REFERENCES session_memory_entries(id),
+          evidence_id INTEGER NOT NULL REFERENCES evidence_items(id),
+          PRIMARY KEY (entry_id, evidence_id)
+        )`,
+        `CREATE INDEX session_memory_evidence_source
+          ON session_memory_evidence(evidence_id, entry_id)`,
+        `CREATE TABLE session_memory_lifecycles (
+          entry_id INTEGER PRIMARY KEY REFERENCES session_memory_entries(id),
+          state TEXT NOT NULL CHECK (state IN ('active', 'retired')),
+          reason TEXT NULL,
+          superseded_by_entry_id INTEGER NULL REFERENCES session_memory_entries(id),
+          CHECK (
+            (state = 'active' AND reason IS NULL AND superseded_by_entry_id IS NULL)
+            OR (state = 'retired' AND reason IS NOT NULL AND (
+              (reason = 'irrelevant' AND superseded_by_entry_id IS NULL)
+              OR (reason = 'superseded' AND superseded_by_entry_id IS NOT NULL
+                AND superseded_by_entry_id <> entry_id)
+            ))
+          )
+        )`,
+        `CREATE INDEX session_memory_lifecycles_superseding_entry
+          ON session_memory_lifecycles(superseded_by_entry_id)`,
+        // SQLite REPLACE may delete conflicts without firing DELETE triggers.
+        // Reject replacement before it can change an existing durable identity.
+        `CREATE TRIGGER session_memory_entries_reject_replace
+          BEFORE INSERT ON session_memory_entries
+          FOR EACH ROW
+          WHEN EXISTS (SELECT 1 FROM session_memory_entries WHERE id = NEW.id)
+          BEGIN
+            SELECT RAISE(ABORT, 'Session memory is immutable.');
+          END`,
+        `CREATE TRIGGER evidence_items_reject_replace
+          BEFORE INSERT ON evidence_items
+          FOR EACH ROW
+          WHEN EXISTS (SELECT 1 FROM evidence_items
+            WHERE id = NEW.id
+              OR (project_id = NEW.project_id AND project_sequence = NEW.project_sequence)
+              OR (project_id = NEW.project_id AND capture_source_key = NEW.capture_source_key
+                AND replay_scheme = NEW.replay_scheme AND replay_key = NEW.replay_key))
+          BEGIN
+            SELECT RAISE(ABORT, 'Captured evidence is immutable.');
+          END`,
+        `CREATE TRIGGER session_memory_evidence_same_project
+          BEFORE INSERT ON session_memory_evidence
+          FOR EACH ROW
+          WHEN (SELECT project_id FROM session_memory_entries WHERE id = NEW.entry_id)
+            <> (SELECT project_id FROM evidence_items WHERE id = NEW.evidence_id)
+          BEGIN
+            SELECT RAISE(ABORT, 'Session evidence must belong to the same Project.');
+          END`,
+        `CREATE TRIGGER session_memory_evidence_sealed
+          BEFORE INSERT ON session_memory_evidence
+          FOR EACH ROW
+          WHEN EXISTS (SELECT 1 FROM session_memory_lifecycles WHERE entry_id = NEW.entry_id)
+          BEGIN
+            SELECT RAISE(ABORT, 'Published Session evidence membership is immutable.');
+          END`,
+        `CREATE TRIGGER session_memory_lifecycles_require_evidence
+          BEFORE INSERT ON session_memory_lifecycles
+          FOR EACH ROW
+          WHEN NOT EXISTS (SELECT 1 FROM session_memory_evidence WHERE entry_id = NEW.entry_id)
+          BEGIN
+            SELECT RAISE(ABORT, 'Session memory requires supporting evidence.');
+          END`,
+        `CREATE TRIGGER session_memory_lifecycles_identity_immutable
+          BEFORE UPDATE OF entry_id ON session_memory_lifecycles
+          FOR EACH ROW
+          WHEN NEW.entry_id <> OLD.entry_id
+          BEGIN
+            SELECT RAISE(ABORT, 'Session lifecycle identity is immutable.');
+          END`,
+        `CREATE TRIGGER session_memory_lifecycles_reject_delete
+          BEFORE DELETE ON session_memory_lifecycles
+          FOR EACH ROW
+          BEGIN
+            SELECT RAISE(ABORT, 'Retire Session memory instead of deleting its lifecycle.');
+          END`,
+      ];
+
+      for (const statement of statements) {
+        await sequelize.query(statement, { transaction });
+      }
+
+      for (const operation of ["INSERT", "UPDATE"] as const) {
+        await sequelize.query(
+          `CREATE TRIGGER session_memory_supersession_project_${operation.toLowerCase()}
+          BEFORE ${operation} ON session_memory_lifecycles
+          FOR EACH ROW
+          WHEN NEW.superseded_by_entry_id IS NOT NULL AND
+            (SELECT project_id FROM session_memory_entries WHERE id = NEW.entry_id)
+            <> (SELECT project_id FROM session_memory_entries WHERE id = NEW.superseded_by_entry_id)
+          BEGIN
+            SELECT RAISE(ABORT, 'Superseding Session memory must belong to the same Project.');
+          END`,
+          { transaction },
+        );
+      }
+
+      for (const table of ["session_memory_entries", "session_memory_evidence"] as const) {
+        for (const operation of ["UPDATE", "DELETE"] as const) {
+          await sequelize.query(
+            `CREATE TRIGGER ${table}_reject_${operation.toLowerCase()}
+            BEFORE ${operation} ON ${table}
+            FOR EACH ROW
+            BEGIN
+              SELECT RAISE(ABORT, 'Session memory and its evidence membership are immutable.');
+            END`,
+            { transaction },
+          );
+        }
+      }
+    },
+  },
 ];
 
 export class SqliteSchema {
-  static initializeModels(sequelize: Sequelize<SqliteDialect>): void {
+  public static initializeModels(sequelize: Sequelize<SqliteDialect>): void {
     initializeProjectModel(sequelize);
     initializeEvidenceItemModel(sequelize);
+    initializeSessionMemoryEntryModel(sequelize);
+    initializeSessionMemoryEvidenceModel(sequelize);
+    initializeSessionMemoryLifecycleModel(sequelize);
+
+    Project.hasMany(EvidenceItem, {
+      as: "evidenceItems",
+      inverse: "project",
+      foreignKey: { name: "projectId", onDelete: "NO ACTION", onUpdate: "NO ACTION" },
+    });
+    Project.hasMany(SessionMemoryEntry, {
+      as: "sessionEntries",
+      inverse: "project",
+      foreignKey: { name: "projectId", onDelete: "NO ACTION", onUpdate: "NO ACTION" },
+    });
+    SessionMemoryEntry.belongsToMany(EvidenceItem, {
+      as: "evidence",
+      inverse: "sessionEntries",
+      through: { model: SessionMemoryEvidence, unique: false },
+      foreignKey: { name: "entryId", onDelete: "NO ACTION", onUpdate: "NO ACTION" },
+      otherKey: { name: "evidenceId", onDelete: "NO ACTION", onUpdate: "NO ACTION" },
+      throughAssociations: {
+        fromSource: "evidenceLinks",
+        toSource: "entry",
+        fromTarget: "sessionLinks",
+        toTarget: "evidenceItem",
+      },
+    });
+    SessionMemoryEntry.hasOne(SessionMemoryLifecycle, {
+      as: "lifecycle",
+      inverse: "entry",
+      foreignKey: { name: "entryId", onDelete: "NO ACTION", onUpdate: "NO ACTION" },
+    });
+    SessionMemoryLifecycle.belongsTo(SessionMemoryEntry, {
+      as: "supersededByEntry",
+      foreignKey: {
+        name: "supersededByEntryId",
+        onDelete: "NO ACTION",
+        onUpdate: "NO ACTION",
+      },
+    });
   }
 
-  static async ensureCurrent(
+  public static async ensureCurrent(
     sequelize: Sequelize<SqliteDialect>,
   ): Promise<void> {
     await sequelize.transaction(

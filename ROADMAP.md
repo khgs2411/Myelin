@@ -74,8 +74,9 @@ Status: Step 2 implementation is complete. The development fixture reaches
 SQLite through the shared pipeline, including the expanded optional Git snapshot.
 The Codex adapter moves to Step 7 with hook installation. Isolated Git and SQLite
 checks covered capture, replay, rollback, restart, and Git observation states.
-Type-checking passed. Existing Git, startup, and CLI integration assertions now
-match the implemented contracts. Test suites have not run.
+The approved unit and isolated integration suites now cover these contracts,
+including Application and CLI failures. Type-checking includes error-contract
+type checks. The development-database sanity suite remains separate.
 
 - [x] `done` Establish the repository-local CLI shell
   - Description: Give this repository one minimal Bun-run entrypoint that owns
@@ -215,19 +216,25 @@ match the implemented contracts. Test suites have not run.
 Goal: Consume captured project evidence through Session-owned services and
 produce visible, traceable SQLite Session Memory entries.
 
-- [ ] `next` Establish the Session Memory entry contract
+- [x] `done` [Establish the Session Memory entry contract](docs/design/2026-09-05-session-memory-entry/README.md)
   - Description: Define the independently reconcilable Session Memory entry,
     including its recent-work meaning, project and workspace applicability,
     lifecycle, evidence lineage, uncertainty, and durable identity.
   - Shape: The entry is canonical Session Memory in SQLite. It is not captured
     evidence, a transcript summary, or a durable-memory Markdown document.
+  - Progress: The immutable entry and separate mutable lifecycle contracts are
+    established as concrete model declarations. Query matching and promotion
+    publication references remain deferred to their owning capabilities.
 
-- [ ] `open` Deliver durable Session Memory entry storage
+- [x] `done` Deliver durable Session Memory entry storage
   - Description: Persist the established Session Memory entry contract through
-    a Session-owned SQLite model and access boundary without exposing mutable
-    ORM state to curation or query services.
+    Session-owned SQLite models used directly by application services, with
+    immutable entry records and separate mutable lifecycle records.
+  - Progress: Relational tables and model associations now connect Project,
+    Evidence, Session entries, and lifecycle state. Evidence membership is
+    immutable, and committed entries require supporting evidence and a lifecycle.
 
-- [ ] `open` Establish Session evidence consumption and progress
+- [ ] `next` Establish Session evidence consumption and progress
   - Description: Define how Session maintenance reads accepted evidence in
     project order, selects one finite evaluation frontier, records pending
     work, and advances successful progress without losing later evidence.

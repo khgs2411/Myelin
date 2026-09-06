@@ -31,7 +31,7 @@ describe("WorkspaceContextService", () => {
     const context = await resolveManaged([project], rootPath);
 
     expect(context).toEqual({ project, workingDirectory: rootPath });
-    expect(context).not.toHaveProperty("repositoryBranch");
+    expect(context).not.toHaveProperty("git");
   });
 
   test("keeps a descendant working directory distinct from its project root", async () => {

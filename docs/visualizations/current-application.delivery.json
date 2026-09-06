@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/liadgoren/Repositories/llm-wiki/docs/visualizations/current-application.architecture.json",
+  "output": "/Users/liadgoren/Repositories/llm-wiki/docs/visualizations/current-application.html",
+  "specification": {
+    "sha256": "7c38a7b56624bc88625fca1aba4f3bfde383865e599cc951d37644bf5971065d",
+    "bytes": 7241
+  },
+  "artifact": {
+    "sha256": "d2f06ae33409ea8c7921daf6de2cfce268cdf42e38c58ce3b75b4cae13143684",
+    "bytes": 718543
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  },
+  "evidence": {
+    "verified": true,
+    "repository": "https://github.com/khgs2411/Myelin",
+    "revision": "f0b2631a85589b45d849517719b8cd5910a58e22",
+    "references": 19
+  }
+}

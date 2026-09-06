@@ -1,5 +1,11 @@
 # LLM Wiki — Open Design Issues
 
+> Design location changed on 2026-09-05. The active entry-contract unit is
+> [Session Memory entry](../2026-09-05-session-memory-entry/README.md).
+> It takes precedence for Session entry design. This unit remains a capture
+> reference and historical source for later questions. References below to this
+> unit as the single current frontier describe the earlier consolidation.
+
 Established design: [Feature Shape](feature-shape.md). Navigation and migration assessment: [Design Unit](README.md).
 
 This is the single current issue list. Capture is the current detailed design

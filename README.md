@@ -524,16 +524,21 @@ SQLite transactions and constraints rather than shared TypeScript state.
 
 ## Design Authority
 
-Continue detailed design in the
-[current consolidated unit](docs/design/2026-09-03-shared-captured-activity-seam/README.md):
+[Project context](CONTEXT.md) records settled shared language and ownership
+decisions. Its 2026-09-05 Session decisions govern entry immutability, separate
+curation and review agents, and promotion retirement. They supersede older
+wording about those boundaries in this overview and detailed design artifacts.
 
-- [Feature Shape](docs/design/2026-09-03-shared-captured-activity-seam/feature-shape.md)
-- [Open Design Issues](docs/design/2026-09-03-shared-captured-activity-seam/design-issues.md)
-- [Current pseudocode](docs/design/2026-09-03-shared-captured-activity-seam/pseudocode/README.md)
+Select current work through the [design index](docs/design/README.md).
+The closed [Session Memory entry unit](docs/design/2026-09-05-session-memory-entry/README.md)
+records the entry and relational-storage design:
+
+- [Feature Shape](docs/design/2026-09-05-session-memory-entry/feature-shape.md)
+- [Open Design Issues](docs/design/2026-09-05-session-memory-entry/design-issues.md)
 
 This README remains the product overview. ROADMAP.md retains delivery order
 and status. Existing code establishes implemented behavior; pseudocode does
-not prove implementation. The current unit owns ongoing detailed design and
-the single unresolved frontier. Other dated units are historical sources.
-Their issue dispositions and surviving boundaries are recorded in the current
-unit, rather than inferred from older overlapping pseudocode.
+not prove implementation. Session evidence consumption and progress is the next
+selected design item. The previous
+consolidated unit retains capture details and later-product reference questions.
+The [design index](docs/design/README.md) records this scope transfer.

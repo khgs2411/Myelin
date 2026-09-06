@@ -1,5 +1,11 @@
 # LLM Wiki — Feature Shape
 
+> Design location changed on 2026-09-05. The active entry-contract unit is
+> [Session Memory entry](../2026-09-05-session-memory-entry/README.md).
+> It takes precedence for Session entry design. This unit remains a capture
+> reference and historical source for later questions. References below to this
+> unit as the single current frontier describe the earlier consolidation.
+
 This is the current consolidated design unit for LLM Wiki. It maps the
 established product boundaries and the detailed capture path from native input
 to durable SQLite evidence. The root README owns the product overview;

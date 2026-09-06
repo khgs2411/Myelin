@@ -4,9 +4,13 @@ import {
   type CreationOptional,
   type InferAttributes,
   type InferCreationAttributes,
+  type NonAttribute,
   type Sequelize,
 } from "@sequelize/core";
 import type { SqliteDialect } from "@sequelize/sqlite3";
+
+import type { EvidenceItem } from "./evidence-item.model.ts";
+import type { SessionMemoryEntry } from "./session-memory-entry.model.ts";
 
 export const PROJECT_KEY_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const PROJECT_KEY_MAX_LENGTH = 64;
@@ -15,11 +19,13 @@ export class Project extends Model<
   InferAttributes<Project>,
   InferCreationAttributes<Project>
 > {
-  declare id: CreationOptional<number>;
-  declare key: string;
-  declare rootPath: string;
-  declare repositoryRootPath: string | null;
-  declare lastAllocatedEvidenceSequence: CreationOptional<number>;
+  public declare id: CreationOptional<number>;
+  public declare key: string;
+  public declare rootPath: string;
+  public declare repositoryRootPath: string | null;
+  public declare lastAllocatedEvidenceSequence: CreationOptional<number>;
+  public declare evidenceItems?: NonAttribute<EvidenceItem[]>;
+  public declare sessionEntries?: NonAttribute<SessionMemoryEntry[]>;
 }
 
 export function initializeProjectModel(

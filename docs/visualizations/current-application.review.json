@@ -1,0 +1,12 @@
+{
+  "diagram_type": "architecture",
+  "output": "/Users/liadgoren/Repositories/llm-wiki/docs/visualizations/current-application.html",
+  "specification_sha256": "7c38a7b56624bc88625fca1aba4f3bfde383865e599cc951d37644bf5971065d",
+  "artifact_sha256": "d2f06ae33409ea8c7921daf6de2cfce268cdf42e38c58ce3b75b4cae13143684",
+  "validation": "9/9 showcase, 0 errors, 0 warnings",
+  "browser_evidence": "passed",
+  "visual_review": "passed",
+  "correction_rounds": 0,
+  "visual_review_scope": "Image review of light and dark screenshots at 1440x900 and 2048x1320; layout, text, arrows, and cards. Interactive controls and exports were not manually exercised.",
+  "repository_revision": "f0b2631a85589b45d849517719b8cd5910a58e22"
+}
