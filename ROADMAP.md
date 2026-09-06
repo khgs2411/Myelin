@@ -234,20 +234,36 @@ produce visible, traceable SQLite Session Memory entries.
     Evidence, Session entries, and lifecycle state. Evidence membership is
     immutable, and committed entries require supporting evidence and a lifecycle.
 
-- [ ] `next` [Establish Session evidence consumption and progress](docs/design/2026-09-06-evidence-ingestion/README.md)
+- [x] `done` [Establish Session evidence consumption and progress](docs/design/2026-09-06-evidence-ingestion/README.md)
   - Description: Define how Session maintenance reads accepted evidence in
     project order, selects one finite evaluation frontier, records pending
     work, and advances successful progress without losing later evidence.
   - Shape: Evidence remains authoritative and immutable. A Session-owned
     processing ledger tracks eligibility, claims, and successful evaluation.
     Progress does not move into the Project or Evidence Log models.
+  - Progress: Selection, leases, source preparation, publication, and caller
+    results are designed. Curator task and execution remain separate work;
+    recovery of evidence with unavailable captured Git context remains deferred.
 
-- [ ] `open` Establish the Session curator contract
-  - Description: Define the evidence and existing-memory input supplied for one
-    Session curation pass and the structured, untrusted proposal returned by an
-    agent for application validation.
+- [ ] `next` Deliver Session evidence ingestion and publication
+  - Description: Implement the established evidence consumption design, including
+    processing state, scoped batch claims, source preparation, configuration,
+    and atomic publication of validated Session memories with evidence completion.
+  - Shape: Agent work occurs outside database transactions. Ingestion processes
+    evidence; evidence management owns leases. Actual agent execution remains
+    with its separate delivery item.
+  - Progress: The accepted design is handed off for implementation. Runtime
+    delivery is not yet complete.
+
+- [ ] `next` Establish the Session curator contract
+  - Description: Define the curator task for evaluating a complete prepared
+    evidence batch and producing useful Session memory drafts within the
+    established structured response contract.
   - Shape: The curator interprets recent work but cannot write SQLite or assign
-    durable memory identity.
+    durable memory identity. Comparison with existing memories belongs to the
+    separate memory reviewer.
+  - Progress: Prepared evidence and response contracts are established. Detailed
+    task design can proceed alongside ingestion implementation.
 
 - [ ] `open` Deliver local agent execution for Session curation
   - Description: Run the Session curator through the provider-neutral agent
@@ -256,10 +272,15 @@ produce visible, traceable SQLite Session Memory entries.
   - Shape: Agent execution is independent from evidence capture. It does not
     require Codex hook installation.
 
-- [ ] `open` Deliver Session Memory reconciliation and publication
-  - Description: Validate one curator proposal against its evidence frontier
-    and current Session Memory, then atomically create, revise, supersede, or
-    retain Session entries and advance successful Session progress.
+- [ ] `open` Deliver Session Memory review and reconciliation
+  - Description: Review newly published memories against existing memories,
+    re-qualify relevance, retire or supersede outdated entries, and propose
+    promotion through the destination memory product.
+  - Shape: The memory reviewer is separate from the evidence curator. Session
+    entries remain immutable; lifecycle changes represent retirement and
+    supersession. Promotion retirement requires confirmed durable publication.
+  - Why: Initial publication and evidence completion belong to ingestion;
+    successful ingestion does not imply completed memory review.
 
 - [ ] `open` Connect the development fixture to Session curation
   - Description: Extend the local fixture workflow so accepted evidence enters
