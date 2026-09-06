@@ -289,21 +289,21 @@ Codex parsing. `CodexCaptureAdapter` owns that separate provider contract.
 `EvidenceIngestionService` begins after capture has committed
 `EvidenceItem` rows. It is not part of the capture transaction.
 
-It owns the processing boundary for uncovered captured evidence:
+The accepted [ingestion design](docs/design/2026-09-06-evidence-ingestion/README.md)
+uses code to select eligible evidence by workspace and source, then atomically
+claim a finite batch in a Session-owned processing ledger. Claims carry attempt
+identity and expiry. Source-specific preparation and independently configured
+agent execution occur after the claim transaction closes.
 
-1. Read one finite project-ordered evidence frontier from `evidence_items`.
-2. Preserve the original evidence and existing Session Memory as curator
-   input.
-3. Invoke Session Memory curation through the provider-neutral agent-execution
-   capability.
-4. Validate the untrusted curator result.
-5. Reconcile and publish Session Memory changes.
-6. Persist destination-specific Project, Personal, and Practice candidate
-   leads with references to the original evidence.
-7. Advance the successful Session evidence frontier.
+The application validates the untrusted result and current attempt ownership,
+then commits publication and processing completion together. Successful evaluation
+can produce no new memory. Failure does not count as success. Replaced attempts
+cannot publish. Original evidence remains available for later processing.
 
-The service coordinates the flow. It does not define memory meaning. Session
-Memory and each durable memory product own their own admission rules.
+The Evidence curator creates new memories. The Memory reviewer owns the separate
+review and promotion responsibility. Completing evidence evaluation does not
+establish completion of memory review. The active unit owns the detailed
+selection, ledger, lease, and handoff contracts.
 
 Session maintenance starts this work when enough uncovered evidence exists or
 when the elapsed-time policy makes the work eligible. A maintenance attempt
@@ -529,7 +529,13 @@ decisions. Its 2026-09-05 Session decisions govern entry immutability, separate
 curation and review agents, and promotion retirement. They supersede older
 wording about those boundaries in this overview and detailed design artifacts.
 
-Select current work through the [design index](docs/design/README.md).
+Continue current design in the
+[Evidence Ingestion unit](docs/design/2026-09-06-evidence-ingestion/README.md):
+
+- [Feature Shape](docs/design/2026-09-06-evidence-ingestion/feature-shape.md)
+- [Open Design Issues](docs/design/2026-09-06-evidence-ingestion/design-issues.md)
+
+The [design index](docs/design/README.md) records unit scope and history.
 The closed [Session Memory entry unit](docs/design/2026-09-05-session-memory-entry/README.md)
 records the entry and relational-storage design:
 
@@ -538,7 +544,7 @@ records the entry and relational-storage design:
 
 This README remains the product overview. ROADMAP.md retains delivery order
 and status. Existing code establishes implemented behavior; pseudocode does
-not prove implementation. Session evidence consumption and progress is the next
-selected design item. The previous
+not prove implementation. The Evidence Ingestion unit owns current Session
+consumption and progress design. The previous
 consolidated unit retains capture details and later-product reference questions.
 The [design index](docs/design/README.md) records this scope transfer.

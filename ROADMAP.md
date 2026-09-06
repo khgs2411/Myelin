@@ -234,12 +234,13 @@ produce visible, traceable SQLite Session Memory entries.
     Evidence, Session entries, and lifecycle state. Evidence membership is
     immutable, and committed entries require supporting evidence and a lifecycle.
 
-- [ ] `next` Establish Session evidence consumption and progress
+- [ ] `next` [Establish Session evidence consumption and progress](docs/design/2026-09-06-evidence-ingestion/README.md)
   - Description: Define how Session maintenance reads accepted evidence in
     project order, selects one finite evaluation frontier, records pending
     work, and advances successful progress without losing later evidence.
-  - Shape: Evidence remains authoritative and immutable. Session-owned progress
-    does not move into the Project or Evidence Log models.
+  - Shape: Evidence remains authoritative and immutable. A Session-owned
+    processing ledger tracks eligibility, claims, and successful evaluation.
+    Progress does not move into the Project or Evidence Log models.
 
 - [ ] `open` Establish the Session curator contract
   - Description: Define the evidence and existing-memory input supplied for one

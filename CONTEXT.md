@@ -2,7 +2,7 @@
 
 This document records settled project language and ownership boundaries.
 It complements the product overview in [README.md](README.md) and the detailed
-[design unit](docs/design/2026-09-05-session-memory-entry/README.md).
+[design index](docs/design/README.md).
 
 ## Authority
 
