@@ -16,6 +16,7 @@ function result(index: number): CaptureResult {
     nativeSessionReference: "session",
     nativeInteractionReference: String(index),
     nativeOccurredAt: "2026-09-05T00:00:00.000Z",
+    speakerRole: index % 2 === 0 ? "assistant" : "user",
     normalizedContent: `value ${index}`,
     workingDirectory: `/project/${index}`,
     replay: { scheme: "fixture/v1", key: String(index) },

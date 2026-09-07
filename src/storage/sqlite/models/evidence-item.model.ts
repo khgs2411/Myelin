@@ -25,6 +25,7 @@ export class EvidenceItem extends Model<
   public declare nativeSessionReference: string | null;
   public declare nativeInteractionReference: string | null;
   public declare nativeOccurredAt: string | null;
+  public declare speakerRole: "user" | "assistant" | null;
   public declare normalizedContent: string | null;
   public declare workingDirectory: string;
   public declare workspaceContextJson: string;
@@ -84,6 +85,11 @@ export function initializeEvidenceItemModel(
         type: DataTypes.TEXT,
         allowNull: true,
         columnName: "native_occurred_at",
+      },
+      speakerRole: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        columnName: "speaker_role",
       },
       normalizedContent: {
         type: DataTypes.TEXT,

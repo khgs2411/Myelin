@@ -281,6 +281,18 @@ const ORDERED_MIGRATIONS: readonly SqliteMigration[] = [
       );
     },
   },
+  {
+    version: 5,
+    name: "add-evidence-speaker-role",
+    async apply(sequelize, transaction) {
+      await sequelize.query(
+        `ALTER TABLE evidence_items
+        ADD COLUMN speaker_role TEXT NULL
+          CHECK (speaker_role IN ('user', 'assistant'))`,
+        { transaction },
+      );
+    },
+  },
 ];
 
 export class SqliteSchema {

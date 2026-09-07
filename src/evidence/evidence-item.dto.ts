@@ -12,6 +12,7 @@ export type EvidenceItemDto = Readonly<{
   nativeSessionReference?: string;
   nativeInteractionReference?: string;
   nativeOccurredAt?: NormalizedTimestamp;
+  speakerRole: "user" | "assistant" | null;
   normalizedContent: string | null;
   replay: Readonly<{
     scheme: string;

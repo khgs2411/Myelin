@@ -94,3 +94,44 @@ curation and review against existing memories.
 - An immutable Session entry and a revisable durable Markdown document have
   different content lifecycles. Generic memory revision language must not imply
   that Session content is edited in place.
+
+## Capture Entry Points And Development Simulation
+
+Authority: explicit user clarification in the `implement` task on 2026-09-07.
+This decision supersedes earlier guidance that treats the development fixture
+as a CLI use case or composes its production services outside Application.
+
+- **Automatic provider capture** submits provider-native events through
+  Application.capture for later Session Memory curation.
+- **Development fixture capture** is a manual, mirrored capture source. The
+  developer supplies fixture-native inputs through the development simulation
+  harness. It uses the same Application.capture boundary and shared capture
+  pipeline as automatic provider capture. It does not insert Session memories.
+- **Targeted durable-memory proposals** are a separate future CLI/MCP path for
+  Project, Personal, or Practice Memory candidates. They enter the selected
+  product's Inbox, not the captured-evidence path or Session Memory.
+
+The development simulation and cli.ts are sibling entry points into Application.
+The simulation exclusively submits development.fixture inputs. It creates and
+closes Application, calls Application.capture, and lets Application select the
+source adapter and compose the production services. It must not call the CLI or
+duplicate the application's capture composition.
+
+```text
+Automatic provider caller OR manual development simulation
+  -> Application.capture(trusted source key, native inputs)
+  -> CaptureAdapterFactory -> selected ICaptureAdapter -> CaptureResult[]
+  -> EvidenceCaptureService -> EvidenceManager -> EvidenceItemRepository
+  -> SQLite EvidenceItem rows
+  -> later ingestion, curation, and application-owned Session publication
+```
+
+The source adapter changes with the input source; the shared capture path does
+not. The fixture uses its own native format rather than fabricated provider
+payloads. Capture records admitted evidence and returns durable receipts.
+Curation and Session publication happen separately after capture.
+
+The manual capture simulation is invoked through [tests/debug.ts](tests/debug.ts).
+Its source-file organization does not change this application-entry contract. It uses the configured development database; it is
+not an isolated automated test and does not run in the default test suites.
+Provider capture adapters and the targeted CLI/MCP path remain later work.

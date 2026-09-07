@@ -1,7 +1,16 @@
 import type { CaptureSourceKey } from "../capture/capture-adapter.ts";
 import type { IApplicationConfiguration } from "../application.configuration.ts";
-import type { IPreparedEvidenceItem } from "../evidence/evidence.adapter.ts";
 import type { ISessionMemoryDraft } from "../session-memory/session-memory-manager.ts";
+
+export interface IPreparedEvidenceItem {
+  readonly evidenceId: number;
+  readonly content: string;
+  readonly speakerRole: "user" | "assistant" | null;
+  readonly nativeEventKind: string;
+  readonly nativeSessionReference: string | null;
+  readonly nativeInteractionReference: string | null;
+  readonly nativeOccurredAt: string | null;
+}
 
 export interface IEvidenceIngestionRequest {
   readonly workingDirectory: string;

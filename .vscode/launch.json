@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "bun",
+      "request": "launch",
+      "name": "Debug Development Capture Simulation",
+      "program": "${workspaceFolder}/tests/debug.ts",
+      "cwd": "${workspaceFolder}",
+      "runtime": "${env:HOME}/.bun/bin/bun"
+    }
+  ]
+}

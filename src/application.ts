@@ -4,7 +4,6 @@ import { CaptureAdapterFactory } from "./capture/capture-adapter.factory.ts";
 import type { TrustedCaptureInput } from "./capture/capture-input.ts";
 import { EvidenceCaptureService } from "./capture/evidence-capture.service.ts";
 import type { CapturedEvidenceReference } from "./evidence/captured-evidence-reference.ts";
-import { EvidenceAdapterFactory } from "./evidence/evidence-adapter.factory.ts";
 import { EvidenceLedgerRepository } from "./evidence/evidence-ledger.repository.ts";
 import { EvidenceItemRepository } from "./evidence/evidence-item.repository.ts";
 import { EvidenceManager } from "./evidence/evidence-manager.ts";
@@ -82,7 +81,6 @@ export class Application {
         ? () =>
             new EvidenceIngestionService(
               workspaceContextService,
-              new EvidenceAdapterFactory(),
               evidenceManager,
               new SessionMemoryManager(new SessionMemoryRepository()),
               sqliteDatabase,

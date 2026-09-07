@@ -25,14 +25,17 @@ from the default command and was not run as part of this test work.
 | Suite | Guarantees |
 | --- | --- |
 | [Native source](unit/native-source-material.test.ts) | Lossless supported values; stable recursive key ordering; meaningful differences; unsupported values and structures; cycle detection; no mutation or getter execution |
-| [Fixture adapter](unit/development-capture.adapter.test.ts) | Fact mapping; complete source; valid empty content; field and time validation; replay identity independent of content; distinct coordinates; fixed v1 hash vector |
+| [Fixture adapter](unit/development-capture.adapter.test.ts) | Fact and speaker-role mapping; complete source; valid empty content; field, role, and time validation; replay identity independent of normalized facts; distinct coordinates; fixed v1 hash vector |
 | [Adapter factory](unit/capture-adapter.factory.test.ts) | Usable fixture adapter; unsupported routes never fall back |
-| [Capture service](unit/evidence-capture.service.test.ts) | Ordered DTOs; one managed Project; complete resolution before persistence; failure prevents writes; receipt and error propagation |
+| [Capture service](unit/evidence-capture.service.test.ts) | Ordered DTOs with speaker attribution; one managed Project; complete resolution before persistence; failure prevents writes; receipt and error propagation |
+| [Evidence manager](unit/evidence-manager.test.ts) | Shared content admission; retained DTO identity and order; no repository access for wholly contentless batches |
+| [Evidence ingestion service](unit/evidence-ingestion.service.test.ts) | Direct ordered preparation; exact source filtering; curator-result admission; lease renewal; atomic publication and completion; failure release; valid zero-memory completion |
 | [Application errors](unit/application-error.test.ts) | Stable identity and safe messages; optional causes retained internally |
 | [Error type checks](types/application-error.typecheck.ts) | Unknown codes and invalid arguments fail compilation; domain-specific types remain distinct |
 | [Workspace resolution](integration/workspace-resolution.integration.test.ts) | Registered roots and descendants; most-specific ownership; path boundary checks; invalid directories |
 | [Git context](integration/workspace-context.integration.test.ts) | Canonical paths; managed/unmanaged outcomes; optional Git; normal, detached, and unborn HEAD; configured upstream mapping; missing commits; unavailable observations; local-only reads; independent snapshots |
-| [Repository and application](integration/capture.integration.test.ts) | Exact storage; Project-local sequences; atomic rollback; replay identity and original snapshots; SQL integrity; restart; concurrent writers; Application composition; trusted routing; CLI receipts, safe failures, output and cleanup outcomes |
+| [Repository and application](integration/capture.integration.test.ts) | Version-4 evidence upgrade and role constraint; exact storage with nullable speaker attribution; contentless-item admission; Project-local sequences; atomic rollback; replay identity and original snapshots; SQL integrity; restart; concurrent writers; Application composition; trusted routing; CLI receipts, safe failures, output and cleanup outcomes |
+| [Ingestion availability](integration/evidence-ingestion.integration.test.ts) | Capture remains available without a real curator executor; application ingestion fails before creating claims |
 
 ## Isolation and verification boundaries
 
@@ -44,6 +47,8 @@ from the default command and was not run as part of this test work.
 - Application and CLI integration use fresh Bun processes. The test entry calls
   the existing `runCli` with a temporary database. This covers command behavior,
   not host installation or the fixed development path in the executable.
+- Application ingestion availability uses its own fresh Bun process so its
+  SQLite model definitions remain isolated from the repository integration suite.
 - Output, cleanup, and unexpected repository failures are injected only in the
   child-process test entry. Successful persistence and rollback use real SQLite.
 - Concurrent writers wait at an explicit gate after startup. The assertions

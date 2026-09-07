@@ -45,6 +45,7 @@ export class EvidenceCaptureService {
         nativeSessionReference: result.nativeSessionReference,
         nativeInteractionReference: result.nativeInteractionReference,
         nativeOccurredAt: result.nativeOccurredAt,
+        speakerRole: result.speakerRole,
         normalizedContent: result.normalizedContent,
         replay: result.replay,
         sourceMaterial: result.sourceMaterial,

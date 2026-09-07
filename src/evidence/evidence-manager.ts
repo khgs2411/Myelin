@@ -73,7 +73,14 @@ export class EvidenceManager {
   public async InsertBatch(
     items: readonly EvidenceItemDto[],
   ): Promise<readonly CapturedEvidenceReference[]> {
-    return await this.evidenceItemRepository.insertBatch(items);
+    const retainedItems = items.filter(
+      (item) => (item.normalizedContent?.trim().length ?? 0) > 0,
+    );
+    if (retainedItems.length === 0) {
+      return [];
+    }
+
+    return await this.evidenceItemRepository.insertBatch(retainedItems);
   }
 
   public async insertBatch(

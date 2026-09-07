@@ -12,7 +12,12 @@ describe("DevelopmentCaptureAdapter", () => {
   const adapter = new DevelopmentCaptureAdapter();
 
   test("maps fixture facts and retains the complete native source", () => {
-    const input = { ...INPUT, occurredAt: "2026-09-05T08:30:00.000Z", extra: { preserved: [1, null] } };
+    const input = {
+      ...INPUT,
+      occurredAt: "2026-09-05T08:30:00.000Z",
+      speakerRole: "assistant" as const,
+      extra: { preserved: [1, null] },
+    };
     const result = adapter.normalize(input);
     expect(result).toMatchObject({
       nativeEventKind: "fixture.input",
@@ -21,10 +26,24 @@ describe("DevelopmentCaptureAdapter", () => {
       workingDirectory: INPUT.workingDirectory,
       normalizedContent: INPUT.content,
       nativeOccurredAt: input.occurredAt,
+      speakerRole: input.speakerRole,
     });
     expect(result.sourceMaterial.format).toBe("json.v1");
     expect(JSON.parse(new TextDecoder().decode(result.sourceMaterial.content))).toEqual(input);
     expect(adapter.normalize(INPUT).nativeOccurredAt).toBeUndefined();
+  });
+
+  test("accepts source attribution or records unknown attribution", () => {
+    expect(adapter.normalize({ ...INPUT, speakerRole: "user" }).speakerRole).toBe("user");
+    expect(adapter.normalize({ ...INPUT, speakerRole: "assistant" }).speakerRole).toBe("assistant");
+    expect(adapter.normalize({ ...INPUT, speakerRole: null }).speakerRole).toBeNull();
+    expect(adapter.normalize(INPUT).speakerRole).toBeNull();
+  });
+
+  test("rejects unsupported source attribution", () => {
+    expect(() => adapter.normalize({ ...INPUT, speakerRole: "system" })).toThrow(
+      expect.objectContaining({ code: "capture:invalid-input" }),
+    );
   });
 
   test.each(["", null])("preserves valid empty content %p", (content) => {
@@ -56,7 +75,13 @@ describe("DevelopmentCaptureAdapter", () => {
 
   test("keeps replay identity independent of content and workspace observations", () => {
     const first = adapter.normalize(INPUT);
-    const changed = adapter.normalize({ ...INPUT, content: "Changed", workingDirectory: "/elsewhere", extra: true });
+    const changed = adapter.normalize({
+      ...INPUT,
+      content: "Changed",
+      workingDirectory: "/elsewhere",
+      speakerRole: "assistant",
+      extra: true,
+    });
     expect(changed.replay).toEqual(first.replay);
     expect(changed.sourceMaterial.content).not.toEqual(first.sourceMaterial.content);
   });

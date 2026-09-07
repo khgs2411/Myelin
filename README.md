@@ -45,7 +45,7 @@ future Claude hooks
 
 LOCAL DEVELOPMENT CAPTURE
 
-ordered developer input
+manual development simulation (sibling to CLI)
   -> trusted development.fixture entry
       -> [Application] capture operation
         -> [CaptureAdapterFactory]
@@ -58,9 +58,10 @@ trusted capture source + CaptureResult[]
   -> [EvidenceCaptureService]
       -> resolve WorkspaceContext
       -> EvidenceItemDto[]
-          -> [EvidenceItemRepository]
-              -> [EvidenceItem]
-                  -> SQLite evidence_items
+          -> [EvidenceManager] : skip contentless candidates
+              -> [EvidenceItemRepository]
+                  -> [EvidenceItem]
+                      -> SQLite evidence_items
 
 CAPTURED-EVIDENCE INGESTION
 
@@ -180,11 +181,13 @@ shared capture service.
 1. Receive a trusted capture source and an ordered `CaptureResult` array.
 2. Resolve each working directory to a registered Project.
 3. Construct an `EvidenceItemDto` for each result.
-4. Submit the complete DTO array to `EvidenceItemRepository`.
+4. Submit candidates to `EvidenceManager`, which skips contentless items and
+   delegates the retained batch to `EvidenceItemRepository`.
 5. Return durable evidence identities and project-local sequence numbers.
 
-Each valid supplied input produces one evidence row. Capture does not decide
-whether the input deserves memory. A later curator makes that decision.
+Each retained input produces a durable evidence receipt. Null, empty, and
+whitespace-only normalized content is skipped. Capture does not decide whether
+the retained input deserves memory. A later curator makes that decision.
 
 `EvidenceItemRepository` computes the SHA-256 integrity digest over each serialized source
 content before opening the SQLite write transaction. It stores the digest with
@@ -240,8 +243,9 @@ plus a format identifier. Shared persistence stores the bytes as a SQLite BLOB.
 
 `CodexCaptureAdapter` is the first implementation. It supports Codex
 `UserPromptSubmit` and `Stop` hook inputs. It uses their native event fields to
-extract content and replay coordinates. It does not interpret those fields as
-conversation roles or pair them into a synthetic conversation entity.
+extract content and replay coordinates. It assigns user attribution to
+UserPromptSubmit and assistant attribution to Stop. It does not pair events into
+a synthetic conversation entity.
 
 A later provider supplies its own adapter and factory construction branch without
 changing `EvidenceCaptureService`, `EvidenceItemRepository`, or any memory
@@ -249,40 +253,50 @@ product.
 
 ### Development capture fixture
 
-The repository-local development command lets the project develop and verify
-memory behavior before global installation and automatic hook delivery exist.
+The development fixture is a manual, mirrored capture source for Session
+Memory development. It supplies developer-authored fixture-native evidence
+where automatic capture would supply provider-native events. Both enter through
+Application.capture and use the same shared capture pipeline.
 
-With the local Project already seeded, run:
+The development capture simulation, launched through [tests/debug.ts](tests/debug.ts),
+is a sibling entry point to cli.ts. It exclusively invokes the development
+fixture through Application.create(), Application.capture(), and
+Application.close(). It does not call the CLI or duplicate application service
+composition. The controlling decision is in
+[Project context](CONTEXT.md#capture-entry-points-and-development-simulation).
+
+With the local Project seeded, edit the fixture inputs used by the simulation
+and invoke the development harness:
 
 ```sh
-bun run cli.ts dev capture-fixture fixtures/development-capture.json
+bun tests/debug.ts
 ```
 
-The command writes an ordered JSON receipt to stdout. Each entry contains
-`evidenceId`, `projectSequence`, and `disposition` (`inserted` or `existing`).
-Errors use stderr and a nonzero exit status. Repeating the unchanged fixture
-returns the existing evidence. For a new event, change `fixtureReference` or
-`itemIndex`; changing content under existing coordinates causes a replay conflict.
-The example working directory targets the seeded local LLM Wiki Project.
+Alternatively, use the **Debug Development Capture Simulation** launch
+configuration. This manual harness uses the configured development SQLite
+database. It is separate from the default automated test suites.
 
-The fixture:
+The flow is:
 
-1. Accepts one ordered array of controlled inputs.
-2. Sends the exact fixture-native records through
-   `DevelopmentCaptureAdapter`.
-3. Produces the same `CaptureResult` contract as a provider adapter.
-4. Submits the results through the real `EvidenceCaptureService` and
-   `EvidenceItemRepository`.
-5. Returns the same durable capture receipt as automatic input.
+1. The simulation supplies a trusted development.fixture source key and an
+   ordered native input array to Application.capture.
+2. Application selects DevelopmentCaptureAdapter through CaptureAdapterFactory.
+3. The adapter validates inputs, preserves source material, and produces
+   CaptureResult values, including supplied speakerRole attribution.
+4. EvidenceCaptureService resolves workspace context. EvidenceManager skips
+   contentless candidates, then EvidenceItemRepository stores the retained batch.
+5. The simulation prints durable evidence receipts and closes Application.
 
-The fixture does not generate fake Codex JSON. It preserves truthful
-fixture-native source material. It replaces provider delivery only. It does
-not write SQLite directly, register a Project, or create memory. Stable fixture
-replay coordinates make exact repeated input idempotent. The fixture needs no
-retry workflow.
+Each receipt contains evidenceId, projectSequence, and disposition (inserted or
+existing). Exact replay returns existing evidence. For a new event, change
+fixtureReference or itemIndex; changing native input under existing coordinates
+causes a replay conflict.
 
-The fixture verifies the shared capture and memory pipeline. It does not verify
-Codex parsing. `CodexCaptureAdapter` owns that separate provider contract.
+The fixture captures evidence for later ingestion and curation. It does not
+insert Session memories, create a Project, or verify provider parsing. Future
+CLI/MCP proposals for Project, Personal, or Practice Memory use the separate
+targeted-insertion path. The existing dev capture-fixture CLI command is an
+implementation remnant; it is not the intended development-fixture entry point.
 
 ### Captured-evidence ingestion
 

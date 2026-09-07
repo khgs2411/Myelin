@@ -58,6 +58,7 @@ function item(key = "event", owner = project): EvidenceItemDto {
     nativeSessionReference: "session",
     nativeInteractionReference: key,
     nativeOccurredAt: "2026-09-05T00:00:00.000Z",
+    speakerRole: "assistant",
     normalizedContent: "source facts",
     replay: { scheme: "fixture/v1", key },
     sourceMaterial: { format: "bytes.v1", content: new TextEncoder().encode("abc") },
@@ -71,7 +72,14 @@ function sequence(owner = project): number {
   return sql.query<{ value: number }, [number]>("SELECT last_allocated_evidence_sequence AS value FROM projects WHERE id = ?").get(owner.id)!.value;
 }
 function native(index = 0, changes: Record<string, unknown> = {}) {
-  return { fixtureReference: "application-fixture", itemIndex: index, workingDirectory: workspace, content: `content-${index}`, ...changes };
+  return {
+    fixtureReference: "application-fixture",
+    itemIndex: index,
+    workingDirectory: workspace,
+    content: `content-${index}`,
+    speakerRole: "assistant",
+    ...changes,
+  };
 }
 function start(input: Omit<CaptureProcessInput, "databasePath"> & { databasePath?: string }) {
   const child = Bun.spawn([process.execPath, PROCESS_ENTRY], {
@@ -97,6 +105,149 @@ function expectSafeFailure(result: Awaited<ReturnType<typeof start>>, code: stri
   expect(result.stderr).not.toMatch(/\n\s+at\s/);
 }
 
+async function migrateThroughPublicStartup(path: string): Promise<void> {
+  const databaseModule = new URL(
+    "../../src/storage/sqlite/sqlite-database.ts",
+    import.meta.url,
+  ).href;
+  const runtimeModule = new URL(
+    "../../src/storage/sqlite/sqlite-runtime.ts",
+    import.meta.url,
+  ).href;
+  const source = `
+    const [{ SqliteDatabase }, { SqliteRuntime }] = await Promise.all([
+      import(${JSON.stringify(databaseModule)}),
+      import(${JSON.stringify(runtimeModule)}),
+    ]);
+    const database = await SqliteDatabase.open({
+      databasePath: ${JSON.stringify(path)},
+      runtime: await SqliteRuntime.initialize(),
+    });
+    await database.close();
+  `;
+  const child = Bun.spawn([process.execPath, "-e", source], {
+    cwd: root,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ]);
+  expect({ exitCode, stdout, stderr }).toEqual({
+    exitCode: 0,
+    stdout: "",
+    stderr: "",
+  });
+}
+
+describe("SQLite evidence migration", () => {
+  test("upgrades populated version 4 evidence with unknown attribution and a constrained role", async () => {
+    const upgradePath = join(root, "upgrade-v4.sqlite");
+    const upgradeWorkspace = join(root, "upgrade-v4-project");
+    await mkdir(upgradeWorkspace);
+
+    // Create the historical schema through the same public owner, then remove
+    // only migration 5 so the fixture is an exact populated version-4 database.
+    await migrateThroughPublicStartup(upgradePath);
+    const legacy = new Database(upgradePath, { strict: true });
+    legacy.exec("ALTER TABLE evidence_items DROP COLUMN speaker_role");
+    legacy.query("DELETE FROM schema_migrations WHERE version = 5").run();
+    legacy.query(
+      `INSERT INTO projects (
+        key, root_path, repository_root_path, last_allocated_evidence_sequence
+      ) VALUES (?, ?, NULL, 1)`,
+    ).run("upgrade-project", upgradeWorkspace);
+    const projectId = legacy
+      .query<{ id: number }, []>("SELECT id FROM projects WHERE key = 'upgrade-project'")
+      .get()!.id;
+    const workspaceContext = JSON.stringify({
+      project: {
+        identity: projectId,
+        key: "upgrade-project",
+        rootPath: upgradeWorkspace,
+      },
+      workingDirectory: upgradeWorkspace,
+    });
+    legacy.query(
+      `INSERT INTO evidence_items (
+        project_id, project_sequence, capture_source_key, native_event_kind,
+        native_session_reference, native_interaction_reference,
+        native_occurred_at, normalized_content, working_directory,
+        workspace_context_json, raw_source_format, raw_source_content,
+        raw_source_digest, replay_scheme, replay_key, received_at
+      ) VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      projectId,
+      "fixture.upgrade",
+      "fixture.input",
+      "legacy-session",
+      "legacy-interaction",
+      "2026-09-05T00:00:00.000Z",
+      "legacy evidence",
+      upgradeWorkspace,
+      workspaceContext,
+      "bytes.v1",
+      new TextEncoder().encode("legacy source"),
+      "legacy-digest",
+      "fixture/v1",
+      "legacy-event",
+      "2026-09-05T00:01:00.000Z",
+    );
+    const before = legacy.query<Record<string, unknown>, []>(
+      `SELECT project_sequence, capture_source_key, native_event_kind,
+        native_session_reference, native_interaction_reference,
+        native_occurred_at, normalized_content, working_directory,
+        workspace_context_json, raw_source_format,
+        hex(raw_source_content) AS raw_source_hex, raw_source_digest,
+        replay_scheme, replay_key, received_at
+      FROM evidence_items`,
+    ).get()!;
+    expect(legacy.query<{ version: number }, []>(
+      "SELECT max(version) AS version FROM schema_migrations",
+    ).get()).toEqual({ version: 4 });
+    expect(legacy.query<{ name: string }, []>(
+      "SELECT name FROM pragma_table_info('evidence_items') WHERE name = 'speaker_role'",
+    ).get()).toBeNull();
+    legacy.close();
+
+    await migrateThroughPublicStartup(upgradePath);
+
+    const upgraded = new Database(upgradePath, { strict: true });
+    expect(upgraded.query<Record<string, unknown>, []>(
+      `SELECT project_sequence, capture_source_key, native_event_kind,
+        native_session_reference, native_interaction_reference,
+        native_occurred_at, normalized_content, working_directory,
+        workspace_context_json, raw_source_format,
+        hex(raw_source_content) AS raw_source_hex, raw_source_digest,
+        replay_scheme, replay_key, received_at, speaker_role
+      FROM evidence_items`,
+    ).get()).toEqual({ ...before, speaker_role: null });
+    expect(upgraded.query<{ version: number; name: string }, []>(
+      "SELECT version, name FROM schema_migrations WHERE version = 5",
+    ).get()).toEqual({ version: 5, name: "add-evidence-speaker-role" });
+    expect(() => upgraded.query(
+      `INSERT INTO evidence_items (
+        project_id, project_sequence, capture_source_key, native_event_kind,
+        native_session_reference, native_interaction_reference,
+        native_occurred_at, normalized_content, working_directory,
+        workspace_context_json, raw_source_format, raw_source_content,
+        raw_source_digest, replay_scheme, replay_key, received_at, speaker_role
+      ) SELECT project_id, project_sequence + 1, capture_source_key,
+        native_event_kind, native_session_reference, 'invalid-role',
+        native_occurred_at, normalized_content, working_directory,
+        workspace_context_json, raw_source_format, raw_source_content,
+        raw_source_digest, replay_scheme, 'invalid-role', received_at, 'system'
+      FROM evidence_items WHERE replay_key = 'legacy-event'`,
+    ).run()).toThrow(/CHECK constraint failed/);
+    expect(upgraded.query<{ count: number }, []>(
+      "SELECT count(*) AS count FROM evidence_items",
+    ).get()).toEqual({ count: 1 });
+    upgraded.close();
+  });
+});
+
 describe("EvidenceItemRepository with real SQLite", () => {
   test("stores complete source facts and returns committed ordered identities", async () => {
     const before = Date.now();
@@ -108,7 +259,7 @@ describe("EvidenceItemRepository with real SQLite", () => {
     expect(stored[0]).toMatchObject({
       project_id: project.id, project_sequence: 1, capture_source_key: "fixture.integration",
       native_event_kind: "fixture.input", native_session_reference: "session", native_interaction_reference: "first",
-      native_occurred_at: "2026-09-05T00:00:00.000Z", normalized_content: "source facts",
+      native_occurred_at: "2026-09-05T00:00:00.000Z", speaker_role: "assistant", normalized_content: "source facts",
       working_directory: workspace, raw_source_format: "bytes.v1", replay_scheme: "fixture/v1", replay_key: "first",
       // Independently calculated SHA-256 vector for the literal bytes 'abc'.
       raw_source_digest: "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
@@ -125,11 +276,11 @@ describe("EvidenceItemRepository with real SQLite", () => {
   test("preserves null content and stores omitted native facts as NULL", async () => {
     await repository.insertBatch([{
       ...item(), normalizedContent: null, nativeSessionReference: undefined,
-      nativeInteractionReference: undefined, nativeOccurredAt: undefined,
+      nativeInteractionReference: undefined, nativeOccurredAt: undefined, speakerRole: null,
     }]);
     expect(rows()[0]).toMatchObject({
       normalized_content: null, native_session_reference: null,
-      native_interaction_reference: null, native_occurred_at: null,
+      native_interaction_reference: null, native_occurred_at: null, speaker_role: null,
     });
   });
 
@@ -146,7 +297,7 @@ describe("EvidenceItemRepository with real SQLite", () => {
     const receipt = await repository.insertBatch([item()]);
     const original = rows();
     const replay = await repository.insertBatch([{
-      ...item(), normalizedContent: "different normalized facts", nativeOccurredAt: undefined,
+      ...item(), normalizedContent: "different normalized facts", nativeOccurredAt: undefined, speakerRole: "user",
       workspaceContext: { ...item().workspaceContext, git: { kind: "unavailable", safeDiagnostic: "Now unavailable" } },
     }]);
     expect(replay).toEqual([{ ...receipt[0]!, disposition: "existing" }]);
@@ -232,7 +383,39 @@ describe("Application and CLI through fresh processes", () => {
     const result = JSON.parse(child.stdout);
     expect(result.receipt.map((r: { projectSequence: number }) => r.projectSequence)).toEqual([1, 2]);
     expect(rows().map((r) => r.normalized_content)).toEqual(["content-0", "content-1"]);
+    expect(rows().map((r) => r.speaker_role)).toEqual(["assistant", "assistant"]);
     expect(rows().map((r) => r.working_directory)).toEqual([workspace, workspace]);
+  });
+
+  test("skips contentless inputs and preserves retained content and order", async () => {
+    const child = await start({
+      mode: "application",
+      inputs: [
+        native(0, { content: null }),
+        native(1, { content: " \t\n" }),
+        native(2, { content: "  first retained  ", speakerRole: "user" }),
+        native(3, { content: "second retained" }),
+      ],
+    });
+    expect(child.exitCode).toBe(0);
+    const result = JSON.parse(child.stdout);
+    expect(result.receipt.map((entry: { projectSequence: number }) => entry.projectSequence)).toEqual([1, 2]);
+    expect(rows().map((row) => [row.normalized_content, row.speaker_role])).toEqual([
+      ["  first retained  ", "user"],
+      ["second retained", "assistant"],
+    ]);
+    expect(sequence()).toBe(2);
+  });
+
+  test("does not allocate evidence when every normalized input is contentless", async () => {
+    const child = await start({
+      mode: "application",
+      inputs: [native(0, { content: null }), native(1, { content: "" })],
+    });
+    expect(child.exitCode).toBe(0);
+    expect(JSON.parse(child.stdout).receipt).toEqual([]);
+    expect(rows()).toEqual([]);
+    expect(sequence()).toBe(0);
   });
 
   test.each([

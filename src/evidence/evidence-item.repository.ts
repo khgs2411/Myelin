@@ -99,6 +99,7 @@ export class EvidenceItemRepository
         nativeSessionReference: item.nativeSessionReference ?? null,
         nativeInteractionReference: item.nativeInteractionReference ?? null,
         nativeOccurredAt: item.nativeOccurredAt ?? null,
+        speakerRole: item.speakerRole,
         normalizedContent: item.normalizedContent,
         workingDirectory: item.workspaceContext.workingDirectory,
         workspaceContextJson: JSON.stringify(item.workspaceContext),

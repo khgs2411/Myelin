@@ -14,6 +14,7 @@ export type CaptureResult = Readonly<{
   nativeSessionReference?: string;
   nativeInteractionReference?: string;
   nativeOccurredAt?: NormalizedTimestamp;
+  speakerRole: "user" | "assistant" | null;
   normalizedContent: string | null;
   workingDirectory: string;
   replay: Readonly<{

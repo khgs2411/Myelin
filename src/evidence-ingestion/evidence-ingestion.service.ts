@@ -1,10 +1,8 @@
 import type { IApplicationConfiguration } from "../application.configuration.ts";
-import type { EvidenceAdapterFactory } from "../evidence/evidence-adapter.factory.ts";
 import type {
   IClaimedEvidenceBatch,
   EvidenceManager,
 } from "../evidence/evidence-manager.ts";
-import type { IEvidenceAdapter } from "../evidence/evidence.adapter.ts";
 import type { EvidenceItem } from "../storage/sqlite/models/evidence-item.model.ts";
 import type { SqliteDatabase } from "../storage/sqlite/sqlite-database.ts";
 import { SessionMemoryManager } from "../session-memory/session-memory-manager.ts";
@@ -14,6 +12,7 @@ import type {
   ICuratorExecutor,
   IEvidenceIngestionRequest,
   IEvidenceIngestionResult,
+  IPreparedEvidenceItem,
 } from "./evidence-ingestion.types.ts";
 import type { ISessionMemoryDraft } from "../session-memory/session-memory-manager.ts";
 
@@ -26,7 +25,6 @@ type EvidenceIngestionConfiguration = Readonly<{
 }>;
 
 type WorkspaceResolver = Pick<WorkspaceContextService, "resolve">;
-type EvidenceAdapterCreator = Pick<EvidenceAdapterFactory, "Create">;
 type EvidenceIngestionManager = Pick<
   EvidenceManager,
   | "CountUnavailableGitEvidence"
@@ -42,7 +40,6 @@ type WriteTransactionDatabase = Pick<SqliteDatabase, "writeTransaction">;
 export class EvidenceIngestionService {
   public constructor(
     private readonly workspaceContextService: WorkspaceResolver,
-    private readonly evidenceAdapterFactory: EvidenceAdapterCreator,
     private readonly evidenceManager: EvidenceIngestionManager,
     private readonly sessionMemoryManager: SessionMemoryPublisher,
     private readonly sqliteDatabase: WriteTransactionDatabase,
@@ -60,10 +57,6 @@ export class EvidenceIngestionService {
       throw new Error(workspaceContext.git.safeDiagnostic);
     }
 
-    // Source support must be established before any evidence lease can exist.
-    const adapter = this.evidenceAdapterFactory.Create(
-      request.captureSourceKey,
-    );
     const skippedUnavailableGitEvidenceCount =
       await this.evidenceManager.CountUnavailableGitEvidence(
         workspaceContext,
@@ -84,7 +77,7 @@ export class EvidenceIngestionService {
     }
 
     try {
-      const drafts = await this.prepareAndCurate(adapter, batch);
+      const drafts = await this.prepareAndCurate(batch);
 
       // Refresh the lease after preparation and execution. The manager checks
       // the complete original batch and renews it atomically.
@@ -146,10 +139,18 @@ export class EvidenceIngestionService {
   }
 
   private async prepareAndCurate(
-    adapter: IEvidenceAdapter,
     batch: IClaimedEvidenceBatch,
   ): Promise<readonly ISessionMemoryDraft[]> {
-    const preparedEvidence = adapter.Prepare(batch.evidence);
+    const preparedEvidence: readonly IPreparedEvidenceItem[] =
+      batch.evidence.map((item) => ({
+        evidenceId: item.id,
+        content: item.normalizedContent!,
+        speakerRole: item.speakerRole,
+        nativeEventKind: item.nativeEventKind,
+        nativeSessionReference: item.nativeSessionReference,
+        nativeInteractionReference: item.nativeInteractionReference,
+        nativeOccurredAt: item.nativeOccurredAt,
+      }));
     const result = await this.curatorExecutor.Execute(
       preparedEvidence,
       this.configuration.agents.evidenceCurator,

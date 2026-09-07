@@ -14,6 +14,7 @@ type DevelopmentCaptureInput = Readonly<{
   workingDirectory: string;
   content: string | null;
   occurredAt?: NormalizedTimestamp;
+  speakerRole?: "user" | "assistant" | null;
 }>;
 
 export class DevelopmentCaptureAdapter implements ICaptureAdapter {
@@ -28,6 +29,7 @@ export class DevelopmentCaptureAdapter implements ICaptureAdapter {
       ...(fixture.occurredAt === undefined
         ? {}
         : { nativeOccurredAt: fixture.occurredAt }),
+      speakerRole: fixture.speakerRole ?? null,
       normalizedContent: fixture.content,
       workingDirectory: fixture.workingDirectory,
       replay: {
@@ -72,6 +74,15 @@ function validateInput(input: unknown): DevelopmentCaptureInput {
     ) {
       throw new ApplicationError("capture:invalid-input");
     }
+  }
+
+  if (
+    record.speakerRole !== undefined &&
+    record.speakerRole !== "user" &&
+    record.speakerRole !== "assistant" &&
+    record.speakerRole !== null
+  ) {
+    throw new ApplicationError("capture:invalid-input");
   }
 
   return record as DevelopmentCaptureInput;
