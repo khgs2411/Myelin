@@ -245,22 +245,24 @@ produce visible, traceable SQLite Session Memory entries.
     results are designed. Curator task and execution remain separate work;
     recovery of evidence with unavailable captured Git context remains deferred.
 
-- [ ] `next` Deliver evidence consumption and publication infrastructure
+- [x] `done` Deliver evidence consumption and publication infrastructure
   - Description: Implement the accepted configuration, scoped evidence reads,
     claims, lease lifecycle, and atomic Session publication with evidence
     completion. Keep this application behavior independent of agent execution.
   - Shape: EvidenceManager coordinates evidence access and leases. Ingestion
     coordinates preparation, curation, and publication. Agent work never runs
     inside the publication transaction.
-  - Progress: Implementation is in progress. This item does not establish a
-    working curator or the complete evidence-to-memory journey.
+  - Progress: Configuration, scoped evidence reads, claims, lease lifecycle,
+    and atomic Session publication with evidence completion are implemented.
+    Source preparation, real curation, and the complete evidence-to-memory
+    journey remain separate work.
 
-- [ ] `next` Prepare stored development evidence for the curator
-  - Description: Implement the development fixture source's evidence adapter
-    so persisted EvidenceItem rows become the accepted prepared-evidence input.
+- [ ] `next` [Prepare stored development evidence for the curator](docs/design/2026-09-07-stored-development-evidence-preparation/README.md)
+  - Description: Establish complete normalized capture evidence and construct
+    the curator's prepared input directly from stored development evidence.
   - Shape: Capture already normalizes fixture inputs and stores them in SQLite.
-    EvidenceAdapterFactory selects DevelopmentEvidenceAdapter for that source;
-    no additional fixture-to-database connection is needed. Preparing evidence
+    Capture owns source-specific interpretation. Ingestion maps normalized
+    stored fields into prepared input without a preparation adapter. Preparing evidence
     does not count as successful curation or advance processing completion.
   - Why: The curator can be developed against controlled evidence read through
     the real storage and preparation path.

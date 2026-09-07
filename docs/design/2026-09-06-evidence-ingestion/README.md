@@ -1,7 +1,15 @@
 # Evidence Ingestion — Design Unit
 
-This is the active design unit for
+This is the parent design unit for
 [Establish Session evidence consumption and progress](../../../ROADMAP.md#roadmap-step-3-create-session-memory-from-accepted-evidence).
+
+Active design continues in the
+[Stored Development Evidence Preparation unit](../2026-09-07-stored-development-evidence-preparation/README.md).
+That unit adds the accepted content admission rule at EvidenceManager insertion.
+Its approved preparation boundary also supersedes this unit's IEvidenceAdapter
+and EvidenceAdapterFactory requirements: capture owns source interpretation,
+and ingestion constructs prepared input directly from normalized stored fields.
+The prepared-input contract, selection, leases, and publication remain in force.
 
 ## Read And Continue Here
 

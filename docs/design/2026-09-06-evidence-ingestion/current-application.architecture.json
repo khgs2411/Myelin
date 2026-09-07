@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "LLM Wiki — Current Application and Missing Capabilities",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/khgs2411/Myelin.git",
+      "revision": "f9c0f2420d6dc9ef769bca7793eaf65bdb6d8836"
+    },
+    "viewBox": [1380, 760],
+    "views": [
+      {
+        "id": "capture-path",
+        "label": "Working capture path",
+        "focus": ["application", "capture", "evidence-manager", "sqlite"],
+        "note": "Capture is implemented and remains independent of curator availability."
+      },
+      {
+        "id": "ingestion-infrastructure",
+        "label": "Ingestion infrastructure",
+        "focus": ["application", "ingestion", "evidence-manager", "session-publication", "sqlite"],
+        "note": "Selection, leases, validation, publication, and completion are implemented."
+      },
+      {
+        "id": "missing-path",
+        "label": "TO BE IMPLEMENTED",
+        "focus": ["manual-ingestion", "preparation-factory", "development-preparation", "curator-execution", "real-curator"],
+        "note": "Preparation, real execution, invocation, review, and autonomous activation remain future work."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "configuration", "type": "backend", "label": "Development configuration", "sublabel": "Validated config.json", "tag": "IMPLEMENTED", "pos": [70, 75], "size": [190, 72],
+      "sources": [{"path": "src/application.configuration.ts", "line": 39, "label": "Configuration loader"}]
+    },
+    {
+      "id": "application", "type": "backend", "label": "Application", "sublabel": "Composition + lifecycle", "tag": "IMPLEMENTED", "pos": [70, 285], "size": [190, 76],
+      "sources": [{"path": "src/application.ts", "line": 51, "label": "Composition root"}]
+    },
+    {
+      "id": "capture", "type": "backend", "label": "Evidence capture", "sublabel": "Normalize + resolve workspace", "tag": "WORKING", "pos": [325, 130], "size": [205, 76],
+      "sources": [{"path": "src/capture/evidence-capture.service.ts", "line": 19, "label": "Capture service"}]
+    },
+    {
+      "id": "ingestion", "type": "backend", "label": "EvidenceIngestionService", "sublabel": "Claims → validate → publish", "tag": "IMPLEMENTED INFRASTRUCTURE", "pos": [325, 390], "size": [220, 82],
+      "sources": [{"path": "src/evidence-ingestion/evidence-ingestion.service.ts", "line": 42, "label": "Ingestion orchestration"}]
+    },
+    {
+      "id": "evidence-manager", "type": "backend", "label": "EvidenceManager", "sublabel": "Selection + lease lifecycle", "tag": "IMPLEMENTED", "pos": [610, 155], "size": [205, 76],
+      "sources": [{"path": "src/evidence/evidence-manager.ts", "line": 66, "label": "Evidence ownership"}]
+    },
+    {
+      "id": "preparation-factory", "type": "backend", "label": "EvidenceAdapterFactory", "sublabel": "Fail closed: no source registered", "tag": "IMPLEMENTED BOUNDARY", "pos": [610, 390], "size": [215, 82],
+      "sources": [{"path": "src/evidence/evidence-adapter.factory.ts", "line": 5, "label": "Preparation factory"}]
+    },
+    {
+      "id": "sqlite", "type": "database", "label": "SQLite", "sublabel": "Evidence + ledger + Session memory", "tag": "IMPLEMENTED", "pos": [925, 90], "size": [220, 84],
+      "sources": [{"path": "src/storage/sqlite/sqlite-database.ts", "line": 18, "label": "Database lifecycle"}]
+    },
+    {
+      "id": "session-publication", "type": "backend", "label": "Session memory publication", "sublabel": "Entries + links + active lifecycle", "tag": "IMPLEMENTED", "pos": [920, 230], "size": [230, 82],
+      "sources": [{"path": "src/session-memory/session-memory-manager.ts", "line": 12, "label": "Publication boundary"}]
+    },
+    {
+      "id": "curator-execution", "type": "backend", "label": "Curator execution boundary", "sublabel": "Explicit development.no-op only", "tag": "BOUNDARY + MOCK", "pos": [920, 390], "size": [230, 82],
+      "sources": [{"path": "src/evidence-ingestion/curator.executor-factory.ts", "line": 18, "label": "Executor selection"}]
+    },
+    {
+      "id": "manual-ingestion", "type": "external", "label": "Stored-evidence invocation", "sublabel": "No CLI command or scheduler", "tag": "TO BE IMPLEMENTED", "pos": [60, 540], "size": [210, 78],
+      "sources": [{"path": "ROADMAP.md", "line": 287, "label": "Manual journey"}]
+    },
+    {
+      "id": "development-preparation", "type": "external", "label": "DevelopmentEvidenceAdapter", "sublabel": "Prepare stored fixture evidence", "tag": "TO BE IMPLEMENTED", "pos": [607.5, 555], "size": [220, 78],
+      "sources": [{"path": "ROADMAP.md", "line": 260, "label": "Preparation frontier"}]
+    },
+    {
+      "id": "real-curator", "type": "external", "label": "Real curator execution", "sublabel": "Task + provider adapter", "tag": "TO BE IMPLEMENTED", "pos": [927.5, 555], "size": [215, 78],
+      "sources": [{"path": "ROADMAP.md", "line": 270, "label": "Curator task"}, {"path": "ROADMAP.md", "line": 280, "label": "Local execution"}]
+    }
+  ],
+  "connections": [
+    {"id": "configuration-to-application", "from": "configuration", "to": "application", "label": "validated settings", "fromSide": "bottom", "toSide": "top", "route": "straight", "labelAt": [165, 190]},
+    {"id": "application-to-capture", "from": "application", "to": "capture", "label": "capture(input)", "variant": "emphasis"},
+    {"id": "capture-to-manager", "from": "capture", "to": "evidence-manager", "label": "insert batch", "variant": "emphasis"},
+    {"id": "manager-to-sqlite", "from": "evidence-manager", "to": "sqlite", "label": "evidence + claims", "variant": "emphasis"},
+    {"id": "manual-to-application", "from": "manual-ingestion", "to": "application", "label": "future invocation", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "route": "straight", "labelAt": [165, 485]},
+    {"id": "application-to-ingestion", "from": "application", "to": "ingestion", "label": "ingest(request)", "labelAt": [380, 365]},
+    {"id": "ingestion-to-preparation", "from": "ingestion", "to": "preparation-factory", "label": "adapter before claim", "labelAt": [578, 370]},
+    {"id": "preparation-to-development", "from": "preparation-factory", "to": "development-preparation", "label": "missing source registration", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "route": "straight", "labelAt": [717.5, 520]},
+    {"id": "ingestion-to-manager", "from": "ingestion", "to": "evidence-manager", "label": "claim + lease lifecycle", "fromSide": "top", "toSide": "bottom", "via": [[435, 270], [712.5, 270]], "labelAt": [574, 255]},
+    {"id": "ingestion-to-curator", "from": "ingestion", "to": "curator-execution", "label": "prepared evidence", "fromSide": "bottom", "toSide": "right", "via": [[435, 680], [1200, 680], [1200, 431]], "labelAt": [745, 695]},
+    {"id": "curator-to-real", "from": "curator-execution", "to": "real-curator", "label": "real provider unavailable", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "route": "straight", "labelAt": [1035, 505]},
+    {"id": "ingestion-to-publication", "from": "ingestion", "to": "session-publication", "label": "validated drafts", "fromSide": "left", "toSide": "left", "via": [[290, 431], [290, 330], [880, 330], [880, 271]], "labelAt": [725, 345]},
+    {"id": "publication-to-sqlite", "from": "session-publication", "to": "sqlite", "label": "shared transaction", "fromSide": "top", "toSide": "bottom", "route": "straight", "labelAt": [1035, 185]}
+  ],
+  "cards": [
+    {"dot": "emerald", "title": "Implemented now", "items": ["Fixture capture is independent of curation", "Selection and attempt-owned leases", "Atomic publication and evidence completion"]},
+    {"dot": "amber", "title": "Current stopping point", "items": ["EvidenceAdapterFactory rejects all sources before claims", "Only the explicit development no-op executor is available"]},
+    {"dot": "violet", "title": "TO BE IMPLEMENTED", "items": ["Development evidence preparation", "Curator task, provider execution, and local invocation", "Memory review, autonomous activation, and Git-context recovery"]}
+  ]
+}

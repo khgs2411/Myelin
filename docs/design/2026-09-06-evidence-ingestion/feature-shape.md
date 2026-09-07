@@ -3,6 +3,13 @@
 This unit maps code-owned selection and leasing of captured evidence for Session
 curation, followed by validated publication and durable processing completion.
 
+Preparation-boundary revision, approved 2026-09-07: the
+[active Feature Shape](../2026-09-07-stored-development-evidence-preparation/feature-shape.md)
+supersedes source-specific preparation, factory selection, and unsupported-source
+failure shown below. Capture owns source interpretation; ingestion constructs
+prepared input directly and uses captureSourceKey only as an exact stored-evidence
+filter. Selection, leases, and atomic publication retain their established contracts.
+
 Open design frontier: [Open Design Issues](design-issues.md).
 
 ## Feature Map

@@ -2,6 +2,11 @@
 
 > Pseudocode artifact. Non-executable reference shape.
 
+Preparation-boundary revision, approved 2026-09-07: the [active unit](../../2026-09-07-stored-development-evidence-preparation/pseudocode/evidence-preparation.md)
+supersedes source-specific preparation adapters and factory selection below.
+Capture supplies normalized evidence; ingestion constructs prepared input directly.
+The prepared-input contract and other ingestion behavior remain in force.
+
 Accepted orchestration owner. Proposed filename: evidence-ingestion.service.ts;
 source directory and public method name remain undecided. This artifact joins
 the accepted contracts without defining the curator execution API.

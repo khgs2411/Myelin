@@ -2,6 +2,11 @@
 
 > Pseudocode artifact. Non-executable reference shape.
 
+Preparation-boundary revision, approved 2026-09-07: the [active unit](../../2026-09-07-stored-development-evidence-preparation/pseudocode/evidence-preparation.md)
+supersedes source-specific preparation adapters and factory selection below.
+Capture supplies normalized evidence; ingestion constructs prepared input directly.
+The prepared-input contract and other ingestion behavior remain in force.
+
 Accepted name and contract. Proposed filename: evidence-adapter.factory.ts;
 source directory remains undecided.
 
