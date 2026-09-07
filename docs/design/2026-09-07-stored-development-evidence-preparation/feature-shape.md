@@ -3,6 +3,8 @@
 This unit maps evidence admission before persistence and source preparation
 before curator execution. Capture and preparation retain separate boundaries.
 
+Resolved implementation decision: [development no-op ingestion](design-issues.md).
+
 ## Feature Map
 
 ```text
@@ -117,8 +119,8 @@ EvidenceManager. Preserve supplied source metadata, including the accepted
 speakerRole field on stored EvidenceItem records. Return durable evidence
 references in retained input order.
 
-The speakerRole persistence extension is accepted user design from 2026-09-07;
-it is not present in the current runtime model.
+The speakerRole persistence extension is implemented in the runtime model and
+SQLite migration 5.
 
 ## Admission Rule
 

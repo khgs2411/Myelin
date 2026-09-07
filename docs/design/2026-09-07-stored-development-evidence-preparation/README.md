@@ -4,6 +4,7 @@ This is the active design unit for **Prepare stored development evidence for
 the curator** in [Roadmap Step 3](../../../ROADMAP.md#roadmap-step-3-create-session-memory-from-accepted-evidence).
 
 - [Feature Shape](feature-shape.md): established owners and boundaries.
+- [Design issue resolution](design-issues.md): application ingestion with the development no-op.
 - [EvidenceManager pseudocode](pseudocode/src/evidence/evidence-manager.ts.md): content
   admission before persistence.
 - [Preparation boundary pseudocode](pseudocode/evidence-preparation.md): capture
@@ -47,15 +48,16 @@ identifies the source speaker, not whether a statement is approved or true.
 
 This supersedes the parent unit's requirement for IEvidenceAdapter,
 EvidenceAdapterFactory, and source-specific preparation implementations. The
-prepared-input contract remains. Existing runtime code still uses the earlier
-adapter boundary.
+prepared-input contract remains. The runtime now uses the direct preparation
+boundary.
 
-This is accepted design, not implemented behavior. The focused pseudocode is
-incremental review material, not an approved implementation plan. It revises
-capture admission and the preparation boundary. Existing selection,
-lease, and publication contracts remain with the parent unit.
+The user authorized implementation and behavior-focused unit tests on
+2026-09-07. Capture admission, speaker attribution, persistence, direct
+preparation, and the pre-claim executor-availability boundary are implemented.
+Existing selection, lease, and publication contracts remain with the parent
+unit.
 
-No runtime changes are authorized by this design unit.
+Real curator task design and execution remain unimplemented.
 
 ## Development Data Baseline
 

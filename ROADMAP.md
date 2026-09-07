@@ -257,7 +257,7 @@ produce visible, traceable SQLite Session Memory entries.
     Source preparation, real curation, and the complete evidence-to-memory
     journey remain separate work.
 
-- [ ] `next` [Prepare stored development evidence for the curator](docs/design/2026-09-07-stored-development-evidence-preparation/README.md)
+- [x] `done` [Prepare stored development evidence for the curator](docs/design/2026-09-07-stored-development-evidence-preparation/README.md)
   - Description: Establish complete normalized capture evidence and construct
     the curator's prepared input directly from stored development evidence.
   - Shape: Capture already normalizes fixture inputs and stores them in SQLite.
@@ -266,6 +266,10 @@ produce visible, traceable SQLite Session Memory entries.
     does not count as successful curation or advance processing completion.
   - Why: The curator can be developed against controlled evidence read through
     the real storage and preparation path.
+  - Progress: Capture now records speaker attribution and skips contentless
+    evidence before persistence. SQLite stores the attribution. Ingestion maps
+    claimed rows directly into ordered curator input. Application ingestion
+    remains unavailable before claims until a real curator executor exists.
 
 - [ ] `next` Establish the Session curator task
   - Description: Define how the curator evaluates the entire prepared evidence
