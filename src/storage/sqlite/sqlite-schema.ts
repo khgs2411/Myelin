@@ -11,6 +11,10 @@ import {
   initializeEvidenceItemModel,
 } from "./models/evidence-item.model.ts";
 import {
+  EvidenceProcessingLedger,
+  initializeEvidenceProcessingLedgerModel,
+} from "./models/evidence-processing-ledger.model.ts";
+import {
   Project,
   initializeProjectModel,
 } from "./models/project.model.ts";
@@ -252,12 +256,38 @@ const ORDERED_MIGRATIONS: readonly SqliteMigration[] = [
       }
     },
   },
+  {
+    version: 4,
+    name: "create-evidence-processing-ledger",
+    async apply(sequelize, transaction) {
+      await sequelize.query(
+        `CREATE TABLE evidence_processing_ledgers (
+          evidence_id INTEGER PRIMARY KEY REFERENCES evidence_items(id),
+          status TEXT NOT NULL CHECK (status IN ('processing', 'void', 'processed')),
+          attempt_id TEXT NOT NULL CHECK (length(trim(attempt_id)) > 0),
+          lease_expires_at TEXT NULL,
+          CHECK (
+            (status = 'processing' AND lease_expires_at IS NOT NULL)
+            OR (status IN ('void', 'processed') AND lease_expires_at IS NULL)
+          )
+        )`,
+        { transaction },
+      );
+
+      await sequelize.query(
+        `CREATE INDEX evidence_processing_ledgers_status_lease
+        ON evidence_processing_ledgers (status, lease_expires_at)`,
+        { transaction },
+      );
+    },
+  },
 ];
 
 export class SqliteSchema {
   public static initializeModels(sequelize: Sequelize<SqliteDialect>): void {
     initializeProjectModel(sequelize);
     initializeEvidenceItemModel(sequelize);
+    initializeEvidenceProcessingLedgerModel(sequelize);
     initializeSessionMemoryEntryModel(sequelize);
     initializeSessionMemoryEvidenceModel(sequelize);
     initializeSessionMemoryLifecycleModel(sequelize);
@@ -266,6 +296,11 @@ export class SqliteSchema {
       as: "evidenceItems",
       inverse: "project",
       foreignKey: { name: "projectId", onDelete: "NO ACTION", onUpdate: "NO ACTION" },
+    });
+    EvidenceItem.hasOne(EvidenceProcessingLedger, {
+      as: "processingLedger",
+      inverse: "evidenceItem",
+      foreignKey: { name: "evidenceId", onDelete: "NO ACTION", onUpdate: "NO ACTION" },
     });
     Project.hasMany(SessionMemoryEntry, {
       as: "sessionEntries",

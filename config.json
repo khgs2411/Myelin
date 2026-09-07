@@ -1,0 +1,18 @@
+{
+  "sqlite": {
+    "databasePath": ".llm-wiki-dev/state.sqlite"
+  },
+  "evidenceIngestion": {
+    "batchSize": 32
+  },
+  "agents": {
+    "evidenceCurator": {
+      "provider": "development.no-op",
+      "model": "no-op"
+    },
+    "memoryReviewer": {
+      "provider": "development.unimplemented",
+      "model": "not-implemented"
+    }
+  }
+}

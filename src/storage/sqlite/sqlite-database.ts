@@ -54,6 +54,15 @@ export class SqliteDatabase {
     );
   }
 
+  public async readTransaction<T>(
+    operation: (transaction: Transaction) => Promise<T>,
+  ): Promise<T> {
+    return await this.sequelize.transaction(
+      { readOnly: true, type: TransactionType.DEFERRED },
+      operation,
+    );
+  }
+
   async close(): Promise<void> {
     await this.sequelize.close();
   }

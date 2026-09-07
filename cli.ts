@@ -4,12 +4,13 @@ import {
   Application,
   type RuntimeApplicationConfiguration,
 } from "./src/application.ts";
-import { ApplicationError } from "./src/application-error.ts";
+import {
+  ApplicationConfigurationError,
+  ApplicationError,
+} from "./src/application-error.ts";
+import { loadApplicationConfiguration } from "./src/application.configuration.ts";
 import { readDevelopmentCaptureFixture } from "./src/development/capture-fixture.ts";
 import type { CapturedEvidenceReference } from "./src/evidence/captured-evidence-reference.ts";
-
-const LOCAL_DATABASE_PATH =
-  "/Users/liadgoren/Repositories/llm-wiki/.llm-wiki-dev/state.sqlite";
 
 const ROOT_HELP = `LLM Wiki local prototype
 
@@ -22,9 +23,7 @@ Commands:
 
 export async function runCli(
   args: readonly string[],
-  configuration: RuntimeApplicationConfiguration = {
-    sqlite: { databasePath: LOCAL_DATABASE_PATH },
-  },
+  configuration?: RuntimeApplicationConfiguration,
 ): Promise<number> {
   if (args.length === 0 || isHelpRequest(args)) {
     process.stdout.write(ROOT_HELP);
@@ -46,16 +45,30 @@ export async function runCli(
 
 async function runCaptureFixture(
   fixtureFile: string,
-  configuration: RuntimeApplicationConfiguration,
+  configuration: RuntimeApplicationConfiguration | undefined,
 ): Promise<number> {
   let application: Application | undefined;
   let receipt: readonly CapturedEvidenceReference[] | undefined;
   const errors: ApplicationError[] = [];
 
   try {
+    let applicationConfiguration: RuntimeApplicationConfiguration;
+    try {
+      applicationConfiguration =
+        configuration ?? await loadApplicationConfiguration();
+    } catch (cause) {
+      if (cause instanceof ApplicationConfigurationError) {
+        throw new ApplicationError("cli:configuration-failed", {
+          cause,
+          configuration: cause.diagnostic,
+        });
+      }
+      throw new ApplicationError("cli:startup-failed", { cause });
+    }
+
     const nativeInputs = await readDevelopmentCaptureFixture(fixtureFile);
     try {
-      application = await Application.create(configuration);
+      application = await Application.create(applicationConfiguration);
     } catch (cause) {
       throw new ApplicationError("cli:startup-failed", { cause });
     }

@@ -1,7 +1,7 @@
 import { ApplicationError } from "../application-error.ts";
 import type { CapturedEvidenceReference } from "../evidence/captured-evidence-reference.ts";
 import type { EvidenceItemDto } from "../evidence/evidence-item.dto.ts";
-import type { IEvidenceItemRepository } from "../evidence/evidence-item.repository.ts";
+import type { EvidenceManager } from "../evidence/evidence-manager.ts";
 import type { WorkspaceContextService } from "../workspace/workspace-context.service.ts";
 import type { CaptureResult, CaptureSourceKey } from "./capture-adapter.ts";
 
@@ -13,7 +13,7 @@ export type CaptureBatchInput = Readonly<{
 export class EvidenceCaptureService {
   public constructor(
     private readonly workspaceContextService: WorkspaceContextService,
-    private readonly evidenceItemRepository: IEvidenceItemRepository,
+    private readonly evidenceManager: Pick<EvidenceManager, "insertBatch">,
   ) {}
 
   public async captureBatch(
@@ -61,6 +61,6 @@ export class EvidenceCaptureService {
     }
 
     // No persistence starts until every context and the complete batch are valid.
-    return this.evidenceItemRepository.insertBatch(items);
+    return this.evidenceManager.insertBatch(items);
   }
 }

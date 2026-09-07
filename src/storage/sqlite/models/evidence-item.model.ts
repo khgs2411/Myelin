@@ -9,6 +9,7 @@ import {
 } from "@sequelize/core";
 import type { SqliteDialect } from "@sequelize/sqlite3";
 
+import type { EvidenceProcessingLedger } from "./evidence-processing-ledger.model.ts";
 import type { Project } from "./project.model.ts";
 import type { SessionMemoryEntry } from "./session-memory-entry.model.ts";
 
@@ -34,6 +35,7 @@ export class EvidenceItem extends Model<
   public declare replayKey: string;
   public declare receivedAt: string;
   public declare project?: NonAttribute<Project>;
+  public declare processingLedger?: NonAttribute<EvidenceProcessingLedger>;
   public declare sessionEntries?: NonAttribute<SessionMemoryEntry[]>;
 }
 

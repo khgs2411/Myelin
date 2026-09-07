@@ -245,32 +245,52 @@ produce visible, traceable SQLite Session Memory entries.
     results are designed. Curator task and execution remain separate work;
     recovery of evidence with unavailable captured Git context remains deferred.
 
-- [ ] `next` Deliver Session evidence ingestion and publication
-  - Description: Implement the established evidence consumption design, including
-    processing state, scoped batch claims, source preparation, configuration,
-    and atomic publication of validated Session memories with evidence completion.
-  - Shape: Agent work occurs outside database transactions. Ingestion processes
-    evidence; evidence management owns leases. Actual agent execution remains
-    with its separate delivery item.
-  - Progress: The accepted design is handed off for implementation. Runtime
-    delivery is not yet complete.
+- [ ] `next` Deliver evidence consumption and publication infrastructure
+  - Description: Implement the accepted configuration, scoped evidence reads,
+    claims, lease lifecycle, and atomic Session publication with evidence
+    completion. Keep this application behavior independent of agent execution.
+  - Shape: EvidenceManager coordinates evidence access and leases. Ingestion
+    coordinates preparation, curation, and publication. Agent work never runs
+    inside the publication transaction.
+  - Progress: Implementation is in progress. This item does not establish a
+    working curator or the complete evidence-to-memory journey.
 
-- [ ] `next` Establish the Session curator contract
-  - Description: Define the curator task for evaluating a complete prepared
-    evidence batch and producing useful Session memory drafts within the
-    established structured response contract.
-  - Shape: The curator interprets recent work but cannot write SQLite or assign
-    durable memory identity. Comparison with existing memories belongs to the
-    separate memory reviewer.
-  - Progress: Prepared evidence and response contracts are established. Detailed
-    task design can proceed alongside ingestion implementation.
+- [ ] `next` Prepare stored development evidence for the curator
+  - Description: Implement the development fixture source's evidence adapter
+    so persisted EvidenceItem rows become the accepted prepared-evidence input.
+  - Shape: Capture already normalizes fixture inputs and stores them in SQLite.
+    EvidenceAdapterFactory selects DevelopmentEvidenceAdapter for that source;
+    no additional fixture-to-database connection is needed. Preparing evidence
+    does not count as successful curation or advance processing completion.
+  - Why: The curator can be developed against controlled evidence read through
+    the real storage and preparation path.
 
-- [ ] `open` Deliver local agent execution for Session curation
-  - Description: Run the Session curator through the provider-neutral agent
-    execution boundary in the local development environment and return its
-    untrusted structured result for application validation.
-  - Shape: Agent execution is independent from evidence capture. It does not
-    require Codex hook installation.
+- [ ] `next` Establish the Session curator task
+  - Description: Define how the curator evaluates the entire prepared evidence
+    batch, identifies useful continuity facts, preserves uncertainty, and
+    returns memory drafts within the accepted structured response contract.
+  - Shape: The input and response shapes are already established. The curator
+    cannot write SQLite or assign canonical memory identity. Existing-memory
+    comparison belongs to the separate memory reviewer.
+  - Progress: Task design can proceed alongside infrastructure implementation;
+    prepared development evidence supplies its concrete input examples.
+
+- [ ] `open` Deliver local execution of the Session curator
+  - Description: Run the curator task through the configured execution provider
+    and model, consume prepared evidence, and return its untrusted response for
+    application validation.
+  - Shape: Execution is independent of the evidence source and does not require
+    provider-hook installation. A placeholder response is not evidence evaluation.
+
+- [ ] `open` Deliver the manual stored-evidence-to-memory journey
+  - Description: Provide a local invocation that consumes evidence already in
+    SQLite, prepares it, runs the real curator, validates the result, publishes
+    Session memories, and reports committed ingestion outcomes.
+  - Shape: Use the existing fixture capture command to supply controlled source
+    evidence. The ingestion invocation consumes stored rows; it does not bypass
+    capture, write memories directly, or require a new fixture storage path.
+  - Why: This establishes the complete manual journey after preparation and
+    curator execution exist, before autonomous activation.
 
 - [ ] `open` Deliver Session Memory review and reconciliation
   - Description: Review newly published memories against existing memories,
@@ -279,20 +299,14 @@ produce visible, traceable SQLite Session Memory entries.
   - Shape: The memory reviewer is separate from the evidence curator. Session
     entries remain immutable; lifecycle changes represent retirement and
     supersession. Promotion retirement requires confirmed durable publication.
-  - Why: Initial publication and evidence completion belong to ingestion;
-    successful ingestion does not imply completed memory review.
-
-- [ ] `open` Connect the development fixture to Session curation
-  - Description: Extend the local fixture workflow so accepted evidence enters
-    the real Session consumption and curation path and the command reports the
-    resulting SQLite Session Memory entry without writing it directly.
-  - Why: This completes the first local fixture-to-memory journey before
-    autonomous scheduling exists.
+  - Why: Successful ingestion does not imply completed memory review.
 
 - [ ] `open` Deliver autonomous Session Memory activation
   - Description: Detect durable pending Session work and invoke the same
-    consumption, curation, and publication path without requiring the
-    development fixture command or routine user action.
+    consumption, curation, and publication path without requiring routine
+    manual invocation.
+  - Shape: Activation reuses the established ingestion behavior; it does not
+    introduce another capture or publication path.
 
 ## Roadmap Step 4: Retrieve Local Session Continuity
 
