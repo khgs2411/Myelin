@@ -1,6 +1,10 @@
-```markdown
+# LLM Wiki - a living breathing brain
 
-### Naming
+## Index
+
+- read README.md
+
+## Naming
 
 - Classes and types use `TitleCase`.
 - Interfaces use the C#-style `IInterfaceName` convention.
@@ -12,5 +16,3 @@
 - TypeScript filenames use lowercase kebab-case for the primary domain or entity.
 - A supporting role uses the dot-qualified form `<domain>.<role>.ts`, with each segment in lowercase
   kebab-case.
-```
-

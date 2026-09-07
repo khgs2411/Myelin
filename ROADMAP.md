@@ -271,32 +271,21 @@ produce visible, traceable SQLite Session Memory entries.
     claimed rows directly into ordered curator input. Application ingestion
     remains unavailable before claims until a real curator executor exists.
 
-- [ ] `next` Establish the Session curator task
-  - Description: Define how the curator evaluates the entire prepared evidence
-    batch, identifies useful continuity facts, preserves uncertainty, and
-    returns memory drafts within the accepted structured response contract.
-  - Shape: The input and response shapes are already established. The curator
-    cannot write SQLite or assign canonical memory identity. Existing-memory
-    comparison belongs to the separate memory reviewer.
-  - Progress: Task design can proceed alongside infrastructure implementation;
-    prepared development evidence supplies its concrete input examples.
-
-- [ ] `open` Deliver local execution of the Session curator
-  - Description: Run the curator task through the configured execution provider
-    and model, consume prepared evidence, and return its untrusted response for
-    application validation.
-  - Shape: Execution is independent of the evidence source and does not require
-    provider-hook installation. A placeholder response is not evidence evaluation.
-
-- [ ] `open` Deliver the manual stored-evidence-to-memory journey
-  - Description: Provide a local invocation that consumes evidence already in
-    SQLite, prepares it, runs the real curator, validates the result, publishes
-    Session memories, and reports committed ingestion outcomes.
-  - Shape: Use the existing fixture capture command to supply controlled source
-    evidence. The ingestion invocation consumes stored rows; it does not bypass
-    capture, write memories directly, or require a new fixture storage path.
-  - Why: This establishes the complete manual journey after preparation and
-    curator execution exist, before autonomous activation.
+- [ ] `next` Curate stored evidence into Session Memory
+  - Description: Establish the complete locally invoked journey from stored
+    conversation evidence to published Session memories, including curator
+    instructions, configured agent execution, response validation, and atomic
+    publication through the existing ingestion infrastructure.
+  - Shape: Execution configuration selects the provider, model, and reasoning
+    settings independently of the evidence source. Codex is the first execution
+    provider. The curator receives the complete prepared batch and instructions
+    for useful continuity content, uncertainty, evidence support, and structured
+    output. It may return zero or more drafts regardless of input count. The
+    application owns validation, canonical identity, persistence, and processing
+    completion. The development capture simulation supplies controlled evidence
+    through Application.capture; local ingestion consumes the stored rows.
+  - Why: Instructions, execution, and publication form one usable curation
+    capability. Existing-memory review remains a separate responsibility.
 
 - [ ] `open` Deliver Session Memory review and reconciliation
   - Description: Review newly published memories against existing memories,
@@ -307,12 +296,13 @@ produce visible, traceable SQLite Session Memory entries.
     supersession. Promotion retirement requires confirmed durable publication.
   - Why: Successful ingestion does not imply completed memory review.
 
-- [ ] `open` Deliver autonomous Session Memory activation
-  - Description: Detect durable pending Session work and invoke the same
-    consumption, curation, and publication path without requiring routine
-    manual invocation.
-  - Shape: Activation reuses the established ingestion behavior; it does not
-    introduce another capture or publication path.
+- [ ] `open` Maintain Session Memory automatically
+  - Description: Detect pending evidence and memory-review work, run the
+    established curation and reconciliation capabilities, and recover interrupted
+    work without requiring routine manual invocation.
+  - Shape: Maintenance owns activation and coordination. It reuses the existing
+    processing and publication contracts and preserves pending work after failure.
+    Automatic provider capture remains separate from automatic maintenance.
 
 ## Roadmap Step 4: Retrieve Local Session Continuity
 
